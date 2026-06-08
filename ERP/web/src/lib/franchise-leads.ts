@@ -19,6 +19,8 @@ export const FRANCHISE_LEAD_SOURCES = [
     '소개',
     '광고',
     '전화문의',
+    '고객DB',
+    '명함DB',
     '기타'
 ] as const;
 
