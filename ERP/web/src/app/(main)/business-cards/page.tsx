@@ -215,7 +215,7 @@ function BusinessCardListContent() {
         }
     };
 
-    const buildBusinessCardQueryString = React.useCallback((requestedLimit: number | 'all') => {
+    const buildBusinessCardQueryString = React.useCallback((requestedLimit: number | 'all', search?: string) => {
         const userStr = localStorage.getItem('user');
         const params = new URLSearchParams();
 
@@ -233,11 +233,15 @@ function BusinessCardListContent() {
             else if (user.id) params.append('userId', user.id);
         }
 
+        if (search?.trim()) {
+            params.append('search', search.trim());
+        }
+
         return `?${params.toString()}`;
     }, []);
 
-    const fetchBusinessCardList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal) => {
-        const query = buildBusinessCardQueryString(requestedLimit);
+    const fetchBusinessCardList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal, search?: string) => {
+        const query = buildBusinessCardQueryString(requestedLimit, search);
         const res = await fetch(`/api/business-cards${query}`, { signal });
 
         if (!res.ok) {
@@ -285,16 +289,14 @@ function BusinessCardListContent() {
             return;
         }
 
-        if (searchCards !== null) {
-            return;
-        }
+        setSearchCards(null);
 
         const controller = new AbortController();
         searchFetchControllerRef.current = controller;
 
         void (async () => {
             try {
-                const data = await fetchBusinessCardList('all', controller.signal);
+                const data = await fetchBusinessCardList('all', controller.signal, searchTerm);
                 if (searchFetchControllerRef.current === controller) {
                     setSearchCards(data);
                 }
@@ -314,7 +316,7 @@ function BusinessCardListContent() {
                 searchFetchControllerRef.current = null;
             }
         };
-    }, [fetchBusinessCardList, isSearchActive, limit, searchCards]);
+    }, [fetchBusinessCardList, isSearchActive, limit, searchTerm]);
 
     // Upload State
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);

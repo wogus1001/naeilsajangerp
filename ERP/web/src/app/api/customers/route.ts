@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
+import { normalizeSearchValue, parseSearchTerms } from '@/utils/search';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -42,6 +43,34 @@ function transformCustomer(row: any) {
     };
 }
 
+function parseRequestedLimit(limitParam: string | null, hasSearch: boolean) {
+    if (hasSearch || limitParam === 'all') return null;
+    const parsed = parseInt(limitParam || '10000', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 10000;
+}
+
+function matchesCustomerSearch(customer: any, terms: string[]) {
+    if (terms.length === 0) return true;
+
+    const mobile = normalizeSearchValue(customer.mobile).replace(/-/g, '');
+    const companyPhone = normalizeSearchValue(customer.companyPhone).replace(/-/g, '');
+    const fields = [
+        customer.feature,
+        customer.address,
+        customer.name,
+        customer.wantedItem,
+        customer.wantedIndustry,
+        customer.wantedArea
+    ].map(normalizeSearchValue);
+
+    return terms.some(term => {
+        const cleanTerm = term.replace(/-/g, '');
+        return mobile.includes(cleanTerm) ||
+            companyPhone.includes(cleanTerm) ||
+            fields.some(field => field.includes(term));
+    });
+}
+
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
@@ -49,6 +78,7 @@ export async function GET(request: Request) {
         const id = searchParams.get('id');
         const company = searchParams.get('company');
         const name = searchParams.get('name');
+        const searchTerms = parseSearchTerms(searchParams.get('search') || searchParams.get('q') || '');
 
         const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
@@ -74,7 +104,7 @@ export async function GET(request: Request) {
         }
 
         const limitParam = searchParams.get('limit');
-        const maxLimit = limitParam === 'all' ? 10000 : (limitParam ? parseInt(limitParam, 10) : 10000);
+        const maxLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
 
         let allCustomers: any[] = [];
         const PAGE_SIZE = 1000;
@@ -132,7 +162,7 @@ export async function GET(request: Request) {
                 hasMore = false;
             }
 
-            if (allCustomers.length >= maxLimit) {
+            if (maxLimit !== null && allCustomers.length >= maxLimit) {
                 hasMore = false;
                 if (allCustomers.length > maxLimit) {
                     allCustomers = allCustomers.slice(0, maxLimit);
@@ -144,6 +174,10 @@ export async function GET(request: Request) {
 
         if (name) {
             result = result.filter((customer) => customer.name?.includes(name));
+        }
+
+        if (searchTerms.length > 0) {
+            result = result.filter((customer) => matchesCustomerSearch(customer, searchTerms));
         }
 
         return ok(result);

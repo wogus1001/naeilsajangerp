@@ -6,7 +6,6 @@ import { notFound } from 'next/navigation';
 export const dynamic = 'force-dynamic';
 
 async function getBriefingData(token: string) {
-    console.log('[BriefingPage] Fetching data for token:', token);
     const { createAdminClient } = await import('@/utils/supabase/admin');
     const supabaseAdmin = createAdminClient();
 
@@ -16,16 +15,12 @@ async function getBriefingData(token: string) {
         .eq('token', token)
         .single();
 
-    if (linkError) console.error('[BriefingPage] Link Error:', linkError);
+    if (linkError) console.error('[BriefingPage] Link lookup failed');
     if (!link) {
-        console.log('[BriefingPage] Link not found for token:', token);
         return null;
     }
 
-    console.log('[BriefingPage] Link found:', link.id, 'Expires:', link.expires_at);
-
     if (link.expires_at && new Date(link.expires_at) < new Date()) {
-        console.log('[BriefingPage] Link expired');
         return { error: 'expired' };
     }
 
@@ -36,21 +31,15 @@ async function getBriefingData(token: string) {
         .eq('id', link.property_id)
         .single();
 
-    if (propError) console.error('[BriefingPage] Property Error:', propError);
+    if (propError) console.error('[BriefingPage] Property lookup failed');
 
     if (!property) {
-        console.log('[BriefingPage] Property not found for ID:', link.property_id);
         return null;
     }
-
-    console.log('[BriefingPage] Property found:', property.name);
 
     // Mask Data (Duplicate logic from API - ideally strict util function)
     const options = link.options || {};
     const { hide_address, show_briefing_price } = options;
-
-    // Prepare minimal data for frontend
-    console.log('[BriefingPage] Property Data Keys:', Object.keys(property.data || {}));
 
     // Check keys in data JSON (typically camelCase from frontend)
     const pData = property.data || {};
@@ -67,8 +56,6 @@ async function getBriefingData(token: string) {
         if (typeof val === 'string') return parseFloat(val.replace(/,/g, '')) || 0;
         return 0;
     };
-
-    console.log('[BriefingPage] Resolved Coords:', lat, lng);
 
     const briefingPrice = parseNum(pData.briefingPrice || pData.briefing_price || 0);
     const deposit = parseNum(pData.deposit || 0);
@@ -129,8 +116,6 @@ async function getBriefingData(token: string) {
 
 export default async function SharePage(props: { params: Promise<{ token: string }> }) {
     const params = await props.params;
-    const token = params.token;
-    console.log('[BriefingPage] Page requested for token:', params.token);
     const data = await getBriefingData(params.token);
 
     if (!data) {
