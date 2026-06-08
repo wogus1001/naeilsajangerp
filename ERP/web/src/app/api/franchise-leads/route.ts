@@ -54,8 +54,12 @@ const CONTROL_FIELDS = new Set([
     'desired_region',
     'budgetMin',
     'budget_min',
+    '예산최소',
+    '예산최소(만원)',
     'budgetMax',
     'budget_max',
+    '예산최대',
+    '예산최대(만원)',
     'interestedBrand',
     'interested_brand',
     'memo',
@@ -86,8 +90,24 @@ function cleanString(value: unknown): string | null {
 
 function parseNullableNumber(value: unknown): number | null {
     if (value === null || value === undefined || value === '') return null;
-    const parsed = Number(String(value).replace(/,/g, '').replace(/[^\d.-]/g, ''));
-    return Number.isFinite(parsed) ? parsed : null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const compact = raw.replace(/,/g, '');
+    const eokMatch = compact.match(/(-?\d+(?:\.\d+)?)\s*억/);
+    const manMatch = compact.match(/(-?\d+(?:\.\d+)?)\s*만/);
+
+    if (eokMatch || manMatch) {
+        const eok = eokMatch ? Number(eokMatch[1]) * 100_000_000 : 0;
+        const man = manMatch ? Number(manMatch[1]) * 10_000 : 0;
+        const total = eok + man;
+        return Number.isFinite(total) ? total : null;
+    }
+
+    const parsed = Number(compact.replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(parsed)) return null;
+    if (raw.includes('원') && !raw.includes('만원')) return parsed;
+    return Math.abs(parsed) > 0 && Math.abs(parsed) < 1_000_000 ? parsed * 10_000 : parsed;
 }
 
 function parseNullableDate(value: unknown): string | null {
@@ -294,8 +314,8 @@ function buildInsertPayload(body: Record<string, any>, companyId: string, manage
             status: normalizeLeadStatus(getFirst(body, ['status', '상태'])),
             grade: normalizeLeadGrade(getFirst(body, ['grade', '등급'])),
             desired_region: cleanString(getFirst(body, ['desiredRegion', 'desired_region', '희망지역'])) || '',
-            budget_min: parseNullableNumber(getFirst(body, ['budgetMin', 'budget_min', '예산최소'])),
-            budget_max: parseNullableNumber(getFirst(body, ['budgetMax', 'budget_max', '예산최대'])),
+            budget_min: parseNullableNumber(getFirst(body, ['budgetMin', 'budget_min', '예산최소', '예산최소(만원)'])),
+            budget_max: parseNullableNumber(getFirst(body, ['budgetMax', 'budget_max', '예산최대', '예산최대(만원)'])),
             interested_brand: cleanString(getFirst(body, ['interestedBrand', 'interested_brand', '관심브랜드', '브랜드'])) || '',
             memo: cleanString(getFirst(body, ['memo', '메모', '상담메모'])) || '',
             next_contact_at: parseNullableDate(getFirst(body, ['nextContactAt', 'next_contact_at', '다음연락일'])),
@@ -323,8 +343,8 @@ function buildUpdatePayload(body: Record<string, any>, existingData: Record<stri
     if (hasAny(body, ['status', '상태'])) updates.status = normalizeLeadStatus(getFirst(body, ['status', '상태']));
     if (hasAny(body, ['grade', '등급'])) updates.grade = normalizeLeadGrade(getFirst(body, ['grade', '등급']));
     if (hasAny(body, ['desiredRegion', 'desired_region', '희망지역'])) updates.desired_region = cleanString(getFirst(body, ['desiredRegion', 'desired_region', '희망지역'])) || '';
-    if (hasAny(body, ['budgetMin', 'budget_min', '예산최소'])) updates.budget_min = parseNullableNumber(getFirst(body, ['budgetMin', 'budget_min', '예산최소']));
-    if (hasAny(body, ['budgetMax', 'budget_max', '예산최대'])) updates.budget_max = parseNullableNumber(getFirst(body, ['budgetMax', 'budget_max', '예산최대']));
+    if (hasAny(body, ['budgetMin', 'budget_min', '예산최소', '예산최소(만원)'])) updates.budget_min = parseNullableNumber(getFirst(body, ['budgetMin', 'budget_min', '예산최소', '예산최소(만원)']));
+    if (hasAny(body, ['budgetMax', 'budget_max', '예산최대', '예산최대(만원)'])) updates.budget_max = parseNullableNumber(getFirst(body, ['budgetMax', 'budget_max', '예산최대', '예산최대(만원)']));
     if (hasAny(body, ['interestedBrand', 'interested_brand', '관심브랜드', '브랜드'])) updates.interested_brand = cleanString(getFirst(body, ['interestedBrand', 'interested_brand', '관심브랜드', '브랜드'])) || '';
     if (hasAny(body, ['memo', '메모', '상담메모'])) updates.memo = cleanString(getFirst(body, ['memo', '메모', '상담메모'])) || '';
     if (hasAny(body, ['nextContactAt', 'next_contact_at', '다음연락일'])) updates.next_contact_at = parseNullableDate(getFirst(body, ['nextContactAt', 'next_contact_at', '다음연락일']));

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Bar,
     BarChart,
@@ -133,6 +134,15 @@ type AuthUser = {
     companyId?: string | null;
 };
 
+type ManagerOption = {
+    id: string;
+    uuid?: string;
+    name?: string;
+    companyName?: string;
+    companyId?: string | null;
+    role?: string;
+};
+
 type LeadFormState = {
     id?: string;
     name: string;
@@ -150,6 +160,12 @@ type LeadFormState = {
 };
 
 type LeadViewMode = 'table' | 'pipeline' | 'tasks';
+
+type UploadErrorRow = {
+    row: number;
+    reason: string;
+    data?: Record<string, any>;
+};
 
 const EMPTY_FORM: LeadFormState = {
     name: '',
@@ -169,6 +185,7 @@ const EMPTY_FORM: LeadFormState = {
 const ACTIVITY_TYPES: LeadActivityType[] = ['전화', '문자', '방문상담', '계약검토', '메모', '상태변경', '고객전환'];
 const SOURCE_FILTER_OPTIONS = ['전체', ...FRANCHISE_LEAD_SOURCES] as const;
 const RANGE_OPTIONS = ['7D', '30D', '3M', '전체'] as const;
+const PAGE_SIZE_OPTIONS = [50, 100, 200] as const;
 const VIEW_OPTIONS: Array<{ mode: LeadViewMode; label: string; description: string }> = [
     { mode: 'table', label: '테이블', description: '전체 필드 중심으로 확인' },
     { mode: 'pipeline', label: '파이프라인', description: '상태별 상담 흐름 관리' },
@@ -229,8 +246,9 @@ function formatFullDateTime(value?: string | null) {
 }
 
 function formatBudgetValue(value: number | null | undefined) {
-    if (value === null || value === undefined) return '';
-    return new Intl.NumberFormat('ko-KR').format(value);
+    const manwonValue = toBudgetManwonValue(value);
+    if (manwonValue === null) return '';
+    return `${new Intl.NumberFormat('ko-KR').format(manwonValue)}만원`;
 }
 
 function formatBudget(min: number | null, max: number | null) {
@@ -239,6 +257,34 @@ function formatBudget(min: number | null, max: number | null) {
     if (!minText && !maxText) return '-';
     if (minText && maxText) return `${minText} ~ ${maxText}`;
     return minText || maxText;
+}
+
+function toBudgetManwonValue(value: number | null | undefined) {
+    if (value === null || value === undefined) return null;
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    if (Math.abs(numericValue) > 0 && Math.abs(numericValue) < 1_000_000) {
+        return Math.round(numericValue);
+    }
+    return Math.round(numericValue / 10_000);
+}
+
+function toBudgetInputValue(value: number | null | undefined) {
+    const manwonValue = toBudgetManwonValue(value);
+    return manwonValue === null ? '' : String(manwonValue);
+}
+
+function parseBudgetInputToWon(value: string) {
+    const normalized = value.replace(/,/g, '').trim();
+    if (!normalized) return null;
+    const parsed = Number(normalized.replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(parsed)) return null;
+    return Math.abs(parsed) >= 1_000_000 ? parsed : parsed * 10_000;
+}
+
+function toCustomerBudgetValue(value: number | null | undefined) {
+    const manwonValue = toBudgetManwonValue(value);
+    return manwonValue === null ? '' : String(manwonValue);
 }
 
 function toDatetimeLocalValue(value?: string | null) {
@@ -346,8 +392,8 @@ function createFormFromLead(lead: FranchiseLead): LeadFormState {
         status: lead.status || DEFAULT_FRANCHISE_LEAD_STATUS,
         grade: lead.grade || '',
         desiredRegion: lead.desiredRegion || '',
-        budgetMin: lead.budgetMin === null || lead.budgetMin === undefined ? '' : String(lead.budgetMin),
-        budgetMax: lead.budgetMax === null || lead.budgetMax === undefined ? '' : String(lead.budgetMax),
+        budgetMin: toBudgetInputValue(lead.budgetMin),
+        budgetMax: toBudgetInputValue(lead.budgetMax),
         interestedBrand: lead.interestedBrand || '',
         managerId: lead.managerId || '',
         nextContactAt: toDatetimeLocalValue(lead.nextContactAt),
@@ -356,6 +402,7 @@ function createFormFromLead(lead: FranchiseLead): LeadFormState {
 }
 
 export default function FranchiseLeadsPage() {
+    const router = useRouter();
     const [user, setUser] = React.useState<AuthUser | null>(null);
     const [userId, setUserId] = React.useState('');
     const [companyName, setCompanyName] = React.useState('');
@@ -368,17 +415,30 @@ export default function FranchiseLeadsPage() {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<'전체' | FranchiseLeadStatus>('전체');
     const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
+    const [managerFilter, setManagerFilter] = React.useState('전체');
     const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('30D');
     const [viewMode, setViewMode] = React.useState<LeadViewMode>('table');
+    const [pageSize, setPageSize] = React.useState<typeof PAGE_SIZE_OPTIONS[number]>(50);
+    const [currentPage, setCurrentPage] = React.useState(1);
     const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('30D'));
     const [createdTo, setCreatedTo] = React.useState('');
     const [selectedLeadId, setSelectedLeadId] = React.useState('');
+    const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
     const [activityType, setActivityType] = React.useState<LeadActivityType>('전화');
     const [activityContent, setActivityContent] = React.useState('');
+    const [quickActivityLeadId, setQuickActivityLeadId] = React.useState('');
+    const [quickActivityType, setQuickActivityType] = React.useState<LeadActivityType>('전화');
+    const [quickActivityContent, setQuickActivityContent] = React.useState('');
+    const [isQuickSaving, setIsQuickSaving] = React.useState(false);
     const [detailNextContactAt, setDetailNextContactAt] = React.useState('');
+    const [bulkNextContactAt, setBulkNextContactAt] = React.useState('');
+    const [isBulkUpdating, setIsBulkUpdating] = React.useState(false);
     const [convertingLeadId, setConvertingLeadId] = React.useState('');
     const [relatedCustomers, setRelatedCustomers] = React.useState<RelatedCustomer[]>([]);
     const [relatedCards, setRelatedCards] = React.useState<RelatedBusinessCard[]>([]);
+    const [managerOptions, setManagerOptions] = React.useState<ManagerOption[]>([]);
+    const [managerMap, setManagerMap] = React.useState<Record<string, string>>({});
+    const [uploadErrors, setUploadErrors] = React.useState<UploadErrorRow[]>([]);
     const [isRelatedLoading, setIsRelatedLoading] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [form, setForm] = React.useState<LeadFormState>(EMPTY_FORM);
@@ -397,6 +457,10 @@ export default function FranchiseLeadsPage() {
     const selectedLead = React.useMemo(
         () => leads.find(lead => lead.id === selectedLeadId) || null,
         [leads, selectedLeadId]
+    );
+    const quickActivityLead = React.useMemo(
+        () => leads.find(lead => lead.id === quickActivityLeadId) || null,
+        [leads, quickActivityLeadId]
     );
 
     React.useEffect(() => {
@@ -432,6 +496,7 @@ export default function FranchiseLeadsPage() {
             if (searchTerm.trim()) params.set('search', searchTerm.trim());
             if (statusFilter !== '전체') params.set('status', statusFilter);
             if (sourceFilter !== '전체') params.set('source', sourceFilter);
+            if (managerFilter !== '전체') params.set('managerId', managerFilter);
             if (createdFrom) params.set('createdFrom', createdFrom);
             if (createdTo) params.set('createdTo', createdTo);
 
@@ -460,7 +525,7 @@ export default function FranchiseLeadsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [companyName, createdFrom, createdTo, searchTerm, sourceFilter, statusFilter, userId]);
+    }, [companyName, createdFrom, createdTo, managerFilter, searchTerm, sourceFilter, statusFilter, userId]);
 
     React.useEffect(() => {
         if (!userId) return;
@@ -470,6 +535,77 @@ export default function FranchiseLeadsPage() {
 
         return () => window.clearTimeout(timer);
     }, [fetchLeads, userId]);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [createdFrom, createdTo, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+
+    React.useEffect(() => {
+        setSelectedLeadIds([]);
+    }, [createdFrom, createdTo, currentPage, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+
+    React.useEffect(() => {
+        const visibleLeadIds = new Set(leads.map(lead => lead.id));
+        setSelectedLeadIds(prev => {
+            const next = prev.filter(id => visibleLeadIds.has(id));
+            return next.length === prev.length ? prev : next;
+        });
+    }, [leads]);
+
+    React.useEffect(() => {
+        if (!userId) return;
+
+        const controller = new AbortController();
+        const currentUserId = user?.uid || user?.id || userId;
+        const currentUserName = user?.name || currentUserId;
+
+        const fallbackToCurrentUser = () => {
+            setManagerOptions(currentUserId ? [{ id: currentUserId, uuid: currentUserId, name: currentUserName }] : []);
+            setManagerMap(currentUserId ? { [currentUserId]: currentUserName } : {});
+        };
+
+        const fetchManagers = async () => {
+            try {
+                const params = new URLSearchParams({ requesterId: userId });
+                if (companyName) params.set('company', companyName);
+
+                const response = await fetch(`/api/users?${params.toString()}`, {
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+
+                if (!response.ok) {
+                    fallbackToCurrentUser();
+                    return;
+                }
+
+                const users = await response.json() as ManagerOption[];
+                const nextMap: Record<string, string> = {};
+                const nextOptions = (users || [])
+                    .filter(manager => manager.id || manager.uuid)
+                    .map(manager => {
+                        const label = manager.name || manager.id || manager.uuid || '담당자 미상';
+                        if (manager.id) nextMap[manager.id] = label;
+                        if (manager.uuid) nextMap[manager.uuid] = label;
+                        return manager;
+                    });
+
+                if (currentUserId && !nextMap[currentUserId]) {
+                    nextMap[currentUserId] = currentUserName;
+                }
+
+                setManagerOptions(nextOptions.length > 0 ? nextOptions : [{ id: currentUserId, uuid: currentUserId, name: currentUserName }]);
+                setManagerMap(nextMap);
+            } catch (error) {
+                if (error instanceof DOMException && error.name === 'AbortError') return;
+                console.error('Failed to fetch lead managers:', error);
+                fallbackToCurrentUser();
+            }
+        };
+
+        void fetchManagers();
+        return () => controller.abort();
+    }, [companyName, user, userId]);
 
     React.useEffect(() => {
         if (!selectedLead) {
@@ -547,8 +683,6 @@ export default function FranchiseLeadsPage() {
     const activeFollowupLeads = leads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
     const dueContactCount = activeFollowupLeads.filter(lead => isContactActionDue(lead.nextContactAt)).length;
     const overdueContactCount = activeFollowupLeads.filter(lead => isPastDue(lead.nextContactAt)).length;
-    const linkedLeadCount = leads.filter(lead => lead.linkedCustomerId || lead.linkedBusinessCardId).length;
-    const convertedLeadCount = leads.filter(lead => lead.convertedCustomerId).length;
     const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
         leads: leads.filter(lead => lead.status === status)
@@ -562,13 +696,102 @@ export default function FranchiseLeadsPage() {
             const bTime = b.nextContactAt ? new Date(b.nextContactAt).getTime() : Number.MAX_SAFE_INTEGER;
             return aTime - bTime;
         });
+    const listPolicyText = searchTerm.trim()
+        ? `검색 중에는 전체 데이터 범위에서 찾고, 화면에는 ${pageSize}건씩 표시합니다.`
+        : `기본 조회: 최신 500건 · 화면 표시: ${pageSize}건씩 · 검색 시 전체 범위 조회`;
+    const totalPages = Math.max(1, Math.ceil(leads.length / pageSize));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const pageStartIndex = leads.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
+    const pageEndIndex = Math.min(pageStartIndex + pageSize, leads.length);
+    const paginatedLeads = React.useMemo(
+        () => leads.slice(pageStartIndex, pageEndIndex),
+        [leads, pageEndIndex, pageStartIndex]
+    );
+    const selectedLeadSet = React.useMemo(() => new Set(selectedLeadIds), [selectedLeadIds]);
+    const selectedLeads = React.useMemo(
+        () => paginatedLeads.filter(lead => selectedLeadSet.has(lead.id)),
+        [paginatedLeads, selectedLeadSet]
+    );
+    const allVisibleSelected = paginatedLeads.length > 0 && paginatedLeads.every(lead => selectedLeadSet.has(lead.id));
+    const pageRangeText = leads.length === 0
+        ? '0건 표시'
+        : `전체 ${leads.length.toLocaleString()}건 중 ${(pageStartIndex + 1).toLocaleString()}-${pageEndIndex.toLocaleString()}건 표시`;
+
+    React.useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const getManagerName = (managerId?: string) => {
+        if (!managerId) return '-';
+        return managerMap[managerId] || managerId;
+    };
+
+    const getManagerOptionValue = (manager: ManagerOption) => manager.uuid || manager.id;
+
+    const scopedManagerOptions = React.useMemo(() => {
+        if (user?.role === 'admin') return managerOptions;
+        const currentUserId = user?.uid || user?.id || userId;
+        return managerOptions.filter(manager => {
+            if (manager.id === currentUserId || manager.uuid === currentUserId) return true;
+            if (user?.companyId) return manager.companyId === user.companyId;
+            if (companyName) return manager.companyName === companyName;
+            return false;
+        });
+    }, [companyName, managerOptions, user, userId]);
+
+    const renderManagerOptions = (currentManagerId?: string) => (
+        <>
+            {currentManagerId && !scopedManagerOptions.some(manager => getManagerOptionValue(manager) === currentManagerId) && (
+                <option value={currentManagerId}>{getManagerName(currentManagerId)}</option>
+            )}
+            {scopedManagerOptions.map(manager => {
+                const value = getManagerOptionValue(manager);
+                return (
+                    <option key={value} value={value}>
+                        {manager.name || manager.id}{manager.companyName && user?.role === 'admin' ? ` · ${manager.companyName}` : ''}
+                    </option>
+                );
+            })}
+        </>
+    );
+
+    const defaultManagerId = React.useMemo(() => {
+        const currentUserId = user?.uid || user?.id || userId;
+        const matched = scopedManagerOptions.find(manager => manager.id === currentUserId || manager.uuid === currentUserId);
+        return matched ? getManagerOptionValue(matched) : currentUserId;
+    }, [scopedManagerOptions, user, userId]);
+
+    const isMyManagerFilterActive = Boolean(defaultManagerId && managerFilter === defaultManagerId);
+
+    const toggleMyLeadsOnly = () => {
+        if (!defaultManagerId) return;
+        setManagerFilter(prev => prev === defaultManagerId ? '전체' : defaultManagerId);
+    };
+
+    const toggleSelectAllVisible = (checked: boolean) => {
+        setSelectedLeadIds(checked ? paginatedLeads.map(lead => lead.id) : []);
+    };
+
+    const toggleSelectLead = (leadId: string, checked: boolean) => {
+        setSelectedLeadIds(prev => {
+            if (checked) return prev.includes(leadId) ? prev : [...prev, leadId];
+            return prev.filter(id => id !== leadId);
+        });
+    };
+
+    const openCustomerDetail = (customerId: string) => {
+        if (!customerId) return;
+        router.push(`/customers?openCustomerId=${encodeURIComponent(customerId)}`);
+    };
 
     const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
         setAlertConfig({ isOpen: true, title, message, type });
     };
 
     const openCreateModal = () => {
-        setForm({ ...EMPTY_FORM, managerId: userId });
+        setForm({ ...EMPTY_FORM, managerId: defaultManagerId });
         setIsModalOpen(true);
     };
 
@@ -605,6 +828,8 @@ export default function FranchiseLeadsPage() {
                 requesterId: userId,
                 companyName,
                 managerId: form.managerId || userId,
+                budgetMin: parseBudgetInputToWon(form.budgetMin),
+                budgetMax: parseBudgetInputToWon(form.budgetMax),
                 nextContactAt: form.nextContactAt ? new Date(form.nextContactAt).toISOString() : null
             };
 
@@ -657,7 +882,18 @@ export default function FranchiseLeadsPage() {
         }
     };
 
-    const updateLeadWithPatch = async (lead: FranchiseLead, patch: Record<string, unknown>) => {
+    const updateLeadManager = async (lead: FranchiseLead, managerId: string) => {
+        if (!userId || !managerId || lead.managerId === managerId) return;
+
+        try {
+            await updateLeadWithPatch(lead, { managerId });
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '담당자 변경에 실패했습니다.', 'error', '담당자 변경 실패');
+        }
+    };
+
+    const putLeadPatch = async (lead: FranchiseLead, patch: Record<string, unknown>) => {
         if (!userId) return null;
 
         const response = await fetch('/api/franchise-leads', {
@@ -676,8 +912,13 @@ export default function FranchiseLeadsPage() {
         }
 
         const data = unwrapApiData<{ lead?: FranchiseLead }>(payload);
-        await fetchLeads();
         return data.lead || null;
+    };
+
+    const updateLeadWithPatch = async (lead: FranchiseLead, patch: Record<string, unknown>) => {
+        const updatedLead = await putLeadPatch(lead, patch);
+        await fetchLeads();
+        return updatedLead;
     };
 
     const addLeadActivity = async () => {
@@ -704,6 +945,109 @@ export default function FranchiseLeadsPage() {
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '상담 이력 저장에 실패했습니다.', 'error', '저장 실패');
+        }
+    };
+
+    const openQuickActivityModal = (lead: FranchiseLead) => {
+        setQuickActivityLeadId(lead.id);
+        setQuickActivityType('전화');
+        setQuickActivityContent('');
+    };
+
+    const closeQuickActivityModal = () => {
+        if (isQuickSaving) return;
+        setQuickActivityLeadId('');
+        setQuickActivityContent('');
+        setQuickActivityType('전화');
+    };
+
+    const submitQuickActivity = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!quickActivityLead || !quickActivityContent.trim()) {
+            showAlert('상담 내용을 입력해주세요.', 'error', '빠른 이력 추가 실패');
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const nextActivity: LeadActivity = {
+            id: createActivityId(),
+            type: quickActivityType,
+            content: quickActivityContent.trim(),
+            createdAt: now,
+            createdBy: user?.name || userId
+        };
+
+        setIsQuickSaving(true);
+        try {
+            await updateLeadWithPatch(quickActivityLead, {
+                activityLog: [nextActivity, ...(quickActivityLead.activityLog || [])],
+                lastContactedAt: now
+            });
+            setQuickActivityLeadId('');
+            setQuickActivityContent('');
+            setQuickActivityType('전화');
+            showAlert('상담 이력을 빠르게 추가했습니다.', 'success', '저장 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '상담 이력 저장에 실패했습니다.', 'error', '저장 실패');
+        } finally {
+            setIsQuickSaving(false);
+        }
+    };
+
+    const applyBulkNextContact = async () => {
+        if (selectedLeads.length === 0) {
+            showAlert('변경할 후보자를 선택해주세요.', 'error', '일괄 변경 실패');
+            return;
+        }
+
+        if (!bulkNextContactAt) {
+            showAlert('적용할 다음 연락일을 선택해주세요.', 'error', '일괄 변경 실패');
+            return;
+        }
+
+        const nextDate = new Date(bulkNextContactAt);
+        if (Number.isNaN(nextDate.getTime())) {
+            showAlert('다음 연락일 형식이 올바르지 않습니다.', 'error', '일괄 변경 실패');
+            return;
+        }
+        const nextContactAt = nextDate.toISOString();
+
+        setIsBulkUpdating(true);
+        try {
+            const now = new Date().toISOString();
+            const results = await Promise.allSettled(selectedLeads.map(lead => {
+                const nextActivity: LeadActivity = {
+                    id: createActivityId(),
+                    type: '메모',
+                    content: `다음 연락일 일괄 변경: ${formatFullDateTime(nextContactAt)}`,
+                    createdAt: now,
+                    createdBy: user?.name || userId
+                };
+                return putLeadPatch(lead, {
+                    nextContactAt,
+                    activityLog: [nextActivity, ...(lead.activityLog || [])]
+                });
+            }));
+            const successCount = results.filter(result => result.status === 'fulfilled').length;
+            const failCount = results.length - successCount;
+            await fetchLeads();
+            if (successCount > 0) {
+                setSelectedLeadIds([]);
+                setBulkNextContactAt('');
+            }
+            showAlert(
+                failCount > 0
+                    ? `${successCount}건 적용, ${failCount}건 실패했습니다.`
+                    : `${successCount}건의 다음 연락일을 변경했습니다.`,
+                failCount > 0 ? 'info' : 'success',
+                '일괄 변경 완료'
+            );
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '다음 연락일 일괄 변경에 실패했습니다.', 'error', '일괄 변경 실패');
+        } finally {
+            setIsBulkUpdating(false);
         }
     };
 
@@ -804,6 +1148,7 @@ export default function FranchiseLeadsPage() {
         if (!userId) return;
         if (lead.convertedCustomerId) {
             showAlert('이미 고객 DB로 전환된 리드입니다.', 'info', '전환 완료');
+            openCustomerDetail(lead.convertedCustomerId);
             return;
         }
 
@@ -816,6 +1161,7 @@ export default function FranchiseLeadsPage() {
                     `기존 연결 고객(${lead.linkedCustomerName || lead.name})을 전환 완료로 표시`
                 );
                 showAlert('기존 연결 고객을 전환 완료로 표시했습니다.', 'success', '고객 전환 완료');
+                openCustomerDetail(lead.linkedCustomerId);
                 return;
             }
 
@@ -827,6 +1173,7 @@ export default function FranchiseLeadsPage() {
                     `동일 연락처 기존 고객(${existingCustomer.name})과 연결 후 전환 완료`
                 );
                 showAlert('같은 연락처의 기존 고객과 연결하고 전환 완료 처리했습니다.', 'success', '고객 전환 완료');
+                openCustomerDetail(existingCustomer.id);
                 return;
             }
 
@@ -865,8 +1212,8 @@ export default function FranchiseLeadsPage() {
                     wantedFeature: lead.memo || '',
                     wantedItem: lead.interestedBrand || '',
                     wantedIndustry: '프랜차이즈',
-                    wantedDepositMin: lead.budgetMin,
-                    wantedDepositMax: lead.budgetMax,
+                    wantedDepositMin: toCustomerBudgetValue(lead.budgetMin),
+                    wantedDepositMax: toCustomerBudgetValue(lead.budgetMax),
                     sourceType: 'franchise-lead',
                     sourceId: lead.id,
                     franchiseLeadId: lead.id
@@ -884,6 +1231,7 @@ export default function FranchiseLeadsPage() {
                 `신규 고객(${customer.name || lead.name})으로 전환`
             );
             showAlert('고객 DB로 전환했습니다.', 'success', '고객 전환 완료');
+            openCustomerDetail(customer.id);
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '고객 전환에 실패했습니다.', 'error', '고객 전환 실패');
@@ -942,6 +1290,7 @@ export default function FranchiseLeadsPage() {
         if (!userId) return;
 
         setIsUploading(true);
+        setUploadErrors([]);
         try {
             const XLSX = await import('xlsx');
             const buffer = await file.arrayBuffer();
@@ -972,10 +1321,12 @@ export default function FranchiseLeadsPage() {
                 throw new Error(readApiError(payload));
             }
 
-            const result = unwrapApiData<{ created: number; updated: number; skipped: number; errors: Array<{ row: number; reason: string }> }>(payload);
+            const result = unwrapApiData<{ created: number; updated: number; skipped: number; errors?: UploadErrorRow[] }>(payload);
+            const nextUploadErrors = result.errors || [];
+            setUploadErrors(nextUploadErrors);
             await fetchLeads();
             showAlert(
-                `신규 ${result.created}건, 업데이트 ${result.updated}건, 제외 ${result.skipped}건 처리했습니다.${result.errors.length > 0 ? `\n첫 오류: ${result.errors[0].row}행 - ${result.errors[0].reason}` : ''}`,
+                `신규 ${result.created}건, 업데이트 ${result.updated}건, 제외 ${result.skipped}건 처리했습니다.${nextUploadErrors.length > 0 ? `\n실패 행은 상단의 다운로드 버튼으로 확인할 수 있습니다.\n첫 오류: ${nextUploadErrors[0].row}행 - ${nextUploadErrors[0].reason}` : ''}`,
                 result.skipped > 0 ? 'info' : 'success',
                 '엑셀 업로드 완료'
             );
@@ -988,6 +1339,27 @@ export default function FranchiseLeadsPage() {
         }
     };
 
+    const downloadUploadErrorRows = async () => {
+        if (uploadErrors.length === 0) {
+            showAlert('다운로드할 실패 행이 없습니다.', 'info');
+            return;
+        }
+
+        const XLSX = await import('xlsx');
+        const originalKeys = Array.from(new Set(
+            uploadErrors.flatMap(error => Object.keys(error.data || {}))
+        )).filter(key => key !== '행번호' && key !== '오류사유');
+        const exportRows = uploadErrors.map(error => ({
+            ...(error.data || {}),
+            행번호: error.row,
+            오류사유: error.reason
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: ['행번호', '오류사유', ...originalKeys] });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, '실패행');
+        XLSX.writeFile(workbook, 'franchise-leads-upload-errors.xlsx');
+    };
+
     const downloadTemplate = async () => {
         const XLSX = await import('xlsx');
         const worksheet = XLSX.utils.json_to_sheet([
@@ -998,7 +1370,7 @@ export default function FranchiseLeadsPage() {
                 상태: '문의접수',
                 등급: 'HOT',
                 희망지역: '서울 강남구',
-                창업예산: '100000000~200000000',
+                '창업예산(만원)': '10000~20000',
                 관심브랜드: '미카도',
                 담당자: user?.name || '',
                 다음연락일: '2026-06-10',
@@ -1014,7 +1386,6 @@ export default function FranchiseLeadsPage() {
         <div className={styles.pageShell}>
             <section className={styles.hero}>
                 <div>
-                    <div className={styles.eyebrow}>Franchise Growth Console</div>
                     <h1>모객 DB</h1>
                     <p>가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다.</p>
                 </div>
@@ -1031,6 +1402,12 @@ export default function FranchiseLeadsPage() {
                         <Upload size={16} />
                         {isUploading ? '업로드 중' : '엑셀 업로드'}
                     </button>
+                    {uploadErrors.length > 0 && (
+                        <button className={styles.secondaryButton} onClick={() => void downloadUploadErrorRows()}>
+                            <Download size={16} />
+                            실패 행 다운로드
+                        </button>
+                    )}
                     <button className={styles.primaryButton} onClick={openCreateModal}>
                         <Plus size={16} />
                         후보자 등록
@@ -1086,6 +1463,19 @@ export default function FranchiseLeadsPage() {
                             <option key={source} value={source}>{source === '전체' ? '전체 유입' : source}</option>
                         ))}
                     </select>
+                    <select value={managerFilter} onChange={(event) => setManagerFilter(event.target.value)}>
+                        <option value="전체">전체 담당자</option>
+                        {renderManagerOptions()}
+                    </select>
+                    <button
+                        type="button"
+                        className={isMyManagerFilterActive ? styles.quickFilterButtonActive : styles.quickFilterButton}
+                        onClick={toggleMyLeadsOnly}
+                        disabled={!defaultManagerId}
+                    >
+                        <UserRound size={14} />
+                        내 담당만
+                    </button>
                     <input
                         type="date"
                         value={createdFrom}
@@ -1136,16 +1526,6 @@ export default function FranchiseLeadsPage() {
                     <strong>{summary.hotCount.toLocaleString()}</strong>
                     <small>빠른 연락 필요 후보</small>
                 </article>
-                <article className={styles.kpiCard}>
-                    <span>기존 DB 연결</span>
-                    <strong>{linkedLeadCount.toLocaleString()}</strong>
-                    <small>고객/명함과 연결된 리드</small>
-                </article>
-                <article className={styles.kpiCard}>
-                    <span>고객 전환</span>
-                    <strong>{convertedLeadCount.toLocaleString()}</strong>
-                    <small>고객 DB로 전환 완료</small>
-                </article>
             </section>
 
             <section className={styles.analyticsGrid}>
@@ -1155,7 +1535,11 @@ export default function FranchiseLeadsPage() {
                             <h2>모객 파이프라인</h2>
                             <p>상태별 후보자 분포와 병목 구간을 확인합니다.</p>
                         </div>
-                        <span>{FRANCHISE_LEAD_STATUSES.length}-step Funnel</span>
+                        {statusFilter !== '전체' && (
+                            <button className={styles.clearStageButton} onClick={() => setStatusFilter('전체')}>
+                                전체 보기
+                            </button>
+                        )}
                     </div>
                     <div className={styles.stageStrip}>
                         {stageData.map((item, index) => (
@@ -1173,7 +1557,7 @@ export default function FranchiseLeadsPage() {
                         ))}
                     </div>
                     <div className={styles.chartBox}>
-                        <ResponsiveContainer width="100%" height={230}>
+                        <ResponsiveContainer width="100%" height={180}>
                             <BarChart data={stageData}>
                                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
                                 <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
@@ -1239,7 +1623,7 @@ export default function FranchiseLeadsPage() {
                                 ? '상태별 카드에서 상담 흐름을 빠르게 이동합니다.'
                                 : viewMode === 'tasks'
                                     ? '오늘 연락하거나 이미 지연된 리드를 우선 처리합니다.'
-                                    : searchTerm.trim() ? '검색 중에는 전체 데이터 범위에서 결과를 불러옵니다.' : '기본 목록은 최근 500건 기준으로 표시합니다.'}
+                                    : listPolicyText}
                         </p>
                     </div>
                     <div className={styles.tableHeaderActions}>
@@ -1258,20 +1642,72 @@ export default function FranchiseLeadsPage() {
                                 </button>
                             ))}
                         </div>
+                        {viewMode === 'table' && (
+                            <div className={styles.actionLegend} aria-label="목록 액션 아이콘 설명">
+                                <span><UserCheck size={13} /> 고객전환</span>
+                                <span><MessageSquare size={13} /> 이력추가</span>
+                                <span><Pencil size={13} /> 수정</span>
+                                <span><Trash2 size={13} /> 삭제</span>
+                            </div>
+                        )}
+                        {viewMode === 'table' && (
+                            <label className={styles.pageSizeControl}>
+                                표시
+                                <select
+                                    value={pageSize}
+                                    onChange={(event) => setPageSize(Number(event.target.value) as typeof PAGE_SIZE_OPTIONS[number])}
+                                >
+                                    {PAGE_SIZE_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}건</option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
                         <div className={styles.tableMeta}>
                             <FileSpreadsheet size={16} />
-                            {isLoading ? '불러오는 중' : `${leads.length.toLocaleString()}건 표시`}
+                            {isLoading ? '불러오는 중' : pageRangeText}
                         </div>
                     </div>
                 </div>
                 {viewMode === 'table' && (
+                    <>
+                    {selectedLeadIds.length > 0 && (
+                        <div className={styles.bulkBar}>
+                            <div>
+                                <strong>{selectedLeadIds.length.toLocaleString()}건 선택</strong>
+                                <span>선택한 후보자의 다음 연락일을 한 번에 지정합니다.</span>
+                            </div>
+                            <input
+                                type="datetime-local"
+                                value={bulkNextContactAt}
+                                onChange={(event) => setBulkNextContactAt(event.target.value)}
+                            />
+                            <button className={styles.primaryButton} onClick={() => void applyBulkNextContact()} disabled={isBulkUpdating}>
+                                <CalendarClock size={15} />
+                                {isBulkUpdating ? '적용 중' : '연락일 적용'}
+                            </button>
+                            <button className={styles.secondaryButton} onClick={() => setSelectedLeadIds([])} disabled={isBulkUpdating}>
+                                선택 해제
+                            </button>
+                        </div>
+                    )}
                     <div className={styles.tableScroll}>
                         <table className={styles.leadTable}>
                             <thead>
                                 <tr>
+                                    <th className={styles.checkboxCell}>
+                                        <input
+                                            type="checkbox"
+                                            checked={allVisibleSelected}
+                                            onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                                            disabled={paginatedLeads.length === 0 || isLoading}
+                                            aria-label="현재 페이지 전체 선택"
+                                        />
+                                    </th>
                                     <th>후보자</th>
                                     <th>연락처</th>
                                     <th>상태</th>
+                                    <th>담당자</th>
                                     <th>유입</th>
                                     <th>희망지역</th>
                                     <th>예산</th>
@@ -1285,14 +1721,22 @@ export default function FranchiseLeadsPage() {
                             <tbody>
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={11} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
+                                        <td colSpan={13} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
                                     </tr>
                                 ) : leads.length === 0 ? (
                                     <tr>
-                                        <td colSpan={11} className={styles.emptyRow}>조건에 맞는 후보자가 없습니다.</td>
+                                        <td colSpan={13} className={styles.emptyRow}>조건에 맞는 후보자가 없습니다.</td>
                                     </tr>
-                                ) : leads.map(lead => (
+                                ) : paginatedLeads.map(lead => (
                                     <tr key={lead.id}>
+                                        <td className={styles.checkboxCell}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedLeadSet.has(lead.id)}
+                                                onChange={(event) => toggleSelectLead(lead.id, event.target.checked)}
+                                                aria-label={`${lead.name} 선택`}
+                                            />
+                                        </td>
                                         <td>
                                             <button className={styles.nameButton} onClick={() => setSelectedLeadId(lead.id)}>
                                                 <strong>{lead.name}</strong>
@@ -1301,7 +1745,6 @@ export default function FranchiseLeadsPage() {
                                         </td>
                                         <td>
                                             <span className={styles.phone}>{lead.mobile || '-'}</span>
-                                            {normalizeLeadPhone(lead.mobile).length > 0 && <small>{normalizeLeadPhone(lead.mobile)}</small>}
                                         </td>
                                         <td>
                                             <select
@@ -1312,6 +1755,16 @@ export default function FranchiseLeadsPage() {
                                                 {FRANCHISE_LEAD_STATUSES.map(status => (
                                                     <option key={status} value={status}>{status}</option>
                                                 ))}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select
+                                                className={styles.managerSelect}
+                                                value={lead.managerId || ''}
+                                                onChange={(event) => void updateLeadManager(lead, event.target.value)}
+                                            >
+                                                <option value="">담당자 선택</option>
+                                                {renderManagerOptions(lead.managerId)}
                                             </select>
                                         </td>
                                         <td>{lead.source || '-'}</td>
@@ -1326,7 +1779,7 @@ export default function FranchiseLeadsPage() {
                                         <td className={styles.memoCell}>{lead.memo || '-'}</td>
                                         <td>
                                             <div className={styles.linkBadges}>
-                                                {lead.convertedCustomerId && <span className={styles.convertedBadge}>전환</span>}
+                                                {lead.convertedCustomerId && <span className={styles.convertedBadge}>전환완료</span>}
                                                 {lead.linkedCustomerId && <span>고객</span>}
                                                 {lead.linkedBusinessCardId && <span>명함</span>}
                                                 {!lead.convertedCustomerId && !lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
@@ -1334,18 +1787,35 @@ export default function FranchiseLeadsPage() {
                                         </td>
                                         <td>
                                             <div className={styles.rowActions}>
+                                                {lead.convertedCustomerId ? (
+                                                    <span className={styles.convertedActionPill} title="고객 DB 전환 완료">
+                                                        <CheckCircle2 size={14} />
+                                                        완료
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        className={styles.iconButton}
+                                                        onClick={() => void convertLeadToCustomer(lead)}
+                                                        disabled={convertingLeadId === lead.id}
+                                                        aria-label={`${lead.name} 고객 전환`}
+                                                        title="고객 DB로 전환"
+                                                    >
+                                                        <UserCheck size={15} />
+                                                    </button>
+                                                )}
                                                 <button
-                                                    className={lead.convertedCustomerId ? styles.iconButtonSuccess : styles.iconButton}
-                                                    onClick={() => void convertLeadToCustomer(lead)}
-                                                    disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                                    aria-label={`${lead.name} 고객 전환`}
+                                                    className={styles.iconButton}
+                                                    onClick={() => openQuickActivityModal(lead)}
+                                                    aria-label={`${lead.name} 상담 이력 추가`}
+                                                    title="상담 이력 빠른 추가"
                                                 >
-                                                    <UserCheck size={15} />
+                                                    <MessageSquare size={15} />
                                                 </button>
                                                 <button
                                                     className={styles.iconButton}
                                                     onClick={() => openEditModal(lead)}
                                                     aria-label={`${lead.name} 수정`}
+                                                    title="기본정보 수정"
                                                 >
                                                     <Pencil size={15} />
                                                 </button>
@@ -1353,6 +1823,7 @@ export default function FranchiseLeadsPage() {
                                                     className={styles.iconButtonDanger}
                                                     onClick={() => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
                                                     aria-label={`${lead.name} 삭제`}
+                                                    title="후보자 삭제"
                                                 >
                                                     <Trash2 size={15} />
                                                 </button>
@@ -1363,6 +1834,31 @@ export default function FranchiseLeadsPage() {
                             </tbody>
                         </table>
                     </div>
+                    {leads.length > 0 && (
+                        <div className={styles.paginationBar}>
+                            <span>{pageRangeText}</span>
+                            <div className={styles.paginationControls}>
+                                <button
+                                    type="button"
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={safeCurrentPage <= 1}
+                                >
+                                    이전
+                                </button>
+                                <strong>{safeCurrentPage.toLocaleString()} / {totalPages.toLocaleString()}</strong>
+                                <button
+                                    type="button"
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={safeCurrentPage >= totalPages}
+                                >
+                                    다음
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    </>
                 )}
                 {viewMode === 'pipeline' && (
                     <div className={styles.pipelineBoard}>
@@ -1387,6 +1883,7 @@ export default function FranchiseLeadsPage() {
                                                     <span className={styles.pipelineName}>{lead.name}</span>
                                                     <span className={styles.pipelinePhone}>{lead.mobile || '연락처 미입력'}</span>
                                                     <span className={styles.pipelineMeta}>{lead.interestedBrand || '브랜드 미지정'} · {lead.desiredRegion || '지역 미지정'}</span>
+                                                    <span className={styles.pipelineMeta}>담당자 {getManagerName(lead.managerId)}</span>
                                                 </button>
                                                 <div className={styles.pipelineCardFooter}>
                                                     <span className={lead.grade === 'HOT' ? styles.hotBadge : styles.pipelineBadge}>{lead.grade || '미지정'}</span>
@@ -1453,6 +1950,10 @@ export default function FranchiseLeadsPage() {
                                     <div>
                                         <span>상태</span>
                                         <strong>{lead.status}</strong>
+                                    </div>
+                                    <div>
+                                        <span>담당자</span>
+                                        <strong>{getManagerName(lead.managerId)}</strong>
                                     </div>
                                     <div>
                                         <span>다음 연락</span>
@@ -1542,16 +2043,22 @@ export default function FranchiseLeadsPage() {
                                 <input value={form.desiredRegion} onChange={(event) => setForm(prev => ({ ...prev, desiredRegion: event.target.value }))} placeholder="서울 강남구" />
                             </label>
                             <label>
-                                예산 최소
-                                <input value={form.budgetMin} onChange={(event) => setForm(prev => ({ ...prev, budgetMin: event.target.value }))} placeholder="100000000" />
+                                예산 최소(만원)
+                                <input value={form.budgetMin} onChange={(event) => setForm(prev => ({ ...prev, budgetMin: event.target.value }))} placeholder="10000" />
                             </label>
                             <label>
-                                예산 최대
-                                <input value={form.budgetMax} onChange={(event) => setForm(prev => ({ ...prev, budgetMax: event.target.value }))} placeholder="200000000" />
+                                예산 최대(만원)
+                                <input value={form.budgetMax} onChange={(event) => setForm(prev => ({ ...prev, budgetMax: event.target.value }))} placeholder="20000" />
                             </label>
                             <label>
                                 관심브랜드
                                 <input value={form.interestedBrand} onChange={(event) => setForm(prev => ({ ...prev, interestedBrand: event.target.value }))} placeholder="미카도" />
+                            </label>
+                            <label>
+                                담당자
+                                <select value={form.managerId} onChange={(event) => setForm(prev => ({ ...prev, managerId: event.target.value }))}>
+                                    {renderManagerOptions(form.managerId)}
+                                </select>
                             </label>
                             <label>
                                 다음 연락일
@@ -1574,19 +2081,70 @@ export default function FranchiseLeadsPage() {
                 </div>
             )}
 
+            {quickActivityLead && (
+                <div className={styles.modalBackdrop}>
+                    <form className={`${styles.modalCard} ${styles.quickModalCard}`} onSubmit={submitQuickActivity}>
+                        <div className={styles.modalHeader}>
+                            <div>
+                                <h2>상담 이력 빠른 추가</h2>
+                                <p>{quickActivityLead.name} · {quickActivityLead.mobile || '연락처 미입력'} · 담당자 {getManagerName(quickActivityLead.managerId)}</p>
+                            </div>
+                            <button type="button" onClick={closeQuickActivityModal} className={styles.closeButton}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className={styles.quickActivityBody}>
+                            <label>
+                                이력 유형
+                                <select value={quickActivityType} onChange={(event) => setQuickActivityType(event.target.value as LeadActivityType)}>
+                                    {ACTIVITY_TYPES.filter(type => type !== '상태변경' && type !== '고객전환').map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>
+                                상담 내용
+                                <textarea
+                                    value={quickActivityContent}
+                                    onChange={(event) => setQuickActivityContent(event.target.value)}
+                                    placeholder="통화 결과, 고객 반응, 다음 액션을 짧게 기록하세요."
+                                    autoFocus
+                                />
+                            </label>
+                        </div>
+                        <div className={styles.modalActions}>
+                            <button type="button" className={styles.secondaryButton} onClick={closeQuickActivityModal} disabled={isQuickSaving}>취소</button>
+                            <button type="submit" className={styles.primaryButton} disabled={isQuickSaving}>
+                                {isQuickSaving ? '저장 중' : '이력 추가'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
             {selectedLead && (
                 <div className={styles.detailBackdrop} onClick={() => setSelectedLeadId('')}>
                     <aside className={styles.detailPanel} onClick={(event) => event.stopPropagation()}>
                         <div className={styles.detailHeader}>
                             <div>
-                                <span className={styles.detailEyebrow}>Lead Detail</span>
+                                <span className={styles.detailEyebrow}>후보자 상세</span>
                                 <h2>{selectedLead.name}</h2>
-                                <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'}</p>
+                                <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'} · 담당자 {getManagerName(selectedLead.managerId)}</p>
                             </div>
                             <button className={styles.closeButton} onClick={() => setSelectedLeadId('')} aria-label="상세 패널 닫기">
                                 <X size={18} />
                             </button>
                         </div>
+
+                        {selectedLead.convertedCustomerId && (
+                            <div className={styles.convertedNotice}>
+                                <CheckCircle2 size={16} />
+                                <div>
+                                    <strong>고객 DB 전환 완료</strong>
+                                    <span>{selectedLead.convertedCustomerName || selectedLead.name} · {formatFullDateTime(selectedLead.convertedAt)}</span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className={styles.detailQuickActions}>
                             <select
@@ -1621,6 +2179,10 @@ export default function FranchiseLeadsPage() {
                                 <div>
                                     <span>희망지역</span>
                                     <strong>{selectedLead.desiredRegion || '-'}</strong>
+                                </div>
+                                <div>
+                                    <span>담당자</span>
+                                    <strong>{getManagerName(selectedLead.managerId)}</strong>
                                 </div>
                                 <div>
                                     <span>예산</span>
@@ -1697,7 +2259,7 @@ export default function FranchiseLeadsPage() {
                                 <span>{selectedLead.linkedCustomerId ? `고객: ${selectedLead.linkedCustomerName || selectedLead.linkedCustomerId}` : '고객 미연결'}</span>
                                 <span>{selectedLead.linkedBusinessCardId ? `명함: ${selectedLead.linkedBusinessCardName || selectedLead.linkedBusinessCardId}` : '명함 미연결'}</span>
                             </div>
-                            <div className={styles.conversionBox}>
+                            <div className={`${styles.conversionBox} ${selectedLead.convertedCustomerId ? styles.conversionBoxDone : ''}`}>
                                 <div>
                                     <strong>{selectedLead.convertedCustomerId ? '고객 DB 전환 완료' : '이 리드를 고객 DB로 전환'}</strong>
                                     <p>

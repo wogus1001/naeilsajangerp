@@ -25,9 +25,9 @@ const SOURCE_KEYS = ['유입경로', '유입', 'source'];
 const STATUS_KEYS = ['상태', '진행상태', 'status'];
 const GRADE_KEYS = ['등급', '온도', 'grade'];
 const REGION_KEYS = ['희망지역', '관심지역', '지역', 'desiredRegion'];
-const BUDGET_KEYS = ['창업예산', '예산', 'budget'];
-const BUDGET_MIN_KEYS = ['예산최소', '최소예산', 'budgetMin'];
-const BUDGET_MAX_KEYS = ['예산최대', '최대예산', 'budgetMax'];
+const BUDGET_KEYS = ['창업예산(만원)', '창업예산', '예산(만원)', '예산', 'budget'];
+const BUDGET_MIN_KEYS = ['예산최소(만원)', '예산최소', '최소예산', 'budgetMin'];
+const BUDGET_MAX_KEYS = ['예산최대(만원)', '예산최대', '최대예산', 'budgetMax'];
 const BRAND_KEYS = ['관심브랜드', '브랜드', 'brand', 'interestedBrand'];
 const MEMO_KEYS = ['메모', '상담메모', '비고', 'memo'];
 const MANAGER_KEYS = ['담당자', 'manager', 'managerId'];
@@ -49,8 +49,24 @@ function cleanString(value: unknown): string {
 
 function parseNullableNumber(value: unknown): number | null {
     if (value === null || value === undefined || value === '') return null;
-    const parsed = Number(String(value).replace(/,/g, '').replace(/[^\d.-]/g, ''));
-    return Number.isFinite(parsed) ? parsed : null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const compact = raw.replace(/,/g, '');
+    const eokMatch = compact.match(/(-?\d+(?:\.\d+)?)\s*억/);
+    const manMatch = compact.match(/(-?\d+(?:\.\d+)?)\s*만/);
+
+    if (eokMatch || manMatch) {
+        const eok = eokMatch ? Number(eokMatch[1]) * 100_000_000 : 0;
+        const man = manMatch ? Number(manMatch[1]) * 10_000 : 0;
+        const total = eok + man;
+        return Number.isFinite(total) ? total : null;
+    }
+
+    const parsed = Number(compact.replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(parsed)) return null;
+    if (raw.includes('원') && !raw.includes('만원')) return parsed;
+    return Math.abs(parsed) > 0 && Math.abs(parsed) < 1_000_000 ? parsed * 10_000 : parsed;
 }
 
 function parseBudgetRange(row: BatchRow) {
@@ -61,7 +77,7 @@ function parseBudgetRange(row: BatchRow) {
     }
 
     const raw = cleanString(getCell(row, BUDGET_KEYS));
-    const numbers = raw.match(/\d[\d,]*/g)?.map(parseNullableNumber).filter((num): num is number => num !== null) || [];
+    const numbers = raw.match(/-?\d+(?:\.\d+)?(?:,\d{3})*/g)?.map(parseNullableNumber).filter((num): num is number => num !== null) || [];
     return {
         min: numbers[0] ?? null,
         max: numbers[1] ?? null
@@ -234,7 +250,7 @@ export async function POST(request: Request) {
         let created = 0;
         let updated = 0;
         let skipped = 0;
-        const errors: Array<{ row: number; reason: string }> = [];
+        const errors: Array<{ row: number; reason: string; data?: BatchRow }> = [];
 
         for (const [index, row] of rows.entries()) {
             const manager = resolveRowManager(row, managerMap, scope.managerUuid);
@@ -242,14 +258,14 @@ export async function POST(request: Request) {
 
             if (built.error) {
                 skipped++;
-                errors.push({ row: index + 2, reason: built.error });
+                errors.push({ row: index + 2, reason: built.error, data: row });
                 continue;
             }
 
             const rowPayload = built.payload;
             if (!rowPayload) {
                 skipped++;
-                errors.push({ row: index + 2, reason: '행 데이터를 해석하지 못했습니다.' });
+                errors.push({ row: index + 2, reason: '행 데이터를 해석하지 못했습니다.', data: row });
                 continue;
             }
 
@@ -269,7 +285,7 @@ export async function POST(request: Request) {
 
                 if (error) {
                     skipped++;
-                    errors.push({ row: index + 2, reason: error.message });
+                    errors.push({ row: index + 2, reason: error.message, data: row });
                     continue;
                 }
                 updated++;
@@ -287,7 +303,7 @@ export async function POST(request: Request) {
 
                 if (error) {
                     skipped++;
-                    errors.push({ row: index + 2, reason: error.message });
+                    errors.push({ row: index + 2, reason: error.message, data: row });
                     continue;
                 }
                 created++;
