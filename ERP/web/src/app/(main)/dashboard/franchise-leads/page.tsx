@@ -66,7 +66,9 @@ type AuthUser = {
     id?: string;
     uid?: string;
     name?: string;
+    role?: string;
     companyName?: string;
+    companyId?: string | null;
 };
 
 type LeadFormState = {
@@ -242,7 +244,7 @@ export default function FranchiseLeadsPage() {
         const currentUserId = parsedUser.uid || parsedUser.id || localStorage.getItem('userId') || '';
         setUser(parsedUser);
         setUserId(currentUserId);
-        setCompanyName(parsedUser.companyName || '');
+        setCompanyName(parsedUser.role === 'admin' ? '' : parsedUser.companyName || '');
     }, []);
 
     const fetchLeads = React.useCallback(async () => {
