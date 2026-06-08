@@ -3,9 +3,24 @@ import fs from 'fs';
 import path from 'path';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { fail, ok } from '@/lib/api-response';
-import { normalizeSearchValue, parseSearchTerms } from '@/utils/search';
+import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
 export const dynamic = 'force-dynamic';
+
+const BUSINESS_CARD_DB_SEARCH_COLUMNS = [
+    'name',
+    'company_name',
+    'category',
+    'department',
+    'position',
+    'mobile',
+    'company_phone1',
+    'company_phone2',
+    'email',
+    'etc_memo',
+    'company_address',
+    'home_address'
+];
 
 
 const dataPath = path.join(process.cwd(), 'src/data/business-cards.json');
@@ -108,7 +123,12 @@ function matchesBusinessCardSearch(card: any, terms: string[]) {
         card.name,
         card.companyName,
         card.email,
-        card.category
+        card.category,
+        card.department,
+        card.position,
+        card.memo,
+        card.companyAddress,
+        card.homeAddress
     ].map(normalizeSearchValue);
 
     return terms.some(term => {
@@ -117,6 +137,23 @@ function matchesBusinessCardSearch(card: any, terms: string[]) {
             companyPhone.includes(cleanTerm) ||
             fields.some(field => field.includes(term));
     });
+}
+
+function buildBusinessCardDbSearchFilter(terms: string[]) {
+    const baseFilter = buildPostgrestIlikeOrFilter(terms, BUSINESS_CARD_DB_SEARCH_COLUMNS);
+    const phoneConditions = terms.flatMap(term => {
+        const cleanTerm = sanitizePostgrestSearchTerm(term.replace(/-/g, ''));
+        if (cleanTerm.length < 3) return [];
+        const phoneNeedle = cleanTerm.slice(0, 3);
+        return [
+            `mobile.ilike.%${phoneNeedle}%`,
+            `company_phone1.ilike.%${phoneNeedle}%`,
+            `company_phone2.ilike.%${phoneNeedle}%`
+        ];
+    });
+
+    const filters = [baseFilter, ...phoneConditions].filter(Boolean);
+    return filters.length > 0 ? filters.join(',') : null;
 }
 
 export async function GET(request: Request) {
@@ -140,6 +177,7 @@ export async function GET(request: Request) {
 
     const limitParam = searchParams.get('limit'); // limit=100 or 'all'
     const requestedLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
+    const dbSearchFilter = searchTerms.length > 0 ? buildBusinessCardDbSearchFilter(searchTerms) : null;
 
     const createBaseQuery = () => supabaseAdmin
         .from('business_cards')
@@ -213,6 +251,10 @@ export async function GET(request: Request) {
         scopedQuery = scopedQuery.eq('id', id).limit(1);
     }
 
+    if (dbSearchFilter && !id) {
+        scopedQuery = scopedQuery.or(dbSearchFilter);
+    }
+
     // Debug Mode
     const debugMode = searchParams.get('debug') === 'true';
     if (debugMode && requesterProfile.role !== 'admin') {
@@ -267,6 +309,9 @@ export async function GET(request: Request) {
                 query = query.or(`${companyFilter},${managerFilter}`);
             } else {
                 query = query.eq('manager_id', requesterId);
+            }
+            if (dbSearchFilter) {
+                query = query.or(dbSearchFilter);
             }
 
             const { data: rows, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);

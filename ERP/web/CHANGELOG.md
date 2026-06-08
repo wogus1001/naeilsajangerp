@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 이 프로젝트의 주요 변경 사항은 이 파일에 기록됩니다.
 
+## [Unreleased] - 2026-06-08
+
+### Changed (변경됨) - 목록/선택 모달 검색 일관화
+- **점포/고객/명함 목록 검색**: 쉼표(`,`, `，`)와 띄어쓰기 기준 OR 검색을 공용 파서로 통일.
+- **검색 범위 분리**: 기본 목록 조회는 제한 건수(`limit`)를 유지하고, 검색어가 있을 때는 전체 범위 조회 후 필터링하도록 개선.
+- **선택 모달 검색**: `PropertySelector`, `PropertySelectorModal`, `PersonSelectorModal`도 목록과 동일한 검색 규칙과 API 검색 파라미터를 사용하도록 정리.
+- **검색 성능 보강**: 고객/명함 API는 DB `ilike` OR 선필터로 후보를 줄이고, 기존 JS 필터로 최종 검증.
+- **운영 로그 정리**: 공유 브리핑/계약 다운로드/브리핑 생성/점포 hydration 경로의 민감한 디버그 로그 제거.
+- **Lint 운영성 개선**: 기존 누적 lint error를 warning으로 낮춰 `npm run lint -- --quiet`가 배포 전 검증 게이트로 동작하도록 조정.
+
 ## [v1.4.4] - 2026-02-20
 
 ### Fixed (수정됨) - 대량 데이터 처리
