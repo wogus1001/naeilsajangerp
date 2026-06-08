@@ -652,6 +652,66 @@ function BusinessCardListContent() {
         return 0;
     });
 
+    const getStoredUserContext = () => {
+        const userStr = localStorage.getItem('user');
+        const parsed = userStr ? JSON.parse(userStr) : {};
+        const user = parsed.user || parsed;
+
+        return {
+            requesterId: user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id || '',
+            companyName: user?.companyName || ''
+        };
+    };
+
+    const handleAddSelectedToLeads = async () => {
+        if (selectedIds.length === 0) return;
+
+        const targets = filteredCards.filter(card => selectedIds.includes(card.id));
+        const { requesterId, companyName } = getStoredUserContext();
+        if (!requesterId) {
+            showAlert('로그인 정보를 확인할 수 없습니다.', 'error');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const results = await Promise.allSettled(targets.map(card => fetch('/api/franchise-leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requesterId,
+                    managerId: requesterId,
+                    companyName,
+                    name: card.name,
+                    mobile: card.mobile || card.companyPhone1 || card.companyPhone2 || '',
+                    source: '명함DB',
+                    status: '문의접수',
+                    desiredRegion: card.companyAddress || '',
+                    interestedBrand: card.companyName || '',
+                    memo: [card.companyName, card.department, card.memo].filter(Boolean).join('\n'),
+                    sourceType: 'business-card',
+                    sourceId: card.id,
+                    linkedBusinessCardId: card.id,
+                    linkedBusinessCardName: card.name
+                })
+            }).then(async response => {
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload?.message || payload?.error || '모객DB 추가 실패');
+                return payload;
+            })));
+
+            const successCount = results.filter(result => result.status === 'fulfilled').length;
+            const failCount = results.length - successCount;
+            showAlert(`모객DB 추가 완료\n- 성공: ${successCount}건\n- 실패: ${failCount}건`, failCount > 0 ? 'info' : 'success');
+            if (successCount > 0) setSelectedIds([]);
+        } catch (error) {
+            console.error(error);
+            showAlert('모객DB 추가 중 오류가 발생했습니다.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className={styles.container}>
             {/* Toolbar */}
@@ -907,6 +967,16 @@ function BusinessCardListContent() {
                         >
                             <Trash2 size={14} />
                             삭제 ({selectedIds.length})
+                        </button>
+                    )}
+                    {selectedIds.length > 0 && (
+                        <button
+                            className={styles.footerBtn}
+                            onClick={handleAddSelectedToLeads}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#6d5dfc', color: 'white', borderColor: '#6d5dfc' }}
+                        >
+                            <Plus size={14} />
+                            모객DB 추가 ({selectedIds.length})
                         </button>
                     )}
                     <button
