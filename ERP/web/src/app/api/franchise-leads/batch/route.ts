@@ -274,14 +274,16 @@ export async function POST(request: Request) {
                 }
                 updated++;
             } else {
-                const { error } = await supabaseAdmin
+                const { data: insertedLead, error } = await supabaseAdmin
                     .from('franchise_leads')
                     .insert({
                         id: randomUUID(),
                         ...rowPayload,
                         created_at: now,
                         updated_at: now
-                    });
+                    })
+                    .select('*')
+                    .single();
 
                 if (error) {
                     skipped++;
@@ -290,7 +292,7 @@ export async function POST(request: Request) {
                 }
                 created++;
                 if (normalizedPhone) {
-                    existingByPhone.set(normalizedPhone, { mobile_normalized: normalizedPhone });
+                    existingByPhone.set(normalizedPhone, insertedLead);
                 }
             }
         }
