@@ -72,7 +72,7 @@
 - [ ] 연락처 검색은 `01012345678`, `010-1234-5678` 모두 동작함
 - [ ] 엑셀 업로드 시 신규 등록/기존 연락처 업데이트/오류 행 리포트가 정상 동작함
 - [ ] 같은 회사 데이터만 조회/수정되고 타 회사 데이터는 403으로 차단됨
-- [ ] `franchise_leads` 테이블/RLS/인덱스가 Dev DB와 Prod DB에 모두 적용되어 있음
+- [ ] `supabase_franchise_leads_migration.sql`이 Dev DB와 Prod DB에 모두 적용되어 있음
 
 ## 5) 환경별 배포 체크 (Local -> Dev -> Prod)
 
