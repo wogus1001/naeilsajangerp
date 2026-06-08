@@ -141,6 +141,7 @@ export async function GET(request: Request) {
                 uuid: p.id,
                 name: p.name,
                 companyName: p.company?.name || '-',
+                companyId: p.company_id,
                 role: p.role,
                 status: p.status,
                 joinedAt: p.created_at
