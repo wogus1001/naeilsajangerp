@@ -471,7 +471,8 @@
     align-items: center;
     justify-content: flex-end;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
+    max-width: 100%;
 }
 
 .actionLegend {
@@ -537,9 +538,62 @@
 
 .leadTable {
     width: 100%;
-    min-width: 1320px;
+    min-width: 1710px;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
+}
+
+.colCheck {
+    width: 44px;
+}
+
+.colCandidate {
+    width: 140px;
+}
+
+.colPhone {
+    width: 132px;
+}
+
+.colStatus {
+    width: 128px;
+}
+
+.colManager {
+    width: 142px;
+}
+
+.colSource {
+    width: 98px;
+}
+
+.colRegion {
+    width: 124px;
+}
+
+.colBudget {
+    width: 176px;
+}
+
+.colBrand {
+    width: 124px;
+}
+
+.colNextContact {
+    width: 132px;
+}
+
+.colMemo {
+    width: 250px;
+}
+
+.colLink {
+    width: 92px;
+}
+
+.colActions {
+    width: 168px;
 }
 
 .leadTable th {
@@ -562,6 +616,25 @@
     color: #334155;
     font-size: 13px;
     vertical-align: middle;
+}
+
+.leadTable th:nth-child(3),
+.leadTable th:nth-child(4),
+.leadTable th:nth-child(5),
+.leadTable th:nth-child(8),
+.leadTable th:nth-child(9),
+.leadTable th:nth-child(10),
+.leadTable th:nth-child(12),
+.leadTable th:nth-child(13),
+.leadTable td:nth-child(3),
+.leadTable td:nth-child(4),
+.leadTable td:nth-child(5),
+.leadTable td:nth-child(8),
+.leadTable td:nth-child(9),
+.leadTable td:nth-child(10),
+.leadTable td:nth-child(12),
+.leadTable td:nth-child(13) {
+    white-space: nowrap;
 }
 
 .leadTable tr:hover td {
@@ -674,6 +747,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    width: 100%;
     border: none;
     background: transparent;
     text-align: left;
@@ -682,8 +756,13 @@
 }
 
 .nameButton strong {
+    display: -webkit-box;
+    overflow: hidden;
     font-size: 13px;
     font-weight: 850;
+    line-height: 1.35;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .nameButton span,
@@ -696,11 +775,13 @@
     display: block;
     color: #0f172a;
     font-weight: 750;
+    white-space: nowrap;
 }
 
 .statusSelect,
 .managerSelect {
-    width: 110px;
+    width: 100%;
+    max-width: 116px;
     height: 32px;
     border: 1px solid #d8dee8;
     border-radius: 9px;
@@ -711,7 +792,7 @@
 }
 
 .managerSelect {
-    width: 118px;
+    max-width: 126px;
 }
 
 .memoCell {
@@ -745,7 +826,9 @@
 .linkBadges {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 5px;
+    white-space: nowrap;
 }
 
 .linkBadges span {
@@ -765,9 +848,12 @@
 }
 
 .rowActions {
-    display: inline-flex;
+    width: 100%;
+    display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
+    white-space: nowrap;
 }
 
 .iconButton,
@@ -775,6 +861,7 @@
 .iconButtonSuccess {
     width: 32px;
     height: 32px;
+    flex: 0 0 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -821,12 +908,14 @@
 }
 
 .convertedActionPill {
+    width: 54px;
     height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    padding: 0 9px;
+    flex: 0 0 54px;
+    padding: 0;
     border-radius: 9px;
     background: #ecfdf5;
     color: #047857;
@@ -1676,6 +1765,11 @@
         justify-content: flex-start;
         width: 100%;
     }
+
+    .actionLegend {
+        order: 4;
+        width: 100%;
+    }
 }
 
 @media (max-width: 720px) {
@@ -1692,6 +1786,15 @@
     .filterGroup,
     .viewTabs {
         width: 100%;
+    }
+
+    .tableHeaderActions {
+        align-items: stretch;
+    }
+
+    .pageSizeControl,
+    .tableMeta {
+        flex: 1 1 auto;
     }
 
     .viewTab,
