@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
-import { normalizeSearchValue, parseSearchTerms } from '@/utils/search';
+import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -12,6 +12,23 @@ import {
 import { fail, ok } from '@/lib/api-response';
 
 export const dynamic = 'force-dynamic';
+
+const CUSTOMER_DB_SEARCH_COLUMNS = [
+    'name',
+    'mobile',
+    'memo_interest',
+    'memo_history',
+    'wanted_feature',
+    'data->>feature',
+    'data->>address',
+    'data->>wantedItem',
+    'data->>wantedIndustry',
+    'data->>wantedArea',
+    'data->>companyPhone',
+    'data->>memoSituation',
+    'data->>class',
+    'data->>status'
+];
 
 function transformCustomer(row: any) {
     if (!row) return null;
@@ -60,7 +77,13 @@ function matchesCustomerSearch(customer: any, terms: string[]) {
         customer.name,
         customer.wantedItem,
         customer.wantedIndustry,
-        customer.wantedArea
+        customer.wantedArea,
+        customer.wantedFeature,
+        customer.memoSituation,
+        customer.memoInterest,
+        customer.memoHistory,
+        customer.class,
+        customer.status
     ].map(normalizeSearchValue);
 
     return terms.some(term => {
@@ -69,6 +92,22 @@ function matchesCustomerSearch(customer: any, terms: string[]) {
             companyPhone.includes(cleanTerm) ||
             fields.some(field => field.includes(term));
     });
+}
+
+function buildCustomerDbSearchFilter(terms: string[]) {
+    const baseFilter = buildPostgrestIlikeOrFilter(terms, CUSTOMER_DB_SEARCH_COLUMNS);
+    const phoneConditions = terms.flatMap(term => {
+        const cleanTerm = sanitizePostgrestSearchTerm(term.replace(/-/g, ''));
+        if (cleanTerm.length < 3) return [];
+        const phoneNeedle = cleanTerm.slice(0, 3);
+        return [
+            `mobile.ilike.%${phoneNeedle}%`,
+            `data->>companyPhone.ilike.%${phoneNeedle}%`
+        ];
+    });
+
+    const filters = [baseFilter, ...phoneConditions].filter(Boolean);
+    return filters.length > 0 ? filters.join(',') : null;
 }
 
 export async function GET(request: Request) {
@@ -105,6 +144,7 @@ export async function GET(request: Request) {
 
         const limitParam = searchParams.get('limit');
         const maxLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
+        const dbSearchFilter = searchTerms.length > 0 ? buildCustomerDbSearchFilter(searchTerms) : null;
 
         let allCustomers: any[] = [];
         const PAGE_SIZE = 1000;
@@ -149,6 +189,9 @@ export async function GET(request: Request) {
             }
             if (scopeMode === 'admin' && effectiveCompanyId) {
                 query = query.eq('company_id', effectiveCompanyId);
+            }
+            if (dbSearchFilter) {
+                query = query.or(dbSearchFilter);
             }
 
             const { data, error } = await query;

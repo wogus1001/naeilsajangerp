@@ -4,6 +4,8 @@ import { readApiJson } from '@/utils/apiResponse';
 import React, { useState, useEffect } from 'react';
 import { Search, X, RotateCcw, Save, Store } from 'lucide-react';
 import styles from '@/app/(main)/customers/register/page.module.css';
+import { matchesSearchTerms, parseSearchTerms } from '@/utils/search';
+import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 interface Property {
     id: string;
@@ -35,9 +37,11 @@ interface PropertySelectorProps {
 
 export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard }: PropertySelectorProps) {
     const [properties, setProperties] = useState<Property[]>([]);
+    const [searchProperties, setSearchProperties] = useState<Property[] | null>(null);
     const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const searchFetchControllerRef = React.useRef<AbortController | null>(null);
 
     // Resize Logic
     const [nameColWidth, setNameColWidth] = useState(140);
@@ -78,6 +82,9 @@ export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
+    const searchTerms = React.useMemo(() => parseSearchTerms(searchTerm), [searchTerm]);
+    const isSearchActive = searchTerms.length > 0;
+    const sourceProperties = isSearchActive ? (searchProperties ?? properties) : properties;
     const [region, setRegion] = useState('');
     const [areaMin, setAreaMin] = useState('');
     const [areaMax, setAreaMax] = useState('');
@@ -95,22 +102,29 @@ export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard
         }
     }, [isOpen]);
 
+    const buildPropertyQueryString = (requestedLimit: number | 'all', search?: string) => {
+        const params = new URLSearchParams();
+        const user = getStoredUser();
+        const companyName = getStoredCompanyName(user);
+        const requesterId = getRequesterId(user);
+
+        if (companyName) params.set('company', companyName);
+        if (requesterId) params.set('requesterId', requesterId);
+        params.set('limit', requestedLimit === 'all' ? 'all' : String(requestedLimit));
+        if (search?.trim()) params.set('search', search.trim());
+
+        return params.toString() ? `?${params.toString()}` : '';
+    };
+
     const fetchProperties = async () => {
         setLoading(true);
         try {
-            const userStr = localStorage.getItem('user');
-            let query = '';
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user.companyName) {
-                    query = `?company=${encodeURIComponent(user.companyName)}`;
-                }
-            }
-
+            const query = buildPropertyQueryString(500);
             const res = await fetch(`/api/properties${query}`);
             if (res.ok) {
                 const data = await readApiJson(res);
                 setProperties(data);
+                setSearchProperties(null);
                 setFilteredProperties(data);
             }
         } catch (error) {
@@ -120,20 +134,55 @@ export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard
         }
     };
 
+    useEffect(() => {
+        if (!isOpen || !isSearchActive) {
+            if (searchFetchControllerRef.current) {
+                searchFetchControllerRef.current.abort();
+                searchFetchControllerRef.current = null;
+            }
+            setSearchProperties(null);
+            return;
+        }
+
+        setSearchProperties(null);
+        const controller = new AbortController();
+        searchFetchControllerRef.current = controller;
+
+        void (async () => {
+            try {
+                const query = buildPropertyQueryString('all', searchTerm);
+                const res = await fetch(`/api/properties${query}`, { signal: controller.signal });
+                if (res.ok) {
+                    const data = await readApiJson(res);
+                    if (searchFetchControllerRef.current === controller) {
+                        setSearchProperties(data);
+                    }
+                }
+            } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                    console.error('Failed to fetch searchable properties:', error);
+                }
+            } finally {
+                if (searchFetchControllerRef.current === controller) {
+                    searchFetchControllerRef.current = null;
+                }
+            }
+        })();
+
+        return () => {
+            controller.abort();
+            if (searchFetchControllerRef.current === controller) {
+                searchFetchControllerRef.current = null;
+            }
+        };
+    }, [isOpen, isSearchActive, searchTerm]);
+
     // Filter Logic
     useEffect(() => {
-        let result = properties;
+        let result = sourceProperties;
 
-        if (searchTerm) {
-            const terms = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-            result = result.filter(p =>
-                terms.some(term =>
-                    (p.name && p.name.toLowerCase().includes(term)) ||
-                    (p.address && p.address.toLowerCase().includes(term)) ||
-                    (p.industrySector && p.industrySector.toLowerCase().includes(term)) ||
-                    (p.type && p.type.toLowerCase().includes(term))
-                )
-            );
+        if (searchTerms.length > 0) {
+            result = result.filter(p => matchesSearchTerms([JSON.stringify(p)], searchTerms));
         }
 
         if (region) {
@@ -155,7 +204,7 @@ export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard
         if (depositMax) result = result.filter(p => cleanPrice(p.deposit) <= cleanPrice(depositMax));
 
         setFilteredProperties(result);
-    }, [searchTerm, region, areaMin, areaMax, floorMin, floorMax, rentMin, rentMax, depositMin, depositMax, properties]);
+    }, [searchTerms, region, areaMin, areaMax, floorMin, floorMax, rentMin, rentMax, depositMin, depositMax, sourceProperties]);
 
     const handleReset = () => {
         setSearchTerm('');
@@ -173,7 +222,7 @@ export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard
     };
 
     const handleConfirm = () => {
-        const selected = properties.filter(p => selectedIds.includes(p.id));
+        const selected = sourceProperties.filter(p => selectedIds.includes(p.id));
         onSelect(selected);
         onClose();
     };
@@ -240,7 +289,7 @@ export default function PropertySelector({ isOpen, onClose, onSelect, onOpenCard
                             <input
                                 className={styles.input}
                                 style={{ border: 'none', width: '100%' }}
-                                placeholder="통합 검색"
+                                placeholder="쉼표 또는 띄어쓰기로 여러 키워드 검색"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />

@@ -5,7 +5,9 @@ import { X, Search, Check, RefreshCw } from 'lucide-react';
 import styles from './PropertySelectorModal.module.css';
 import PropertyCard from './PropertyCard';
 import { AlertModal } from '@/components/common/AlertModal';
-
+import { matchesSearchTerms, parseSearchTerms } from '@/utils/search';
+import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+
 import { readApiJson } from '@/utils/apiResponse';
 interface PropertySelectorModalProps {
     isOpen: boolean;
@@ -15,9 +17,14 @@ interface PropertySelectorModalProps {
 
 export default function PropertySelectorModal({ isOpen, onClose, onSelect }: PropertySelectorModalProps) {
     const [properties, setProperties] = useState<any[]>([]);
+    const [searchProperties, setSearchProperties] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const searchTerms = React.useMemo(() => parseSearchTerms(searchTerm), [searchTerm]);
+    const isSearchActive = searchTerms.length > 0;
+    const sourceProperties = isSearchActive ? (searchProperties ?? properties) : properties;
+    const searchFetchControllerRef = React.useRef<AbortController | null>(null);
     const [viewPropertyId, setViewPropertyId] = useState<string | null>(null); // For double-click popup
 
     const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' | 'info'; onClose?: () => void }>({
@@ -41,21 +48,29 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
         }
     }, [isOpen]);
 
+    const buildPropertyQueryString = (requestedLimit: number | 'all', search?: string) => {
+        const params = new URLSearchParams();
+        const user = getStoredUser();
+        const companyName = getStoredCompanyName(user);
+        const requesterId = getRequesterId(user);
+
+        if (companyName) params.set('company', companyName);
+        if (requesterId) params.set('requesterId', requesterId);
+        params.set('limit', requestedLimit === 'all' ? 'all' : String(requestedLimit));
+        if (search?.trim()) params.set('search', search.trim());
+
+        return params.toString() ? `?${params.toString()}` : '';
+    };
+
     const fetchProperties = async () => {
         setLoading(true);
         try {
-            const userStr = localStorage.getItem('user');
-            let query = '';
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user.companyName) {
-                    query = `?company=${encodeURIComponent(user.companyName)}`;
-                }
-            }
+            const query = buildPropertyQueryString(500);
             const res = await fetch(`/api/properties${query}`);
             if (res.ok) {
                 const data = await readApiJson(res);
                 setProperties(data);
+                setSearchProperties(null);
             }
         } catch (error) {
             console.error(error);
@@ -64,9 +79,56 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
         }
     };
 
+    useEffect(() => {
+        if (!isOpen || !isSearchActive) {
+            if (searchFetchControllerRef.current) {
+                searchFetchControllerRef.current.abort();
+                searchFetchControllerRef.current = null;
+            }
+            setSearchProperties(null);
+            return;
+        }
+
+        setSearchProperties(null);
+        const controller = new AbortController();
+        searchFetchControllerRef.current = controller;
+
+        void (async () => {
+            try {
+                const query = buildPropertyQueryString('all', searchTerm);
+                const res = await fetch(`/api/properties${query}`, { signal: controller.signal });
+                if (res.ok) {
+                    const data = await readApiJson(res);
+                    if (searchFetchControllerRef.current === controller) {
+                        setSearchProperties(data);
+                    }
+                }
+            } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                    console.error('Failed to fetch searchable properties:', error);
+                }
+            } finally {
+                if (searchFetchControllerRef.current === controller) {
+                    searchFetchControllerRef.current = null;
+                }
+            }
+        })();
+
+        return () => {
+            controller.abort();
+            if (searchFetchControllerRef.current === controller) {
+                searchFetchControllerRef.current = null;
+            }
+        };
+    }, [isOpen, isSearchActive, searchTerm]);
+
+    const filteredProperties = sourceProperties.filter(p =>
+        matchesSearchTerms([JSON.stringify(p)], searchTerms)
+    );
+
     const handleSelect = () => {
         if (selectedId) {
-            const selected = properties.find(p => p.id === selectedId);
+            const selected = sourceProperties.find(p => p.id === selectedId);
             if (selected) {
                 onSelect(selected);
                 onClose();
@@ -77,11 +139,6 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
     };
 
     if (!isOpen) return null;
-
-    // Filter properties
-    const filteredProperties = properties.filter(p =>
-        p.name?.includes(searchTerm) || p.address?.includes(searchTerm) || p.type?.includes(searchTerm)
-    );
 
     return (
         <div className={styles.overlay}>
@@ -98,7 +155,7 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
                         <span className={styles.label}>검색</span>
                         <input
                             className={styles.searchInput}
-                            placeholder="지역/물건명..."
+                            placeholder="쉼표 또는 띄어쓰기로 여러 키워드 검색"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -169,7 +226,7 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
                 <div className={styles.footer}>
                     <div className={styles.footerLeft}>
                         <span style={{ fontSize: 12, color: '#228BE6' }}>(총 : {filteredProperties.length} 건)</span>
-                        <span style={{ fontSize: 12, color: '#e03131', marginLeft: 12 }}>* 최대 500건만 표시됩니다. 검색어를 활용하세요.</span>
+                        <span style={{ fontSize: 12, color: '#e03131', marginLeft: 12 }}>* 기본 500건 표시, 검색 시 전체 범위에서 찾습니다.</span>
                     </div>
                     <div className={styles.footerRight}>
                         <button className={styles.btnSelect} onClick={handleSelect}>
@@ -187,7 +244,7 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
                 <div className={styles.cardOverlay}>
                     <div className={styles.cardModal}>
                         <PropertyCard
-                            property={properties.find(p => p.id === viewPropertyId)}
+                            property={sourceProperties.find(p => p.id === viewPropertyId) || properties.find(p => p.id === viewPropertyId)}
                             onClose={() => setViewPropertyId(null)}
                             onRefresh={fetchProperties}
                         />
