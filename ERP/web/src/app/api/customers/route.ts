@@ -245,7 +245,7 @@ export async function POST(request: Request) {
         }
 
         const {
-            companyName, managerId, name, grade, mobile, isFavorite,
+            companyName, companyId: requestedCompanyId, managerId, name, grade, mobile, isFavorite,
             memoInterest, memoHistory, progressSteps, wantedFeature,
             wantedDepositMin, wantedDepositMax, wantedRentMin, wantedRentMax,
             wantedAreaMin, wantedAreaMax, wantedFloorMin, wantedFloorMax,
@@ -254,7 +254,7 @@ export async function POST(request: Request) {
 
         const resolvedCompanyId = await resolveCompanyIdByName(supabaseAdmin, companyName || null);
         const mgrUuid = await resolveUserUuid(supabaseAdmin, managerId || requesterProfile.id);
-        const companyId = resolvedCompanyId || requesterProfile.company_id;
+        const companyId = resolvedCompanyId || requestedCompanyId || requesterProfile.company_id;
 
         if (!companyId || !mgrUuid) {
             return fail(400, 'VALIDATION_ERROR', 'Valid managerId and company scope are required');
@@ -299,7 +299,7 @@ export async function POST(request: Request) {
             wanted_floor_max: wantedFloorMax,
             created_at: timestamp,
             updated_at: timestamp,
-            data: { ...rest, companyName, managerId }
+            data: { ...rest, companyName, companyId: requestedCompanyId, managerId }
         };
 
         const { data: inserted, error } = await supabaseAdmin
