@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - **대시보드 하위 메뉴**: `대시보드 > 요약 / 모객 DB` 구조 추가.
 - **모객 DB 화면**: 라이트톤 분석 콘솔 스타일의 KPI, 파이프라인, 유입경로, 최근 7일 유입 차트, 후보자 목록 추가.
 - **신규 API**: `/api/franchise-leads`, `/api/franchise-leads/batch`로 단건 CRUD와 엑셀 업로드 지원.
-- **신규 DB 스키마**: `franchise_leads` 테이블, 회사 스코프 RLS, 상태/담당자/전화번호 인덱스 추가.
+- **신규 DB 스키마**: `franchise_leads` 테이블, 회사 스코프 RLS, 상태/담당자/전화번호 인덱스와 전용 마이그레이션 SQL 추가.
 - **중복 처리**: 같은 회사 안에서 정규화된 연락처가 같은 후보자는 신규 생성 대신 기존 데이터를 업데이트.
 
 ### Changed (변경됨) - 목록/선택 모달 검색 일관화
