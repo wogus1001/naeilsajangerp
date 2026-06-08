@@ -7,3 +7,9 @@ export function parseSearchTerms(input: string): string[] {
         .map(term => term.trim())
         .filter(Boolean);
 }
+
+export function normalizeSearchValue(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value.toLowerCase();
+    return String(value).toLowerCase();
+}

@@ -602,7 +602,7 @@ function PropertiesPageContent() {
         document.body.style.cursor = '';
     }, [handleDrawerMouseMove, handleMouseMove]); // Cleaned up deps
 
-    const buildPropertyQueryString = React.useCallback((requestedLimit: number | 'all') => {
+    const buildPropertyQueryString = React.useCallback((requestedLimit: number | 'all', search?: string) => {
         const params = new URLSearchParams();
         const user = getStoredUser();
 
@@ -625,11 +625,15 @@ function PropertiesPageContent() {
             params.append('limit', 'all');
         }
 
+        if (search?.trim()) {
+            params.append('search', search.trim());
+        }
+
         return params.toString() ? `?${params.toString()}` : '';
     }, []);
 
-    const fetchPropertyList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal) => {
-        const queryString = buildPropertyQueryString(requestedLimit);
+    const fetchPropertyList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal, search?: string) => {
+        const queryString = buildPropertyQueryString(requestedLimit, search);
         const res = await fetch(`/api/properties${queryString}`, { signal });
 
         if (!res.ok) {
@@ -678,16 +682,14 @@ function PropertiesPageContent() {
             return;
         }
 
-        if (searchProperties !== null) {
-            return;
-        }
+        setSearchProperties(null);
 
         const controller = new AbortController();
         searchFetchControllerRef.current = controller;
 
         void (async () => {
             try {
-                const data = await fetchPropertyList('all', controller.signal);
+                const data = await fetchPropertyList('all', controller.signal, searchTerm);
                 if (searchFetchControllerRef.current === controller) {
                     setSearchProperties(data);
                 }
@@ -707,7 +709,7 @@ function PropertiesPageContent() {
                 searchFetchControllerRef.current = null;
             }
         };
-    }, [fetchPropertyList, isSearchActive, limit, searchProperties]);
+    }, [fetchPropertyList, isSearchActive, limit, searchTerm]);
 
     // Selection Handlers
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {

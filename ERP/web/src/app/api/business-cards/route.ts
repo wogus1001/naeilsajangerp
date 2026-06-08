@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { fail, ok } from '@/lib/api-response';
+import { normalizeSearchValue, parseSearchTerms } from '@/utils/search';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,10 +93,37 @@ function canAccessCard(requester: any, card: { company_id: string | null; manage
     return false;
 }
 
+function parseRequestedLimit(limitParam: string | null, hasSearch: boolean) {
+    if (hasSearch || limitParam === 'all') return null;
+    const parsed = parseInt(limitParam || '1000', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1000;
+}
+
+function matchesBusinessCardSearch(card: any, terms: string[]) {
+    if (terms.length === 0) return true;
+
+    const mobile = normalizeSearchValue(card.mobile).replace(/-/g, '');
+    const companyPhone = normalizeSearchValue(card.companyPhone1).replace(/-/g, '');
+    const fields = [
+        card.name,
+        card.companyName,
+        card.email,
+        card.category
+    ].map(normalizeSearchValue);
+
+    return terms.some(term => {
+        const cleanTerm = term.replace(/-/g, '');
+        return mobile.includes(cleanTerm) ||
+            companyPhone.includes(cleanTerm) ||
+            fields.some(field => field.includes(term));
+    });
+}
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const company = searchParams.get('company');
+    const searchTerms = parseSearchTerms(searchParams.get('search') || searchParams.get('q') || '');
 
     // Fetch from Supabase
     const supabaseAdmin = getSupabaseAdmin();
@@ -110,12 +138,10 @@ export async function GET(request: Request) {
 
     const requesterId = requesterProfile.id;
 
-    // Build query
     const limitParam = searchParams.get('limit'); // limit=100 or 'all'
-    const limit = limitParam === 'all' ? undefined : (parseInt(limitParam || '1000', 10) || 1000);
+    const requestedLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
 
-    // Build query
-    let query = supabaseAdmin
+    const createBaseQuery = () => supabaseAdmin
         .from('business_cards')
         .select(`
             *,
@@ -124,9 +150,7 @@ export async function GET(request: Request) {
         `)
         .order('created_at', { ascending: false });
 
-    if (limit) {
-        query = query.limit(limit);
-    }
+    let scopedQuery = createBaseQuery();
 
     // Company Filter Logic
     if (requesterProfile.role === 'admin') {
@@ -135,7 +159,7 @@ export async function GET(request: Request) {
             if (!companyId) {
                 return ok([]);
             }
-            query = query.eq('company_id', companyId);
+            scopedQuery = scopedQuery.eq('company_id', companyId);
         }
     } else if (requesterProfile.company_id) {
         // 2. Get All Team Members in this Company
@@ -165,10 +189,10 @@ export async function GET(request: Request) {
         }
 
         // Apply OR Filter
-        query = query.or(`${companyFilter},${managerFilter}`);
+        scopedQuery = scopedQuery.or(`${companyFilter},${managerFilter}`);
     } else {
         // User has no company_id? -> Show only their own cards (Personal isolation)
-        query = query.eq('manager_id', requesterId);
+        scopedQuery = scopedQuery.eq('manager_id', requesterId);
     }
 
     if (id) {
@@ -186,7 +210,7 @@ export async function GET(request: Request) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 
-        query = query.eq('id', id).limit(1);
+        scopedQuery = scopedQuery.eq('id', id).limit(1);
     }
 
     // Debug Mode
@@ -195,10 +219,70 @@ export async function GET(request: Request) {
         return fail(403, 'FORBIDDEN', 'Forbidden: Admins only');
     }
 
-    const { data, error } = await query;
-    if (error) {
-        console.error('GET business-cards error:', error);
-        return fail(500, 'INTERNAL_ERROR', error.message);
+    let data: any[] = [];
+
+    if (id) {
+        const { data: rows, error } = await scopedQuery;
+        if (error) {
+            console.error('GET business-cards error:', error);
+            return fail(500, 'INTERNAL_ERROR', error.message);
+        }
+        data = rows || [];
+    } else if (requestedLimit !== null) {
+        const { data: rows, error } = await scopedQuery.limit(requestedLimit);
+        if (error) {
+            console.error('GET business-cards error:', error);
+            return fail(500, 'INTERNAL_ERROR', error.message);
+        }
+        data = rows || [];
+    } else {
+        const pageSize = 1000;
+        let page = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+            let query = createBaseQuery();
+
+            if (requesterProfile.role === 'admin') {
+                if (company) {
+                    const { companyId } = await resolveIds(company, null);
+                    if (!companyId) return ok([]);
+                    query = query.eq('company_id', companyId);
+                }
+            } else if (requesterProfile.company_id) {
+                const requesterCompanyId = requesterProfile.company_id;
+                if (company) {
+                    const { companyId } = await resolveIds(company, null);
+                    if (companyId && companyId !== requesterCompanyId) {
+                        return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+                    }
+                }
+                const { data: teamMembers } = await supabaseAdmin
+                    .from('profiles')
+                    .select('id')
+                    .eq('company_id', requesterCompanyId);
+                const teamIds = teamMembers?.map((t: any) => t.id) || [];
+                const companyFilter = `company_id.eq.${requesterCompanyId}`;
+                const managerFilter = teamIds.length > 0 ? `manager_id.in.(${teamIds.join(',')})` : `manager_id.eq.${requesterId}`;
+                query = query.or(`${companyFilter},${managerFilter}`);
+            } else {
+                query = query.eq('manager_id', requesterId);
+            }
+
+            const { data: rows, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+            if (error) {
+                console.error('GET business-cards error:', error);
+                return fail(500, 'INTERNAL_ERROR', error.message);
+            }
+
+            if (rows && rows.length > 0) {
+                data = data.concat(rows);
+                hasMore = rows.length === pageSize;
+                page++;
+            } else {
+                hasMore = false;
+            }
+        }
     }
 
     if (debugMode) {
@@ -251,7 +335,7 @@ export async function GET(request: Request) {
     // Map DB columns to Frontend Interface (BusinessCardData)
     // Front: id, name, companyName, department, mobile, email, etc.
     // DB: manage_id, company_name, department, mobile, email, etc.
-    const mappedData = data.map((item: any) => ({
+    let mappedData = data.map((item: any) => ({
         id: item.id, // UUID
         manageId: item.manage_id,
         name: item.name,
@@ -300,6 +384,10 @@ export async function GET(request: Request) {
             targetName: (h.target_id ? propertyNameMap.get(h.target_id) : null) || h.related_item || '-' // Fallback to text
         })) || []
     }));
+
+    if (searchTerms.length > 0) {
+        mappedData = mappedData.filter((card: any) => matchesBusinessCardSearch(card, searchTerms));
+    }
 
     if (id) {
         const card = mappedData.find((c: any) => c.id === id);

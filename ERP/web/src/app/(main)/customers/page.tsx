@@ -330,7 +330,7 @@ function CustomerListPageContent() {
         });
     };
 
-    const buildCustomerQueryString = React.useCallback((requestedLimit: number | 'all') => {
+    const buildCustomerQueryString = React.useCallback((requestedLimit: number | 'all', search?: string) => {
         const userStr = localStorage.getItem('user');
         const queryParams = new URLSearchParams();
 
@@ -352,11 +352,15 @@ function CustomerListPageContent() {
             }
         }
 
+        if (search?.trim()) {
+            queryParams.append('search', search.trim());
+        }
+
         return `?${queryParams.toString()}`;
     }, []);
 
-    const fetchCustomerList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal) => {
-        const query = buildCustomerQueryString(requestedLimit);
+    const fetchCustomerList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal, search?: string) => {
+        const query = buildCustomerQueryString(requestedLimit, search);
         const res = await fetch(`/api/customers${query}`, { signal });
 
         if (!res.ok) {
@@ -399,16 +403,14 @@ function CustomerListPageContent() {
             return;
         }
 
-        if (searchCustomers !== null) {
-            return;
-        }
+        setSearchCustomers(null);
 
         const controller = new AbortController();
         searchFetchControllerRef.current = controller;
 
         void (async () => {
             try {
-                const data = await fetchCustomerList('all', controller.signal);
+                const data = await fetchCustomerList('all', controller.signal, searchTerm);
                 if (searchFetchControllerRef.current === controller) {
                     setSearchCustomers(data);
                 }
@@ -428,7 +430,7 @@ function CustomerListPageContent() {
                 searchFetchControllerRef.current = null;
             }
         };
-    }, [fetchCustomerList, isSearchActive, limit, searchCustomers]);
+    }, [fetchCustomerList, isSearchActive, limit, searchTerm]);
 
     const fetchManagers = async () => {
         try {
