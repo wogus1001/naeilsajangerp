@@ -193,7 +193,7 @@ function CustomerListPageContent() {
 
 
     useEffect(() => {
-        const queryId = searchParams.get('id');
+        const queryId = searchParams.get('openCustomerId') || searchParams.get('id');
         if (queryId) {
             setSelectedCustomerId(queryId);
             setIsCardOpen(true);

@@ -197,6 +197,34 @@
     font-weight: 650;
 }
 
+.quickFilterButton,
+.quickFilterButtonActive {
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 11px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.quickFilterButtonActive {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #ffffff;
+}
+
+.quickFilterButton:disabled,
+.quickFilterButtonActive:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .kpiGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -247,7 +275,8 @@
 
 .analyticsGrid {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 14px;
     margin-bottom: 18px;
 }
@@ -262,7 +291,7 @@
 }
 
 .panelWide {
-    grid-row: span 2;
+    grid-column: 1 / -1;
 }
 
 .panelHeader,
@@ -300,6 +329,23 @@
     border-radius: 999px;
     font-size: 11px;
     font-weight: 800;
+}
+
+.clearStageButton {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #d8dee8;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.clearStageButton:hover {
+    border-color: #6d5dfc;
+    color: #6d5dfc;
 }
 
 .stageStrip {
@@ -370,6 +416,10 @@
     padding: 8px 14px 18px;
 }
 
+.chartBox {
+    padding-top: 0;
+}
+
 .emptyChart {
     height: 230px;
     display: flex;
@@ -396,12 +446,53 @@
     font-weight: 800;
 }
 
+.pageSizeControl {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.pageSizeControl select {
+    height: 34px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 850;
+}
+
 .tableHeaderActions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+.actionLegend {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.actionLegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #ffffff;
 }
 
 .viewTabs {
@@ -440,16 +531,21 @@
 }
 
 .tableScroll {
-    overflow-x: auto;
+    max-height: min(68vh, 720px);
+    overflow: auto;
 }
 
 .leadTable {
     width: 100%;
-    min-width: 1120px;
-    border-collapse: collapse;
+    min-width: 1320px;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .leadTable th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     padding: 12px 14px;
     background: #f8fafc;
     color: #64748b;
@@ -470,6 +566,108 @@
 
 .leadTable tr:hover td {
     background: #fbfdff;
+}
+
+.paginationBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 18px;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.paginationControls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.paginationControls strong {
+    min-width: 68px;
+    color: #0f172a;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.paginationButton {
+    height: 32px;
+    padding: 0 11px;
+    border: 1px solid #d8dee8;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.paginationButton:disabled {
+    color: #94a3b8;
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+.checkboxCell {
+    width: 42px;
+    padding-left: 10px !important;
+    padding-right: 6px !important;
+    text-align: center !important;
+}
+
+.checkboxCell input {
+    width: 16px;
+    height: 16px;
+    accent-color: #0f172a;
+    cursor: pointer;
+}
+
+.bulkBar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    background:
+        linear-gradient(90deg, rgba(109, 93, 252, 0.08), rgba(24, 169, 153, 0.08)),
+        #ffffff;
+}
+
+.bulkBar div {
+    margin-right: auto;
+}
+
+.bulkBar strong,
+.bulkBar span {
+    display: block;
+}
+
+.bulkBar strong {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.bulkBar span {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.bulkBar input {
+    height: 38px;
+    min-width: 210px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    padding: 0 10px;
+    color: #0f172a;
 }
 
 .nameButton {
@@ -500,7 +698,8 @@
     font-weight: 750;
 }
 
-.statusSelect {
+.statusSelect,
+.managerSelect {
     width: 110px;
     height: 32px;
     border: 1px solid #d8dee8;
@@ -509,6 +708,10 @@
     color: #334155;
     font-size: 12px;
     font-weight: 750;
+}
+
+.managerSelect {
+    width: 118px;
 }
 
 .memoCell {
@@ -612,15 +815,30 @@
 
 .linkBadges .convertedBadge,
 .convertedBadge {
-    background: #f8f7ff;
-    color: #6d5dfc;
-    border: 1px solid #e4e1ff;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #bbf7d0;
+}
+
+.convertedActionPill {
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 9px;
+    border-radius: 9px;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #bbf7d0;
+    font-size: 11px;
+    font-weight: 900;
 }
 
 .pipelineBoard {
     display: flex;
     gap: 12px;
-    min-height: 420px;
+    min-height: 280px;
     padding: 18px;
     overflow-x: auto;
     background: linear-gradient(180deg, #fbfdff, #ffffff);
@@ -630,7 +848,7 @@
     flex: 0 0 284px;
     display: flex;
     flex-direction: column;
-    min-height: 380px;
+    min-height: 260px;
     border: 1px solid #e5e7eb;
     border-radius: 18px;
     background: #f8fafc;
@@ -920,6 +1138,10 @@
     box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24);
 }
 
+.quickModalCard {
+    width: min(520px, 100%);
+}
+
 .modalHeader {
     display: flex;
     align-items: flex-start;
@@ -995,9 +1217,47 @@
     padding: 12px;
 }
 
+.quickActivityBody {
+    display: grid;
+    gap: 14px;
+}
+
+.quickActivityBody label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.quickActivityBody select,
+.quickActivityBody textarea {
+    width: 100%;
+    border: 1px solid #d8dee8;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    outline: none;
+}
+
+.quickActivityBody select {
+    height: 42px;
+    padding: 0 12px;
+}
+
+.quickActivityBody textarea {
+    min-height: 140px;
+    resize: vertical;
+    padding: 12px;
+}
+
 .formGrid input:focus,
 .formGrid select:focus,
-.memoLabel textarea:focus {
+.memoLabel textarea:focus,
+.quickActivityBody select:focus,
+.quickActivityBody textarea:focus {
     border-color: #6d5dfc;
     box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.12);
 }
@@ -1037,6 +1297,35 @@
     justify-content: space-between;
     gap: 18px;
     margin-bottom: 18px;
+}
+
+.convertedNotice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #bbf7d0;
+    border-radius: 14px;
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.convertedNotice strong,
+.convertedNotice span {
+    display: block;
+}
+
+.convertedNotice strong {
+    color: #065f46;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.convertedNotice span {
+    margin-top: 2px;
+    color: #047857;
+    font-size: 12px;
 }
 
 .detailHeader h2 {
@@ -1268,6 +1557,11 @@
     border: 1px solid #e4e1ff;
     border-radius: 14px;
     background: #f8f7ff;
+}
+
+.conversionBoxDone {
+    border-color: #bbf7d0;
+    background: #ecfdf5;
 }
 
 .conversionBox strong {
