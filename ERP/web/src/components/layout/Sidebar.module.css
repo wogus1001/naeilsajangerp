@@ -217,6 +217,12 @@
     background-color: var(--primary-light);
 }
 
+.navSubLinkContent {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .active {
     color: hsl(var(--primary));
     background-color: var(--primary-light);
