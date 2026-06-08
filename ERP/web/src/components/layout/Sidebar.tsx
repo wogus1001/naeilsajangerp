@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, ChevronDown, ChevronRight, ChevronLeft, Menu, Users, Contact, FileText } from 'lucide-react';
+import { LayoutDashboard, Briefcase, ChevronDown, ChevronRight, ChevronLeft, Users, Contact, FileText, Target } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -12,7 +12,8 @@ interface SidebarProps {
 }
 
 const MENU_ITEMS = [
-    { title: '대시보드', url: '/dashboard', category: '메인' },
+    { title: '요약', url: '/dashboard', category: '대시보드' },
+    { title: '모객 DB', url: '/dashboard/franchise-leads', category: '대시보드' },
     { title: '점포 목록', url: '/properties', category: '컨설팅 업무' },
     { title: '점포 신규등록', url: '/properties/register', category: '컨설팅 업무' },
     { title: '물건지도', url: '/properties/map', category: '컨설팅 업무' },
@@ -28,6 +29,7 @@ const MENU_ITEMS = [
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     const pathname = usePathname();
+    const [isDashboardOpen, setIsDashboardOpen] = useState(true);
     const [isConsultingOpen, setIsConsultingOpen] = useState(true);
     const [isCustomersOpen, setIsCustomersOpen] = useState(true);
     const [isBusinessCardsOpen, setIsBusinessCardsOpen] = useState(true);
@@ -142,11 +144,38 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 )}
 
                 <nav className={styles.nav}>
-                    <div className={styles.navItem}>
-                        <Link href="/dashboard" className={`${styles.navLink} ${pathname === '/dashboard' ? styles.active : ''}`} title={!isOpen ? "대시보드" : undefined}>
-                            <LayoutDashboard size={18} />
-                            {isOpen && <span>대시보드</span>}
-                        </Link>
+                    <div className={styles.navGroup}>
+                        <button
+                            className={styles.navGroupTitle}
+                            onClick={() => setIsDashboardOpen(!isDashboardOpen)}
+                            title={!isOpen ? "대시보드" : undefined}
+                        >
+                            <div className={styles.navGroupLabel}>
+                                <LayoutDashboard size={18} />
+                                {isOpen && <span>대시보드</span>}
+                            </div>
+                            {isOpen && (isDashboardOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
+                        </button>
+
+                        {isDashboardOpen && (
+                            <div className={styles.navSubMenu}>
+                                <Link
+                                    href="/dashboard"
+                                    className={`${styles.navSubLink} ${pathname === '/dashboard' ? styles.active : ''}`}
+                                >
+                                    요약
+                                </Link>
+                                <Link
+                                    href="/dashboard/franchise-leads"
+                                    className={`${styles.navSubLink} ${pathname === '/dashboard/franchise-leads' ? styles.active : ''}`}
+                                >
+                                    <span className={styles.navSubLinkContent}>
+                                        <Target size={14} />
+                                        모객 DB
+                                    </span>
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     <div className={styles.navGroup}>

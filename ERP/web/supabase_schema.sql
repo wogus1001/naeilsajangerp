@@ -290,3 +290,53 @@ create policy "Company members can delete share_links" on public.share_links
 -- If we use API Route (backend), we bypass RLS using Service Role or we ensure the user is authenticated.
 -- Since the receiver is anonymous, we will rely on the Server-Side API endpoint to fetch with admin privileges (Service Role) and return sanitized data.
 -- So we DO NOT add a public select policy here to keep it secure. Only authenticated company members can see the raw rows.
+
+-- 18. FRANCHISE LEADS Table (Franchise HQ lead CRM)
+create table if not exists public.franchise_leads (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  manager_id uuid references public.profiles(id),
+  name text not null,
+  mobile text,
+  mobile_normalized text,
+  source text,
+  status text default '문의접수' not null,
+  grade text,
+  desired_region text,
+  budget_min numeric,
+  budget_max numeric,
+  interested_brand text,
+  memo text,
+  next_contact_at timestamp with time zone,
+  last_contacted_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.franchise_leads enable row level security;
+
+create policy "Company members can view franchise_leads" on public.franchise_leads
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_leads" on public.franchise_leads
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_leads" on public.franchise_leads
+  for update using (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_leads" on public.franchise_leads
+  for delete using (company_id = get_my_company_id());
+
+create index if not exists idx_franchise_leads_company_created
+  on public.franchise_leads (company_id, created_at desc);
+
+create index if not exists idx_franchise_leads_company_status
+  on public.franchise_leads (company_id, status);
+
+create index if not exists idx_franchise_leads_company_manager
+  on public.franchise_leads (company_id, manager_id);
+
+create unique index if not exists idx_franchise_leads_company_mobile_unique
+  on public.franchise_leads (company_id, mobile_normalized)
+  where mobile_normalized is not null and mobile_normalized <> '';
