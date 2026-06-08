@@ -45,7 +45,8 @@ const Header = ({ user, onLogout }: HeaderProps) => {
 
     const getBreadcrumbInfo = (path: string) => {
         // Dashboard
-        if (path === '/dashboard') return { category: '메인', title: '대시보드' };
+        if (path === '/dashboard') return { category: '대시보드', title: '요약' };
+        if (path === '/dashboard/franchise-leads') return { category: '대시보드', title: '모객 DB' };
 
         // Consulting
         if (path === '/properties') return { category: '컨설팅 업무', title: '점포 목록' };

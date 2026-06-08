@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckCircle2, BarChart3, Megaphone, StickyNote, RefreshCw } from 'lucide-react';
+import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckCircle2, BarChart3, Megaphone, StickyNote, RefreshCw, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -438,6 +438,10 @@ export default function DashboardPage() {
                             <button style={styles.quickActionBtn} onClick={() => router.push('/contracts/create')}>
                                 <div style={{ ...styles.quickActionIcon, background: '#fff9db', color: '#f59f00' }}><FileText size={20} /></div>
                                 <span>간편 서명</span>
+                            </button>
+                            <button style={styles.quickActionBtn} onClick={() => router.push('/dashboard/franchise-leads')}>
+                                <div style={{ ...styles.quickActionIcon, background: '#f8f7ff', color: '#6d5dfc' }}><Target size={20} /></div>
+                                <span>모객 DB</span>
                             </button>
                         </div>
                     </div>
