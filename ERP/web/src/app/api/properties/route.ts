@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
+import { parseSearchTerms } from '@/utils/search';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -125,6 +126,18 @@ function transformSharedProperty(row: any) {
     return sanitized;
 }
 
+function matchesPropertySearch(property: unknown, terms: string[]) {
+    if (terms.length === 0) return true;
+    const searchable = JSON.stringify(property).toLowerCase();
+    return terms.some(term => searchable.includes(term));
+}
+
+function parsePositiveLimit(value: string | null) {
+    if (!value || value === 'all') return null;
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 // GET
 export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
@@ -133,6 +146,7 @@ export async function GET(request: Request) {
     const company = searchParams.get('company');
     const min = searchParams.get('min') === 'true';
     const shareToken = searchParams.get('shareToken');
+    const searchTerms = parseSearchTerms(searchParams.get('search') || searchParams.get('q') || '');
 
     try {
         const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
@@ -178,15 +192,6 @@ export async function GET(request: Request) {
                 if (custIds.length > 0) {
                     // Update: Select ALL columns
                     const { data: custs } = await supabaseAdmin.from('customers').select('id, name, mobile, data, manager_id, wanted_feature, memo_interest').in('id', custIds);
-
-                    // DEBUG LOGGING
-                    console.log('[PropertyHydration] Fetched Customers:', custs?.map(c => ({
-                        id: c.id,
-                        name: c.name,
-                        wanted_feature: c.wanted_feature,
-                        data_feature: c.data?.feature,
-                        data_memo: c.data?.memo
-                    })));
 
                     custs?.forEach(c => custMap.set(c.id, c));
                 }
@@ -250,33 +255,73 @@ export async function GET(request: Request) {
             return ok(rows.map(transformSharedProperty));
         }
 
-        let query = supabaseAdmin.from('properties').select('*').order('created_at', { ascending: false }).range(0, 9999);
+        let requestedCompanyId: string | null = null;
 
-        if (isAdmin(requesterProfile)) {
-            if (company) {
-                const companyId = await resolveCompanyIdByName(supabaseAdmin, company);
-                if (companyId) {
-                    query = query.eq('company_id', companyId);
-                } else {
-                    return ok([]);
-                }
+        if (company) {
+            requestedCompanyId = await resolveCompanyIdByName(supabaseAdmin, company);
+            if (!requestedCompanyId) {
+                return ok([]);
             }
-        } else if (requesterProfile?.company_id) {
-            if (company) {
-                const companyId = await resolveCompanyIdByName(supabaseAdmin, company);
-                if (companyId && companyId !== requesterProfile.company_id) {
-                    return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+
+        const buildScopedQuery = (from: number, to: number) => {
+            let query = supabaseAdmin
+                .from('properties')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (isAdmin(requesterProfile)) {
+                if (requestedCompanyId) {
+                    query = query.eq('company_id', requestedCompanyId);
                 }
+            } else if (requesterProfile?.company_id) {
+                if (requestedCompanyId && requestedCompanyId !== requesterProfile.company_id) {
+                    return null;
+                }
+                query = query.eq('company_id', requesterProfile.company_id);
+            } else if (requesterProfile?.id) {
+                query = query.eq('manager_id', requesterProfile.id);
             }
-            query = query.eq('company_id', requesterProfile.company_id);
-        } else if (requesterProfile?.id) {
-            query = query.eq('manager_id', requesterProfile.id);
-        } else {
+
+            return query;
+        };
+
+        if (!isAdmin(requesterProfile) && requesterProfile?.company_id && requestedCompanyId && requestedCompanyId !== requesterProfile.company_id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+
+        if (!isAdmin(requesterProfile) && !requesterProfile?.company_id && !requesterProfile?.id) {
             return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
         }
 
-        const { data: properties, error } = await query;
-        if (error) throw error;
+        const limitParam = searchParams.get('limit');
+        const requestedLimit = searchTerms.length > 0 ? null : parsePositiveLimit(limitParam);
+        const pageSize = 1000;
+        let properties: any[] = [];
+        let page = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+            const from = page * pageSize;
+            const to = requestedLimit ? Math.min(from + pageSize - 1, requestedLimit - 1) : from + pageSize - 1;
+            const query = buildScopedQuery(from, to);
+
+            if (!query) {
+                return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                properties = properties.concat(data);
+                hasMore = data.length === pageSize && (!requestedLimit || properties.length < requestedLimit);
+                page++;
+            } else {
+                hasMore = false;
+            }
+        }
 
         if (min) {
             return ok(properties.map((p: any) => ({
@@ -286,22 +331,11 @@ export async function GET(request: Request) {
             })));
         }
 
-        // Apply Limit if provided
-        const limitParam = searchParams.get('limit');
-        let resultPosts = properties;
+        const resultPosts = properties
+            .map(transformProperty)
+            .filter((property: unknown) => matchesPropertySearch(property, searchTerms));
 
-        if (limitParam && limitParam !== 'all') {
-            const limitVal = parseInt(limitParam);
-            if (!isNaN(limitVal)) {
-                resultPosts = resultPosts.slice(0, limitVal);
-            }
-        } else if (!limitParam) {
-            // Default limit if not specified? 
-            // Current behavior: returns all (up to 9999 from range(0, 9999))
-            // Let's keep it as is (all) unless limit is specified.
-        }
-
-        return ok(resultPosts.map(transformProperty));
+        return ok(resultPosts);
 
     } catch (error) {
         console.error('Properties GET error:', error);
@@ -509,4 +543,3 @@ export async function DELETE(request: Request) {
         return fail(500, 'INTERNAL_ERROR', 'Failed to delete property');
     }
 }
-

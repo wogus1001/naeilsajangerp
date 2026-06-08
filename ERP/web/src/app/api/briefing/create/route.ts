@@ -6,15 +6,12 @@ export async function POST(req: NextRequest) {
     try {
         const supabase = await createClient(); // Await if createClient is async
         const body = await req.json();
-        console.log('[BriefingCreate] Request Body:', body);
 
         const { property_id, options, expires_in_days, expiresAt: clientExpiresAt } = body;
 
         const {
             data: { user },
         } = await supabase.auth.getUser();
-
-        console.log('[BriefingCreate] User:', user?.id);
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized: No user found' }, { status: 401 });
@@ -26,8 +23,6 @@ export async function POST(req: NextRequest) {
             .select('company_id')
             .eq('id', user.id)
             .single();
-
-        console.log('[BriefingCreate] Profile:', profile, 'Error:', profileError);
 
         if (!profile?.company_id) {
             return NextResponse.json({ error: 'Company not found/User has no company' }, { status: 400 });
@@ -56,7 +51,7 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (error) {
-            console.error('[BriefingCreate] Insert Error:', error);
+            console.error('[BriefingCreate] Insert Error:', error.message);
             return NextResponse.json({ error: `DB Insert Failed: ${error.message} (Code: ${error.code})` }, { status: 500 });
         }
 
@@ -64,7 +59,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ token, shareUrl, expires_at });
     } catch (e: any) {
-        console.error('[BriefingCreate] Unexpected Error:', e);
+        console.error('[BriefingCreate] Unexpected Error:', e?.message || e);
         return NextResponse.json({ error: `Server Error: ${e.message}` }, { status: 500 });
     }
 }
