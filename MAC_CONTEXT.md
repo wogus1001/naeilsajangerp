@@ -89,12 +89,21 @@ npm run build
   - 실사용 확인이 필요한 작업은 `dev` 먼저
   - 확인 후 `main`
   - 예외적으로 사용자가 실서버 먼저 요청한 경우만 `main` 우선
+  - 리뷰/후속 작업은 `codex/` 접두사의 작업 브랜치를 만들고, dev/main 반영 브랜치를 분리한다.
 
 ## 최근 배포 이력 기준점
-- `dev` 최신 확인 커밋: `0564333e` `fix: align property report header meta layout`
-- `main` 최신 확인 커밋: `b6f4c653` `fix: align property report header meta layout`
+- `dev` 최신 확인 커밋: `1f4cc3d` `fix: harden list search and logging`
+- `main` 최신 확인 커밋: `d76f31a` `fix: harden list search and logging`
 
 ## 최근 중요 작업 요약
+- 점포/고객/명함 목록 검색 개선
+  - 쉼표/띄어쓰기 OR 검색 공용 파서 적용
+  - 검색 시 `limit=500` 밖 데이터까지 전체 범위에서 조회
+  - 고객/명함 API는 DB `ilike` 선필터 후 JS 최종 필터
+  - `PropertySelector`, `PropertySelectorModal`, `PersonSelectorModal` 검색 일관화
+- 운영 로그 정리 및 lint 게이트 개선
+  - 공유 브리핑/계약 다운로드/브리핑 생성/점포 hydration 민감 로그 제거
+  - `npm run lint -- --quiet` 기준 error 0 상태로 정리
 - 매물 상세 리포트 인쇄형식 헤더 정리
   - `발행일` 옆에 `담당자`
   - 기존 담당자 위치에 `주소`
@@ -145,4 +154,3 @@ npm run build
 4. `ERP/web/AGENTS.md` 확인
 5. 필요한 경우 `ERP/web/ROADMAP.md` 확인
 6. 변경 범위가 리포트면 `PropertyReportPrint.tsx`, 매물 입력이면 `PropertyCard.tsx` / `properties/register/page.tsx`부터 확인
-

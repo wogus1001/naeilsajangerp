@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, User, CreditCard, Check } from 'lucide-react';
 import styles from './PersonSelectorModal.module.css';
 import { getRequesterId, getStoredUser } from '@/utils/userUtils';
+import { matchesSearchTerms, normalizeSearchValue, parseSearchTerms } from '@/utils/search';
 
 interface PersonSelectorModalProps {
     isOpen: boolean;
@@ -17,9 +18,14 @@ interface PersonSelectorModalProps {
 export default function PersonSelectorModal({ isOpen, onClose, onSelect, companyName, initialTab = 'customer' }: PersonSelectorModalProps) {
     const [activeTab, setActiveTab] = useState<'customer' | 'businessCard'>('customer');
     const [searchQuery, setSearchQuery] = useState('');
+    const searchTerms = React.useMemo(() => parseSearchTerms(searchQuery), [searchQuery]);
+    const isSearchActive = searchTerms.length > 0;
     const [customers, setCustomers] = useState<any[]>([]);
+    const [searchCustomers, setSearchCustomers] = useState<any[] | null>(null);
     const [businessCards, setBusinessCards] = useState<any[]>([]);
+    const [searchBusinessCards, setSearchBusinessCards] = useState<any[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const searchFetchControllerRef = React.useRef<AbortController | null>(null);
 
     // Initialize Tab on Open
     useEffect(() => {
@@ -51,35 +57,47 @@ export default function PersonSelectorModal({ isOpen, onClose, onSelect, company
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
 
+    const buildQueryString = (requestedLimit: number | 'all', search?: string) => {
+        const params = new URLSearchParams();
+        if (companyName) {
+            params.set('company', companyName);
+        }
+        params.set('limit', requestedLimit === 'all' ? 'all' : String(requestedLimit));
+
+        const requesterId = getRequesterId();
+        if (requesterId) {
+            params.set('requesterId', requesterId);
+        }
+
+        if (activeTab === 'businessCard') {
+            const user = getStoredUser();
+            const userId = user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id;
+            if (userId) {
+                params.set('userId', userId);
+            }
+        }
+
+        if (search?.trim()) {
+            params.set('search', search.trim());
+        }
+
+        return params.toString();
+    };
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
             const url = activeTab === 'customer' ? '/api/customers' : '/api/business-cards';
-            const params = new URLSearchParams();
-            if (companyName) {
-                params.set('company', companyName);
-            }
-            const requesterId = getRequesterId();
-            if (requesterId) {
-                params.set('requesterId', requesterId);
-            }
-
-            if (activeTab === 'businessCard') {
-                const user = getStoredUser();
-                const userId = user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id;
-                if (userId) {
-                    params.set('userId', userId);
-                }
-            }
-
-            const query = params.toString();
+            const query = buildQueryString(500);
             const res = await fetch(`${url}${query ? `?${query}` : ''}`);
             if (res.ok) {
                 const data = await readApiJson(res);
                 if (activeTab === 'customer') {
                     setCustomers(data);
+                    setSearchCustomers(null);
                 } else {
                     setBusinessCards(data);
+                    setSearchBusinessCards(null);
                 }
             }
         } catch (error) {
@@ -89,24 +107,111 @@ export default function PersonSelectorModal({ isOpen, onClose, onSelect, company
         }
     };
 
-    const filteredList = (activeTab === 'customer' ? customers : businessCards).filter(item => {
-        const queries = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
-        if (activeTab === 'customer') {
-            return queries.some(query => 
-                (item.name && item.name.toLowerCase().includes(query)) ||
-                (item.phone && item.phone.includes(query)) ||
-                (item.feature && item.feature.toLowerCase().includes(query)) ||
-                (item.memoSituation && item.memoSituation.toLowerCase().includes(query))
-            );
-        } else {
-            return queries.some(query => 
-                (item.name && item.name.toLowerCase().includes(query)) ||
-                (item.companyName && item.companyName.toLowerCase().includes(query)) ||
-                (item.category && item.category.toLowerCase().includes(query)) ||
-                (item.department && item.department.toLowerCase().includes(query)) ||
-                (item.memo && item.memo.toLowerCase().includes(query))
-            );
+    useEffect(() => {
+        if (!isOpen || !isSearchActive) {
+            if (searchFetchControllerRef.current) {
+                searchFetchControllerRef.current.abort();
+                searchFetchControllerRef.current = null;
+            }
+            if (activeTab === 'customer') {
+                setSearchCustomers(null);
+            } else {
+                setSearchBusinessCards(null);
+            }
+            return;
         }
+
+        if (activeTab === 'customer') {
+            setSearchCustomers(null);
+        } else {
+            setSearchBusinessCards(null);
+        }
+
+        const controller = new AbortController();
+        searchFetchControllerRef.current = controller;
+
+        void (async () => {
+            try {
+                const url = activeTab === 'customer' ? '/api/customers' : '/api/business-cards';
+                const query = buildQueryString('all', searchQuery);
+                const res = await fetch(`${url}${query ? `?${query}` : ''}`, { signal: controller.signal });
+                if (res.ok) {
+                    const data = await readApiJson(res);
+                    if (searchFetchControllerRef.current === controller) {
+                        if (activeTab === 'customer') {
+                            setSearchCustomers(data);
+                        } else {
+                            setSearchBusinessCards(data);
+                        }
+                    }
+                }
+            } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                    console.error('Failed to fetch searchable people:', error);
+                }
+            } finally {
+                if (searchFetchControllerRef.current === controller) {
+                    searchFetchControllerRef.current = null;
+                }
+            }
+        })();
+
+        return () => {
+            controller.abort();
+            if (searchFetchControllerRef.current === controller) {
+                searchFetchControllerRef.current = null;
+            }
+        };
+    }, [isOpen, isSearchActive, activeTab, searchQuery, companyName]);
+
+    const activeList = activeTab === 'customer'
+        ? (isSearchActive ? (searchCustomers ?? customers) : customers)
+        : (isSearchActive ? (searchBusinessCards ?? businessCards) : businessCards);
+
+    const filteredList = activeList.filter(item => {
+        if (searchTerms.length === 0) return true;
+
+        if (activeTab === 'customer') {
+            const mobile = normalizeSearchValue(item.mobile || item.phone).replace(/-/g, '');
+            const companyPhone = normalizeSearchValue(item.companyPhone).replace(/-/g, '');
+            return searchTerms.some(term => {
+                const cleanTerm = term.replace(/-/g, '');
+                return mobile.includes(cleanTerm) ||
+                    companyPhone.includes(cleanTerm) ||
+                    matchesSearchTerms([
+                        item.name,
+                        item.feature,
+                        item.memoSituation,
+                        item.memoInterest,
+                        item.memoHistory,
+                        item.wantedFeature,
+                        item.wantedItem,
+                        item.wantedIndustry,
+                        item.wantedArea,
+                        item.address,
+                        item.class,
+                        item.status
+                    ], [term]);
+            });
+        }
+
+        const mobile = normalizeSearchValue(item.mobile).replace(/-/g, '');
+        const companyPhone = normalizeSearchValue(item.companyPhone1).replace(/-/g, '');
+        return searchTerms.some(term => {
+            const cleanTerm = term.replace(/-/g, '');
+            return mobile.includes(cleanTerm) ||
+                companyPhone.includes(cleanTerm) ||
+                matchesSearchTerms([
+                    item.name,
+                    item.companyName,
+                    item.category,
+                    item.department,
+                    item.position,
+                    item.memo,
+                    item.email,
+                    item.companyAddress
+                ], [term]);
+        });
     });
 
     if (!isOpen) return null;
@@ -139,7 +244,7 @@ export default function PersonSelectorModal({ isOpen, onClose, onSelect, company
                         <Search size={16} className={styles.searchIcon} />
                         <input
                             type="text"
-                            placeholder={`${activeTab === 'customer' ? '고객명, 연락처, 특징, 상황' : '이름, 회사명, 분류, 부서, 메모'} 검색`}
+                            placeholder={`${activeTab === 'customer' ? '고객명, 연락처, 특징, 상황' : '이름, 회사명, 분류, 부서, 메모'} 검색 (쉼표/띄어쓰기 OR)`}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className={styles.searchInput}
