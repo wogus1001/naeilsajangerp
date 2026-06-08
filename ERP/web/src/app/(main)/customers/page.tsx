@@ -14,6 +14,8 @@ import { parseSearchTerms } from '@/utils/search';
 
 interface Customer {
     id: string;
+    companyId?: string;
+    companyName?: string;
     name: string;
     grade: string;
     gender: 'M' | 'F';
@@ -35,6 +37,8 @@ interface Customer {
     managerId: string;
     manager_id?: string; // UUID from DB
     isFavorite?: boolean;
+    memoInterest?: string;
+    memoHistory?: string;
     history?: any[];
 }
 
@@ -816,6 +820,67 @@ function CustomerListPageContent() {
         XLSX.writeFile(wb, `고객연락처_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`);
     };
 
+    const getStoredUserContext = () => {
+        const userStr = localStorage.getItem('user');
+        const parsed = userStr ? JSON.parse(userStr) : {};
+        const user = parsed.user || parsed;
+
+        return {
+            requesterId: user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id || '',
+            companyName: user?.companyName || ''
+        };
+    };
+
+    const handleAddSelectedToLeads = async () => {
+        if (selectedIds.length === 0) return;
+
+        const targets = filteredCustomers.filter(customer => selectedIds.includes(customer.id));
+        const { requesterId, companyName } = getStoredUserContext();
+        if (!requesterId) {
+            showAlert('로그인 정보를 확인할 수 없습니다.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const results = await Promise.allSettled(targets.map(customer => fetch('/api/franchise-leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requesterId,
+                    managerId: requesterId,
+                    companyName,
+                    name: customer.name,
+                    mobile: customer.mobile || customer.companyPhone || '',
+                    source: '고객DB',
+                    status: '문의접수',
+                    grade: customer.grade,
+                    desiredRegion: customer.wantedArea || customer.address || '',
+                    interestedBrand: customer.wantedIndustry || customer.wantedItem || '',
+                    memo: [customer.feature, customer.memoInterest, customer.memoHistory].filter(Boolean).join('\n'),
+                    sourceType: 'customer',
+                    sourceId: customer.id,
+                    linkedCustomerId: customer.id,
+                    linkedCustomerName: customer.name
+                })
+            }).then(async response => {
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload?.message || payload?.error || '모객DB 추가 실패');
+                return payload;
+            })));
+
+            const successCount = results.filter(result => result.status === 'fulfilled').length;
+            const failCount = results.length - successCount;
+            showAlert(`모객DB 추가 완료\n- 성공: ${successCount}건\n- 실패: ${failCount}건`);
+            if (successCount > 0) setSelectedIds([]);
+        } catch (error) {
+            console.error(error);
+            showAlert('모객DB 추가 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className={styles.container}>
             {/* Toolbar */}
@@ -1116,6 +1181,16 @@ function CustomerListPageContent() {
                         >
                             <Trash2 size={14} />
                             삭제 ({selectedIds.length})
+                        </button>
+                    )}
+                    {selectedIds.length > 0 && (
+                        <button
+                            className={styles.footerBtn}
+                            onClick={handleAddSelectedToLeads}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#6d5dfc', color: 'white', borderColor: '#6d5dfc' }}
+                        >
+                            <UserPlus size={14} />
+                            모객DB 추가 ({selectedIds.length})
                         </button>
                     )}
                     {dataManagement?.excelUpload !== false && (

@@ -12,7 +12,23 @@ import {
     XAxis,
     YAxis
 } from 'recharts';
-import { Download, FileSpreadsheet, Plus, RefreshCw, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
+import {
+    BriefcaseBusiness,
+    CalendarClock,
+    Download,
+    FileSpreadsheet,
+    Link2,
+    MessageSquare,
+    Pencil,
+    Plus,
+    RefreshCw,
+    Search,
+    SlidersHorizontal,
+    Trash2,
+    Upload,
+    UserRound,
+    X
+} from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import {
@@ -45,6 +61,41 @@ type FranchiseLead = {
     lastContactedAt: string | null;
     createdAt: string;
     updatedAt: string;
+    activityLog?: LeadActivity[];
+    linkedCustomerId?: string;
+    linkedCustomerName?: string;
+    linkedBusinessCardId?: string;
+    linkedBusinessCardName?: string;
+    sourceType?: string;
+    sourceId?: string;
+};
+
+type LeadActivityType = '전화' | '문자' | '방문상담' | '계약검토' | '메모' | '상태변경';
+
+type LeadActivity = {
+    id: string;
+    type: LeadActivityType;
+    content: string;
+    createdAt: string;
+    createdBy?: string;
+};
+
+type RelatedCustomer = {
+    id: string;
+    name: string;
+    mobile?: string;
+    companyPhone?: string;
+    wantedArea?: string;
+    memoInterest?: string;
+};
+
+type RelatedBusinessCard = {
+    id: string;
+    name: string;
+    companyName?: string;
+    mobile?: string;
+    companyPhone1?: string;
+    memo?: string;
 };
 
 type LeadSummary = {
@@ -102,6 +153,7 @@ const EMPTY_FORM: LeadFormState = {
     memo: ''
 };
 
+const ACTIVITY_TYPES: LeadActivityType[] = ['전화', '문자', '방문상담', '계약검토', '메모', '상태변경'];
 const SOURCE_FILTER_OPTIONS = ['전체', ...FRANCHISE_LEAD_SOURCES] as const;
 const RANGE_OPTIONS = ['7D', '30D', '3M', '전체'] as const;
 
@@ -145,6 +197,19 @@ function formatDateTime(value?: string | null) {
     return date.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function formatFullDateTime(value?: string | null) {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 function formatBudgetValue(value: number | null | undefined) {
     if (value === null || value === undefined) return '';
     return new Intl.NumberFormat('ko-KR').format(value);
@@ -164,6 +229,28 @@ function toDatetimeLocalValue(value?: string | null) {
     if (Number.isNaN(date.getTime())) return '';
     const offset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function isPastDue(value?: string | null) {
+    if (!value) return false;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return false;
+    return date.getTime() < Date.now();
+}
+
+function isDueSoon(value?: string | null) {
+    if (!value) return false;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return false;
+    const now = Date.now();
+    return date.getTime() >= now && date.getTime() <= now + 24 * 60 * 60 * 1000;
+}
+
+function createActivityId() {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function buildTrendData(summary: LeadSummary) {
@@ -214,6 +301,13 @@ export default function FranchiseLeadsPage() {
     const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('30D');
     const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('30D'));
     const [createdTo, setCreatedTo] = React.useState('');
+    const [selectedLeadId, setSelectedLeadId] = React.useState('');
+    const [activityType, setActivityType] = React.useState<LeadActivityType>('전화');
+    const [activityContent, setActivityContent] = React.useState('');
+    const [detailNextContactAt, setDetailNextContactAt] = React.useState('');
+    const [relatedCustomers, setRelatedCustomers] = React.useState<RelatedCustomer[]>([]);
+    const [relatedCards, setRelatedCards] = React.useState<RelatedBusinessCard[]>([]);
+    const [isRelatedLoading, setIsRelatedLoading] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [form, setForm] = React.useState<LeadFormState>(EMPTY_FORM);
     const [alertConfig, setAlertConfig] = React.useState({
@@ -228,6 +322,10 @@ export default function FranchiseLeadsPage() {
         leadName: ''
     });
     const uploadInputRef = React.useRef<HTMLInputElement>(null);
+    const selectedLead = React.useMemo(
+        () => leads.find(lead => lead.id === selectedLeadId) || null,
+        [leads, selectedLeadId]
+    );
 
     React.useEffect(() => {
         const stored = localStorage.getItem('user');
@@ -301,6 +399,67 @@ export default function FranchiseLeadsPage() {
         return () => window.clearTimeout(timer);
     }, [fetchLeads, userId]);
 
+    React.useEffect(() => {
+        if (!selectedLead) {
+            setDetailNextContactAt('');
+            setRelatedCustomers([]);
+            setRelatedCards([]);
+            return;
+        }
+
+        setDetailNextContactAt(toDatetimeLocalValue(selectedLead.nextContactAt));
+    }, [selectedLead]);
+
+    React.useEffect(() => {
+        if (!selectedLead || !userId) return;
+
+        const normalizedPhone = normalizeLeadPhone(selectedLead.mobile);
+        if (normalizedPhone.length < 4) {
+            setRelatedCustomers([]);
+            setRelatedCards([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        const params = new URLSearchParams({
+            requesterId: userId,
+            search: normalizedPhone,
+            limit: 'all'
+        });
+        if (companyName) params.set('company', companyName);
+
+        setIsRelatedLoading(true);
+        Promise.all([
+            fetch(`/api/customers?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
+                .then(async response => {
+                    const payload = await response.json();
+                    if (!response.ok) throw new Error(readApiError(payload));
+                    return unwrapApiData<RelatedCustomer[]>(payload);
+                }),
+            fetch(`/api/business-cards?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
+                .then(async response => {
+                    const payload = await response.json();
+                    if (!response.ok) throw new Error(readApiError(payload));
+                    return unwrapApiData<RelatedBusinessCard[]>(payload);
+                })
+        ])
+            .then(([customers, cards]) => {
+                setRelatedCustomers((customers || []).slice(0, 5));
+                setRelatedCards((cards || []).slice(0, 5));
+            })
+            .catch(error => {
+                if (error instanceof DOMException && error.name === 'AbortError') return;
+                console.error(error);
+                setRelatedCustomers([]);
+                setRelatedCards([]);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsRelatedLoading(false);
+            });
+
+        return () => controller.abort();
+    }, [companyName, selectedLead, userId]);
+
     const stageData = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
         count: summary.byStatus?.[status] || 0
@@ -313,6 +472,9 @@ export default function FranchiseLeadsPage() {
     const trendData = buildTrendData(summary);
     const contractReadyCount = (summary.byStatus?.['계약예정'] || 0) + (summary.byStatus?.['계약완료'] || 0);
     const conversionRate = summary.total > 0 ? Math.round((contractReadyCount / summary.total) * 1000) / 10 : 0;
+    const dueContactCount = leads.filter(lead => isPastDue(lead.nextContactAt) || isDueSoon(lead.nextContactAt)).length;
+    const overdueContactCount = leads.filter(lead => isPastDue(lead.nextContactAt)).length;
+    const linkedLeadCount = leads.filter(lead => lead.linkedCustomerId || lead.linkedBusinessCardId).length;
 
     const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
         setAlertConfig({ isOpen: true, title, message, type });
@@ -409,6 +571,104 @@ export default function FranchiseLeadsPage() {
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '상태 변경에 실패했습니다.', 'error', '상태 변경 실패');
+        }
+    };
+
+    const updateLeadWithPatch = async (lead: FranchiseLead, patch: Record<string, unknown>) => {
+        if (!userId) return null;
+
+        const response = await fetch('/api/franchise-leads', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: lead.id,
+                requesterId: userId,
+                ...patch
+            })
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+            throw new Error(readApiError(payload));
+        }
+
+        const data = unwrapApiData<{ lead?: FranchiseLead }>(payload);
+        await fetchLeads();
+        return data.lead || null;
+    };
+
+    const addLeadActivity = async () => {
+        if (!selectedLead || !activityContent.trim()) {
+            showAlert('상담 내용을 입력해주세요.', 'error', '상담 이력 추가 실패');
+            return;
+        }
+
+        const nextActivity: LeadActivity = {
+            id: createActivityId(),
+            type: activityType,
+            content: activityContent.trim(),
+            createdAt: new Date().toISOString(),
+            createdBy: user?.name || userId
+        };
+
+        try {
+            await updateLeadWithPatch(selectedLead, {
+                activityLog: [nextActivity, ...(selectedLead.activityLog || [])],
+                lastContactedAt: new Date().toISOString()
+            });
+            setActivityContent('');
+            showAlert('상담 이력을 추가했습니다.', 'success', '저장 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '상담 이력 저장에 실패했습니다.', 'error', '저장 실패');
+        }
+    };
+
+    const saveDetailNextContact = async () => {
+        if (!selectedLead) return;
+
+        try {
+            await updateLeadWithPatch(selectedLead, {
+                nextContactAt: detailNextContactAt ? new Date(detailNextContactAt).toISOString() : null
+            });
+            showAlert('다음 연락일을 저장했습니다.', 'success', '저장 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '다음 연락일 저장에 실패했습니다.', 'error', '저장 실패');
+        }
+    };
+
+    const linkRelatedCustomer = async (customer: RelatedCustomer) => {
+        if (!selectedLead) return;
+
+        try {
+            await updateLeadWithPatch(selectedLead, {
+                linkedCustomerId: customer.id,
+                linkedCustomerName: customer.name,
+                sourceType: selectedLead.sourceType || 'customer',
+                sourceId: selectedLead.sourceId || customer.id
+            });
+            showAlert('기존 고객과 연결했습니다.', 'success', '연결 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '고객 연결에 실패했습니다.', 'error', '연결 실패');
+        }
+    };
+
+    const linkRelatedCard = async (card: RelatedBusinessCard) => {
+        if (!selectedLead) return;
+
+        try {
+            await updateLeadWithPatch(selectedLead, {
+                linkedBusinessCardId: card.id,
+                linkedBusinessCardName: card.name,
+                sourceType: selectedLead.sourceType || 'business-card',
+                sourceId: selectedLead.sourceId || card.id
+            });
+            showAlert('기존 명함과 연결했습니다.', 'success', '연결 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '명함 연결에 실패했습니다.', 'error', '연결 실패');
         }
     };
 
@@ -613,15 +873,30 @@ export default function FranchiseLeadsPage() {
                     <strong>{((summary.byStatus?.['상담중'] || 0) + (summary.byStatus?.['가맹검토'] || 0)).toLocaleString()}</strong>
                     <small>상담중 + 가맹검토</small>
                 </article>
+                <article className={styles.kpiCardAccent}>
+                    <span>오늘 연락</span>
+                    <strong>{dueContactCount.toLocaleString()}</strong>
+                    <small>마감 또는 24시간 내 연락</small>
+                </article>
+                <article className={styles.kpiCard}>
+                    <span>연락 지연</span>
+                    <strong>{overdueContactCount.toLocaleString()}</strong>
+                    <small>다음 연락일이 지난 후보</small>
+                </article>
                 <article className={styles.kpiCard}>
                     <span>계약 전환율</span>
                     <strong>{conversionRate}%</strong>
                     <small>계약예정/완료 기준</small>
                 </article>
-                <article className={styles.kpiCardAccent}>
+                <article className={styles.kpiCard}>
                     <span>HOT 리드</span>
                     <strong>{summary.hotCount.toLocaleString()}</strong>
                     <small>빠른 연락 필요 후보</small>
+                </article>
+                <article className={styles.kpiCard}>
+                    <span>기존 DB 연결</span>
+                    <strong>{linkedLeadCount.toLocaleString()}</strong>
+                    <small>고객/명함과 연결된 리드</small>
                 </article>
             </section>
 
@@ -731,22 +1006,23 @@ export default function FranchiseLeadsPage() {
                                 <th>브랜드</th>
                                 <th>다음 연락</th>
                                 <th>메모</th>
+                                <th>연결</th>
                                 <th />
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={10} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
+                                    <td colSpan={11} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
                                 </tr>
                             ) : leads.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className={styles.emptyRow}>조건에 맞는 후보자가 없습니다.</td>
+                                    <td colSpan={11} className={styles.emptyRow}>조건에 맞는 후보자가 없습니다.</td>
                                 </tr>
                             ) : leads.map(lead => (
                                 <tr key={lead.id}>
                                     <td>
-                                        <button className={styles.nameButton} onClick={() => openEditModal(lead)}>
+                                        <button className={styles.nameButton} onClick={() => setSelectedLeadId(lead.id)}>
                                             <strong>{lead.name}</strong>
                                             <span>{formatDate(lead.createdAt)} 등록</span>
                                         </button>
@@ -770,16 +1046,36 @@ export default function FranchiseLeadsPage() {
                                     <td>{lead.desiredRegion || '-'}</td>
                                     <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>
                                     <td>{lead.interestedBrand || '-'}</td>
-                                    <td>{formatDateTime(lead.nextContactAt)}</td>
+                                    <td>
+                                        <span className={isPastDue(lead.nextContactAt) ? styles.dueBadgeDanger : isDueSoon(lead.nextContactAt) ? styles.dueBadge : undefined}>
+                                            {formatDateTime(lead.nextContactAt)}
+                                        </span>
+                                    </td>
                                     <td className={styles.memoCell}>{lead.memo || '-'}</td>
                                     <td>
-                                        <button
-                                            className={styles.iconButtonDanger}
-                                            onClick={() => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
-                                            aria-label={`${lead.name} 삭제`}
-                                        >
-                                            <Trash2 size={15} />
-                                        </button>
+                                        <div className={styles.linkBadges}>
+                                            {lead.linkedCustomerId && <span>고객</span>}
+                                            {lead.linkedBusinessCardId && <span>명함</span>}
+                                            {!lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className={styles.rowActions}>
+                                            <button
+                                                className={styles.iconButton}
+                                                onClick={() => openEditModal(lead)}
+                                                aria-label={`${lead.name} 수정`}
+                                            >
+                                                <Pencil size={15} />
+                                            </button>
+                                            <button
+                                                className={styles.iconButtonDanger}
+                                                onClick={() => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
+                                                aria-label={`${lead.name} 삭제`}
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -870,6 +1166,164 @@ export default function FranchiseLeadsPage() {
                             </button>
                         </div>
                     </form>
+                </div>
+            )}
+
+            {selectedLead && (
+                <div className={styles.detailBackdrop} onClick={() => setSelectedLeadId('')}>
+                    <aside className={styles.detailPanel} onClick={(event) => event.stopPropagation()}>
+                        <div className={styles.detailHeader}>
+                            <div>
+                                <span className={styles.detailEyebrow}>Lead Detail</span>
+                                <h2>{selectedLead.name}</h2>
+                                <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'}</p>
+                            </div>
+                            <button className={styles.closeButton} onClick={() => setSelectedLeadId('')} aria-label="상세 패널 닫기">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className={styles.detailQuickActions}>
+                            <select
+                                value={selectedLead.status}
+                                onChange={(event) => void updateLeadStatus(selectedLead, event.target.value as FranchiseLeadStatus)}
+                            >
+                                {FRANCHISE_LEAD_STATUSES.map(status => (
+                                    <option key={status} value={status}>{status}</option>
+                                ))}
+                            </select>
+                            <button className={styles.secondaryButton} onClick={() => openEditModal(selectedLead)}>
+                                <Pencil size={15} />
+                                기본정보 수정
+                            </button>
+                        </div>
+
+                        <section className={styles.detailSection}>
+                            <h3><UserRound size={16} /> 기본정보</h3>
+                            <div className={styles.detailInfoGrid}>
+                                <div>
+                                    <span>등급</span>
+                                    <strong>{selectedLead.grade || '-'}</strong>
+                                </div>
+                                <div>
+                                    <span>희망지역</span>
+                                    <strong>{selectedLead.desiredRegion || '-'}</strong>
+                                </div>
+                                <div>
+                                    <span>예산</span>
+                                    <strong>{formatBudget(selectedLead.budgetMin, selectedLead.budgetMax)}</strong>
+                                </div>
+                                <div>
+                                    <span>관심브랜드</span>
+                                    <strong>{selectedLead.interestedBrand || '-'}</strong>
+                                </div>
+                            </div>
+                            <div className={styles.detailMemo}>
+                                <span>메모</span>
+                                <p>{selectedLead.memo || '등록된 메모가 없습니다.'}</p>
+                            </div>
+                        </section>
+
+                        <section className={styles.detailSection}>
+                            <h3><CalendarClock size={16} /> 다음 연락</h3>
+                            <div className={styles.nextContactBox}>
+                                <input
+                                    type="datetime-local"
+                                    value={detailNextContactAt}
+                                    onChange={(event) => setDetailNextContactAt(event.target.value)}
+                                />
+                                <button className={styles.primaryButton} onClick={() => void saveDetailNextContact()}>
+                                    저장
+                                </button>
+                            </div>
+                            <p className={styles.detailHint}>
+                                현재: {formatFullDateTime(selectedLead.nextContactAt)}
+                                {isPastDue(selectedLead.nextContactAt) ? ' · 연락 지연' : isDueSoon(selectedLead.nextContactAt) ? ' · 24시간 내 연락' : ''}
+                            </p>
+                        </section>
+
+                        <section className={styles.detailSection}>
+                            <h3><MessageSquare size={16} /> 상담 이력</h3>
+                            <div className={styles.activityComposer}>
+                                <select value={activityType} onChange={(event) => setActivityType(event.target.value as LeadActivityType)}>
+                                    {ACTIVITY_TYPES.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                                <textarea
+                                    value={activityContent}
+                                    onChange={(event) => setActivityContent(event.target.value)}
+                                    placeholder="상담 내용, 고객 반응, 다음 액션을 기록하세요."
+                                />
+                                <button className={styles.primaryButton} onClick={() => void addLeadActivity()}>
+                                    이력 추가
+                                </button>
+                            </div>
+                            <div className={styles.timeline}>
+                                {(selectedLead.activityLog || []).length === 0 ? (
+                                    <div className={styles.emptyTimeline}>아직 상담 이력이 없습니다.</div>
+                                ) : (
+                                    (selectedLead.activityLog || []).map(activity => (
+                                        <article key={activity.id} className={styles.timelineItem}>
+                                            <div>
+                                                <span>{activity.type}</span>
+                                                <time>{formatFullDateTime(activity.createdAt)}</time>
+                                            </div>
+                                            <p>{activity.content}</p>
+                                            <small>{activity.createdBy || '담당자 미상'}</small>
+                                        </article>
+                                    ))
+                                )}
+                            </div>
+                        </section>
+
+                        <section className={styles.detailSection}>
+                            <h3><Link2 size={16} /> 기존 DB 연결</h3>
+                            <div className={styles.linkSummary}>
+                                <span>{selectedLead.linkedCustomerId ? `고객: ${selectedLead.linkedCustomerName || selectedLead.linkedCustomerId}` : '고객 미연결'}</span>
+                                <span>{selectedLead.linkedBusinessCardId ? `명함: ${selectedLead.linkedBusinessCardName || selectedLead.linkedBusinessCardId}` : '명함 미연결'}</span>
+                            </div>
+
+                            <div className={styles.relatedGrid}>
+                                <div className={styles.relatedColumn}>
+                                    <h4><UserRound size={14} /> 고객 후보</h4>
+                                    {isRelatedLoading ? (
+                                        <p>검색 중...</p>
+                                    ) : relatedCustomers.length === 0 ? (
+                                        <p>같은 연락처의 고객이 없습니다.</p>
+                                    ) : relatedCustomers.map(customer => (
+                                        <article key={customer.id} className={styles.relatedItem}>
+                                            <div>
+                                                <strong>{customer.name}</strong>
+                                                <span>{customer.mobile || customer.companyPhone || '-'}</span>
+                                            </div>
+                                            <button onClick={() => void linkRelatedCustomer(customer)}>
+                                                연결
+                                            </button>
+                                        </article>
+                                    ))}
+                                </div>
+                                <div className={styles.relatedColumn}>
+                                    <h4><BriefcaseBusiness size={14} /> 명함 후보</h4>
+                                    {isRelatedLoading ? (
+                                        <p>검색 중...</p>
+                                    ) : relatedCards.length === 0 ? (
+                                        <p>같은 연락처의 명함이 없습니다.</p>
+                                    ) : relatedCards.map(card => (
+                                        <article key={card.id} className={styles.relatedItem}>
+                                            <div>
+                                                <strong>{card.name}</strong>
+                                                <span>{card.companyName || card.mobile || '-'}</span>
+                                            </div>
+                                            <button onClick={() => void linkRelatedCard(card)}>
+                                                연결
+                                            </button>
+                                        </article>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    </aside>
                 </div>
             )}
 
