@@ -1693,6 +1693,21 @@ export default function FranchiseLeadsPage() {
                     )}
                     <div className={styles.tableScroll}>
                         <table className={styles.leadTable}>
+                            <colgroup>
+                                <col className={styles.colCheck} />
+                                <col className={styles.colCandidate} />
+                                <col className={styles.colPhone} />
+                                <col className={styles.colStatus} />
+                                <col className={styles.colManager} />
+                                <col className={styles.colSource} />
+                                <col className={styles.colRegion} />
+                                <col className={styles.colBudget} />
+                                <col className={styles.colBrand} />
+                                <col className={styles.colNextContact} />
+                                <col className={styles.colMemo} />
+                                <col className={styles.colLink} />
+                                <col className={styles.colActions} />
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th className={styles.checkboxCell}>
@@ -1779,10 +1794,9 @@ export default function FranchiseLeadsPage() {
                                         <td className={styles.memoCell}>{lead.memo || '-'}</td>
                                         <td>
                                             <div className={styles.linkBadges}>
-                                                {lead.convertedCustomerId && <span className={styles.convertedBadge}>전환완료</span>}
                                                 {lead.linkedCustomerId && <span>고객</span>}
                                                 {lead.linkedBusinessCardId && <span>명함</span>}
-                                                {!lead.convertedCustomerId && !lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
+                                                {!lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
                                             </div>
                                         </td>
                                         <td>
