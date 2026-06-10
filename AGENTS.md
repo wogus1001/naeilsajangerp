@@ -50,6 +50,21 @@ npm run build
 - Do not write secrets, API keys, service-role keys, private URLs, or tokens into project docs.
 - For user-facing Korean text, preserve UTF-8 and inspect for mojibake before finishing.
 
+## LAZYCODEX / OMO WORKFLOW
+- OMO skills are available in Codex Desktop and terminal Codex; prefer explicit skill names such as `omo:ulw-plan`, `omo:start-work`, `omo:ulw-loop`, `omo:review-work`, and `omo:init-deep`.
+- Prefer Codex Desktop for screenshot/image-heavy UI work, and terminal Codex for long CLI-oriented loops.
+- Small changes in 1-2 files can be implemented directly with focused verification.
+- Multi-file work touching UI, API, DB, or docs should start with a short plan.
+- Large or ambiguous work should use `ulw-plan` first, then `start-work` after user approval.
+- Use `ulw-loop` when the user asks to proceed end-to-end, including implementation, QA, docs, and commit readiness.
+- Use `review-work` before commits or after risky changes to check bugs, regressions, missing tests, and documentation drift.
+- Use `init-deep` after major structural changes or new modules to refresh project memory.
+- Before commits, confirm `ERP/web/handoff.md` has no diff and run applicable verification.
+
+## HERMES DOC/OPS CHECKPOINTS
+- Suggest a Hermes Doc/Ops Brief when docs and code change together, 2+ docs change, SQL/API/UI change together, QA logs or verification results change, a feature milestone completes, external API/quota/cost/crawling policy changes, or before broad commits.
+- When suggesting Hermes, give the user an exact paste-ready prompt and remind it not to edit code, SQL, env, package files, or `ERP/web/handoff.md`.
+
 ## CURRENT PRODUCT NOTES
 - Meta Lead Ads code exists but development and rollout are on HOLD until Meta account/app config, env, webhook URLs, and permissions are ready.
 - SearchAPI quota exhaustion is not the same as "no Naver data"; preserve prior successful Naver review/ad values when provider limits or timeouts occur.

@@ -35,6 +35,16 @@
 - `.env.local`은 git에 올리지 않는다.
 - `handoff.md`는 단일 작성자 규칙 때문에 Codex가 수정하지 않는다.
 
+## LazyCodex 운영 요약
+- 상세 작업 규칙은 루트 `AGENTS.md`를 따른다.
+- LazyCodex/OMO 스킬은 데스크탑 Codex와 터미널 Codex 모두에서 사용 가능하며, 필요 시 `omo:ulw-plan`처럼 네임스페이스를 명시한다.
+- 화면/이미지 피드백이 많은 작업은 데스크탑 Codex를 우선 사용하고, 긴 CLI 루프는 터미널 Codex를 보조로 사용한다.
+- 큰 작업은 `ulw-plan`으로 계획을 만든 뒤 사용자 승인 후 `start-work`로 실행한다.
+- 사용자가 "끝까지", "알아서 진행", "문서/QA/커밋까지"를 요청하면 `ulw-loop`를 우선 고려한다.
+- 커밋 전에는 변경 범위, `ERP/web/handoff.md` 무변경, 관련 검증 결과를 확인한다.
+- 구조가 크게 바뀌거나 새 모듈이 생기면 `init-deep`로 프로젝트 메모리를 갱신한다.
+- Codex는 주요 변경/커밋 전 Hermes Doc/Ops Brief 호출 타이밍과 붙여넣을 프롬프트를 사용자에게 제안한다.
+
 ## 맥에서 ERP 전용 폴더로 재구성하는 안전한 순서
 - 이미 `/Users/kimjaehyun/Documents/project` 아래에 작업 폴더가 있는 상태를 기준으로 한다.
 - 아래 방식은 기존 현재 상태를 유지한 채, 새 `erp_workspace`를 만들고 그 안에서 다시 구성하는 방식이다.
@@ -123,9 +133,9 @@ npm run build
     - 1차 완료: 기존 모객DB와 점포 DB만 사용해 `출점 후보지 인사이트` 추가
     - 2차 완료: 본사 직영점/가맹점/예정점 위치 마스터 DB/API/UI 분리
     - 화면 구조:
-      - `/dashboard/franchise-leads`: 후보자 관리
-      - `/dashboard/franchise-leads/market-insights`: 출점 후보지 관리 및 후보지 인사이트
-      - `/dashboard/franchise-operations`: 현재 직영점/가맹점 운영 관리
+      - `/dashboard/franchise-leads/market-insights`: 후보자 및 출점 후보지 관리
+      - `/dashboard/franchise-operations`: 현재 직영점/가맹점 운영 관리, 외부 상가 수집 탭 포함
+      - `/dashboard/franchise-leads/brand-monitoring`: 브랜드별 모니터링 대시보드
     - 구분 원칙:
       - 출점 후보지: `예정점`, `검토중`, `오픈준비` 중심으로 모객 리드의 희망지역/예산/관심브랜드와 연결
       - 가맹 운영: `직영점`, `가맹점`, `운영중`, `휴점`, `폐점` 중심으로 본사 운영 상태 관리
@@ -154,9 +164,9 @@ npm run build
       - 출점 후보지/가맹 운영 주소 검색도 점포 신규등록과 같은 Daum 우편번호 검색 모달 방식으로 맞췄다. 주소 선택 시 주소/지역을 채우고 좌표는 비워두며, 경쟁스캔은 기존처럼 서버에서 주소 기반 좌표 변환을 수행한다.
       - 적용 SQL: `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 실데이터 테스트 전 선행 적용 필요 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
-      - 미적용 상태에서 브랜드 선택/조회 시 Supabase `PGRST205`(`franchise_brands` 테이블 schema cache 없음) 발생 가능.
-      - 검증 완료: `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build`
-      - 브라우저 확인: 인증 없는 상태에서 보호 라우트가 `/login`으로 정상 이동하고 console error 없음. 본문 데이터 수집 확인은 실제 로그인 세션과 Naver/SERP env 설정 후 진행 필요.
+      - 브랜드 모니터링 실제 수집 전 선행 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
+      - P0: SearchAPI 429/한도 초과 시 기존 Naver 리뷰/광고 성공 값을 덮어쓰지 않게 보호하고, UI를 `SearchAPI 한도초과`/`provider 미설정`/`결과 없음`으로 분리 표시.
+      - P1: `supabase_realty_import_migration.sql` 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 500/1000 리밋, 점포목록 미등록, 회사 격리 확인.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
