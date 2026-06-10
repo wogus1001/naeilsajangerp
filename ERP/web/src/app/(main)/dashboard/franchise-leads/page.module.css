@@ -880,7 +880,14 @@
     font-weight: 900;
 }
 
-.realtyImportForm input {
+.realtyRegionPicker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.realtyImportForm input,
+.realtyImportForm select {
     height: 40px;
     width: 100%;
     padding: 0 11px;
@@ -892,10 +899,33 @@
     font-weight: 700;
 }
 
+.realtyImportForm select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, #64748b 50%), linear-gradient(135deg, #64748b 50%, transparent 50%);
+    background-position: calc(100% - 16px) 17px, calc(100% - 11px) 17px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
 .realtySourceBox>div {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.realtySourcePill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    width: fit-content;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 900;
 }
 
 .realtyResultPanel {
@@ -981,6 +1011,26 @@
     border: 1px solid #fecaca;
     background: #fff7f7;
     color: #b91c1c;
+}
+
+.realtyResultEmpty {
+    margin: 12px 16px 16px;
+    padding: 14px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 13px;
+    background: #fbfdff;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.realtySavedPanel {
+    margin-top: 14px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.86);
 }
 
 .realtyTableWrap {
@@ -4168,6 +4218,10 @@
 
     .realtySummaryCards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .realtyRegionPicker {
+        grid-template-columns: 1fr;
     }
 
     .realtyResultHeader {

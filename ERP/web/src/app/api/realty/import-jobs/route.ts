@@ -12,14 +12,13 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
     buildExternalPropertyPayload,
     fetchDaangnStoreListings,
-    fetchNaverStoreListings,
     type RealtyListing,
     type RealtySource
 } from '@/lib/realty-import';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_SOURCES = new Set<RealtySource>(['daangn', 'naver_land']);
+const VALID_SOURCES = new Set<RealtySource>(['daangn']);
 
 function cleanString(value: unknown): string {
     return String(value ?? '').trim();
@@ -87,6 +86,7 @@ function transformListing(row: any) {
     return {
         id: row.id,
         companyId: row.company_id,
+        requesterId: row.requester_id,
         importJobId: row.import_job_id,
         propertyId: row.property_id,
         duplicateOfPropertyId: row.duplicate_of_property_id,
@@ -123,17 +123,25 @@ function isMissingRealtyTableError(error: unknown) {
         && /realty_import_jobs|external_property_listings/i.test(String(payload.message || ''));
 }
 
+function isMissingRealtySchemaError(error: unknown) {
+    const payload = error as { code?: string; message?: string } | null;
+    return payload?.code === 'PGRST204'
+        && /requester_id|company_id/i.test(String(payload.message || ''));
+}
+
 function transformRuntimeListing(params: {
     listing: RealtyListing;
-    companyId: string;
+    companyId: string | null;
     importJobId: string;
+    requesterId?: string | null;
     propertyId?: string | null;
     duplicateOfPropertyId?: string | null;
 }) {
-    const { listing, companyId, importJobId, propertyId, duplicateOfPropertyId } = params;
+    const { listing, companyId, importJobId, requesterId, propertyId, duplicateOfPropertyId } = params;
     return {
         id: `${listing.source}:${listing.sourceListingId}`,
         companyId,
+        requesterId,
         importJobId,
         propertyId,
         duplicateOfPropertyId: duplicateOfPropertyId || null,
@@ -187,9 +195,8 @@ async function resolveCompanyContext(supabaseAdmin: any, request: Request, body:
     const requestedCompanyName = cleanString(body.companyName);
     const requestedCompanyId = cleanString(body.companyId)
         || (requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null);
-    const companyId = referenceProperty?.company_id || requestedCompanyId || requesterProfile.company_id;
-    if (!companyId) return { error: fail(400, 'VALIDATION_ERROR', 'Company scope is required') };
-    if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, companyId)) {
+    const companyId = referenceProperty?.company_id || requestedCompanyId || requesterProfile.company_id || null;
+    if (companyId && !isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, companyId)) {
         return { error: fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied') };
     }
 
@@ -207,20 +214,29 @@ async function resolveCompanyContext(supabaseAdmin: any, request: Request, body:
     };
 }
 
-async function findExistingExternalListing(supabaseAdmin: any, companyId: string, listing: RealtyListing) {
-    const { data, error } = await supabaseAdmin
+async function findExistingExternalListing(
+    supabaseAdmin: any,
+    companyId: string | null,
+    requesterId: string,
+    listing: RealtyListing
+) {
+    let query = supabaseAdmin
         .from('external_property_listings')
         .select('*')
-        .eq('company_id', companyId)
         .eq('source', listing.source)
-        .eq('source_listing_id', listing.sourceListingId)
-        .maybeSingle();
+        .eq('source_listing_id', listing.sourceListingId);
+
+    query = companyId
+        ? query.eq('company_id', companyId)
+        : query.is('company_id', null).eq('requester_id', requesterId);
+
+    const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return data;
 }
 
-async function findPotentialDuplicateProperty(supabaseAdmin: any, companyId: string, listing: RealtyListing) {
-    if (!listing.address) return null;
+async function findPotentialDuplicateProperty(supabaseAdmin: any, companyId: string | null, listing: RealtyListing) {
+    if (!companyId || !listing.address) return null;
     const { data, error } = await supabaseAdmin
         .from('properties')
         .select('id, name, address')
@@ -231,7 +247,8 @@ async function findPotentialDuplicateProperty(supabaseAdmin: any, companyId: str
     return data?.[0] || null;
 }
 
-async function findExistingImportedPropertyBySource(supabaseAdmin: any, companyId: string, listing: RealtyListing) {
+async function findExistingImportedPropertyBySource(supabaseAdmin: any, companyId: string | null, listing: RealtyListing) {
+    if (!companyId) return null;
     const { data, error } = await supabaseAdmin
         .from('properties')
         .select('id, name, address, data')
@@ -336,7 +353,8 @@ async function updateExternalProperty(supabaseAdmin: any, propertyId: string, pa
 
 async function upsertExternalListing(supabaseAdmin: any, params: {
     listing: RealtyListing;
-    companyId: string;
+    companyId: string | null;
+    requesterId: string;
     importJobId: string;
     propertyId?: string | null;
     duplicateOfPropertyId?: string | null;
@@ -344,6 +362,7 @@ async function upsertExternalListing(supabaseAdmin: any, params: {
 }) {
     const payload = {
         company_id: params.companyId,
+        requester_id: params.requesterId,
         import_job_id: params.importJobId,
         property_id: params.propertyId,
         duplicate_of_property_id: params.duplicateOfPropertyId || null,
@@ -400,8 +419,7 @@ async function upsertExternalListing(supabaseAdmin: any, params: {
 
 async function collectListings(region: string, sources: RealtySource[], limit: unknown) {
     const results = await Promise.allSettled(sources.map(source => {
-        if (source === 'daangn') return fetchDaangnStoreListings(region, limit);
-        return fetchNaverStoreListings(region, limit);
+        return fetchDaangnStoreListings(region, limit);
     }));
 
     const listings: RealtyListing[] = [];
@@ -441,6 +459,9 @@ export async function POST(request: Request) {
         if (!region || region.length < 2) {
             return fail(400, 'VALIDATION_ERROR', '수집할 지역을 확인할 수 없습니다.');
         }
+        if (registerToProperties && !context.companyId) {
+            return fail(400, 'VALIDATION_ERROR', 'ERP 물건지로 승격하려면 회사 범위가 필요합니다.');
+        }
 
         let trackingTablesAvailable = true;
         let job: any = null;
@@ -459,6 +480,7 @@ export async function POST(request: Request) {
                 status: 'running',
                 data: {
                     requestedSources: sources,
+                    requesterOnlyScope: !context.companyId,
                     referencePropertyName: context.referenceProperty?.name || '',
                     requestedAt: new Date().toISOString()
                 }
@@ -473,6 +495,7 @@ export async function POST(request: Request) {
                 id: randomUUID(),
                 data: {
                     requestedSources: sources,
+                    requesterOnlyScope: !context.companyId,
                     referencePropertyName: context.referenceProperty?.name || '',
                     requestedAt: new Date().toISOString()
                 }
@@ -504,7 +527,7 @@ export async function POST(request: Request) {
         for (const listing of collection.listings) {
             try {
                 const existingExternal = trackingTablesAvailable
-                    ? await findExistingExternalListing(supabaseAdmin, context.companyId, listing)
+                    ? await findExistingExternalListing(supabaseAdmin, context.companyId, context.requesterProfile.id, listing)
                     : null;
                 const duplicateProperty = existingExternal?.property_id
                     ? null
@@ -518,6 +541,7 @@ export async function POST(request: Request) {
                     const externalListing = await upsertExternalListing(supabaseAdmin, {
                         listing,
                         companyId: context.companyId,
+                        requesterId: context.requesterProfile.id,
                         importJobId: job.id,
                         propertyId: existingExternal?.property_id || null,
                         duplicateOfPropertyId: duplicateProperty?.id || null,
@@ -562,6 +586,7 @@ export async function POST(request: Request) {
                     ? await upsertExternalListing(supabaseAdmin, {
                         listing,
                         companyId: context.companyId,
+                        requesterId: context.requesterProfile.id,
                         importJobId: job.id,
                         propertyId: property.id,
                         duplicateOfPropertyId: duplicateProperty?.id || null,
@@ -571,6 +596,7 @@ export async function POST(request: Request) {
                         listing,
                         companyId: context.companyId,
                         importJobId: job.id,
+                        requesterId: context.requesterProfile.id,
                         propertyId: property.id,
                         duplicateOfPropertyId: duplicateProperty?.id || null
                     });
@@ -657,6 +683,13 @@ export async function POST(request: Request) {
         }, 201);
     } catch (error) {
         console.error('Realty import job error:', error);
+        if (isMissingRealtySchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '외부 상가 수집 테이블이 최신 스키마가 아닙니다. supabase_realty_import_migration.sql 최신 버전을 적용한 뒤 다시 수집해주세요.'
+            );
+        }
         if (jobId) {
             await supabaseAdmin
                 .from('realty_import_jobs')

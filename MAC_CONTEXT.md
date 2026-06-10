@@ -222,10 +222,12 @@ npm run build
   - 범위: 우선 상가만 수집. 사무실은 MVP에서 제외.
   - 추가 SQL: `ERP/web/supabase_realty_import_migration.sql`, base schema 반영: `ERP/web/supabase_schema.sql`.
   - 추가 API: `POST /api/realty/import-jobs`, `GET /api/realty/import-jobs/:id`, `GET /api/realty/listings`.
-  - 기본 소스: Daangn 상가 목록. 네이버부동산은 MVP 기본 수집 소스에서 제외하고 향후 과제로 이관했다.
-  - Naver Land POC는 지역 코드 확인 후 모바일 clusterList/articleList 흐름을 시도할 수 있으나 공식 API가 아니어서 빈 응답/429 warning 가능. 후속 검토 순서는 사용자 URL/CSV/JSON import -> 로컬 Chrome 세션 캡처 POC -> provider/proxy 어댑터다.
+  - 기본 소스: Daangn 상가 목록 단일화. 네이버부동산은 UI/API에서 제거하고 향후 과제로 이관했다.
+  - Naver Land 후속 검토 순서는 사용자 URL/CSV/JSON import -> 로컬 Chrome 세션 캡처 POC -> provider/proxy 어댑터다.
   - 저장: `external_property_listings` 원본 추적. ERP `properties`에는 자동 생성하지 않는다.
-  - Daangn 구 단위 검색은 동 단위 후보로 자동 확장한다. 예: 광진구 -> 자양동/화양동/구의동/광장동/군자동/중곡동/능동.
+  - 수집 지역은 자연어 입력이 아니라 시도/시군구 선택 방식이다. Daangn 구 단위 검색은 동 단위 후보로 자동 확장한다. 예: 서울 광진구 -> 자양동/화양동/구의동/광장동/군자동/중곡동/능동.
+  - 등록 회사명 입력은 제거했다. 회사 범위가 있으면 `company_id`, 없으면 `requester_id` 기준 수집함에 저장한다.
+  - 하단 `저장된 상가` 목록과 `최신화` 버튼을 추가했다. 최신화는 기존 sourceListingId를 중복 추가하지 않고 새 매물만 신규 저장한다.
   - Daangn 목록 호출은 `salesType=store`를 명시한다. 결과 UI는 매물명보다 주소를 중심으로 표시하고 목록 응답의 관리비/승인일/등록일/반응수/설명 일부를 함께 보여준다.
   - 당근 지도 숫자는 지도 클러스터/필터/뷰포트 집계라 동별 목록 응답 수집 건수와 1:1로 맞지 않을 수 있다. 현재 MVP는 숫자 완전 일치보다 검토 가능한 후보 목록 정리를 우선한다.
   - 화면 기본 수집 리밋은 500건, API 안전 상한은 1000건이다.

@@ -36,6 +36,7 @@ function transformListing(row: any) {
     return {
         id: row.id,
         companyId: row.company_id,
+        requesterId: row.requester_id,
         importJobId: row.import_job_id,
         propertyId: row.property_id,
         duplicateOfPropertyId: row.duplicate_of_property_id,
@@ -74,7 +75,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
             .maybeSingle();
         if (error) throw error;
         if (!job) return fail(404, 'NOT_FOUND', 'Import job not found');
-        if (!canAccessCompanyResource(requesterProfile, job)) {
+        if (!canAccessCompanyResource(requesterProfile, job) && job.requester_id !== requesterProfile.id) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 

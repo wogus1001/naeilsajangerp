@@ -653,7 +653,7 @@ create index if not exists idx_meta_lead_imports_company_created
 -- 23. REALTY EXTERNAL LISTING IMPORT Tables
 create table if not exists public.realty_import_jobs (
   id uuid default uuid_generate_v4() primary key,
-  company_id uuid references public.companies(id) on delete cascade not null,
+  company_id uuid references public.companies(id) on delete cascade,
   requester_id uuid references public.profiles(id),
   reference_property_id text references public.properties(id) on delete set null,
   source text default 'all' not null,
@@ -677,7 +677,8 @@ create table if not exists public.realty_import_jobs (
 
 create table if not exists public.external_property_listings (
   id uuid default uuid_generate_v4() primary key,
-  company_id uuid references public.companies(id) on delete cascade not null,
+  company_id uuid references public.companies(id) on delete cascade,
+  requester_id uuid references public.profiles(id),
   import_job_id uuid references public.realty_import_jobs(id) on delete set null,
   property_id text references public.properties(id) on delete set null,
   duplicate_of_property_id text references public.properties(id) on delete set null,
@@ -713,28 +714,54 @@ alter table public.external_property_listings enable row level security;
 create policy "Company members can view realty_import_jobs" on public.realty_import_jobs
   for select using (company_id = get_my_company_id());
 
+create policy "Requesters can view own realty_import_jobs" on public.realty_import_jobs
+  for select using (requester_id = auth.uid());
+
 create policy "Company members can insert realty_import_jobs" on public.realty_import_jobs
   for insert with check (company_id = get_my_company_id());
+
+create policy "Requesters can insert own realty_import_jobs" on public.realty_import_jobs
+  for insert with check (requester_id = auth.uid());
 
 create policy "Company members can update realty_import_jobs" on public.realty_import_jobs
   for update using (company_id = get_my_company_id())
   with check (company_id = get_my_company_id());
 
+create policy "Requesters can update own realty_import_jobs" on public.realty_import_jobs
+  for update using (requester_id = auth.uid())
+  with check (requester_id = auth.uid());
+
 create policy "Company members can delete realty_import_jobs" on public.realty_import_jobs
   for delete using (company_id = get_my_company_id());
+
+create policy "Requesters can delete own realty_import_jobs" on public.realty_import_jobs
+  for delete using (requester_id = auth.uid());
 
 create policy "Company members can view external_property_listings" on public.external_property_listings
   for select using (company_id = get_my_company_id());
 
+create policy "Requesters can view own external_property_listings" on public.external_property_listings
+  for select using (requester_id = auth.uid());
+
 create policy "Company members can insert external_property_listings" on public.external_property_listings
   for insert with check (company_id = get_my_company_id());
+
+create policy "Requesters can insert own external_property_listings" on public.external_property_listings
+  for insert with check (requester_id = auth.uid());
 
 create policy "Company members can update external_property_listings" on public.external_property_listings
   for update using (company_id = get_my_company_id())
   with check (company_id = get_my_company_id());
 
+create policy "Requesters can update own external_property_listings" on public.external_property_listings
+  for update using (requester_id = auth.uid())
+  with check (requester_id = auth.uid());
+
 create policy "Company members can delete external_property_listings" on public.external_property_listings
   for delete using (company_id = get_my_company_id());
+
+create policy "Requesters can delete own external_property_listings" on public.external_property_listings
+  for delete using (requester_id = auth.uid());
 
 create index if not exists idx_realty_import_jobs_company_created
   on public.realty_import_jobs (company_id, created_at desc);
@@ -745,8 +772,19 @@ create index if not exists idx_realty_import_jobs_reference_property
 create unique index if not exists idx_external_property_listings_source_unique
   on public.external_property_listings (company_id, source, source_listing_id);
 
+create unique index if not exists idx_external_property_listings_scope_source_unique
+  on public.external_property_listings (
+    coalesce(company_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    coalesce(case when company_id is null then requester_id else null end, '00000000-0000-0000-0000-000000000000'::uuid),
+    source,
+    source_listing_id
+  );
+
 create index if not exists idx_external_property_listings_company_collected
   on public.external_property_listings (company_id, collected_at desc);
+
+create index if not exists idx_external_property_listings_requester_collected
+  on public.external_property_listings (requester_id, collected_at desc);
 
 create index if not exists idx_external_property_listings_property
   on public.external_property_listings (property_id);

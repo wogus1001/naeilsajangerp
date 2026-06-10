@@ -39,12 +39,12 @@ interface CustomFieldItem {
     value: string;
 }
 
-type RealtyImportSource = 'daangn' | 'naver_land';
+type RealtyImportSource = 'daangn';
 
 type RealtyImportedListing = {
     listing?: {
         id: string;
-        source: RealtyImportSource;
+        source: string;
         sourceListingId: string;
         sourceUrl: string;
         title: string;
@@ -314,10 +314,6 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
     const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
     const [userCompanyName, setUserCompanyName] = useState<string>('');
     const [realtyRegion, setRealtyRegion] = useState(() => deriveRealtyRegion(property.address || property.region || property.name));
-    const [realtySources, setRealtySources] = useState<Record<RealtyImportSource, boolean>>({
-        daangn: true,
-        naver_land: false
-    });
     const [isRealtyImporting, setIsRealtyImporting] = useState(false);
     const [realtyImportResult, setRealtyImportResult] = useState<RealtyImportResult | null>(null);
 
@@ -2183,26 +2179,10 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
     const getRealtySourceLabel = (source: RealtyImportSource | string) => {
         if (source === 'daangn') return '당근';
-        if (source === 'naver_land') return '네이버';
         return source || '-';
     };
 
-    const toggleRealtySource = (source: RealtyImportSource) => {
-        setRealtySources(prev => ({
-            ...prev,
-            [source]: !prev[source]
-        }));
-    };
-
     const handleRealtyImport = async () => {
-        const selectedSources = (Object.entries(realtySources) as Array<[RealtyImportSource, boolean]>)
-            .filter(([, checked]) => checked)
-            .map(([source]) => source);
-
-        if (selectedSources.length === 0) {
-            showAlert('수집 소스를 선택해주세요.', 'info');
-            return;
-        }
         if (!realtyRegion || realtyRegion.length < 2) {
             showAlert('수집 지역을 확인해주세요.', 'info');
             return;
@@ -2216,10 +2196,10 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 body: JSON.stringify(withRequesterPayload({
                     referencePropertyId: formData.id,
                     region: realtyRegion,
-                    sources: selectedSources,
-                    companyName: formData.companyName || userCompanyName,
+                    sources: ['daangn'],
                     managerId: formData.managerId,
-                    limit: 40
+                    limit: 40,
+                    registerToProperties: false
                 }))
             });
 
@@ -3646,7 +3626,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 {/* Right Side: Tabs */}
                 <div className={styles.rightPanel}>
                     <div className={styles.tabs}>
-                        {['priceWork', 'revenue', 'photos', 'realty', 'contracts', 'reports', 'docs', 'transfer'].map(tab => (
+                        {['priceWork', 'revenue', 'photos', 'contracts', 'reports', 'docs', 'transfer'].map(tab => (
                             <button
                                 key={tab}
                                 className={`${styles.tabBtn} ${activeTab === tab ? styles.activeTab : ''}`}
@@ -4024,22 +4004,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                         />
                                     </label>
                                     <div className={styles.realtySourceGroup}>
-                                        <label className={`${styles.realtySourceChip} ${realtySources.daangn ? styles.realtySourceChipActive : ''}`}>
-                                            <input
-                                                type="checkbox"
-                                                checked={realtySources.daangn}
-                                                onChange={() => toggleRealtySource('daangn')}
-                                            />
-                                            당근
-                                        </label>
-                                        <label className={`${styles.realtySourceChip} ${realtySources.naver_land ? styles.realtySourceChipActive : ''}`}>
-                                            <input
-                                                type="checkbox"
-                                                checked={realtySources.naver_land}
-                                                onChange={() => toggleRealtySource('naver_land')}
-                                            />
-                                            네이버 POC
-                                        </label>
+                                        <span className={`${styles.realtySourceChip} ${styles.realtySourceChipActive}`}>당근 상가</span>
                                     </div>
                                 </div>
 

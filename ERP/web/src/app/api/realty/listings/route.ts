@@ -18,6 +18,7 @@ function transformListing(row: any) {
     return {
         id: row.id,
         companyId: row.company_id,
+        requesterId: row.requester_id,
         importJobId: row.import_job_id,
         propertyId: row.property_id,
         duplicateOfPropertyId: row.duplicate_of_property_id,
@@ -48,6 +49,12 @@ function transformListing(row: any) {
     };
 }
 
+function isMissingRealtySchemaError(error: unknown) {
+    const payload = error as { code?: string; message?: string } | null;
+    return payload?.code === 'PGRST204'
+        && /requester_id|company_id/i.test(String(payload.message || ''));
+}
+
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
@@ -59,6 +66,7 @@ export async function GET(request: Request) {
         const importJobId = cleanString(searchParams.get('importJobId'));
         const companyName = cleanString(searchParams.get('company'));
         const source = cleanString(searchParams.get('source'));
+        const region = cleanString(searchParams.get('region'));
         const limit = Math.max(1, Math.min(200, Number(searchParams.get('limit') || 80)));
         let companyId = requesterProfile.company_id;
 
@@ -83,10 +91,6 @@ export async function GET(request: Request) {
             companyId = resolvedCompanyId;
         }
 
-        if (!companyId && !isAdmin(requesterProfile)) {
-            return fail(400, 'VALIDATION_ERROR', 'Company scope is required');
-        }
-
         let query = supabaseAdmin
             .from('external_property_listings')
             .select('*')
@@ -94,9 +98,15 @@ export async function GET(request: Request) {
             .limit(limit);
 
         if (companyId) query = query.eq('company_id', companyId);
+        else query = query.is('company_id', null).eq('requester_id', requesterProfile.id);
         if (propertyId) query = query.eq('property_id', propertyId);
         if (importJobId) query = query.eq('import_job_id', importJobId);
         if (source) query = query.eq('source', source);
+        if (region) {
+            const district = region.split(/\s+/).find(token => /[구군시]$/.test(token)) || region;
+            const sanitized = district.replace(/[%,()]/g, '').trim();
+            if (sanitized) query = query.or(`region.ilike.%${sanitized}%,address.ilike.%${sanitized}%`);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
@@ -106,6 +116,13 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         console.error('Realty listings GET error:', error);
+        if (isMissingRealtySchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '외부 상가 수집 테이블이 최신 스키마가 아닙니다. supabase_realty_import_migration.sql 최신 버전을 적용한 뒤 다시 조회해주세요.'
+            );
+        }
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch external realty listings');
     }
 }

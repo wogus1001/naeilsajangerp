@@ -118,11 +118,11 @@ Current source policy:
 
 - Daangn is the default source for store listings.
 - Daangn listing calls include `salesType=store`; the UI shows address-first rows with price, area/floor, management fee, approval date, collected source metadata, and source links.
-- District-level Daangn searches are expanded into dong-level region candidates when available.
-- Naver Land is deferred from the MVP and is not a default collection source. It remains a helper POC only, shown in the UI as `네이버 보조 POC`; it tries the mobile `clusterList -> articleList` flow after region resolution, but it may return empty or 429/rate-limited responses because it is not an official public API.
-- Future Naver Land work should start with user-provided URL/CSV/JSON import, then local Chrome-session capture POC, and only then a provider/proxy adapter after legal and cost review.
+- The UI uses sido/sigungu selects instead of free-text region input; district-level Daangn searches are expanded into dong-level region candidates when available.
+- Naver Land is deferred from the MVP and removed from the current UI/API. Future Naver Land work should start with user-provided URL/CSV/JSON import, then local Chrome-session capture POC, and only then a provider/proxy adapter after legal and cost review.
 - Screen requests default to 500 listings, and the API clamps import requests to a 1000-listing safety maximum.
-- External listing dedupe/update is keyed by `company_id + source + source_listing_id`.
+- External listing dedupe/update is keyed by `company_id + source + source_listing_id` when a company scope exists, otherwise `requester_id + source + source_listing_id`.
+- The import screen does not ask for company name. Saved listings appear in the lower saved-list panel, and the refresh button re-collects the selected region without duplicating existing source listing IDs.
 - Daangn map counts are cluster/filter/viewport aggregates and may not match the collected dong-level listing count exactly.
 - Listing-response fields are enough for address, price, area/floor, management fee, approval date, registered date, chat/interest counts, photo count, short description, source link, and inferred `writerType`; direction, move-in date, restroom, parking, violation/building-use details require selective detail-page fetches.
 - Login, messaging, reservation, bypass automation, and write actions on external services are out of scope.

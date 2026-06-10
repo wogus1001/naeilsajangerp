@@ -56,9 +56,12 @@
 - 당근 지도 숫자는 지도 클러스터/필터/뷰포트 집계라 동별 공개 목록 응답 수집 건수와 1:1로 맞지 않을 수 있으며, 현재 MVP는 숫자 완전 일치보다 검토 가능한 후보 정리를 우선한다.
 - 방향, 입주가능일, 화장실, 주차, 위반건축물, 건축물 용도, 세부 위치/특징은 상세 페이지 추가 호출이 필요하므로 상위 N건 선택 보강 대상으로 분리했다.
 - 네이버부동산 POC는 단일 `articleList` 호출에서 모바일 `clusterList -> articleList` 흐름으로 보강했다.
-- UI에서는 네이버를 기본 소스가 아니라 `네이버 보조 POC`로 표시하고, 빈 응답/429/구조 변경 가능성이 있어 현재 MVP에서는 당근 상가 수집을 기본으로 유지한다.
+- 당시 UI에서는 네이버를 보조 POC로 분리 표시했으나, 빈 응답/429/구조 변경 가능성이 있어 현재 MVP에서는 제거하고 당근 상가 수집만 유지한다.
 - 네이버부동산 대안 조사를 진행했다. `single-markers/2.0` 계열 예시는 아파트/단지 마커 요약에 가까워 상가 목록 수집에는 바로 맞지 않고, `clusterList -> articleList` 계열은 서버 호출에서 빈 응답/429가 반복될 수 있어 MVP 완료 조건에서 제외했다.
 - 네이버부동산은 향후 `사용자 URL/CSV import -> 로컬 Chrome 세션 기반 캡처 POC -> provider/proxy 어댑터` 순서로 재검토한다.
+- 2026-06-10 외부 상가 수집 UI/API에서 네이버 보조 POC를 제거하고 Daangn 상가 단일 수집으로 정리했다.
+- 2026-06-10 등록 회사명 입력을 제거했다. 회사 범위가 있으면 `company_id`, 회사 범위가 없으면 `requester_id` 기준 수집함에 저장하도록 realty migration/API를 보정했다.
+- 2026-06-10 수집 지역 입력을 시도/시군구 선택 방식으로 변경하고, 하단 `저장된 상가` 목록과 `최신화` 버튼을 추가했다. 최신화는 같은 `sourceListingId`를 중복 추가하지 않고 신규 매물만 추가한다.
 
 ## QA 결과
 
@@ -69,7 +72,8 @@
 - `npm run build`
 - 2026-06-09 외부 상가 수집 MVP 구현 후 `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 통과
 - 2026-06-09 `realty_import_jobs` schema cache 오류 대응 후 `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 재통과
-- 2026-06-09 `POST /api/realty/import-jobs`를 `sources=["naver_land"]`, `region="서울 광진구"`로 확인했을 때 HTTP 성공, 매물 0건 warning 정상 반환
+- 2026-06-09 네이버부동산 보조 POC 요청으로 지역 코드 조회와 빈 매물 warning 반환을 확인한 이력이 있음
+- 2026-06-10 외부 상가 수집 UI/API 정리 후 `npx tsc --noEmit` 통과
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
@@ -126,8 +130,7 @@
 ### Daangn / Naver Land Realty
 
 - 당근은 공개 지역 API와 부동산 목록 `_data` 응답을 읽고 `STORE` 타입만 저장한다. 목록 호출 시 `salesType=store`를 명시한다.
-- 네이버부동산은 공식 API가 아니라 보조 POC 어댑터로 둔다. 지역 코드 확인 후 `clusterList -> articleList` 흐름을 시도하되 빈 응답/429 제한은 warning으로 남긴다.
-- 네이버부동산 수집 실패는 당근 상가 수집 MVP 실패로 처리하지 않는다. 운영 적용 전에는 URL/CSV import나 로컬 세션 캡처 방식부터 별도 검증한다.
+- 네이버부동산은 현재 UI/API에서 제거했다. 운영 적용 전에는 URL/CSV import나 로컬 세션 캡처 방식부터 별도 검증한다.
 - 외부 매물 수집은 읽기 전용이며 로그인, 문의, 채팅, 예약, 결제 자동화는 하지 않는다.
 
 ## 다음 QA 체크리스트
@@ -143,8 +146,11 @@
 
 - `supabase_realty_import_migration.sql` 적용 후 `/dashboard/franchise-operations`의 `외부 상가 수집` 탭에서 당근 상가 수집을 확인
 - `salesType=store` 적용 후 당근 상가 수집 결과가 기존보다 늘어나는지 확인
-- `광진구` 입력 시 동 단위 확장 warning이 표시되는지 확인
+- 시도/시군구 선택으로 `서울특별시 / 광진구` 수집이 실행되는지 확인
+- 선택한 시군구가 당근 동 단위 확장 warning으로 표시되는지 확인
 - 같은 `source + listingId` 재수집 시 `external_property_listings`가 신규 생성이 아니라 업데이트되는지 확인
+- 회사 범위가 없는 계정에서도 `requester_id` 기준으로 저장 목록이 조회되는지 확인
+- 하단 `저장된 상가` 목록과 `최신화` 버튼이 동작하고, 최신화 시 기존 매물이 중복 표시되지 않는지 확인
 - 화면 기본 500건 수집 리밋과 API 1000건 안전 상한이 적용되는지 확인
 - 기존 물건지와 주소가 같은 외부 매물이 `duplicate_candidate`로 표시되는지 확인
 - 외부 수집 결과가 점포목록에 자동 등록되지 않는지 확인
