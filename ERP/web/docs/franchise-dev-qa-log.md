@@ -65,6 +65,7 @@
 - 2026-06-10 저장 목록을 저장 시군구 칩, 동 단위 카드, 동 내부 페이지네이션 구조로 고도화했다. 전체 매물을 먼저 페이지로 자른 뒤 동을 나누지 않고, 모든 동 카드를 먼저 보여준다.
 - 2026-06-10 저장 목록에 저장일 컬럼과 별표 토글을 추가했다. 별표는 `external_property_listings.data.favorite`에 저장하고 재수집 업데이트 시 보존한다.
 - 2026-06-10 requester/company 스키마 drift 대응을 추가했다. `external_property_listings.requester_id`가 없는 구형 스키마에서는 명확한 migration 안내를 반환한다.
+- 2026-06-10 저장 목록 1차 점수화를 추가했다. 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 추천점수/최근 저장/월세/면적/관심 정렬을 제공한다.
 
 ## QA 결과
 
@@ -77,10 +78,13 @@
 - 2026-06-09 `realty_import_jobs` schema cache 오류 대응 후 `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 재통과
 - 2026-06-09 네이버부동산 보조 POC 요청으로 지역 코드 조회와 빈 매물 warning 반환을 확인한 이력이 있음
 - 2026-06-10 외부 상가 수집 UI/API 정리 후 `npx tsc --noEmit` 통과
+- 2026-06-10 저장 상가 점수/필터 유닛 테스트 통과: `utils.test.mts`, `scoring.test.mts`
+- 2026-06-10 저장 상가 점수/필터 구현 후 `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
 - `http://localhost:3000/dashboard/franchise-operations` 보호 라우트 로그인 이동 확인
+- 2026-06-10 인앱 브라우저에서 `/dashboard/franchise-operations` 접근 시 로그인 세션이 없어 `/login` 이동 확인. 저장 상가 실제 화면 조작 QA는 로그인 세션에서 추가 확인 필요.
 - Kakao JavaScript 지도는 `http://localhost:3000` 도메인 등록 후 지도 표시 확인
 - Google Places API (New) `places:searchText` 응답 확인
 - SearchAPI 정상 시점에 Naver 리뷰 예시 수집 확인
@@ -156,6 +160,7 @@
 - 하단 `저장된 상가` 목록, 저장 지역 칩, 동 카드, 동 내부 페이지네이션, 최신화 버튼이 동작하고, 최신화 시 기존 매물이 중복 표시되지 않는지 확인
 - 화면 2000건 수집 요청, import API 3000건 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 확인
 - 저장일 컬럼과 별표 토글이 동작하고, 재수집 후에도 별표가 유지되는지 확인
+- 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 정렬이 저장 지역 칩과 동 카드 페이지네이션을 깨지 않는지 확인
 - 기존 물건지와 주소가 같은 외부 매물이 `duplicate_candidate`로 표시되는지 확인
 - 외부 수집 결과가 점포목록에 자동 등록되지 않는지 확인
 - `external_property_listings`에 원본 raw/data가 저장되는지 확인

@@ -1,9 +1,16 @@
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import {
+    filterRealtyListings,
+    REALTY_SORT_OPTIONS,
+    sortRealtyListings,
+    type RealtyFilterState,
+    type RealtySortKey
+} from './scoring';
 import type { RealtyImportedListing, RealtyListingRecord } from './types';
 import { RealtyListingRow } from './RealtyListingRow';
-import { groupListings, isFavorite } from './utils';
+import { groupListings } from './utils';
 
 type Props = {
     readonly listings: readonly RealtyImportedListing[];
@@ -24,15 +31,19 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
     const [expandedGroups, setExpandedGroups] = React.useState<ReadonlySet<string>>(() => new Set());
     const [groupPages, setGroupPages] = React.useState<Readonly<Record<string, number>>>({});
     const [pageSize, setPageSize] = React.useState<number>(DEFAULT_PAGE_SIZE);
-    const sortedListings = React.useMemo(
-        () => [...listings].sort((a, b) => Number(isFavorite(b)) - Number(isFavorite(a))),
-        [listings]
-    );
+    const [filters, setFilters] = React.useState<RealtyFilterState>({
+        favoriteOnly: false,
+        groundFloorOnly: false,
+        clearMaintenanceOnly: false,
+        sortKey: 'score_desc'
+    });
+    const filteredListings = React.useMemo(() => filterRealtyListings(listings, filters), [filters, listings]);
+    const sortedListings = React.useMemo(() => sortRealtyListings(filteredListings, filters.sortKey), [filteredListings, filters.sortKey]);
     const groupedListings = React.useMemo(() => groupListings(sortedListings), [sortedListings]);
 
     React.useEffect(() => {
         setGroupPages({});
-    }, [listings, pageSize]);
+    }, [filters, listings, pageSize]);
 
     React.useEffect(() => {
         if (groupedListings.length === 0) return;
@@ -64,6 +75,20 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
         }));
     };
 
+    const toggleFilter = (key: keyof Pick<RealtyFilterState, 'favoriteOnly' | 'groundFloorOnly' | 'clearMaintenanceOnly'>) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
+    };
+
+    const setSortKey = (sortKey: RealtySortKey) => {
+        setFilters(prev => ({
+            ...prev,
+            sortKey
+        }));
+    };
+
     return (
         <>
             <div className={styles.realtySavedToolbar}>
@@ -71,14 +96,33 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
                     <button type="button" onClick={() => setAllGroupsExpanded(true)}>전체 열기</button>
                     <button type="button" onClick={() => setAllGroupsExpanded(false)}>전체 닫기</button>
                 </div>
-                <label>
-                    동별 페이지당
-                    <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
-                        {PAGE_SIZE_OPTIONS.map(size => (
-                            <option key={size} value={size}>{size}건</option>
-                        ))}
-                    </select>
-                </label>
+                <span>{sortedListings.length.toLocaleString()} / {listings.length.toLocaleString()}건 표시</span>
+            </div>
+
+            <div className={styles.realtySavedFilterBar}>
+                <div>
+                    <button type="button" className={filters.favoriteOnly ? styles.realtyFilterActive : ''} onClick={() => toggleFilter('favoriteOnly')}>별표만</button>
+                    <button type="button" className={filters.groundFloorOnly ? styles.realtyFilterActive : ''} onClick={() => toggleFilter('groundFloorOnly')}>1층만</button>
+                    <button type="button" className={filters.clearMaintenanceOnly ? styles.realtyFilterActive : ''} onClick={() => toggleFilter('clearMaintenanceOnly')}>관리비 확인</button>
+                </div>
+                <div>
+                    <label>
+                        정렬
+                        <select value={filters.sortKey} onChange={(event) => setSortKey(event.target.value as RealtySortKey)}>
+                            {REALTY_SORT_OPTIONS.map(option => (
+                                <option key={option.key} value={option.key}>{option.label}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label>
+                        동별 페이지당
+                        <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+                            {PAGE_SIZE_OPTIONS.map(size => (
+                                <option key={size} value={size}>{size}건</option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
             </div>
 
             <div className={styles.realtyGroupList}>
@@ -86,6 +130,8 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
                     <div className={styles.locationEmpty}>
                         {isLoading ? '저장된 상가를 불러오는 중입니다.' : '저장된 상가 매물이 없습니다. 상가 수집 실행 후 이 목록에 누적됩니다.'}
                     </div>
+                ) : sortedListings.length === 0 ? (
+                    <div className={styles.locationEmpty}>선택한 조건에 맞는 저장 상가가 없습니다.</div>
                 ) : groupedListings.map(group => {
                     const expanded = expandedGroups.has(group.key);
                     const totalPages = Math.max(1, Math.ceil(group.listings.length / pageSize));
@@ -107,6 +153,7 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
                                             <thead>
                                                 <tr>
                                                     <th>별표</th>
+                                                    <th>점수</th>
                                                     <th>상태</th>
                                                     <th>주소</th>
                                                     <th>가격</th>

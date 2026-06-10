@@ -1,5 +1,6 @@
 import { ExternalLink, Star } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { scoreRealtyListing } from './scoring';
 import type { RealtyImportedListing, RealtyListingRecord } from './types';
 import {
     formatRealtyAreaAndFloor,
@@ -25,6 +26,7 @@ export function RealtyListingRow({ item, favoriteUpdatingId, onToggleFavoriteAct
     const detailMeta = getRealtyDetailMeta(listing);
     const reactionMeta = getRealtyReactionMeta(listing);
     const contentSummary = summarizeRealtyContent(listing?.raw?.content);
+    const candidateScore = scoreRealtyListing(item);
 
     return (
         <tr>
@@ -41,6 +43,10 @@ export function RealtyListingRow({ item, favoriteUpdatingId, onToggleFavoriteAct
                         <Star size={16} fill={favorite ? 'currentColor' : 'none'} />
                     </button>
                 ) : '-'}
+            </td>
+            <td>
+                <strong className={styles.realtyScoreValue}>{candidateScore.score}점</strong>
+                <small>{candidateScore.reasons.slice(0, 3).join(' · ') || '검토'}</small>
             </td>
             <td>
                 <span className={item.duplicateOfPropertyId ? styles.realtyStatusWarn : styles.realtyStatusOk}>
