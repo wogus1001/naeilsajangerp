@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
 import {
     BriefcaseBusiness,
+    FileSearch,
     MapPin,
     Plus,
     RefreshCw,
@@ -14,6 +14,7 @@ import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import KakaoAddressSearch, { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
 import LocationCompetitionPanel, { LocationCompetitionScan } from '@/components/franchise/LocationCompetitionPanel';
+import { RealtyImportPanel } from '@/components/franchise/RealtyImportPanel';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import {
     buildMarketInsights,
@@ -24,6 +25,7 @@ import styles from '../page.module.css';
 
 type FranchiseLocationType = '직영점' | '가맹점' | '예정점';
 type FranchiseLocationStatus = '운영중' | '오픈준비' | '검토중' | '휴점' | '폐점';
+type MarketInsightTab = 'market-insights' | 'realty-import';
 
 type AuthUser = {
     id?: string;
@@ -147,6 +149,7 @@ function getCompetitionKeyword(location: Pick<FranchiseLocation, 'brand' | 'comp
 }
 
 export default function FranchiseMarketInsightsPage() {
+    const [activeMarketTab, setActiveMarketTab] = React.useState<MarketInsightTab>('market-insights');
     const [userId, setUserId] = React.useState('');
     const [companyName, setCompanyName] = React.useState('');
     const [leads, setLeads] = React.useState<FranchiseLead[]>([]);
@@ -173,6 +176,17 @@ export default function FranchiseMarketInsightsPage() {
         const currentUserId = parsedUser.uid || parsedUser.id || localStorage.getItem('userId') || '';
         setUserId(currentUserId);
         setCompanyName(parsedUser.role === 'admin' ? '' : parsedUser.companyName || '');
+    }, []);
+
+    React.useEffect(() => {
+        const syncTabFromUrl = () => {
+            const queryTab = new URLSearchParams(window.location.search).get('tab');
+            setActiveMarketTab(queryTab === 'realty-import' ? 'realty-import' : 'market-insights');
+        };
+
+        syncTabFromUrl();
+        window.addEventListener('popstate', syncTabFromUrl);
+        return () => window.removeEventListener('popstate', syncTabFromUrl);
     }, []);
 
     const fetchInsightData = React.useCallback(async () => {
@@ -263,6 +277,24 @@ export default function FranchiseMarketInsightsPage() {
     const topMarketInsight = marketInsights[0] || null;
     const highCompetitionCount = marketInsights.filter(item => item.competitionScore >= 70).length;
     const strongMarketingCount = marketInsights.filter(item => item.marketingScore >= 70).length;
+    const firstSitePlanningLocation = sitePlanningLocations[0];
+    const realtyInitialRegion = topMarketInsight?.region
+        || firstSitePlanningLocation?.region
+        || (firstSitePlanningLocation?.address ? normalizeRegion(firstSitePlanningLocation.address) : '서울 광진구');
+
+    const selectMarketTab = (tab: MarketInsightTab) => {
+        setActiveMarketTab(tab);
+        const params = new URLSearchParams(window.location.search);
+        if (tab === 'realty-import') {
+            params.set('tab', 'realty-import');
+        } else {
+            params.delete('tab');
+        }
+
+        const queryString = params.toString();
+        const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
+        window.history.pushState(null, '', nextUrl);
+    };
 
     const resetLocationForm = () => {
         setLocationForm(EMPTY_LOCATION_FORM);
@@ -447,13 +479,26 @@ export default function FranchiseMarketInsightsPage() {
                 </div>
             </section>
 
-            <nav className={styles.franchiseTabs} aria-label="모객 DB 하위 메뉴">
-                <Link href="/dashboard/franchise-leads">후보자 관리</Link>
-                <Link href="/dashboard/franchise-leads/market-insights" className={styles.franchiseTabActive}>
+            <nav className={styles.workspaceTabs} aria-label="출점 후보지 작업 영역">
+                <button
+                    type="button"
+                    className={activeMarketTab === 'market-insights' ? styles.workspaceTabActive : styles.workspaceTab}
+                    onClick={() => selectMarketTab('market-insights')}
+                >
+                    <BriefcaseBusiness size={15} />
                     출점 후보지
-                </Link>
+                </button>
+                <button
+                    type="button"
+                    className={activeMarketTab === 'realty-import' ? styles.workspaceTabActive : styles.workspaceTab}
+                    onClick={() => selectMarketTab('realty-import')}
+                >
+                    <FileSearch size={15} />
+                    외부 상가 수집
+                </button>
             </nav>
 
+            {activeMarketTab === 'market-insights' && (
             <section className={styles.marketInsightPanel}>
                 <div className={styles.panelHeader}>
                     <div>
@@ -501,7 +546,7 @@ export default function FranchiseMarketInsightsPage() {
                                     <tr>
                                         <th>지역</th>
                                         <th>리드</th>
-                                        <th>HOT</th>
+                                        <th>즉시상담</th>
                                         <th>계약권</th>
                                         <th>내부점포</th>
                                         <th>평균예산</th>
@@ -731,6 +776,11 @@ export default function FranchiseMarketInsightsPage() {
                     </div>
                 </div>
             </section>
+            )}
+
+            {activeMarketTab === 'realty-import' && (
+                <RealtyImportPanel userId={userId} initialRegionHint={realtyInitialRegion} />
+            )}
         </div>
     );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
     Bar,
@@ -23,8 +22,10 @@ import {
     Columns3,
     Download,
     FileSpreadsheet,
+    LayoutDashboard,
     ListChecks,
     Link2,
+    Megaphone,
     MessageSquare,
     Pencil,
     Plus,
@@ -45,9 +46,27 @@ import {
     FRANCHISE_LEAD_GRADES,
     FRANCHISE_LEAD_SOURCES,
     FRANCHISE_LEAD_STATUSES,
-    FranchiseLeadStatus,
+    getFranchiseLeadGradeLabel,
+    getFranchiseLeadStageLabel,
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
+import type { FranchiseLeadStage, FranchiseLeadStatus } from '@/lib/franchise-leads';
+import { LeadLocationMatchSection } from '@/components/franchise/LeadLocationMatchSection';
+import { LeadWorkflowSection } from '@/components/franchise/LeadWorkflowSection';
+import { buildLeadLocationMatches } from '@/lib/franchise-lead-location-matching';
+import type { LeadLocationMatchLocation } from '@/lib/franchise-lead-location-matching';
+import {
+    EMPTY_LEAD_WORKFLOW_DRAFT,
+    buildLeadWorkflowDraft,
+    getLeadWorkQueueLabel,
+    getLeadWorkQueueRank,
+    getLeadWorkQueueSummary,
+    isLeadContactActionDue,
+    isLeadDueToday,
+    isLeadPastDue,
+    matchesLeadWorkQueue
+} from '@/lib/franchise-lead-workflow';
+import type { LeadConsultationResult, LeadFitLevel, LeadNextAction, LeadWorkflowDraft, LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from './page.module.css';
 
@@ -61,6 +80,7 @@ type FranchiseLead = {
     source: string;
     status: FranchiseLeadStatus;
     grade: string;
+    leadStage?: FranchiseLeadStage;
     desiredRegion: string;
     budgetMin: number | null;
     budgetMax: number | null;
@@ -68,6 +88,12 @@ type FranchiseLead = {
     memo: string;
     nextContactAt: string | null;
     lastContactedAt: string | null;
+    nextAction?: LeadNextAction;
+    consultationResult?: LeadConsultationResult;
+    churnReason?: string;
+    budgetFit?: LeadFitLevel;
+    regionFit?: LeadFitLevel;
+    brandFit?: LeadFitLevel;
     createdAt: string;
     updatedAt: string;
     activityLog?: LeadActivity[];
@@ -109,6 +135,13 @@ type RelatedBusinessCard = {
     mobile?: string;
     companyPhone1?: string;
     memo?: string;
+};
+
+type FranchiseLocation = LeadLocationMatchLocation & {
+    readonly companyId?: string;
+    readonly managerId?: string | null;
+    readonly createdAt?: string;
+    readonly updatedAt?: string;
 };
 
 type LeadSummary = {
@@ -216,6 +249,8 @@ type LeadFormState = {
 };
 
 type LeadViewMode = 'table' | 'pipeline' | 'tasks';
+type LeadDbLayer = 'candidate' | 'raw_intake';
+type LeadWorkspaceTab = 'dashboard' | 'db';
 
 type UploadErrorRow = {
     row: number;
@@ -261,8 +296,22 @@ const META_FIELD_LABELS: Array<{ key: keyof MetaFieldMapping; label: string; hin
 const VIEW_OPTIONS: Array<{ mode: LeadViewMode; label: string; description: string }> = [
     { mode: 'table', label: '테이블', description: '전체 필드 중심으로 확인' },
     { mode: 'pipeline', label: '파이프라인', description: '상태별 상담 흐름 관리' },
-    { mode: 'tasks', label: '오늘 할 일', description: '오늘/지연 연락 우선 처리' }
+    { mode: 'tasks', label: '업무 큐', description: '우선 처리할 리드 분류' }
 ];
+
+const WORK_QUEUE_OPTIONS: ReadonlyArray<{ key: LeadWorkQueueKey; label: string }> = [
+    { key: 'all', label: '전체 업무' },
+    { key: 'overdue', label: '연락 지연' },
+    { key: 'today', label: '오늘 연락' },
+    { key: 'no_response', label: '무응답' },
+    { key: 'contract', label: '계약 가능' },
+    { key: 'hot', label: '즉시상담' }
+] as const;
+
+const LEAD_DB_LAYER_OPTIONS: ReadonlyArray<{ key: LeadDbLayer; label: string; description: string }> = [
+    { key: 'raw_intake', label: '1차 유입 DB', description: 'Meta/엑셀 등에서 들어온 원천 DB' },
+    { key: 'candidate', label: '후보자', description: '의사가 확인되어 파이프라인에서 관리할 DB' }
+] as const;
 
 function createEmptySummary(): LeadSummary {
     return {
@@ -368,24 +417,15 @@ function toDatetimeLocalValue(value?: string | null) {
 }
 
 function isPastDue(value?: string | null) {
-    if (!value) return false;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return false;
-    return date.getTime() < Date.now();
+    return isLeadPastDue(value);
 }
 
 function isDueToday(value?: string | null) {
-    if (!value) return false;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return false;
-    const today = new Date();
-    return date.getFullYear() === today.getFullYear() &&
-        date.getMonth() === today.getMonth() &&
-        date.getDate() === today.getDate();
+    return isLeadDueToday(value);
 }
 
 function isContactActionDue(value?: string | null) {
-    return isPastDue(value) || isDueToday(value);
+    return isLeadContactActionDue(value);
 }
 
 function createActivityId() {
@@ -428,17 +468,11 @@ function mapLeadGradeToCustomerClass(grade: string) {
 }
 
 function getLeadTaskLabel(lead: FranchiseLead) {
-    if (isPastDue(lead.nextContactAt)) return '연락 지연';
-    if (isDueToday(lead.nextContactAt)) return '오늘 연락';
-    if (lead.grade === 'HOT') return 'HOT 리드';
-    return '후속 관리';
+    return getLeadWorkQueueLabel(lead);
 }
 
 function getLeadTaskRank(lead: FranchiseLead) {
-    if (isPastDue(lead.nextContactAt)) return 0;
-    if (isDueToday(lead.nextContactAt)) return 1;
-    if (lead.grade === 'HOT') return 2;
-    return 3;
+    return getLeadWorkQueueRank(lead);
 }
 
 function buildTrendData(summary: LeadSummary) {
@@ -473,12 +507,34 @@ function createFormFromLead(lead: FranchiseLead): LeadFormState {
     };
 }
 
+function isRawIntakeLead(lead: FranchiseLead) {
+    return lead.leadStage === 'raw_intake';
+}
+
+function isMetaLeadSource(lead: FranchiseLead) {
+    return lead.sourceType === 'meta-lead-ad' || lead.source === 'Meta Lead Ads';
+}
+
+function getLeadSourceTitle(lead: FranchiseLead) {
+    return isMetaLeadSource(lead) ? 'Meta Lead Ads' : lead.source || '유입 미지정';
+}
+
+function getLeadSourceBadgeLabel(lead: FranchiseLead) {
+    const source = getLeadSourceTitle(lead);
+    if (source === 'Meta Lead Ads') return 'Meta';
+    if (source.includes('랜딩')) return '랜딩';
+    if (source.includes('전화')) return '전화';
+    if (source.includes('고객')) return '고객DB';
+    return source;
+}
+
 export default function FranchiseLeadsPage() {
     const router = useRouter();
     const [user, setUser] = React.useState<AuthUser | null>(null);
     const [userId, setUserId] = React.useState('');
     const [companyName, setCompanyName] = React.useState('');
     const [leads, setLeads] = React.useState<FranchiseLead[]>([]);
+    const [pipelineStageLeads, setPipelineStageLeads] = React.useState<FranchiseLead[]>([]);
     const [summary, setSummary] = React.useState<LeadSummary>(createEmptySummary);
     const [total, setTotal] = React.useState(0);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -489,7 +545,10 @@ export default function FranchiseLeadsPage() {
     const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
     const [managerFilter, setManagerFilter] = React.useState('전체');
     const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('30D');
+    const [workspaceTab, setWorkspaceTab] = React.useState<LeadWorkspaceTab>('dashboard');
+    const [leadDbLayer, setLeadDbLayer] = React.useState<LeadDbLayer>('candidate');
     const [viewMode, setViewMode] = React.useState<LeadViewMode>('table');
+    const [taskQueueFilter, setTaskQueueFilter] = React.useState<LeadWorkQueueKey>('all');
     const [pageSize, setPageSize] = React.useState<typeof PAGE_SIZE_OPTIONS[number]>(50);
     const [currentPage, setCurrentPage] = React.useState(1);
     const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('30D'));
@@ -508,10 +567,14 @@ export default function FranchiseLeadsPage() {
     const [convertingLeadId, setConvertingLeadId] = React.useState('');
     const [relatedCustomers, setRelatedCustomers] = React.useState<RelatedCustomer[]>([]);
     const [relatedCards, setRelatedCards] = React.useState<RelatedBusinessCard[]>([]);
+    const [franchiseLocations, setFranchiseLocations] = React.useState<FranchiseLocation[]>([]);
+    const [isLocationMatchLoading, setIsLocationMatchLoading] = React.useState(false);
     const [managerOptions, setManagerOptions] = React.useState<ManagerOption[]>([]);
     const [managerMap, setManagerMap] = React.useState<Record<string, string>>({});
     const [uploadErrors, setUploadErrors] = React.useState<UploadErrorRow[]>([]);
     const [isRelatedLoading, setIsRelatedLoading] = React.useState(false);
+    const [detailWorkflow, setDetailWorkflow] = React.useState<LeadWorkflowDraft>(EMPTY_LEAD_WORKFLOW_DRAFT);
+    const [isWorkflowSaving, setIsWorkflowSaving] = React.useState(false);
     const [metaState, setMetaState] = React.useState<MetaIntegrationState>(EMPTY_META_STATE);
     const [isMetaLoading, setIsMetaLoading] = React.useState(false);
     const [isMetaPanelOpen, setIsMetaPanelOpen] = React.useState(false);
@@ -538,6 +601,10 @@ export default function FranchiseLeadsPage() {
     const quickActivityLead = React.useMemo(
         () => leads.find(lead => lead.id === quickActivityLeadId) || null,
         [leads, quickActivityLeadId]
+    );
+    const selectedLeadLocationMatches = React.useMemo(
+        () => buildLeadLocationMatches(selectedLead, franchiseLocations),
+        [franchiseLocations, selectedLead]
     );
 
     React.useEffect(() => {
@@ -585,12 +652,30 @@ export default function FranchiseLeadsPage() {
             }
 
             const data = unwrapApiData<LeadListResponse>(payload);
-            setLeads(data.leads || []);
+            const nextLeads = data.leads || [];
+            setLeads(nextLeads);
             setSummary(data.summary || createEmptySummary());
             setTotal(data.total || 0);
+
+            if (statusFilter === '전체') {
+                setPipelineStageLeads(nextLeads);
+            } else {
+                const stageParams = new URLSearchParams(params);
+                stageParams.delete('status');
+                const stageResponse = await fetch(`/api/franchise-leads?${stageParams.toString()}`, { cache: 'no-store' });
+                const stagePayload = await stageResponse.json();
+
+                if (!stageResponse.ok) {
+                    throw new Error(readApiError(stagePayload));
+                }
+
+                const stageData = unwrapApiData<LeadListResponse>(stagePayload);
+                setPipelineStageLeads(stageData.leads || []);
+            }
         } catch (error) {
             console.error(error);
             setLeads([]);
+            setPipelineStageLeads([]);
             setSummary(createEmptySummary());
             setTotal(0);
             setAlertConfig({
@@ -648,12 +733,45 @@ export default function FranchiseLeadsPage() {
     }, [fetchMetaIntegration, userId]);
 
     React.useEffect(() => {
+        if (!userId) return;
+
+        const controller = new AbortController();
+        const params = new URLSearchParams({ requesterId: userId });
+        if (companyName) params.set('company', companyName);
+
+        setIsLocationMatchLoading(true);
+        fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
+            .then(async response => {
+                const payload = await response.json();
+                if (!response.ok) throw new Error(readApiError(payload));
+                return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
+            })
+            .then(data => setFranchiseLocations(data.locations || []))
+            .catch(error => {
+                if (error instanceof DOMException && error.name === 'AbortError') return;
+                console.error('Failed to fetch franchise locations for lead matching:', error);
+                setFranchiseLocations([]);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsLocationMatchLoading(false);
+            });
+
+        return () => controller.abort();
+    }, [companyName, userId]);
+
+    React.useEffect(() => {
         setCurrentPage(1);
-    }, [createdFrom, createdTo, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+    }, [createdFrom, createdTo, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
 
     React.useEffect(() => {
         setSelectedLeadIds([]);
-    }, [createdFrom, createdTo, currentPage, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+    }, [createdFrom, createdTo, currentPage, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+
+    React.useEffect(() => {
+        if (leadDbLayer === 'raw_intake' && viewMode !== 'table') {
+            setViewMode('table');
+        }
+    }, [leadDbLayer, viewMode]);
 
     React.useEffect(() => {
         const visibleLeadIds = new Set(leads.map(lead => lead.id));
@@ -721,12 +839,14 @@ export default function FranchiseLeadsPage() {
     React.useEffect(() => {
         if (!selectedLead) {
             setDetailNextContactAt('');
+            setDetailWorkflow(EMPTY_LEAD_WORKFLOW_DRAFT);
             setRelatedCustomers([]);
             setRelatedCards([]);
             return;
         }
 
         setDetailNextContactAt(toDatetimeLocalValue(selectedLead.nextContactAt));
+        setDetailWorkflow(buildLeadWorkflowDraft(selectedLead));
     }, [selectedLead]);
 
     React.useEffect(() => {
@@ -779,9 +899,13 @@ export default function FranchiseLeadsPage() {
         return () => controller.abort();
     }, [companyName, selectedLead, userId]);
 
+    const rawIntakeLeads = leads.filter(isRawIntakeLead);
+    const candidateLeads = leads.filter(lead => !isRawIntakeLead(lead));
+    const pipelineStageCandidateLeads = pipelineStageLeads.filter(lead => !isRawIntakeLead(lead));
+    const visibleLayerLeads = leadDbLayer === 'raw_intake' ? rawIntakeLeads : candidateLeads;
     const stageData = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
-        count: summary.byStatus?.[status] || 0
+        count: pipelineStageCandidateLeads.filter(lead => lead.status === status).length
     }));
     const maxStageCount = Math.max(1, ...stageData.map(item => item.count));
     const sourceChartData = Object.entries(summary.bySource || {})
@@ -798,17 +922,18 @@ export default function FranchiseLeadsPage() {
     ].filter(Boolean).sort().at(-1) || null;
     const canManageMeta = user?.role === 'admin' || user?.role === 'manager';
     const trendData = buildTrendData(summary);
-    const contractReadyCount = (summary.byStatus?.['계약예정'] || 0) + (summary.byStatus?.['계약완료'] || 0);
-    const conversionRate = summary.total > 0 ? Math.round((contractReadyCount / summary.total) * 1000) / 10 : 0;
-    const activeFollowupLeads = leads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
-    const dueContactCount = activeFollowupLeads.filter(lead => isContactActionDue(lead.nextContactAt)).length;
-    const overdueContactCount = activeFollowupLeads.filter(lead => isPastDue(lead.nextContactAt)).length;
+    const contractReadyCount = candidateLeads.filter(lead => lead.status === '계약예정' || lead.status === '계약완료').length;
+    const conversionRate = candidateLeads.length > 0 ? Math.round((contractReadyCount / candidateLeads.length) * 1000) / 10 : 0;
+    const activeFollowupLeads = candidateLeads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
+    const workQueueSummary = getLeadWorkQueueSummary(activeFollowupLeads);
+    const dueContactCount = workQueueSummary.overdue + workQueueSummary.today;
+    const overdueContactCount = workQueueSummary.overdue;
     const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
-        leads: leads.filter(lead => lead.status === status)
+        leads: candidateLeads.filter(lead => lead.status === status)
     }));
     const taskLeads = [...activeFollowupLeads]
-        .filter(lead => isContactActionDue(lead.nextContactAt) || lead.grade === 'HOT')
+        .filter(lead => matchesLeadWorkQueue(lead, taskQueueFilter))
         .sort((a, b) => {
             const rankDiff = getLeadTaskRank(a) - getLeadTaskRank(b);
             if (rankDiff !== 0) return rankDiff;
@@ -816,16 +941,24 @@ export default function FranchiseLeadsPage() {
             const bTime = b.nextContactAt ? new Date(b.nextContactAt).getTime() : Number.MAX_SAFE_INTEGER;
             return aTime - bTime;
         });
+    const taskQueueOptions = WORK_QUEUE_OPTIONS.map(option => {
+        const count = option.key === 'all'
+            ? workQueueSummary.actionable
+            : option.key === 'no_response'
+                ? workQueueSummary.noResponse
+                : workQueueSummary[option.key];
+        return { ...option, count };
+    });
     const listPolicyText = searchTerm.trim()
         ? `검색 중에는 전체 데이터 범위에서 찾고, 화면에는 ${pageSize}건씩 표시합니다.`
         : `기본 조회: 최신 500건 · 화면 표시: ${pageSize}건씩 · 검색 시 전체 범위 조회`;
-    const totalPages = Math.max(1, Math.ceil(leads.length / pageSize));
+    const totalPages = Math.max(1, Math.ceil(visibleLayerLeads.length / pageSize));
     const safeCurrentPage = Math.min(currentPage, totalPages);
-    const pageStartIndex = leads.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
-    const pageEndIndex = Math.min(pageStartIndex + pageSize, leads.length);
+    const pageStartIndex = visibleLayerLeads.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
+    const pageEndIndex = Math.min(pageStartIndex + pageSize, visibleLayerLeads.length);
     const paginatedLeads = React.useMemo(
-        () => leads.slice(pageStartIndex, pageEndIndex),
-        [leads, pageEndIndex, pageStartIndex]
+        () => visibleLayerLeads.slice(pageStartIndex, pageEndIndex),
+        [pageEndIndex, pageStartIndex, visibleLayerLeads]
     );
     const selectedLeadSet = React.useMemo(() => new Set(selectedLeadIds), [selectedLeadIds]);
     const selectedLeads = React.useMemo(
@@ -833,9 +966,9 @@ export default function FranchiseLeadsPage() {
         [paginatedLeads, selectedLeadSet]
     );
     const allVisibleSelected = paginatedLeads.length > 0 && paginatedLeads.every(lead => selectedLeadSet.has(lead.id));
-    const pageRangeText = leads.length === 0
+    const pageRangeText = visibleLayerLeads.length === 0
         ? '0건 표시'
-        : `전체 ${leads.length.toLocaleString()}건 중 ${(pageStartIndex + 1).toLocaleString()}-${pageEndIndex.toLocaleString()}건 표시`;
+        : `${getFranchiseLeadStageLabel(leadDbLayer)} ${visibleLayerLeads.length.toLocaleString()}건 중 ${(pageStartIndex + 1).toLocaleString()}-${pageEndIndex.toLocaleString()}건 표시`;
 
     React.useEffect(() => {
         if (currentPage > totalPages) {
@@ -1070,6 +1203,7 @@ export default function FranchiseLeadsPage() {
                 ...form,
                 requesterId: userId,
                 companyName,
+                leadStage: 'candidate',
                 managerId: form.managerId || userId,
                 budgetMin: parseBudgetInputToWon(form.budgetMin),
                 budgetMax: parseBudgetInputToWon(form.budgetMax),
@@ -1162,6 +1296,29 @@ export default function FranchiseLeadsPage() {
         const updatedLead = await putLeadPatch(lead, patch);
         await fetchLeads();
         return updatedLead;
+    };
+
+    const promoteLeadToCandidate = async (lead: FranchiseLead) => {
+        const now = new Date().toISOString();
+        const nextActivity: LeadActivity = {
+            id: createActivityId(),
+            type: '메모',
+            content: '1차 유입 DB에서 후보자 목록으로 승격',
+            createdAt: now,
+            createdBy: user?.name || userId
+        };
+
+        try {
+            await updateLeadWithPatch(lead, {
+                leadStage: 'candidate',
+                activityLog: [nextActivity, ...(lead.activityLog || [])]
+            });
+            setLeadDbLayer('candidate');
+            showAlert('후보자 목록으로 승격했습니다.', 'success', '승격 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '후보자 승격에 실패했습니다.', 'error', '승격 실패');
+        }
     };
 
     const addLeadActivity = async () => {
@@ -1305,6 +1462,33 @@ export default function FranchiseLeadsPage() {
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '다음 연락일 저장에 실패했습니다.', 'error', '저장 실패');
+        }
+    };
+
+    const saveDetailWorkflow = async () => {
+        if (!selectedLead) return;
+
+        const nextActivity: LeadActivity = {
+            id: createActivityId(),
+            type: '메모',
+            content: `업무 정보 업데이트: ${detailWorkflow.nextAction} · ${detailWorkflow.consultationResult}`,
+            createdAt: new Date().toISOString(),
+            createdBy: user?.name || userId
+        };
+
+        setIsWorkflowSaving(true);
+        try {
+            await updateLeadWithPatch(selectedLead, {
+                ...detailWorkflow,
+                churnReason: detailWorkflow.churnReason.trim(),
+                activityLog: [nextActivity, ...(selectedLead.activityLog || [])]
+            });
+            showAlert('업무 큐 정보를 저장했습니다.', 'success', '저장 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '업무 큐 정보 저장에 실패했습니다.', 'error', '저장 실패');
+        } finally {
+            setIsWorkflowSaving(false);
         }
     };
 
@@ -1488,7 +1672,7 @@ export default function FranchiseLeadsPage() {
         const nextActivity: LeadActivity = {
             id: createActivityId(),
             type: '메모',
-            content: '오늘 할 일에서 연락 완료 처리',
+            content: '업무 큐에서 연락 완료 처리',
             createdAt: now,
             createdBy: user?.name || userId
         };
@@ -1497,12 +1681,14 @@ export default function FranchiseLeadsPage() {
             await updateLeadWithPatch(lead, {
                 lastContactedAt: now,
                 nextContactAt: null,
+                consultationResult: '연락 성공',
+                nextAction: '미정',
                 activityLog: [nextActivity, ...(lead.activityLog || [])]
             });
-            showAlert('오늘 연락 완료로 처리했습니다. 다음 연락일이 필요하면 상세 패널에서 다시 지정하세요.', 'success', '처리 완료');
+            showAlert('연락 완료로 처리했습니다. 다음 연락일이 필요하면 상세 패널에서 다시 지정하세요.', 'success', '처리 완료');
         } catch (error) {
             console.error(error);
-            showAlert(error instanceof Error ? error.message : '오늘 할 일 처리에 실패했습니다.', 'error', '처리 실패');
+            showAlert(error instanceof Error ? error.message : '업무 큐 처리에 실패했습니다.', 'error', '처리 실패');
         }
     };
 
@@ -1611,7 +1797,7 @@ export default function FranchiseLeadsPage() {
                 연락처: '010-1234-5678',
                 유입경로: '랜딩페이지',
                 상태: '문의접수',
-                등급: 'HOT',
+                등급: '즉시상담',
                 희망지역: '서울 강남구',
                 '창업예산(만원)': '10000~20000',
                 관심브랜드: '미카도',
@@ -1684,15 +1870,6 @@ export default function FranchiseLeadsPage() {
                 </div>
             </section>
 
-            <nav className={styles.franchiseTabs} aria-label="모객 DB 하위 메뉴">
-                <Link href="/dashboard/franchise-leads" className={styles.franchiseTabActive}>
-                    후보자 관리
-                </Link>
-                <Link href="/dashboard/franchise-leads/market-insights">
-                    출점 후보지
-                </Link>
-            </nav>
-
             <section className={styles.toolbar}>
                 <div className={styles.rangeGroup} aria-label="기간 필터">
                     {RANGE_OPTIONS.map(option => (
@@ -1762,6 +1939,25 @@ export default function FranchiseLeadsPage() {
                     />
                 </div>
             </section>
+
+            <nav className={styles.workspaceTabs} aria-label="모객 DB 작업 영역">
+                <button
+                    type="button"
+                    className={workspaceTab === 'dashboard' ? styles.workspaceTabActive : styles.workspaceTab}
+                    onClick={() => setWorkspaceTab('dashboard')}
+                >
+                    <LayoutDashboard size={15} />
+                    대시보드
+                </button>
+                <button
+                    type="button"
+                    className={workspaceTab === 'db' ? styles.workspaceTabActive : styles.workspaceTab}
+                    onClick={() => setWorkspaceTab('db')}
+                >
+                    <Table2 size={15} />
+                    DB 관리
+                </button>
+            </nav>
 
             {isMetaPanelOpen && (
                 <section className={styles.metaPanel}>
@@ -1932,140 +2128,169 @@ export default function FranchiseLeadsPage() {
                 </section>
             )}
 
-            <section className={styles.kpiGrid}>
-                <article className={styles.kpiCard}>
-                    <span>총 후보자</span>
-                    <strong>{summary.total.toLocaleString()}</strong>
-                    <small>현재 조건 기준 {total.toLocaleString()}건</small>
-                </article>
-                <article className={styles.kpiCard}>
-                    <span>상담 진행</span>
-                    <strong>{((summary.byStatus?.['상담중'] || 0) + (summary.byStatus?.['가맹검토'] || 0)).toLocaleString()}</strong>
-                    <small>상담중 + 가맹검토</small>
-                </article>
-                <article className={styles.kpiCardAccent}>
-                    <span>오늘 연락</span>
-                    <strong>{dueContactCount.toLocaleString()}</strong>
-                    <small>오늘이거나 이미 지난 연락</small>
-                </article>
-                <article className={styles.kpiCard}>
-                    <span>연락 지연</span>
-                    <strong>{overdueContactCount.toLocaleString()}</strong>
-                    <small>다음 연락일이 지난 후보</small>
-                </article>
-                <article className={styles.kpiCard}>
-                    <span>계약 전환율</span>
-                    <strong>{conversionRate}%</strong>
-                    <small>계약예정/완료 기준</small>
-                </article>
-                <article className={styles.kpiCard}>
-                    <span>HOT 리드</span>
-                    <strong>{summary.hotCount.toLocaleString()}</strong>
-                    <small>빠른 연락 필요 후보</small>
-                </article>
-            </section>
+            {workspaceTab === 'dashboard' && (
+                <>
+                    <section className={styles.kpiGrid}>
+                        <article className={styles.kpiCard}>
+                            <span>총 후보자</span>
+                            <strong>{candidateLeads.length.toLocaleString()}</strong>
+                            <small>파이프라인 관리 대상</small>
+                        </article>
+                        <article className={styles.kpiCard}>
+                            <span>1차 유입 DB</span>
+                            <strong>{rawIntakeLeads.length.toLocaleString()}</strong>
+                            <small>의사 확인 전 원천 DB</small>
+                        </article>
+                        <article className={styles.kpiCard}>
+                            <span>상담 진행</span>
+                            <strong>{candidateLeads.filter(lead => lead.status === '상담중' || lead.status === '가맹검토').length.toLocaleString()}</strong>
+                            <small>상담중 + 가맹검토</small>
+                        </article>
+                        <article className={styles.kpiCardAccent}>
+                            <span>오늘 연락</span>
+                            <strong>{dueContactCount.toLocaleString()}</strong>
+                            <small>오늘이거나 이미 지난 연락</small>
+                        </article>
+                        <article className={styles.kpiCard}>
+                            <span>연락 지연</span>
+                            <strong>{overdueContactCount.toLocaleString()}</strong>
+                            <small>다음 연락일이 지난 후보</small>
+                        </article>
+                        <article className={styles.kpiCard}>
+                            <span>계약 전환율</span>
+                            <strong>{conversionRate}%</strong>
+                            <small>계약예정/완료 기준</small>
+                        </article>
+                        <article className={styles.kpiCard}>
+                            <span>즉시상담</span>
+                            <strong>{candidateLeads.filter(lead => lead.grade === 'HOT').length.toLocaleString()}</strong>
+                            <small>빠른 연락 필요 후보</small>
+                        </article>
+                    </section>
 
-            <section className={styles.analyticsGrid}>
-                <article className={styles.panelWide}>
-                    <div className={styles.panelHeader}>
-                        <div>
-                            <h2>모객 파이프라인</h2>
-                            <p>상태별 후보자 분포와 병목 구간을 확인합니다.</p>
-                        </div>
-                        {statusFilter !== '전체' && (
-                            <button className={styles.clearStageButton} onClick={() => setStatusFilter('전체')}>
-                                전체 보기
-                            </button>
-                        )}
-                    </div>
-                    <div className={styles.stageStrip}>
-                        {stageData.map((item, index) => (
-                            <button
-                                key={item.status}
-                                className={statusFilter === item.status ? styles.stageCardActive : styles.stageCard}
-                                onClick={() => setStatusFilter(statusFilter === item.status ? '전체' : item.status)}
-                            >
-                                <span>{index + 1}. {item.status}</span>
-                                <strong>{item.count.toLocaleString()}</strong>
-                                <div className={styles.stageBarTrack}>
-                                    <div className={styles.stageBarFill} style={{ width: `${Math.max(4, (item.count / maxStageCount) * 100)}%` }} />
+                    <section className={styles.analyticsGrid}>
+                        <article className={styles.panelWide}>
+                            <div className={styles.panelHeader}>
+                                <div>
+                                    <h2>모객 파이프라인</h2>
+                                    <p>상태별 후보자 분포와 병목 구간을 확인합니다.</p>
                                 </div>
+                                {statusFilter !== '전체' && (
+                                    <button className={styles.clearStageButton} onClick={() => setStatusFilter('전체')}>
+                                        전체 보기
+                                    </button>
+                                )}
+                            </div>
+                            <div className={styles.stageStrip}>
+                                {stageData.map((item, index) => (
+                                    <button
+                                        key={item.status}
+                                        className={statusFilter === item.status ? styles.stageCardActive : styles.stageCard}
+                                        onClick={() => setStatusFilter(statusFilter === item.status ? '전체' : item.status)}
+                                    >
+                                        <span>{index + 1}. {item.status}</span>
+                                        <strong>{item.count.toLocaleString()}</strong>
+                                        <div className={styles.stageBarTrack}>
+                                            <div className={styles.stageBarFill} style={{ width: `${Math.max(4, (item.count / maxStageCount) * 100)}%` }} />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className={styles.chartBox}>
+                                <ResponsiveContainer width="100%" height={180}>
+                                    <BarChart data={stageData}>
+                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
+                                        <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                        <Tooltip cursor={{ fill: '#f3f4f6' }} />
+                                        <Bar dataKey="count" fill="#6d5dfc" radius={[8, 8, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </article>
+
+                        <article className={styles.panel}>
+                            <div className={styles.panelHeader}>
+                                <div>
+                                    <h2>유입 경로</h2>
+                                    <p>채널별 모객 볼륨</p>
+                                </div>
+                            </div>
+                            <div className={styles.chartBoxSmall}>
+                                {sourceChartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={230}>
+                                        <BarChart data={sourceChartData} layout="vertical" margin={{ left: 12, right: 12 }}>
+                                            <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#e5e7eb" />
+                                            <XAxis type="number" allowDecimals={false} hide />
+                                            <YAxis dataKey="source" type="category" width={78} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                            <Tooltip cursor={{ fill: '#f3f4f6' }} />
+                                            <Bar dataKey="count" fill="#ff725e" radius={[0, 8, 8, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className={styles.emptyChart}>유입 데이터가 없습니다.</div>
+                                )}
+                            </div>
+                        </article>
+
+                        <article className={styles.panel}>
+                            <div className={styles.panelHeader}>
+                                <div>
+                                    <h2>최근 7일 유입</h2>
+                                    <p>원천 DB와 후보자 유입 추이</p>
+                                </div>
+                            </div>
+                            <div className={styles.chartBoxSmall}>
+                                <ResponsiveContainer width="100%" height={230}>
+                                    <LineChart data={trendData}>
+                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
+                                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                        <Tooltip />
+                                        <Line type="monotone" dataKey="count" stroke="#18a999" strokeWidth={3} dot={{ r: 3 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </article>
+                    </section>
+                </>
+            )}
+
+            {workspaceTab === 'db' && (
+                <section className={styles.tablePanel}>
+                <div className={styles.leadLayerTabs}>
+                    {LEAD_DB_LAYER_OPTIONS.map(option => {
+                        const count = option.key === 'raw_intake' ? rawIntakeLeads.length : candidateLeads.length;
+                        return (
+                            <button
+                                key={option.key}
+                                type="button"
+                                className={leadDbLayer === option.key ? styles.leadLayerTabActive : styles.leadLayerTab}
+                                onClick={() => setLeadDbLayer(option.key)}
+                            >
+                                <strong>{option.label}</strong>
+                                <span>{option.description}</span>
+                                <b>{count.toLocaleString()}건</b>
                             </button>
-                        ))}
-                    </div>
-                    <div className={styles.chartBox}>
-                        <ResponsiveContainer width="100%" height={180}>
-                            <BarChart data={stageData}>
-                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
-                                <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                                <Bar dataKey="count" fill="#6d5dfc" radius={[8, 8, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </article>
-
-                <article className={styles.panel}>
-                    <div className={styles.panelHeader}>
-                        <div>
-                            <h2>유입 경로</h2>
-                            <p>채널별 모객 볼륨</p>
-                        </div>
-                    </div>
-                    <div className={styles.chartBoxSmall}>
-                        {sourceChartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={230}>
-                                <BarChart data={sourceChartData} layout="vertical" margin={{ left: 12, right: 12 }}>
-                                    <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#e5e7eb" />
-                                    <XAxis type="number" allowDecimals={false} hide />
-                                    <YAxis dataKey="source" type="category" width={78} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                    <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                                    <Bar dataKey="count" fill="#ff725e" radius={[0, 8, 8, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className={styles.emptyChart}>유입 데이터가 없습니다.</div>
-                        )}
-                    </div>
-                </article>
-
-                <article className={styles.panel}>
-                    <div className={styles.panelHeader}>
-                        <div>
-                            <h2>최근 7일 유입</h2>
-                            <p>신규 후보자 등록 추이</p>
-                        </div>
-                    </div>
-                    <div className={styles.chartBoxSmall}>
-                        <ResponsiveContainer width="100%" height={230}>
-                            <LineChart data={trendData}>
-                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
-                                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="count" stroke="#18a999" strokeWidth={3} dot={{ r: 3 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </article>
-            </section>
-
-            <section className={styles.tablePanel}>
+                        );
+                    })}
+                </div>
                 <div className={styles.tableHeader}>
                     <div>
-                        <h2>{viewMode === 'pipeline' ? '상태별 파이프라인' : viewMode === 'tasks' ? '오늘 할 일' : '후보자 목록'}</h2>
+                        <h2>{leadDbLayer === 'raw_intake' ? '1차 유입 DB' : viewMode === 'pipeline' ? '상태별 파이프라인' : viewMode === 'tasks' ? '업무 큐' : '후보자 목록'}</h2>
                         <p>
-                            {viewMode === 'pipeline'
+                            {leadDbLayer === 'raw_intake'
+                                ? 'Meta 광고, 엑셀 업로드 등 원천 유입을 먼저 모아두고 의사가 확인된 DB만 후보자로 승격합니다.'
+                                : viewMode === 'pipeline'
                                 ? '상태별 카드에서 상담 흐름을 빠르게 이동합니다.'
                                 : viewMode === 'tasks'
-                                    ? '오늘 연락하거나 이미 지연된 리드를 우선 처리합니다.'
+                                    ? '연락 지연, 오늘 연락, 무응답, 계약 가능 리드를 우선 처리합니다.'
                                     : listPolicyText}
                         </p>
                     </div>
                     <div className={styles.tableHeaderActions}>
                         <div className={styles.viewTabs} aria-label="모객 DB 보기 전환">
-                            {VIEW_OPTIONS.map(option => (
+                            {VIEW_OPTIONS.filter(option => leadDbLayer === 'candidate' || option.mode === 'table').map(option => (
                                 <button
                                     key={option.mode}
                                     className={viewMode === option.mode ? styles.viewTabActive : styles.viewTab}
@@ -2079,14 +2304,6 @@ export default function FranchiseLeadsPage() {
                                 </button>
                             ))}
                         </div>
-                        {viewMode === 'table' && (
-                            <div className={styles.actionLegend} aria-label="목록 액션 아이콘 설명">
-                                <span><UserCheck size={13} /> 고객전환</span>
-                                <span><MessageSquare size={13} /> 이력추가</span>
-                                <span><Pencil size={13} /> 수정</span>
-                                <span><Trash2 size={13} /> 삭제</span>
-                            </div>
-                        )}
                         {viewMode === 'table' && (
                             <label className={styles.pageSizeControl}>
                                 표시
@@ -2175,9 +2392,11 @@ export default function FranchiseLeadsPage() {
                                     <tr>
                                         <td colSpan={13} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
                                     </tr>
-                                ) : leads.length === 0 ? (
+                                ) : visibleLayerLeads.length === 0 ? (
                                     <tr>
-                                        <td colSpan={13} className={styles.emptyRow}>조건에 맞는 후보자가 없습니다.</td>
+                                        <td colSpan={13} className={styles.emptyRow}>
+                                            {leadDbLayer === 'raw_intake' ? '1차 유입 DB에 쌓인 원천 DB가 없습니다.' : '조건에 맞는 후보자가 없습니다.'}
+                                        </td>
                                     </tr>
                                 ) : paginatedLeads.map(lead => (
                                     <tr key={lead.id}>
@@ -2220,11 +2439,15 @@ export default function FranchiseLeadsPage() {
                                             </select>
                                         </td>
                                         <td>
-                                            {lead.sourceType === 'meta-lead-ad' || lead.source === 'Meta Lead Ads' ? (
-                                                <span className={styles.metaSourceBadge}>Meta Lead Ads</span>
-                                            ) : (
-                                                lead.source || '-'
-                                            )}
+                                            {lead.source ? (
+                                                <span
+                                                    className={isMetaLeadSource(lead) ? `${styles.sourceBadge} ${styles.sourceBadgeMeta}` : styles.sourceBadge}
+                                                    title={getLeadSourceTitle(lead)}
+                                                >
+                                                    <Megaphone size={12} aria-hidden="true" />
+                                                    <span>{getLeadSourceBadgeLabel(lead)}</span>
+                                                </span>
+                                            ) : '-'}
                                         </td>
                                         <td>{lead.desiredRegion || '-'}</td>
                                         <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>
@@ -2244,27 +2467,39 @@ export default function FranchiseLeadsPage() {
                                         </td>
                                         <td>
                                             <div className={styles.rowActions}>
-                                                {lead.convertedCustomerId ? (
-                                                    <span className={styles.convertedActionPill} title="고객 DB 전환 완료">
-                                                        <CheckCircle2 size={14} />
-                                                        완료
-                                                    </span>
-                                                ) : (
+                                                {isRawIntakeLead(lead) && (
                                                     <button
-                                                        className={styles.iconButton}
-                                                        onClick={() => void convertLeadToCustomer(lead)}
-                                                        disabled={convertingLeadId === lead.id}
-                                                        aria-label={`${lead.name} 고객 전환`}
-                                                        title="고객 DB로 전환"
+                                                        className={styles.promoteButton}
+                                                        onClick={() => void promoteLeadToCandidate(lead)}
+                                                        aria-label={`${lead.name} 후보자 승격`}
+                                                        data-tooltip="후보자 목록으로 승격"
                                                     >
-                                                        <UserCheck size={15} />
+                                                        후보자
                                                     </button>
+                                                )}
+                                                {!isRawIntakeLead(lead) && (
+                                                    lead.convertedCustomerId ? (
+                                                        <span className={styles.convertedActionPill} data-tooltip="고객 DB 전환 완료">
+                                                            <CheckCircle2 size={14} />
+                                                            완료
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            className={styles.iconButton}
+                                                            onClick={() => void convertLeadToCustomer(lead)}
+                                                            disabled={convertingLeadId === lead.id}
+                                                            aria-label={`${lead.name} 고객 전환`}
+                                                            data-tooltip="고객전환"
+                                                        >
+                                                            <UserCheck size={15} />
+                                                        </button>
+                                                    )
                                                 )}
                                                 <button
                                                     className={styles.iconButton}
                                                     onClick={() => openQuickActivityModal(lead)}
                                                     aria-label={`${lead.name} 상담 이력 추가`}
-                                                    title="상담 이력 빠른 추가"
+                                                    data-tooltip="이력추가"
                                                 >
                                                     <MessageSquare size={15} />
                                                 </button>
@@ -2272,7 +2507,7 @@ export default function FranchiseLeadsPage() {
                                                     className={styles.iconButton}
                                                     onClick={() => openEditModal(lead)}
                                                     aria-label={`${lead.name} 수정`}
-                                                    title="기본정보 수정"
+                                                    data-tooltip="수정"
                                                 >
                                                     <Pencil size={15} />
                                                 </button>
@@ -2280,7 +2515,7 @@ export default function FranchiseLeadsPage() {
                                                     className={styles.iconButtonDanger}
                                                     onClick={() => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
                                                     aria-label={`${lead.name} 삭제`}
-                                                    title="후보자 삭제"
+                                                    data-tooltip="삭제"
                                                 >
                                                     <Trash2 size={15} />
                                                 </button>
@@ -2291,7 +2526,7 @@ export default function FranchiseLeadsPage() {
                             </tbody>
                         </table>
                     </div>
-                    {leads.length > 0 && (
+                    {visibleLayerLeads.length > 0 && (
                         <div className={styles.paginationBar}>
                             <span>{pageRangeText}</span>
                             <div className={styles.paginationControls}>
@@ -2343,7 +2578,7 @@ export default function FranchiseLeadsPage() {
                                                     <span className={styles.pipelineMeta}>담당자 {getManagerName(lead.managerId)}</span>
                                                 </button>
                                                 <div className={styles.pipelineCardFooter}>
-                                                    <span className={lead.grade === 'HOT' ? styles.hotBadge : styles.pipelineBadge}>{lead.grade || '미지정'}</span>
+                                                    <span className={lead.grade === 'HOT' ? styles.hotBadge : styles.pipelineBadge}>{getFranchiseLeadGradeLabel(lead.grade)}</span>
                                                     {lead.convertedCustomerId && <span className={styles.convertedBadge}>전환완료</span>}
                                                     {isPastDue(lead.nextContactAt) && <span className={styles.dueBadgeDanger}>지연</span>}
                                                     {isDueToday(lead.nextContactAt) && !isPastDue(lead.nextContactAt) && <span className={styles.dueBadge}>오늘</span>}
@@ -2384,68 +2619,94 @@ export default function FranchiseLeadsPage() {
                 )}
 
                 {viewMode === 'tasks' && (
-                    <div className={styles.taskBoard}>
-                        {isLoading ? (
-                            <div className={styles.boardEmpty}>오늘 할 일을 불러오고 있습니다.</div>
-                        ) : taskLeads.length === 0 ? (
-                            <div className={styles.boardEmpty}>
-                                <CheckCircle2 size={28} />
-                                오늘 처리할 연락 또는 HOT 리드가 없습니다.
-                            </div>
-                        ) : taskLeads.map(lead => (
-                            <article key={lead.id} className={styles.taskCard}>
-                                <div className={styles.taskCardMain}>
-                                    <span className={getLeadTaskRank(lead) === 0 ? styles.taskLabelDanger : styles.taskLabel}>
-                                        {getLeadTaskLabel(lead)}
-                                    </span>
-                                    <button onClick={() => setSelectedLeadId(lead.id)}>
-                                        <strong>{lead.name}</strong>
-                                        <span>{lead.mobile || '연락처 미입력'}</span>
-                                    </button>
+                    <>
+                        <div className={styles.taskQueueToolbar}>
+                            {taskQueueOptions.map(option => (
+                                <button
+                                    key={option.key}
+                                    type="button"
+                                    className={taskQueueFilter === option.key ? styles.taskQueueFilterActive : styles.taskQueueFilter}
+                                    onClick={() => setTaskQueueFilter(option.key)}
+                                >
+                                    <span>{option.label}</span>
+                                    <strong>{option.count.toLocaleString()}</strong>
+                                </button>
+                            ))}
+                        </div>
+                        <div className={styles.taskBoard}>
+                            {isLoading ? (
+                                <div className={styles.boardEmpty}>업무 큐를 불러오고 있습니다.</div>
+                            ) : taskLeads.length === 0 ? (
+                                <div className={styles.boardEmpty}>
+                                    <CheckCircle2 size={28} />
+                                    현재 필터에 처리할 리드가 없습니다.
                                 </div>
-                                <div className={styles.taskInfoGrid}>
-                                    <div>
-                                        <span>상태</span>
-                                        <strong>{lead.status}</strong>
+                            ) : taskLeads.map(lead => (
+                                <article key={lead.id} className={styles.taskCard}>
+                                    <div className={styles.taskCardMain}>
+                                        <span className={getLeadTaskRank(lead) === 0 ? styles.taskLabelDanger : styles.taskLabel}>
+                                            {getLeadTaskLabel(lead)}
+                                        </span>
+                                        <button type="button" onClick={() => setSelectedLeadId(lead.id)}>
+                                            <strong>{lead.name}</strong>
+                                            <span>{lead.mobile || '연락처 미입력'} · 담당자 {getManagerName(lead.managerId)}</span>
+                                        </button>
                                     </div>
-                                    <div>
-                                        <span>담당자</span>
-                                        <strong>{getManagerName(lead.managerId)}</strong>
+                                    <div className={styles.taskInfoGrid}>
+                                        <div>
+                                            <span>다음 액션</span>
+                                            <strong>{lead.nextAction || '미정'}</strong>
+                                        </div>
+                                        <div>
+                                            <span>상담 결과</span>
+                                            <strong>{lead.consultationResult || '미상담'}</strong>
+                                        </div>
+                                        <div>
+                                            <span>다음 연락</span>
+                                            <strong>{formatDateTime(lead.nextContactAt)}</strong>
+                                        </div>
+                                        <div>
+                                            <span>상태</span>
+                                            <strong>{lead.status}</strong>
+                                        </div>
+                                        <div>
+                                            <span>관심브랜드</span>
+                                            <strong>{lead.interestedBrand || '-'}</strong>
+                                        </div>
+                                        <div>
+                                            <span>희망지역</span>
+                                            <strong>{lead.desiredRegion || '-'}</strong>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span>다음 연락</span>
-                                        <strong>{formatDateTime(lead.nextContactAt)}</strong>
+                                    <div className={styles.fitPillRow}>
+                                        <span>자금 {lead.budgetFit || '미확인'}</span>
+                                        <span>지역 {lead.regionFit || '미확인'}</span>
+                                        <span>브랜드 {lead.brandFit || '미확인'}</span>
                                     </div>
-                                    <div>
-                                        <span>관심브랜드</span>
-                                        <strong>{lead.interestedBrand || '-'}</strong>
+                                    <p>{lead.churnReason || lead.memo || '등록된 메모가 없습니다.'}</p>
+                                    <div className={styles.taskActions}>
+                                        <button type="button" className={styles.secondaryButton} onClick={() => setSelectedLeadId(lead.id)}>
+                                            상세 보기
+                                        </button>
+                                        <button type="button" className={styles.secondaryButton} onClick={() => void completeTodayTask(lead)}>
+                                            연락 완료
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={styles.primaryButton}
+                                            disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
+                                            onClick={() => void convertLeadToCustomer(lead)}
+                                        >
+                                            고객 전환
+                                        </button>
                                     </div>
-                                    <div>
-                                        <span>희망지역</span>
-                                        <strong>{lead.desiredRegion || '-'}</strong>
-                                    </div>
-                                </div>
-                                <p>{lead.memo || '등록된 메모가 없습니다.'}</p>
-                                <div className={styles.taskActions}>
-                                    <button className={styles.secondaryButton} onClick={() => setSelectedLeadId(lead.id)}>
-                                        상세 보기
-                                    </button>
-                                    <button className={styles.secondaryButton} onClick={() => void completeTodayTask(lead)}>
-                                        연락 완료
-                                    </button>
-                                    <button
-                                        className={styles.primaryButton}
-                                        disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                        onClick={() => void convertLeadToCustomer(lead)}
-                                    >
-                                        고객 전환
-                                    </button>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </>
                 )}
-            </section>
+                </section>
+            )}
 
             {isModalOpen && (
                 <div className={styles.modalBackdrop}>
@@ -2482,7 +2743,7 @@ export default function FranchiseLeadsPage() {
                                 <select value={form.grade} onChange={(event) => setForm(prev => ({ ...prev, grade: event.target.value }))}>
                                     <option value="">미지정</option>
                                     {FRANCHISE_LEAD_GRADES.map(grade => (
-                                        <option key={grade} value={grade}>{grade}</option>
+                                        <option key={grade} value={grade}>{getFranchiseLeadGradeLabel(grade)}</option>
                                     ))}
                                 </select>
                             </label>
@@ -2604,6 +2865,11 @@ export default function FranchiseLeadsPage() {
                         )}
 
                         <div className={styles.detailQuickActions}>
+                            {isRawIntakeLead(selectedLead) && (
+                                <button className={styles.promoteButtonLarge} onClick={() => void promoteLeadToCandidate(selectedLead)}>
+                                    후보자 승격
+                                </button>
+                            )}
                             <select
                                 value={selectedLead.status}
                                 onChange={(event) => void updateLeadStatus(selectedLead, event.target.value as FranchiseLeadStatus)}
@@ -2630,8 +2896,12 @@ export default function FranchiseLeadsPage() {
                             <h3><UserRound size={16} /> 기본정보</h3>
                             <div className={styles.detailInfoGrid}>
                                 <div>
-                                    <span>등급</span>
-                                    <strong>{selectedLead.grade || '-'}</strong>
+                                    <span>단계</span>
+                                    <strong>{getFranchiseLeadStageLabel(selectedLead.leadStage)}</strong>
+                                </div>
+                                <div>
+                                    <span>우선순위</span>
+                                    <strong>{getFranchiseLeadGradeLabel(selectedLead.grade)}</strong>
                                 </div>
                                 <div>
                                     <span>희망지역</span>
@@ -2673,6 +2943,18 @@ export default function FranchiseLeadsPage() {
                                 {isPastDue(selectedLead.nextContactAt) ? ' · 연락 지연' : isDueToday(selectedLead.nextContactAt) ? ' · 오늘 연락' : ''}
                             </p>
                         </section>
+
+                        <LeadWorkflowSection
+                            value={detailWorkflow}
+                            isSaving={isWorkflowSaving}
+                            onChange={setDetailWorkflow}
+                            onSave={() => void saveDetailWorkflow()}
+                        />
+
+                        <LeadLocationMatchSection
+                            matches={selectedLeadLocationMatches}
+                            isLoading={isLocationMatchLoading}
+                        />
 
                         <section className={styles.detailSection}>
                             <h3><MessageSquare size={16} /> 상담 이력</h3>

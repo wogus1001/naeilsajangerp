@@ -200,7 +200,8 @@ function buildPayload(row: BatchRow, companyId: string, managerUuid: string) {
             next_contact_at: parseNullableDate(getCell(row, NEXT_CONTACT_KEYS)),
             data: {
                 originalRow: row,
-                budgetRaw: cleanString(getCell(row, BUDGET_KEYS))
+                budgetRaw: cleanString(getCell(row, BUDGET_KEYS)),
+                leadStage: 'raw_intake'
             }
         }
     };
@@ -278,7 +279,11 @@ export async function POST(request: Request) {
                     .from('franchise_leads')
                     .update({
                         ...rowPayload,
-                        data: { ...(existing.data || {}), ...rowPayload.data },
+                        data: {
+                            ...(existing.data || {}),
+                            ...rowPayload.data,
+                            leadStage: (existing.data || {}).leadStage || 'candidate'
+                        },
                         updated_at: now
                     })
                     .eq('id', existing.id);

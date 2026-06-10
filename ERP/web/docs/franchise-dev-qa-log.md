@@ -45,7 +45,7 @@
 - Docs Steward 감사에서 `LocationCompetitionPanel`의 `Naver 미수집`/`수집오류` 계열 문구와 경쟁사 API 로직을 검색해 SearchAPI 429 보존/상태 분리 P0가 아직 완료되지 않았음을 확인했다.
 - 네이버부동산/당근부동산 기반 외부 매물 수집 MVP를 상가 전용으로 축소했다.
 - `realty_import_jobs`, `external_property_listings` 테이블과 수집 API를 추가하고, 외부 매물을 점포목록과 분리된 원본 목록으로 저장하도록 구현했다.
-- 진입점은 물건지 상세가 아니라 `/dashboard/franchise-operations`의 `외부 상가 수집` 탭으로 배치했다.
+- 진입점은 물건지 상세가 아니라 `/dashboard/franchise-leads/market-insights?tab=realty-import`의 `외부 상가 수집` 탭으로 배치했다.
 - 구 단위 당근 검색은 지역 API 후보를 동 단위로 확장해 수집하도록 보정했다.
 - 당근 목록 호출은 `salesType=store`를 명시해 전체 매물 중 일부만 상가로 필터링되던 누락을 줄였다.
 - 외부 수집 결과 표는 당근 요약 매물명 대신 주소를 기본 식별값으로 표시하고, 가격, 면적/층, 관리비, 사용승인일, 등록일, 채팅/관심 수, 사진 수, 설명 일부, 원문 링크를 노출한다.
@@ -68,6 +68,10 @@
 - 2026-06-10 저장 목록 1차 점수화를 추가했다. 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 추천점수/최근 저장/월세/면적/관심 정렬을 제공한다.
 - 2026-06-10 저장 목록 1차 지도화를 추가했다. 열린 동 카드의 현재 페이지 주소를 대상으로 저장 좌표 또는 Kakao 브라우저 지오코딩 좌표를 지도에 표시한다.
 - 2026-06-10 저장 목록 지도 우측 번호 목록을 제거하고, 하단 표의 `지도` 컬럼에 마커 번호를 매칭했다. 표의 지도 번호나 주소를 누르면 해당 지도 마커가 선택된다.
+- 2026-06-10 외부 상가 수집은 Daangn 저장/지도/점수화 MVP까지 우선 완료하고, 신규 기능 개발은 모객 DB 업무 큐 강화와 점포·상권 매칭으로 전환했다.
+- 2026-06-10 모객 DB `오늘 할 일`을 `업무 큐`로 확장했다. 연락 지연/오늘 연락/무응답/계약 가능/즉시상담 필터와 후보자별 다음 액션, 상담 결과, 이탈 사유, 자금/지역/브랜드 적합도 저장 흐름을 추가했다.
+- 2026-06-10 후보자 상세 패널에 기존 `franchise_locations` 기반 점포·상권 매칭 카드를 추가했다. 희망지역, 관심브랜드, 후보지 상태, 업무 적합도, 경쟁업체 수를 점수/근거/리스크로 표시한다.
+- 2026-06-10 모객 DB에 `1차 유입 DB -> 후보자` 단계를 추가했다. Meta Lead Ads와 엑셀 업로드는 원천 DB로 저장하고, 의사가 확인된 DB만 `후보자 승격` 액션으로 파이프라인/업무 큐/점포·상권 매칭 대상이 된다.
 
 ## QA 결과
 
@@ -85,12 +89,22 @@
 - 2026-06-10 저장 상가 지도 후보 유닛 테스트 통과: `map-utils.test.mts`
 - 2026-06-10 저장 상가 동별 현재 페이지 지도화 후 `map-utils.test.mts`, `scoring.test.mts`, `utils.test.mts`, TypeScript LSP error diagnostics, `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
 - 2026-06-10 저장 상가 표-지도 마커 번호 매칭 후 `map-utils.test.mts`, `scoring.test.mts`, `utils.test.mts`, TypeScript LSP error diagnostics, `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
+- 2026-06-10 모객 DB 업무 큐 분류 유닛 테스트 통과: `franchise-lead-workflow.test.mts`
+- 2026-06-10 모객 DB 업무 큐 구현 중 `npx tsc --noEmit` 통과
+- 2026-06-10 점포·상권 매칭 유닛 테스트 통과: `franchise-lead-location-matching.test.mts`
+- 2026-06-10 점포·상권 매칭 구현 중 `npx tsc --noEmit` 통과
+- 2026-06-10 모객 DB 업무 큐 + 점포·상권 매칭 구현 후 `npm run lint -- --quiet`, `npx tsc --noEmit`, `franchise-lead-workflow.test.mts`, `franchise-lead-location-matching.test.mts`, `git diff --check`, `npm run build` 통과
+- 2026-06-10 모객 DB 단계 분리 구현 후 `franchise-leads.test.mts`, `franchise-lead-workflow.test.mts`, `franchise-lead-location-matching.test.mts` 통합 유닛 테스트 10건 통과
+- 2026-06-10 모객 DB 단계 분리 구현 후 TypeScript LSP error diagnostics, `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
+- 2026-06-10 `/dashboard/franchise-leads` 로컬 HTTP 200 응답 확인
+- 2026-06-10 외부 상가 수집을 출점 후보지 하위 `/dashboard/franchise-leads/market-insights?tab=realty-import`로 이동한 뒤 TypeScript LSP diagnostics, `npm run lint -- --quiet`, `npx tsc --noEmit`, `git diff --check`, `npm run build`, Playwright URL 로드 확인 통과
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
 - `http://localhost:3000/dashboard/franchise-operations` 보호 라우트 로그인 이동 확인
 - 2026-06-10 Playwright 브라우저에서 `/dashboard/franchise-operations` 로그인 세션 화면을 확인했다. 저장 상가 동 카드 내부에 `구의동 지도`, `구의동 현재 페이지 1-50 / 109건` 범위 문구, 지도 마커, 우측 선택 상세, 하단 현재 페이지 표가 함께 표시되는지 확인했다.
 - 2026-06-10 Playwright 브라우저에서 저장 상가 지도 우측 번호 목록 제거, 하단 표 `지도` 컬럼 표시, 표 주소 클릭 후 지도 선택 상세 변경, 선택 행 강조, `Maximum update depth` 에러 0건을 확인했다.
+- 2026-06-10 Playwright 브라우저에서 `/dashboard/franchise-leads` 접근 시 로그인 화면으로 이동하는 보호 라우트 상태를 확인했다. 저장된 로그인 세션이 없어 업무 큐/점포·상권 매칭 상세 패널의 실제 클릭 QA는 미수행했다.
 - Kakao JavaScript 지도는 `http://localhost:3000` 도메인 등록 후 지도 표시 확인
 - Google Places API (New) `places:searchText` 응답 확인
 - SearchAPI 정상 시점에 Naver 리뷰 예시 수집 확인
@@ -105,6 +119,8 @@
 - SearchAPI 한도 초과 상태에서 기존 Naver 성공 값이 덮어쓰기되는 문제는 P0로 남아 있다.
 - Playwright MCP 스크린샷 확인은 Chrome 프로필 잠금 이슈로 완료하지 못한 이력이 있다.
 - 실제 로그인 세션에서 전체 사용자 플로우를 끝까지 반복 QA한 기록은 아직 부족하다.
+- 모객 DB 업무 큐와 점포·상권 매칭은 로그인 세션 부재로 실제 화면 클릭 QA가 필요하다.
+- 모객 DB `1차 유입 DB -> 후보자` 승격은 로그인 세션 부재로 실제 화면 클릭 QA가 필요하다.
 - 이번 Docs Steward 감사에서는 새 브라우저/빌드 QA를 실행하지 않았고, 문서와 코드 검색 기준으로 최신성만 확인했다.
 - 외부 상가 수집은 구현 직후 상태이며 아직 실제 Supabase migration 적용 후 지역별 실수집 QA를 완료하지 않았다.
 - 네이버부동산 POC는 지역 코드 조회는 가능해도 목록 응답이 빈 값일 수 있어 운영 데이터 소스로 확정하지 않았다.
@@ -150,14 +166,20 @@
 
 ### P0
 
-- SearchAPI 429 발생 시 기존 Naver 리뷰/광고 값이 유지되는지 확인
-- UI에서 `SearchAPI 한도초과`, `provider 미설정`, `결과 없음`이 구분 표시되는지 확인
-- 경쟁스캔 재실행 시 외부 provider 호출 남발을 막는지 확인
-- 기존 스캔 캐시가 있을 때 상세 모달이 정상 렌더링되는지 확인
+- 모객 DB에서 Meta/엑셀 유입이 `1차 유입 DB`에 쌓이고, `후보자 승격` 후 후보자 레이어/파이프라인/업무 큐/점포·상권 매칭 대상으로 이동하는지 확인
+- 기존 단계값 없는 모객 DB가 후보자 레이어에 유지되는지 확인
+- 모객 DB 업무 큐에서 `전체 업무`, `연락 지연`, `오늘 연락`, `무응답`, `계약 가능`, `즉시상담` 필터별 건수가 실제 카드 목록과 맞는지 확인
+- 후보자 상세에서 다음 액션, 상담 결과, 이탈 사유, 자금/지역/브랜드 적합도 저장 후 새로고침해도 값이 유지되는지 확인
+- `연락 완료` 처리 시 다음 연락일이 비워지고 상담 결과가 `연락 성공`으로 저장되는지 확인
+- 점포·상권 매칭에서 업무 큐 적합도 필드가 추천 근거로 연결되는지 확인
 
 ### P1
 
-- `supabase_realty_import_migration.sql` 적용 후 `/dashboard/franchise-operations`의 `외부 상가 수집` 탭에서 당근 상가 수집을 확인
+- SearchAPI 유료 결제 후 SearchAPI 429 발생 시 기존 Naver 리뷰/광고 값이 유지되는지 확인
+- SearchAPI 유료 결제 후 UI에서 `SearchAPI 한도초과`, `provider 미설정`, `결과 없음`이 구분 표시되는지 확인
+- SearchAPI 유료 결제 후 경쟁스캔 재실행 시 외부 provider 호출 남발을 막는지 확인
+- 기존 스캔 캐시가 있을 때 상세 모달이 정상 렌더링되는지 확인
+- `supabase_realty_import_migration.sql` 적용 후 `/dashboard/franchise-leads/market-insights?tab=realty-import`의 `외부 상가 수집` 탭에서 당근 상가 수집을 확인
 - `salesType=store` 적용 후 당근 상가 수집 결과가 기존보다 늘어나는지 확인
 - 시도/시군구 선택으로 `서울특별시 / 광진구` 수집이 실행되는지 확인
 - 선택한 시군구가 당근 동 단위 확장 warning으로 표시되는지 확인

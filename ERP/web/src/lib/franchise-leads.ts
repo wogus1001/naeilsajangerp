@@ -31,6 +31,23 @@ export const FRANCHISE_LEAD_GRADES = [
     'COLD'
 ] as const;
 
+export type FranchiseLeadGrade = typeof FRANCHISE_LEAD_GRADES[number];
+
+export const FRANCHISE_LEAD_GRADE_LABELS: Record<FranchiseLeadGrade, string> = {
+    HOT: '즉시상담',
+    WARM: '관심확인',
+    COLD: '장기관리'
+} as const;
+
+export const FRANCHISE_LEAD_STAGES = ['raw_intake', 'candidate'] as const;
+
+export type FranchiseLeadStage = typeof FRANCHISE_LEAD_STAGES[number];
+
+export const FRANCHISE_LEAD_STAGE_LABELS: Record<FranchiseLeadStage, string> = {
+    raw_intake: '1차 유입 DB',
+    candidate: '후보자'
+} as const;
+
 export function normalizeLeadPhone(value: unknown): string {
     if (value === null || value === undefined) return '';
     return String(value).replace(/\D/g, '');
@@ -53,8 +70,27 @@ export function normalizeLeadStatus(value: unknown): FranchiseLeadStatus {
 export function normalizeLeadGrade(value: unknown): string {
     const raw = String(value || '').trim().toUpperCase();
     if (!raw) return '';
-    if (raw.includes('HOT') || raw.includes('상')) return 'HOT';
-    if (raw.includes('WARM') || raw.includes('중')) return 'WARM';
-    if (raw.includes('COLD') || raw.includes('하')) return 'COLD';
+    if (raw.includes('HOT') || raw.includes('즉시') || raw.includes('긴급') || raw.includes('우선') || raw.includes('상')) return 'HOT';
+    if (raw.includes('WARM') || raw.includes('관심') || raw.includes('확인') || raw.includes('중')) return 'WARM';
+    if (raw.includes('COLD') || raw.includes('장기') || raw.includes('낮') || raw.includes('하')) return 'COLD';
     return raw;
+}
+
+export function getFranchiseLeadGradeLabel(value?: string | null): string {
+    if (value === 'HOT') return FRANCHISE_LEAD_GRADE_LABELS.HOT;
+    if (value === 'WARM') return FRANCHISE_LEAD_GRADE_LABELS.WARM;
+    if (value === 'COLD') return FRANCHISE_LEAD_GRADE_LABELS.COLD;
+    return value || '미지정';
+}
+
+export function normalizeLeadStage(value: unknown): FranchiseLeadStage {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'raw_intake' || raw.includes('1차') || raw.includes('유입') || raw.includes('raw')) return 'raw_intake';
+    return 'candidate';
+}
+
+export function getFranchiseLeadStageLabel(value?: string | null): string {
+    return normalizeLeadStage(value) === 'raw_intake'
+        ? FRANCHISE_LEAD_STAGE_LABELS.raw_intake
+        : FRANCHISE_LEAD_STAGE_LABELS.candidate;
 }

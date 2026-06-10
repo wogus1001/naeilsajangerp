@@ -2,11 +2,11 @@
 
 ## 목적
 
-가맹 운영 화면에서 지역 기준 외부 상가 매물을 수집하고, 점포목록과 분리된 외부 원본 목록으로 관리하는 MVP를 관리한다.
+출점 후보지 화면에서 지역 기준 외부 상가 매물을 수집하고, 점포목록과 분리된 외부 원본 목록으로 관리하는 MVP를 관리한다.
 
 ## 현재 범위
 
-- 진입점: `/dashboard/franchise-operations`의 `외부 상가 수집` 탭
+- 진입점: `/dashboard/franchise-leads/market-insights?tab=realty-import`의 `외부 상가 수집` 탭
 - 수집 대상: 상가 전용
 - 수집 방식: 시도/시군구 선택 후 Daangn 상가 대량 수집
 - 저장 방식:
@@ -30,7 +30,8 @@
   - `GET /api/realty/import-jobs/:id`
   - `GET /api/realty/listings`
 - UI:
-  - `ERP/web/src/app/(main)/dashboard/franchise-operations/page.tsx`
+  - `ERP/web/src/app/(main)/dashboard/franchise-leads/market-insights/page.tsx`
+  - `ERP/web/src/components/franchise/RealtyImportPanel.tsx`
   - `ERP/web/src/app/(main)/properties/page.tsx`
 
 ## 수집 소스 정책
@@ -75,11 +76,11 @@
 - 1순위: 회사 범위가 있으면 `company_id + source + source_listing_id`, 회사 범위가 없으면 `requester_id + source + source_listing_id`가 같을 때 기존 외부 원본을 업데이트한다.
 - 2순위: 주소가 완전히 같은 기존 `properties`가 있으면 `duplicate_candidate`로 표시한다.
 - 주소/가격/면적 유사 중복은 다음 단계에서 별도 검토 로직으로 확장한다.
-- 현재 가맹 운영 화면은 `registerToProperties=false`로 호출하므로 중복 재수집은 ERP 물건지가 아니라 `external_property_listings` 기준으로 검증한다.
+- 현재 출점 후보지 화면은 `registerToProperties=false`로 호출하므로 중복 재수집은 ERP 물건지가 아니라 `external_property_listings` 기준으로 검증한다.
 
 ## UI 정책
 
-- `가맹 운영 > 외부 상가 수집` 탭에서 시도/시군구를 선택한다.
+- `출점 후보지 > 외부 상가 수집` 탭에서 시도/시군구를 선택한다.
 - 등록 회사명 입력은 받지 않는다. 로그인 계정의 회사 범위가 있으면 회사 수집함에 저장하고, 회사 범위가 없으면 요청자 기준 수집함에 저장한다.
 - 시군구 선택은 당근 지역 후보를 동 단위로 확장한다. 예: `서울 광진구` -> `자양동`, `화양동`, `구의동`, `광장동`, `군자동`, `중곡동`, `능동`.
 - 화면 수집 요청은 2000건이고, import API 안전 상한은 3000건이다.

@@ -117,10 +117,12 @@ npm run build
   - `handoff.md`는 단일 작성자 규칙 때문에 수정하지 않는다.
 - 프랜차이즈 본사용 고도화 방향
   - 1순위: 모객 전환율 개선 Command Center
-    - `오늘 연락`, `연락 지연`, `HOT 리드`, `무응답`, `계약 가능성` 중심의 업무 큐 강화
+    - `오늘 연락`, `연락 지연`, `즉시상담`, `무응답`, `계약 가능성` 중심의 업무 큐 강화
     - 리드별 `다음 액션`, `상담 결과`, `이탈 사유`, `자금/지역/브랜드 적합도`, `담당자 성과` 관리
     - KPI 우선순위: 응답 속도, 상담 전환율, 계약예정 전환율, 소스별 효율, 담당자별 처리율
     - 기존 고객/명함/엑셀 유입은 유지하고, Meta 유입은 HOLD 상태로 표시만 남긴다.
+    - 2026-06-10 진행: 모객 DB의 `오늘 할 일` 뷰를 `업무 큐`로 확장하고, 업무 필드는 `franchise_leads.data` JSON에 저장하는 방향으로 구현 중이다.
+    - 2026-06-10 진행: Meta/엑셀 원천 유입은 `1차 유입 DB`에 쌓고, 의사 확인 후 `후보자`로 승격해 파이프라인/업무 큐/점포 매칭에 연결하는 단계 구조를 추가했다.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외
@@ -129,12 +131,14 @@ npm run build
     - 모객 리드의 `희망지역`, `예산`, `관심브랜드`와 기존 점포 DB를 연결
     - 후보자 상세에서 추천 점포, 추천 지역, 예산 적합도, 출점 리스크를 보여주는 방향
     - 지도/상권 분석은 기본 매칭 이후 별도 고도화로 진행
+    - 2026-06-10 진행: 후보자 상세 패널에 기존 `franchise_locations` 기반 추천 점포/후보지 카드를 추가하고, 희망지역/브랜드/적합도/경쟁업체 수를 점수 근거로 사용한다.
   - 2026-06-09 개발 순서:
     - 1차 완료: 기존 모객DB와 점포 DB만 사용해 `출점 후보지 인사이트` 추가
     - 2차 완료: 본사 직영점/가맹점/예정점 위치 마스터 DB/API/UI 분리
     - 화면 구조:
       - `/dashboard/franchise-leads/market-insights`: 후보자 및 출점 후보지 관리
-      - `/dashboard/franchise-operations`: 현재 직영점/가맹점 운영 관리, 외부 상가 수집 탭 포함
+      - `/dashboard/franchise-operations`: 현재 직영점/가맹점 운영 관리
+      - `/dashboard/franchise-leads/market-insights?tab=realty-import`: 출점 후보지 하위 외부 상가 수집
       - `/dashboard/franchise-leads/brand-monitoring`: 브랜드별 모니터링 대시보드
     - 구분 원칙:
       - 출점 후보지: `예정점`, `검토중`, `오픈준비` 중심으로 모객 리드의 희망지역/예산/관심브랜드와 연결
@@ -167,6 +171,7 @@ npm run build
       - 브랜드 모니터링 실제 수집 전 선행 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - P0: SearchAPI 429/한도 초과 시 기존 Naver 리뷰/광고 성공 값을 덮어쓰지 않게 보호하고, UI를 `SearchAPI 한도초과`/`provider 미설정`/`결과 없음`으로 분리 표시.
   - P1: `supabase_realty_import_migration.sql` 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 저장 상가 추천점수/필터/정렬, 점포목록 미등록, 회사 격리 확인.
+  - 2026-06-10 결정: 외부 상가 수집은 Daangn 저장/지도/점수화 MVP까지 우선 마감하고, 다음 신규 개발은 모객 DB 업무 큐 강화 후 점포·상권 매칭으로 진행한다. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 1~3순위를 묶어서 진행한다.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
@@ -228,7 +233,7 @@ npm run build
   - 산출물: `Doc Update Brief` 형식으로 변경 문서, 반영 이유, 남은 QA/로드맵 gap, handoff 상태를 보고한다.
   - 운영 리듬: 시간표 기반 자동화보다 작업 중 주요 변경 단위마다 메인 Codex가 문서관리 세션 전달 프롬프트와 커밋 묶음/메시지 제안을 사용자에게 함께 제공한다.
 - 2026-06-09 외부 상가 매물 수집 MVP
-  - 진입점: `/dashboard/franchise-operations` 하위 `외부 상가 수집` 탭.
+  - 진입점: `/dashboard/franchise-leads/market-insights?tab=realty-import` 하위 `외부 상가 수집` 탭.
   - 범위: 우선 상가만 수집. 사무실은 MVP에서 제외.
   - 추가 SQL: `ERP/web/supabase_realty_import_migration.sql`, base schema 반영: `ERP/web/supabase_schema.sql`.
   - 추가 API: `POST /api/realty/import-jobs`, `GET /api/realty/import-jobs/:id`, `GET /api/realty/listings`.

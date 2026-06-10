@@ -14,6 +14,7 @@ import {
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadGrade,
     normalizeLeadPhone,
+    normalizeLeadStage,
     normalizeLeadStatus
 } from '@/lib/franchise-leads';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
@@ -131,6 +132,7 @@ function transformLead(row: any) {
         source: row.source || '',
         status: row.status || DEFAULT_FRANCHISE_LEAD_STATUS,
         grade: row.grade || '',
+        leadStage: normalizeLeadStage(data.leadStage),
         desiredRegion: row.desired_region || '',
         budgetMin: row.budget_min,
         budgetMax: row.budget_max,

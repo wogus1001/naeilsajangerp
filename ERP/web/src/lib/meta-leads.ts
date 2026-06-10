@@ -612,6 +612,7 @@ export async function importMetaLead(
         if (existingLead) {
             const nextData = {
                 ...(existingLead.data || {}),
+                leadStage: (existingLead.data || {}).leadStage || 'candidate',
                 meta: {
                     ...((existingLead.data || {}).meta || {}),
                     ...metaData.meta
@@ -667,6 +668,7 @@ export async function importMetaLead(
             updated_at: now,
             data: {
                 ...metaData,
+                leadStage: 'raw_intake',
                 activityLog: [{
                     id: activityId,
                     type: '메모',

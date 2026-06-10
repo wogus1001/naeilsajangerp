@@ -5,7 +5,6 @@ import {
     AlertTriangle,
     Building2,
     CheckCircle2,
-    FileSearch,
     Plus,
     RefreshCw,
     Store
@@ -14,7 +13,6 @@ import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import KakaoAddressSearch, { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
 import LocationCompetitionPanel, { LocationCompetitionScan } from '@/components/franchise/LocationCompetitionPanel';
-import { RealtyImportPanel } from '@/components/franchise/RealtyImportPanel';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { normalizeRegion } from '@/lib/franchise-market-insights';
 import styles from '../franchise-leads/page.module.css';
@@ -79,8 +77,6 @@ type LocationFormState = {
     memo: string;
 };
 
-type OperationTab = 'locations' | 'realty-import';
-
 const FRANCHISE_LOCATION_TYPES: FranchiseLocationType[] = ['직영점', '가맹점', '예정점'];
 const FRANCHISE_LOCATION_STATUSES: FranchiseLocationStatus[] = ['운영중', '오픈준비', '검토중', '휴점', '폐점'];
 const EMPTY_LOCATION_FORM: LocationFormState = {
@@ -131,7 +127,6 @@ function getCompetitionKeyword(location: Pick<FranchiseLocation, 'brand' | 'comp
 }
 
 export default function FranchiseOperationsPage() {
-    const [activeOperationsTab, setActiveOperationsTab] = React.useState<OperationTab>('locations');
     const [userId, setUserId] = React.useState('');
     const [companyName, setCompanyName] = React.useState('');
     const [locations, setLocations] = React.useState<FranchiseLocation[]>([]);
@@ -196,10 +191,6 @@ export default function FranchiseOperationsPage() {
     const openingCount = operationalLocations.filter(location => location.status === '오픈준비').length;
     const pausedCount = operationalLocations.filter(location => location.status === '휴점').length;
     const scannedCount = operationalLocations.filter(location => location.competitionScan).length;
-
-    const realtyInitialRegion = operationalLocations[0]?.region
-        || normalizeRegion(operationalLocations[0]?.address)
-        || '서울 광진구';
 
     const resetLocationForm = () => {
         setLocationForm(EMPTY_LOCATION_FORM);
@@ -407,27 +398,7 @@ export default function FranchiseOperationsPage() {
                 </div>
             </section>
 
-            <nav className={`${styles.viewTabs} ${styles.operationTabs}`} aria-label="가맹 운영 탭">
-                <button
-                    type="button"
-                    className={activeOperationsTab === 'locations' ? styles.viewTabActive : styles.viewTab}
-                    onClick={() => setActiveOperationsTab('locations')}
-                >
-                    <Store size={14} />
-                    가맹점 마스터
-                </button>
-                <button
-                    type="button"
-                    className={activeOperationsTab === 'realty-import' ? styles.viewTabActive : styles.viewTab}
-                    onClick={() => setActiveOperationsTab('realty-import')}
-                >
-                    <FileSearch size={14} />
-                    외부 상가 수집
-                </button>
-            </nav>
-
-            {activeOperationsTab === 'locations' && (
-                <section className={styles.marketInsightPanel}>
+            <section className={styles.marketInsightPanel}>
                 <div className={styles.panelHeader}>
                     <div>
                         <h2>가맹점 운영 현황</h2>
@@ -657,12 +628,7 @@ export default function FranchiseOperationsPage() {
                         <span>공지/매뉴얼 배포</span>
                     </div>
                 </div>
-                </section>
-            )}
-
-            {activeOperationsTab === 'realty-import' && (
-                <RealtyImportPanel userId={userId} initialRegionHint={realtyInitialRegion} />
-            )}
+            </section>
         </div>
     );
 }

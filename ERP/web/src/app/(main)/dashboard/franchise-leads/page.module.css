@@ -102,44 +102,48 @@
     display: none;
 }
 
-.franchiseTabs {
+.workspaceTabs {
+    width: fit-content;
     display: inline-flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: -4px 0 16px;
+    align-items: center;
+    gap: 4px;
     padding: 5px;
+    margin: -2px 0 18px;
     border: 1px solid #d8dee8;
     border-radius: 999px;
     background: #ffffff;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 
-.franchiseTabs a {
+.workspaceTab,
+.workspaceTabActive {
+    min-height: 36px;
     display: inline-flex;
-    min-height: 34px;
     align-items: center;
     justify-content: center;
-    padding: 0 14px;
+    gap: 7px;
+    padding: 0 15px;
+    border: none;
     border-radius: 999px;
+    background: transparent;
     color: #64748b;
     font-size: 13px;
     font-weight: 900;
+    line-height: 1;
     text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
 }
 
-.franchiseTabs a:hover {
-    color: #0f172a;
+.workspaceTab:hover {
     background: #f8fafc;
+    color: #0f172a;
 }
 
-.franchiseTabs .franchiseTabActive {
+.workspaceTabActive {
     background: #0f172a;
     color: #ffffff;
-}
-
-.franchiseTabs .franchiseTabActive:hover {
-    color: #ffffff;
-    background: #0f172a;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
 }
 
 .toolbar {
@@ -2477,6 +2481,60 @@
     grid-column: 1 / -1;
 }
 
+.leadLayerTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px 16px 0;
+}
+
+.leadLayerTab,
+.leadLayerTabActive {
+    min-height: 72px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #334155;
+    text-align: left;
+    cursor: pointer;
+}
+
+.leadLayerTab strong,
+.leadLayerTabActive strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.leadLayerTab span,
+.leadLayerTabActive span {
+    grid-column: 1 / -1;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.leadLayerTab b,
+.leadLayerTabActive b {
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: #eef6ff;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.leadLayerTabActive {
+    border-color: #2563eb;
+    background: #f8fbff;
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16);
+}
+
 .panelHeader,
 .tableHeader {
     display: flex;
@@ -2656,27 +2714,6 @@
     flex-wrap: wrap;
     gap: 8px;
     max-width: 100%;
-}
-
-.actionLegend {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.actionLegend span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    height: 28px;
-    padding: 0 8px;
-    border: 1px solid #e5e7eb;
-    border-radius: 999px;
-    background: #ffffff;
 }
 
 .viewTabs {
@@ -2961,18 +2998,31 @@
     white-space: nowrap;
 }
 
-.metaSourceBadge {
+.sourceBadge {
+    max-width: 86px;
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     height: 24px;
-    padding: 0 9px;
-    border: 1px solid #bfdbfe;
+    padding: 0 8px;
+    border: 1px solid #d8dee8;
     border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: #ffffff;
+    color: #475569;
     font-size: 11px;
     font-weight: 900;
     white-space: nowrap;
+}
+
+.sourceBadge span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sourceBadgeMeta {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 
 .statusSelect,
@@ -3051,6 +3101,78 @@
     justify-content: flex-end;
     gap: 6px;
     white-space: nowrap;
+}
+
+.rowActions [data-tooltip] {
+    position: relative;
+}
+
+.rowActions [data-tooltip]::before,
+.rowActions [data-tooltip]::after {
+    position: absolute;
+    left: 50%;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 4px);
+    transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.rowActions [data-tooltip]::before {
+    bottom: calc(100% + 8px);
+    min-width: max-content;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #ffffff;
+    content: attr(data-tooltip);
+    font-size: 11px;
+    font-weight: 850;
+    line-height: 1;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.rowActions [data-tooltip]::after {
+    bottom: calc(100% + 3px);
+    width: 8px;
+    height: 8px;
+    background: #0f172a;
+    content: '';
+    rotate: 45deg;
+}
+
+.rowActions [data-tooltip]:hover::before,
+.rowActions [data-tooltip]:hover::after,
+.rowActions [data-tooltip]:focus-visible::before,
+.rowActions [data-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.promoteButton,
+.promoteButtonLarge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.promoteButton {
+    min-width: 54px;
+    height: 32px;
+    padding: 0 10px;
+}
+
+.promoteButtonLarge {
+    min-height: 42px;
+    padding: 0 16px;
+    gap: 8px;
 }
 
 .iconButton,
@@ -3294,6 +3416,53 @@
     margin: 18px;
 }
 
+.taskQueueToolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px 18px 0;
+    background: #ffffff;
+}
+
+.taskQueueFilter,
+.taskQueueFilterActive {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.taskQueueFilter strong,
+.taskQueueFilterActive strong {
+    min-width: 26px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #2563eb;
+    text-align: center;
+    font-size: 11px;
+}
+
+.taskQueueFilterActive {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.1);
+}
+
+.taskQueueFilterActive strong {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
 .taskBoard {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -3385,6 +3554,26 @@
 .taskInfoGrid strong {
     color: #0f172a;
     font-size: 12px;
+}
+
+.fitPillRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.fitPillRow span {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 850;
 }
 
 .taskCard p {
@@ -3735,6 +3924,161 @@
 
 .detailHint {
     margin-top: 8px;
+}
+
+.workflowGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.workflowGrid label,
+.workflowMemoLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.workflowGrid select,
+.workflowMemoLabel textarea {
+    width: 100%;
+    border: 1px solid #d8dee8;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13px;
+    outline: none;
+}
+
+.workflowGrid select {
+    height: 38px;
+    padding: 0 10px;
+}
+
+.workflowMemoLabel {
+    margin-top: 10px;
+}
+
+.workflowMemoLabel textarea {
+    min-height: 72px;
+    resize: vertical;
+    padding: 10px;
+}
+
+.workflowGrid select:focus,
+.workflowMemoLabel textarea:focus {
+    border-color: #6d5dfc;
+    box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.12);
+}
+
+.workflowActions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.workflowActions .detailHint {
+    margin-top: 0;
+}
+
+.locationMatchEmpty {
+    padding: 14px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 13px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.locationMatchList {
+    display: grid;
+    gap: 10px;
+}
+
+.locationMatchCard {
+    padding: 13px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.locationMatchHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.locationMatchHead strong,
+.locationMatchHead span {
+    display: block;
+}
+
+.locationMatchHead strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.locationMatchHead span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.locationMatchHead b {
+    min-width: 48px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857;
+    text-align: center;
+    font-size: 12px;
+}
+
+.locationMatchCard p {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 0 0;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.locationMatchTags,
+.locationMatchRisks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.locationMatchTags span,
+.locationMatchRisks span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.locationMatchTags span {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.locationMatchRisks span {
+    background: #fff7ed;
+    color: #c2410c;
 }
 
 .activityComposer {
@@ -4608,10 +4952,6 @@
         width: 100%;
     }
 
-    .actionLegend {
-        order: 4;
-        width: 100%;
-    }
 }
 
 @media (max-width: 720px) {
@@ -4626,8 +4966,14 @@
     .rangeGroup,
     .searchBox,
     .filterGroup,
+    .workspaceTabs,
     .viewTabs {
         width: 100%;
+    }
+
+    .workspaceTab,
+    .workspaceTabActive {
+        flex: 1;
     }
 
     .tableHeaderActions {
@@ -4637,6 +4983,11 @@
     .pageSizeControl,
     .tableMeta {
         flex: 1 1 auto;
+    }
+
+    .leadLayerTabs {
+        grid-template-columns: 1fr;
+        padding: 12px 12px 0;
     }
 
     .viewTab,
@@ -4824,7 +5175,8 @@
 
     .detailInfoGrid,
     .relatedGrid,
-    .taskInfoGrid {
+    .taskInfoGrid,
+    .workflowGrid {
         grid-template-columns: 1fr;
     }
 
@@ -4848,7 +5200,9 @@
     }
 
     .detailQuickActions,
-    .nextContactBox {
+    .nextContactBox,
+    .workflowActions {
         flex-direction: column;
+        align-items: stretch;
     }
 }
