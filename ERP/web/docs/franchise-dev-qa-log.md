@@ -66,6 +66,8 @@
 - 2026-06-10 저장 목록에 저장일 컬럼과 별표 토글을 추가했다. 별표는 `external_property_listings.data.favorite`에 저장하고 재수집 업데이트 시 보존한다.
 - 2026-06-10 requester/company 스키마 drift 대응을 추가했다. `external_property_listings.requester_id`가 없는 구형 스키마에서는 명확한 migration 안내를 반환한다.
 - 2026-06-10 저장 목록 1차 점수화를 추가했다. 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 추천점수/최근 저장/월세/면적/관심 정렬을 제공한다.
+- 2026-06-10 저장 목록 1차 지도화를 추가했다. 열린 동 카드의 현재 페이지 주소를 대상으로 저장 좌표 또는 Kakao 브라우저 지오코딩 좌표를 지도에 표시한다.
+- 2026-06-10 저장 목록 지도 우측 번호 목록을 제거하고, 하단 표의 `지도` 컬럼에 마커 번호를 매칭했다. 표의 지도 번호나 주소를 누르면 해당 지도 마커가 선택된다.
 
 ## QA 결과
 
@@ -80,11 +82,15 @@
 - 2026-06-10 외부 상가 수집 UI/API 정리 후 `npx tsc --noEmit` 통과
 - 2026-06-10 저장 상가 점수/필터 유닛 테스트 통과: `utils.test.mts`, `scoring.test.mts`
 - 2026-06-10 저장 상가 점수/필터 구현 후 `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
+- 2026-06-10 저장 상가 지도 후보 유닛 테스트 통과: `map-utils.test.mts`
+- 2026-06-10 저장 상가 동별 현재 페이지 지도화 후 `map-utils.test.mts`, `scoring.test.mts`, `utils.test.mts`, TypeScript LSP error diagnostics, `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
+- 2026-06-10 저장 상가 표-지도 마커 번호 매칭 후 `map-utils.test.mts`, `scoring.test.mts`, `utils.test.mts`, TypeScript LSP error diagnostics, `npx tsc --noEmit`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
 - `http://localhost:3000/dashboard/franchise-operations` 보호 라우트 로그인 이동 확인
-- 2026-06-10 인앱 브라우저에서 `/dashboard/franchise-operations` 접근 시 로그인 세션이 없어 `/login` 이동 확인. 저장 상가 실제 화면 조작 QA는 로그인 세션에서 추가 확인 필요.
+- 2026-06-10 Playwright 브라우저에서 `/dashboard/franchise-operations` 로그인 세션 화면을 확인했다. 저장 상가 동 카드 내부에 `구의동 지도`, `구의동 현재 페이지 1-50 / 109건` 범위 문구, 지도 마커, 우측 선택 상세, 하단 현재 페이지 표가 함께 표시되는지 확인했다.
+- 2026-06-10 Playwright 브라우저에서 저장 상가 지도 우측 번호 목록 제거, 하단 표 `지도` 컬럼 표시, 표 주소 클릭 후 지도 선택 상세 변경, 선택 행 강조, `Maximum update depth` 에러 0건을 확인했다.
 - Kakao JavaScript 지도는 `http://localhost:3000` 도메인 등록 후 지도 표시 확인
 - Google Places API (New) `places:searchText` 응답 확인
 - SearchAPI 정상 시점에 Naver 리뷰 예시 수집 확인
@@ -161,6 +167,7 @@
 - 화면 2000건 수집 요청, import API 3000건 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 확인
 - 저장일 컬럼과 별표 토글이 동작하고, 재수집 후에도 별표가 유지되는지 확인
 - 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 정렬이 저장 지역 칩과 동 카드 페이지네이션을 깨지 않는지 확인
+- 동 카드 안의 저장 상가 지도 패널이 로그인 세션에서 Kakao 지도 도메인 설정, 주소 지오코딩, 마커 선택, 표의 지도 번호/주소 클릭 선택, 원문 링크를 정상 처리하는지 확인
 - 기존 물건지와 주소가 같은 외부 매물이 `duplicate_candidate`로 표시되는지 확인
 - 외부 수집 결과가 점포목록에 자동 등록되지 않는지 확인
 - `external_property_listings`에 원본 raw/data가 저장되는지 확인

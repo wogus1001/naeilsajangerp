@@ -1170,6 +1170,161 @@
     font-weight: 850;
 }
 
+.realtyMapPanel {
+    margin: 14px 16px 0;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.realtyDistrictCard .realtyMapPanel {
+    margin: 12px;
+}
+
+.realtyMapHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    background: #fbfdff;
+}
+
+.realtyMapHeader>div {
+    display: grid;
+    gap: 4px;
+}
+
+.realtyMapHeader strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.realtyMapHeader span,
+.realtyMapHeader small {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.realtyMapBody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    min-height: 320px;
+}
+
+.realtyMapCanvas {
+    position: relative;
+    min-height: 320px;
+    border-right: 1px solid #eef2f7;
+    background: #f8fafc;
+}
+
+.realtyMapList {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.realtyMapList article {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #eff6ff;
+}
+
+.realtyMapList article strong {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.realtyMapList article span,
+.realtyMapList article small {
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.realtyMapList article a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.realtyMapMarker,
+.realtyMapMarkerActive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.realtyMapMarker,
+.realtyMapMarkerActive {
+    border: 1px solid #ffffff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+    cursor: pointer;
+}
+
+.realtyMapMarkerActive {
+    background: #2563eb;
+}
+
+.realtyDistrictMapAction {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 12px;
+    padding: 10px 12px;
+    border: 1px dashed #bfdbfe;
+    border-radius: 12px;
+    background: #f8fbff;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.realtyDistrictMapAction button {
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 9px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.realtyDistrictMapAction button:hover {
+    border-color: #93c5fd;
+    background: #dbeafe;
+}
+
 .realtyGroupList {
     display: grid;
     gap: 12px;
@@ -1235,31 +1390,36 @@
 
 .realtyTable th:nth-child(2),
 .realtyTable td:nth-child(2) {
-    width: 86px;
+    width: 58px;
 }
 
 .realtyTable th:nth-child(3),
 .realtyTable td:nth-child(3) {
-    width: 98px;
+    width: 86px;
 }
 
 .realtyTable th:nth-child(4),
 .realtyTable td:nth-child(4) {
-    width: 28%;
+    width: 98px;
 }
 
-.realtyTable th:nth-child(6),
-.realtyTable td:nth-child(6) {
-    width: 150px;
+.realtyTable th:nth-child(5),
+.realtyTable td:nth-child(5) {
+    width: 28%;
 }
 
 .realtyTable th:nth-child(7),
 .realtyTable td:nth-child(7) {
+    width: 150px;
+}
+
+.realtyTable th:nth-child(8),
+.realtyTable td:nth-child(8) {
     width: 170px;
 }
 
-.realtyTable th:nth-child(9),
-.realtyTable td:nth-child(9) {
+.realtyTable th:nth-child(10),
+.realtyTable td:nth-child(10) {
     width: 92px;
 }
 
@@ -1309,9 +1469,61 @@
     white-space: normal;
 }
 
-.realtyTable td:nth-child(6) strong,
-.realtyTable td:nth-child(6) small {
+.realtyTable td:nth-child(7) strong,
+.realtyTable td:nth-child(7) small {
     white-space: nowrap;
+}
+
+.realtyTableRowSelected td {
+    background: #f8fbff;
+}
+
+.realtyTableMapBadge,
+.realtyTableMapBadgeActive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #d8dee8;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.realtyTableMapBadge:hover,
+.realtyTableMapBadgeActive {
+    border-color: #bfdbfe;
+    background: #2563eb;
+}
+
+.realtyTableMapEmpty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.realtyAddressButton {
+    display: block;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.realtyAddressButton:hover strong {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .realtyScoreValue {
@@ -4499,6 +4711,21 @@
     .realtyDistrictHeader small:last-child {
         grid-column: 2 / 4;
         width: fit-content;
+    }
+
+    .realtyMapHeader,
+    .realtyMapBody {
+        grid-template-columns: 1fr;
+    }
+
+    .realtyMapHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .realtyMapCanvas {
+        border-right: 0;
+        border-bottom: 1px solid #eef2f7;
     }
 
     .locationMasterHeader,

@@ -14,6 +14,8 @@ export type RealtyListingRecord = {
     readonly title: string;
     readonly address: string;
     readonly region: string;
+    readonly latitude?: number | null;
+    readonly longitude?: number | null;
     readonly tradeType: string;
     readonly propertyType: string;
     readonly depositAmount: number | null;

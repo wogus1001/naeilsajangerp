@@ -17,19 +17,31 @@ import {
 type Props = {
     readonly item: RealtyImportedListing;
     readonly favoriteUpdatingId: string;
+    readonly mapMarkerNumber?: number;
+    readonly isMapMarkerSelected?: boolean;
+    readonly onSelectMapMarkerAction?: () => void;
     readonly onToggleFavoriteAction: (listing: RealtyListingRecord) => void;
 };
 
-export function RealtyListingRow({ item, favoriteUpdatingId, onToggleFavoriteAction }: Props) {
+export function RealtyListingRow({
+    item,
+    favoriteUpdatingId,
+    mapMarkerNumber,
+    isMapMarkerSelected = false,
+    onSelectMapMarkerAction,
+    onToggleFavoriteAction
+}: Props) {
     const listing = item.listing;
     const favorite = isFavorite(item);
     const detailMeta = getRealtyDetailMeta(listing);
     const reactionMeta = getRealtyReactionMeta(listing);
     const contentSummary = summarizeRealtyContent(listing?.raw?.content);
     const candidateScore = scoreRealtyListing(item);
+    const canSelectMapMarker = Boolean(mapMarkerNumber && onSelectMapMarkerAction);
+    const addressText = listing?.address || listing?.region || '-';
 
     return (
-        <tr>
+        <tr className={isMapMarkerSelected ? styles.realtyTableRowSelected : undefined}>
             <td>
                 {listing ? (
                     <button
@@ -45,6 +57,20 @@ export function RealtyListingRow({ item, favoriteUpdatingId, onToggleFavoriteAct
                 ) : '-'}
             </td>
             <td>
+                {mapMarkerNumber ? (
+                    <button
+                        type="button"
+                        className={isMapMarkerSelected ? styles.realtyTableMapBadgeActive : styles.realtyTableMapBadge}
+                        onClick={onSelectMapMarkerAction}
+                        aria-label={`지도 ${mapMarkerNumber}번 마커 보기`}
+                    >
+                        {mapMarkerNumber}
+                    </button>
+                ) : (
+                    <span className={styles.realtyTableMapEmpty}>-</span>
+                )}
+            </td>
+            <td>
                 <strong className={styles.realtyScoreValue}>{candidateScore.score}점</strong>
                 <small>{candidateScore.reasons.slice(0, 3).join(' · ') || '검토'}</small>
             </td>
@@ -55,7 +81,13 @@ export function RealtyListingRow({ item, favoriteUpdatingId, onToggleFavoriteAct
                 <small>{getRealtySourceLabel(listing?.source)}</small>
             </td>
             <td>
-                <strong>{listing?.address || listing?.region || '-'}</strong>
+                {canSelectMapMarker ? (
+                    <button type="button" className={styles.realtyAddressButton} onClick={onSelectMapMarkerAction}>
+                        <strong>{addressText}</strong>
+                    </button>
+                ) : (
+                    <strong>{addressText}</strong>
+                )}
                 <small>{listing?.region || listing?.sourceListingId || ''}</small>
                 {contentSummary && <small>{contentSummary}</small>}
             </td>
