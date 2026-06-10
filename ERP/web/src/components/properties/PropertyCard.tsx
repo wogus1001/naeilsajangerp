@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import styles from './PropertyCard.module.css';
-import { User, Phone, MapPin, Building, DollarSign, FileText, Save, Trash2, Printer, Copy, Plus, Star, ChevronDown, ChevronUp, Search, X, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { User, Phone, MapPin, Building, DollarSign, FileText, Save, Trash2, Printer, Copy, Plus, Star, ChevronDown, ChevronUp, Search, X, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink } from 'lucide-react';
 import PersonSelectorModal from './PersonSelectorModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -38,6 +38,51 @@ interface CustomFieldItem {
     label: string;
     value: string;
 }
+
+type RealtyImportSource = 'daangn' | 'naver_land';
+
+type RealtyImportedListing = {
+    listing?: {
+        id: string;
+        source: RealtyImportSource;
+        sourceListingId: string;
+        sourceUrl: string;
+        title: string;
+        address: string;
+        region: string;
+        tradeType: string;
+        propertyType: string;
+        depositAmount: number | null;
+        monthlyRent: number | null;
+        salePrice: number | null;
+        maintenanceFee: number | null;
+        areaSqm: number | null;
+        areaPyeong: string;
+        floorInfo: string;
+        status: string;
+        collectedAt: string;
+    };
+    propertyId: string;
+    action: 'created' | 'updated';
+    duplicateOfPropertyId?: string | null;
+};
+
+type RealtyImportResult = {
+    job?: {
+        id: string;
+        status: string;
+        region: string;
+        totalCount: number;
+        createdCount: number;
+        updatedCount: number;
+        duplicateCount: number;
+        failedCount: number;
+        warnings: string[];
+        errors: Array<{ source?: string; listingId?: string; message: string }>;
+        completedAt?: string;
+    };
+    listings?: RealtyImportedListing[];
+};
 
 // ... (existing interfaces)
 const INDUSTRY_DATA: Record<string, Record<string, string[]>> = {
@@ -160,6 +205,18 @@ export const EditableLabel = ({ name, defaultVal, value, onChange }: { name: str
         />
     );
 };
+
+function deriveRealtyRegion(value: unknown) {
+    const text = String(value || '').replace(/[(),]/g, ' ').trim();
+    const tokens = text.split(/\s+/).filter(Boolean);
+    const district = tokens.find(token => /[구군시]$/.test(token));
+    const dong = tokens.find(token => /[동가읍면리]$/.test(token));
+    if (district && dong) return `${district} ${dong}`;
+    if (district) return district;
+    if (dong) return dong;
+    return tokens.slice(0, 2).join(' ') || text;
+}
+
 export default function PropertyCard({ property, onClose, onRefresh, onNavigate, canNavigate }: PropertyCardProps) {
     useKakaoLoader({
         appkey: "26c1197bae99e17f8c1f3e688e22914d",
@@ -256,6 +313,13 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
     const [directReportPreview, setDirectReportPreview] = useState<number>(0);
     const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
     const [userCompanyName, setUserCompanyName] = useState<string>('');
+    const [realtyRegion, setRealtyRegion] = useState(() => deriveRealtyRegion(property.address || property.region || property.name));
+    const [realtySources, setRealtySources] = useState<Record<RealtyImportSource, boolean>>({
+        daangn: true,
+        naver_land: false
+    });
+    const [isRealtyImporting, setIsRealtyImporting] = useState(false);
+    const [realtyImportResult, setRealtyImportResult] = useState<RealtyImportResult | null>(null);
 
     const getRequesterId = () => {
         if (formData?.managerId) return formData.managerId;
@@ -298,6 +362,11 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             }
         }
     }, []);
+
+    useEffect(() => {
+        setRealtyRegion(deriveRealtyRegion(formData.address || formData.region || formData.name));
+        setRealtyImportResult(null);
+    }, [formData.id, formData.address, formData.region, formData.name]);
 
 
     // Init Map Constants safely
@@ -2107,6 +2176,70 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
         return Number(value).toLocaleString();
     };
 
+    const formatRealtyMoney = (value: number | null | undefined) => {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return '-';
+        return `${Number(value).toLocaleString()}만`;
+    };
+
+    const getRealtySourceLabel = (source: RealtyImportSource | string) => {
+        if (source === 'daangn') return '당근';
+        if (source === 'naver_land') return '네이버';
+        return source || '-';
+    };
+
+    const toggleRealtySource = (source: RealtyImportSource) => {
+        setRealtySources(prev => ({
+            ...prev,
+            [source]: !prev[source]
+        }));
+    };
+
+    const handleRealtyImport = async () => {
+        const selectedSources = (Object.entries(realtySources) as Array<[RealtyImportSource, boolean]>)
+            .filter(([, checked]) => checked)
+            .map(([source]) => source);
+
+        if (selectedSources.length === 0) {
+            showAlert('수집 소스를 선택해주세요.', 'info');
+            return;
+        }
+        if (!realtyRegion || realtyRegion.length < 2) {
+            showAlert('수집 지역을 확인해주세요.', 'info');
+            return;
+        }
+
+        setIsRealtyImporting(true);
+        try {
+            const response = await fetch(withRequesterId('/api/realty/import-jobs'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(withRequesterPayload({
+                    referencePropertyId: formData.id,
+                    region: realtyRegion,
+                    sources: selectedSources,
+                    companyName: formData.companyName || userCompanyName,
+                    managerId: formData.managerId,
+                    limit: 40
+                }))
+            });
+
+            const result = await readApiJson<RealtyImportResult>(response);
+            if (!response.ok) {
+                throw new Error((result as any)?.message || (result as any)?.error || '외부 매물 수집 실패');
+            }
+
+            setRealtyImportResult(result);
+            onRefresh?.();
+            const job = result.job;
+            showAlert(`외부 매물 수집 완료: 생성 ${job?.createdCount || 0}건, 업데이트 ${job?.updatedCount || 0}건`, 'success');
+        } catch (error) {
+            console.error('Realty import failed:', error);
+            showAlert(error instanceof Error ? error.message : '외부 매물 수집 중 오류가 발생했습니다.', 'error');
+        } finally {
+            setIsRealtyImporting(false);
+        }
+    };
+
     const formatInput = (value: number | undefined | null) => {
         if (value === undefined || value === null || value === 0 || Number.isNaN(value)) return '';
         return value.toLocaleString();
@@ -3513,7 +3646,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 {/* Right Side: Tabs */}
                 <div className={styles.rightPanel}>
                     <div className={styles.tabs}>
-                        {['priceWork', 'revenue', 'photos', 'contracts', 'reports', 'docs', 'transfer'].map(tab => (
+                        {['priceWork', 'revenue', 'photos', 'realty', 'contracts', 'reports', 'docs', 'transfer'].map(tab => (
                             <button
                                 key={tab}
                                 className={`${styles.tabBtn} ${activeTab === tab ? styles.activeTab : ''}`}
@@ -3522,6 +3655,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                 {tab === 'priceWork' && '금액작업'}
                                 {tab === 'revenue' && '매출'}
                                 {tab === 'photos' && '사진지도'}
+                                {tab === 'realty' && '외부수집'}
                                 {tab === 'contracts' && '고객계약'}
                                 {tab === 'reports' && '리포트'}
                                 {tab === 'transfer' && '물건전송'}
@@ -3866,6 +4000,156 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                 </div>
                             </div>
                         )}
+                        {activeTab === 'realty' && (
+                            <div className={styles.tabPane}>
+                                <div className={styles.paneHeader}>
+                                    <h3>외부 상가 수집</h3>
+                                    <button
+                                        className={styles.smallBtn}
+                                        onClick={handleRealtyImport}
+                                        disabled={isRealtyImporting}
+                                    >
+                                        <Search size={14} /> {isRealtyImporting ? '수집중' : '수집실행'}
+                                    </button>
+                                </div>
+
+                                <div className={styles.realtyControls}>
+                                    <label className={styles.realtyField}>
+                                        <span>지역</span>
+                                        <input
+                                            className={styles.input}
+                                            value={realtyRegion}
+                                            onChange={(event) => setRealtyRegion(event.target.value)}
+                                            placeholder="예: 광진구, 합정동"
+                                        />
+                                    </label>
+                                    <div className={styles.realtySourceGroup}>
+                                        <label className={`${styles.realtySourceChip} ${realtySources.daangn ? styles.realtySourceChipActive : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={realtySources.daangn}
+                                                onChange={() => toggleRealtySource('daangn')}
+                                            />
+                                            당근
+                                        </label>
+                                        <label className={`${styles.realtySourceChip} ${realtySources.naver_land ? styles.realtySourceChipActive : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={realtySources.naver_land}
+                                                onChange={() => toggleRealtySource('naver_land')}
+                                            />
+                                            네이버 POC
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {realtyImportResult?.job && (
+                                    <div className={styles.realtySummary}>
+                                        <div>
+                                            <span>상태</span>
+                                            <strong>{realtyImportResult.job.status}</strong>
+                                        </div>
+                                        <div>
+                                            <span>수집</span>
+                                            <strong>{realtyImportResult.job.totalCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>생성</span>
+                                            <strong>{realtyImportResult.job.createdCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>업데이트</span>
+                                            <strong>{realtyImportResult.job.updatedCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>중복후보</span>
+                                            <strong>{realtyImportResult.job.duplicateCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>실패</span>
+                                            <strong>{realtyImportResult.job.failedCount}건</strong>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {realtyImportResult?.job?.warnings?.length ? (
+                                    <div className={styles.realtyNotice}>
+                                        {realtyImportResult.job.warnings.map((warning, index) => (
+                                            <div key={`${warning}-${index}`}>{warning}</div>
+                                        ))}
+                                    </div>
+                                ) : null}
+
+                                {realtyImportResult?.job?.errors?.length ? (
+                                    <div className={`${styles.realtyNotice} ${styles.realtyErrorNotice}`}>
+                                        {realtyImportResult.job.errors.map((error, index) => (
+                                            <div key={`${error.message}-${index}`}>{error.source ? `[${getRealtySourceLabel(error.source)}] ` : ''}{error.message}</div>
+                                        ))}
+                                    </div>
+                                ) : null}
+
+                                <div className={styles.realtyTableWrap}>
+                                    <table className={styles.listTable}>
+                                        <thead>
+                                            <tr>
+                                                <th>결과</th>
+                                                <th>소스</th>
+                                                <th>매물명</th>
+                                                <th>가격</th>
+                                                <th>면적</th>
+                                                <th>상태</th>
+                                                <th>링크</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {!realtyImportResult?.listings?.length ? (
+                                                <tr>
+                                                    <td colSpan={7} style={{ textAlign: 'center', padding: 30, color: '#868e96' }}>
+                                                        수집 결과가 없습니다.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                realtyImportResult.listings.map((item, index) => {
+                                                    const listing = item.listing;
+                                                    return (
+                                                        <tr key={`${listing?.id || item.propertyId}-${index}`}>
+                                                            <td>
+                                                                <span className={`${styles.realtyStatus} ${item.action === 'updated' ? styles.realtyStatusUpdated : styles.realtyStatusCreated}`}>
+                                                                    {item.action === 'updated' ? '업데이트' : '생성'}
+                                                                </span>
+                                                            </td>
+                                                            <td>{getRealtySourceLabel(listing?.source || '')}</td>
+                                                            <td>
+                                                                <div className={styles.realtyTitleCell}>
+                                                                    <strong>{listing?.title || '-'}</strong>
+                                                                    <span>{listing?.address || listing?.region || '-'}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                {listing?.salePrice ? (
+                                                                    <span>매매 {formatRealtyMoney(listing.salePrice)}</span>
+                                                                ) : (
+                                                                    <span>보증 {formatRealtyMoney(listing?.depositAmount)} / 월 {formatRealtyMoney(listing?.monthlyRent)}</span>
+                                                                )}
+                                                            </td>
+                                                            <td>{listing?.areaPyeong || (listing?.areaSqm ? `${listing.areaSqm}㎡` : '-')}</td>
+                                                            <td>{item.duplicateOfPropertyId ? '중복후보' : listing?.status || '-'}</td>
+                                                            <td>
+                                                                {listing?.sourceUrl ? (
+                                                                    <a className={styles.realtyLinkBtn} href={listing.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                                                        <ExternalLink size={12} /> 원문
+                                                                    </a>
+                                                                ) : '-'}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
                         {activeTab === 'contracts' && (
                             <div className={styles.tabPane}>
                                 {/* Promoted Customers Section */}
@@ -4163,7 +4447,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                             </div>
                         )}
 
-                        {activeTab !== 'priceWork' && activeTab !== 'revenue' && activeTab !== 'photos' && activeTab !== 'contracts' && activeTab !== 'docs' && activeTab !== 'transfer' && activeTab !== 'reports' && (
+                        {activeTab !== 'priceWork' && activeTab !== 'revenue' && activeTab !== 'photos' && activeTab !== 'realty' && activeTab !== 'contracts' && activeTab !== 'docs' && activeTab !== 'transfer' && activeTab !== 'reports' && (
                             <div style={{ padding: 20, textAlign: 'center', color: '#868e96' }}>
                                 준비 중인 기능입니다.
                             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
     Bar,
@@ -143,6 +144,61 @@ type ManagerOption = {
     role?: string;
 };
 
+type MetaFieldMapping = {
+    name: string[];
+    mobile: string[];
+    desiredRegion: string[];
+    budget: string[];
+    budgetMin: string[];
+    budgetMax: string[];
+    interestedBrand: string[];
+    memo: string[];
+};
+
+type MetaConnection = {
+    id: string;
+    companyId: string;
+    connectedBy?: string;
+    metaPageId: string;
+    metaPageName: string;
+    status: string;
+    lastSyncAt?: string | null;
+    lastWebhookAt?: string | null;
+    lastError?: string | null;
+    pageCategory?: string;
+    subscribeError?: string;
+};
+
+type MetaLeadForm = {
+    id: string;
+    companyId: string;
+    connectionId: string;
+    metaFormId: string;
+    metaFormName: string;
+    enabled: boolean;
+    defaultManagerId?: string | null;
+    fieldMapping: MetaFieldMapping;
+    lastSyncedAt?: string | null;
+    lastError?: string | null;
+};
+
+type MetaLeadImportLog = {
+    id: string;
+    metaLeadId: string;
+    franchiseLeadId?: string | null;
+    status: string;
+    errorMessage?: string | null;
+    receivedAt?: string | null;
+    importedAt?: string | null;
+};
+
+type MetaIntegrationState = {
+    connections: MetaConnection[];
+    forms: MetaLeadForm[];
+    imports: MetaLeadImportLog[];
+    configReady: boolean;
+};
+
 type LeadFormState = {
     id?: string;
     name: string;
@@ -186,6 +242,22 @@ const ACTIVITY_TYPES: LeadActivityType[] = ['전화', '문자', '방문상담', 
 const SOURCE_FILTER_OPTIONS = ['전체', ...FRANCHISE_LEAD_SOURCES] as const;
 const RANGE_OPTIONS = ['7D', '30D', '3M', '전체'] as const;
 const PAGE_SIZE_OPTIONS = [50, 100, 200] as const;
+const EMPTY_META_STATE: MetaIntegrationState = {
+    connections: [],
+    forms: [],
+    imports: [],
+    configReady: false
+};
+const META_FIELD_LABELS: Array<{ key: keyof MetaFieldMapping; label: string; hint: string }> = [
+    { key: 'name', label: '이름', hint: 'full_name, 이름, 성명' },
+    { key: 'mobile', label: '연락처', hint: 'phone_number, 연락처, 휴대폰' },
+    { key: 'desiredRegion', label: '희망지역', hint: '희망지역, 지역, area' },
+    { key: 'budget', label: '예산 통합', hint: '예산, 창업예산' },
+    { key: 'budgetMin', label: '예산 최소', hint: 'budget_min, 예산최소' },
+    { key: 'budgetMax', label: '예산 최대', hint: 'budget_max, 예산최대' },
+    { key: 'interestedBrand', label: '관심브랜드', hint: 'brand, 관심브랜드' },
+    { key: 'memo', label: '메모', hint: 'memo, 문의내용, 비고' }
+];
 const VIEW_OPTIONS: Array<{ mode: LeadViewMode; label: string; description: string }> = [
     { mode: 'table', label: '테이블', description: '전체 필드 중심으로 확인' },
     { mode: 'pipeline', label: '파이프라인', description: '상태별 상담 흐름 관리' },
@@ -440,6 +512,11 @@ export default function FranchiseLeadsPage() {
     const [managerMap, setManagerMap] = React.useState<Record<string, string>>({});
     const [uploadErrors, setUploadErrors] = React.useState<UploadErrorRow[]>([]);
     const [isRelatedLoading, setIsRelatedLoading] = React.useState(false);
+    const [metaState, setMetaState] = React.useState<MetaIntegrationState>(EMPTY_META_STATE);
+    const [isMetaLoading, setIsMetaLoading] = React.useState(false);
+    const [isMetaPanelOpen, setIsMetaPanelOpen] = React.useState(false);
+    const [isMetaSyncing, setIsMetaSyncing] = React.useState(false);
+    const [savingMetaFormId, setSavingMetaFormId] = React.useState('');
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [form, setForm] = React.useState<LeadFormState>(EMPTY_FORM);
     const [alertConfig, setAlertConfig] = React.useState({
@@ -527,6 +604,35 @@ export default function FranchiseLeadsPage() {
         }
     }, [companyName, createdFrom, createdTo, managerFilter, searchTerm, sourceFilter, statusFilter, userId]);
 
+    const fetchMetaIntegration = React.useCallback(async () => {
+        if (!userId) return;
+
+        setIsMetaLoading(true);
+        try {
+            const params = new URLSearchParams({ requesterId: userId });
+            if (companyName) params.set('company', companyName);
+
+            const response = await fetch(`/api/integrations/meta?${params.toString()}`, { cache: 'no-store' });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(readApiError(payload));
+            }
+
+            const data = unwrapApiData<MetaIntegrationState>(payload);
+            setMetaState({
+                connections: data.connections || [],
+                forms: data.forms || [],
+                imports: data.imports || [],
+                configReady: Boolean(data.configReady)
+            });
+        } catch (error) {
+            console.error('Failed to fetch Meta integration:', error);
+            setMetaState(EMPTY_META_STATE);
+        } finally {
+            setIsMetaLoading(false);
+        }
+    }, [companyName, userId]);
+
     React.useEffect(() => {
         if (!userId) return;
         const timer = window.setTimeout(() => {
@@ -535,6 +641,11 @@ export default function FranchiseLeadsPage() {
 
         return () => window.clearTimeout(timer);
     }, [fetchLeads, userId]);
+
+    React.useEffect(() => {
+        if (!userId) return;
+        void fetchMetaIntegration();
+    }, [fetchMetaIntegration, userId]);
 
     React.useEffect(() => {
         setCurrentPage(1);
@@ -677,6 +788,15 @@ export default function FranchiseLeadsPage() {
         .map(([source, count]) => ({ source, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
+    const metaEnabledForms = metaState.forms.filter(form => form.enabled);
+    const metaErrorCount = metaState.connections.filter(connection => connection.lastError || connection.subscribeError).length +
+        metaState.forms.filter(form => form.lastError).length +
+        metaState.imports.filter(item => item.status === 'error').length;
+    const metaLastSyncAt = [
+        ...metaState.connections.map(connection => connection.lastSyncAt || connection.lastWebhookAt || ''),
+        ...metaState.forms.map(form => form.lastSyncedAt || '')
+    ].filter(Boolean).sort().at(-1) || null;
+    const canManageMeta = user?.role === 'admin' || user?.role === 'manager';
     const trendData = buildTrendData(summary);
     const contractReadyCount = (summary.byStatus?.['계약예정'] || 0) + (summary.byStatus?.['계약완료'] || 0);
     const conversionRate = summary.total > 0 ? Math.round((contractReadyCount / summary.total) * 1000) / 10 : 0;
@@ -788,6 +908,129 @@ export default function FranchiseLeadsPage() {
 
     const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
         setAlertConfig({ isOpen: true, title, message, type });
+    };
+
+    const startMetaConnect = () => {
+        if (!userId) return;
+        if (!metaState.configReady) {
+            showAlert('Meta 환경변수가 아직 설정되지 않았습니다. META_APP_ID, META_APP_SECRET, META_VERIFY_TOKEN을 먼저 설정해주세요.', 'error', 'Meta 연동 설정 필요');
+            return;
+        }
+
+        const params = new URLSearchParams({
+            requesterId: userId,
+            redirect: '/dashboard/franchise-leads'
+        });
+        if (companyName) params.set('company', companyName);
+        window.location.href = `/api/integrations/meta/connect?${params.toString()}`;
+    };
+
+    const updateMetaFormState = (formId: string, updater: (form: MetaLeadForm) => MetaLeadForm) => {
+        setMetaState(prev => ({
+            ...prev,
+            forms: prev.forms.map(form => form.id === formId ? updater(form) : form)
+        }));
+    };
+
+    const updateMetaForm = async (form: MetaLeadForm, updates: Partial<MetaLeadForm>) => {
+        if (!userId) return;
+
+        setSavingMetaFormId(form.id);
+        try {
+            const response = await fetch('/api/integrations/meta/forms', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requesterId: userId,
+                    id: form.id,
+                    enabled: updates.enabled,
+                    defaultManagerId: updates.defaultManagerId,
+                    fieldMapping: updates.fieldMapping
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(readApiError(payload));
+            }
+
+            const data = unwrapApiData<{ form: MetaLeadForm }>(payload);
+            updateMetaFormState(form.id, () => data.form);
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : 'Meta Form 설정 저장에 실패했습니다.', 'error', 'Meta 설정 실패');
+            await fetchMetaIntegration();
+        } finally {
+            setSavingMetaFormId('');
+        }
+    };
+
+    const updateMetaFieldMapping = (formId: string, key: keyof MetaFieldMapping, value: string) => {
+        const nextValues = value.split(',').map(item => item.trim()).filter(Boolean);
+        updateMetaFormState(formId, form => ({
+            ...form,
+            fieldMapping: {
+                ...form.fieldMapping,
+                [key]: nextValues
+            }
+        }));
+    };
+
+    const syncMetaLeads = async (formId?: string) => {
+        if (!userId) return;
+
+        setIsMetaSyncing(true);
+        try {
+            const response = await fetch('/api/integrations/meta/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requesterId: userId,
+                    formId
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(readApiError(payload));
+            }
+
+            const result = unwrapApiData<{ stats: Record<string, number>; formCount: number; errors?: Array<{ reason: string }> }>(payload);
+            await Promise.all([fetchMetaIntegration(), fetchLeads()]);
+            const stats = result.stats || {};
+            showAlert(
+                `Meta 동기화 완료\n- 신규: ${stats.created || 0}건\n- 기존 업데이트: ${stats.updated || 0}건\n- 중복: ${stats.duplicate || 0}건\n- 제외/오류: ${(stats.skipped || 0) + (stats.error || 0)}건${result.errors?.length ? `\n첫 오류: ${result.errors[0].reason}` : ''}`,
+                result.errors?.length ? 'info' : 'success',
+                'Meta 동기화'
+            );
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : 'Meta 리드 동기화에 실패했습니다.', 'error', 'Meta 동기화 실패');
+        } finally {
+            setIsMetaSyncing(false);
+        }
+    };
+
+    const disconnectMetaConnection = async (connection: MetaConnection) => {
+        if (!userId) return;
+        const confirmed = window.confirm(`${connection.metaPageName || connection.metaPageId} Meta 연결을 해제할까요? 기존 모객DB 리드는 삭제되지 않습니다.`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/integrations/meta?id=${encodeURIComponent(connection.id)}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requesterId: userId })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(readApiError(payload));
+            }
+
+            await fetchMetaIntegration();
+            showAlert('Meta 연결을 해제했습니다. 기존 후보자 데이터는 유지됩니다.', 'success', '연결 해제');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : 'Meta 연결 해제에 실패했습니다.', 'error', '연결 해제 실패');
+        }
     };
 
     const openCreateModal = () => {
@@ -1390,10 +1633,26 @@ export default function FranchiseLeadsPage() {
                     <p>가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다.</p>
                 </div>
                 <div className={styles.heroActions}>
-                    <button className={styles.secondaryButton} onClick={() => void fetchLeads()} disabled={isLoading}>
+                    <button
+                        className={styles.secondaryButton}
+                        onClick={() => {
+                            void fetchLeads();
+                        }}
+                        disabled={isLoading}
+                    >
                         <RefreshCw size={16} />
                         새로고침
                     </button>
+                    <button className={styles.secondaryButton} onClick={() => setIsMetaPanelOpen(prev => !prev)}>
+                        <Link2 size={16} />
+                        Meta 연동
+                    </button>
+                    {canManageMeta && (
+                        <button className={styles.secondaryButton} onClick={startMetaConnect} disabled={isMetaLoading}>
+                            <Link2 size={16} />
+                            Meta 계정 연결
+                        </button>
+                    )}
                     <button className={styles.secondaryButton} onClick={() => void downloadTemplate()}>
                         <Download size={16} />
                         샘플 양식
@@ -1424,6 +1683,15 @@ export default function FranchiseLeadsPage() {
                     />
                 </div>
             </section>
+
+            <nav className={styles.franchiseTabs} aria-label="모객 DB 하위 메뉴">
+                <Link href="/dashboard/franchise-leads" className={styles.franchiseTabActive}>
+                    후보자 관리
+                </Link>
+                <Link href="/dashboard/franchise-leads/market-insights">
+                    출점 후보지
+                </Link>
+            </nav>
 
             <section className={styles.toolbar}>
                 <div className={styles.rangeGroup} aria-label="기간 필터">
@@ -1494,6 +1762,175 @@ export default function FranchiseLeadsPage() {
                     />
                 </div>
             </section>
+
+            {isMetaPanelOpen && (
+                <section className={styles.metaPanel}>
+                    <div className={styles.metaPanelHeader}>
+                        <div>
+                            <span className={styles.metaEyebrow}>Meta Lead Ads</span>
+                            <h2>Meta 연동 설정</h2>
+                            <p>각 회사의 Meta Page/Form에서 들어온 즉시양식 리드를 모객DB로 자동 등록합니다.</p>
+                        </div>
+                        <div className={styles.metaPanelActions}>
+                            <button className={styles.secondaryButton} onClick={() => void fetchMetaIntegration()} disabled={isMetaLoading}>
+                                <RefreshCw size={15} />
+                                {isMetaLoading ? '확인 중' : '상태 새로고침'}
+                            </button>
+                            {canManageMeta && (
+                                <button className={styles.primaryButton} onClick={() => void syncMetaLeads()} disabled={isMetaSyncing || metaEnabledForms.length === 0}>
+                                    <RefreshCw size={15} />
+                                    {isMetaSyncing ? '동기화 중' : '활성 Form 동기화'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className={styles.metaSummaryGrid}>
+                        <article>
+                            <span>연결 Page</span>
+                            <strong>{metaState.connections.length.toLocaleString()}</strong>
+                            <small>{metaState.configReady ? 'Meta 환경변수 확인됨' : '환경변수 설정 필요'}</small>
+                        </article>
+                        <article>
+                            <span>활성 Form</span>
+                            <strong>{metaEnabledForms.length.toLocaleString()}</strong>
+                            <small>Webhook/백필 수집 대상</small>
+                        </article>
+                        <article>
+                            <span>마지막 동기화</span>
+                            <strong>{formatDateTime(metaLastSyncAt)}</strong>
+                            <small>Webhook 또는 백필 기준</small>
+                        </article>
+                        <article className={metaErrorCount > 0 ? styles.metaSummaryError : undefined}>
+                            <span>오류/주의</span>
+                            <strong>{metaErrorCount.toLocaleString()}</strong>
+                            <small>연결, Form, 최근 import 기준</small>
+                        </article>
+                    </div>
+
+                    {metaState.connections.length === 0 ? (
+                        <div className={styles.metaEmptyBox}>
+                            <strong>연결된 Meta Page가 없습니다.</strong>
+                            <p>회사 Meta 관리자 계정으로 로그인하면 접근 가능한 Page와 Lead Form을 가져옵니다.</p>
+                            {canManageMeta && (
+                                <button className={styles.primaryButton} onClick={startMetaConnect}>
+                                    <Link2 size={15} />
+                                    Meta 계정 연결
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className={styles.metaConnectionGrid}>
+                            {metaState.connections.map(connection => (
+                                <article key={connection.id} className={styles.metaConnectionCard}>
+                                    <div>
+                                        <span className={connection.status === 'connected' ? styles.metaStatusOk : styles.metaStatusWarn}>
+                                            {connection.status === 'connected' ? '연결됨' : connection.status}
+                                        </span>
+                                        <h3>{connection.metaPageName || connection.metaPageId}</h3>
+                                        <p>Page ID {connection.metaPageId}</p>
+                                        {(connection.lastError || connection.subscribeError) && (
+                                            <small className={styles.metaErrorText}>{connection.lastError || connection.subscribeError}</small>
+                                        )}
+                                    </div>
+                                    {canManageMeta && (
+                                        <button className={styles.textDangerButton} onClick={() => void disconnectMetaConnection(connection)}>
+                                            연결 해제
+                                        </button>
+                                    )}
+                                </article>
+                            ))}
+                        </div>
+                    )}
+
+                    {metaState.forms.length > 0 && (
+                        <div className={styles.metaFormsList}>
+                            {metaState.forms.map(form => {
+                                const connection = metaState.connections.find(item => item.id === form.connectionId);
+                                return (
+                                    <article key={form.id} className={styles.metaFormCard}>
+                                        <div className={styles.metaFormTop}>
+                                            <div>
+                                                <h3>{form.metaFormName || form.metaFormId}</h3>
+                                                <p>{connection?.metaPageName || 'Meta Page'} · Form ID {form.metaFormId}</p>
+                                                {form.lastError && <small className={styles.metaErrorText}>{form.lastError}</small>}
+                                            </div>
+                                            <label className={styles.switchLabel}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.enabled}
+                                                    disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                    onChange={(event) => void updateMetaForm(form, { enabled: event.target.checked })}
+                                                />
+                                                수집 활성화
+                                            </label>
+                                        </div>
+                                        <div className={styles.metaFormControls}>
+                                            <label>
+                                                기본 담당자
+                                                <select
+                                                    value={form.defaultManagerId || ''}
+                                                    disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                    onChange={(event) => void updateMetaForm(form, { defaultManagerId: event.target.value })}
+                                                >
+                                                    <option value="">담당자 선택</option>
+                                                    {renderManagerOptions(form.defaultManagerId || undefined)}
+                                                </select>
+                                            </label>
+                                            <button
+                                                className={styles.secondaryButton}
+                                                onClick={() => void syncMetaLeads(form.id)}
+                                                disabled={!form.enabled || !canManageMeta || isMetaSyncing}
+                                            >
+                                                <RefreshCw size={14} />
+                                                이 Form 동기화
+                                            </button>
+                                        </div>
+                                        <div className={styles.metaMappingGrid}>
+                                            {META_FIELD_LABELS.map(field => (
+                                                <label key={field.key}>
+                                                    {field.label}
+                                                    <input
+                                                        value={(form.fieldMapping?.[field.key] || []).join(', ')}
+                                                        disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                        placeholder={field.hint}
+                                                        onChange={(event) => updateMetaFieldMapping(form.id, field.key, event.target.value)}
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className={styles.metaFormFooter}>
+                                            <span>마지막 동기화: {formatDateTime(form.lastSyncedAt)}</span>
+                                            {canManageMeta && (
+                                                <button
+                                                    className={styles.primaryButton}
+                                                    onClick={() => void updateMetaForm(form, { fieldMapping: form.fieldMapping })}
+                                                    disabled={savingMetaFormId === form.id}
+                                                >
+                                                    {savingMetaFormId === form.id ? '저장 중' : '매핑 저장'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {metaState.imports.length > 0 && (
+                        <div className={styles.metaImportLog}>
+                            <h3>최근 수집 로그</h3>
+                            {metaState.imports.slice(0, 6).map(item => (
+                                <div key={item.id}>
+                                    <span>{item.status}</span>
+                                    <strong>{item.metaLeadId}</strong>
+                                    <small>{item.errorMessage || formatDateTime(item.importedAt || item.receivedAt)}</small>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            )}
 
             <section className={styles.kpiGrid}>
                 <article className={styles.kpiCard}>
@@ -1782,7 +2219,13 @@ export default function FranchiseLeadsPage() {
                                                 {renderManagerOptions(lead.managerId)}
                                             </select>
                                         </td>
-                                        <td>{lead.source || '-'}</td>
+                                        <td>
+                                            {lead.sourceType === 'meta-lead-ad' || lead.source === 'Meta Lead Ads' ? (
+                                                <span className={styles.metaSourceBadge}>Meta Lead Ads</span>
+                                            ) : (
+                                                lead.source || '-'
+                                            )}
+                                        </td>
                                         <td>{lead.desiredRegion || '-'}</td>
                                         <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>
                                         <td>{lead.interestedBrand || '-'}</td>

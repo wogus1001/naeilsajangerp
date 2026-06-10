@@ -18,6 +18,7 @@ export const FRANCHISE_LEAD_SOURCES = [
     '박람회',
     '소개',
     '광고',
+    'Meta Lead Ads',
     '전화문의',
     '고객DB',
     '명함DB',

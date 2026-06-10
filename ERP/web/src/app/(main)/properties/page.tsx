@@ -2,7 +2,7 @@
 
 import { readApiJson } from '@/utils/apiResponse';
 import React, { useState, useEffect, useMemo, Suspense, useRef } from 'react';
-import { Search, Filter, Plus, MoreHorizontal, Printer, Save, Trash2, X, ChevronDown, ChevronUp, Download, ChevronLeft, ChevronRight, Settings, Layout, Check, MapPin, Users, Banknote, Maximize, TrendingUp, Star, Eye, EyeOff, Type, Calendar, FileSpreadsheet, Copy, Upload } from 'lucide-react';
+import { Search, Filter, Plus, MoreHorizontal, Printer, Save, Trash2, X, ChevronDown, ChevronUp, Download, ChevronLeft, ChevronRight, Settings, Layout, Check, MapPin, Users, Banknote, Maximize, TrendingUp, Star, Eye, EyeOff, Type, Calendar, FileSpreadsheet, Copy, Upload, FileSearch } from 'lucide-react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
@@ -170,6 +170,14 @@ function PropertiesPageContent() {
     const searchTerms = useMemo(() => parseSearchTerms(searchTerm), [searchTerm]);
     const isSearchActive = searchTerms.length > 0;
     const sourceProperties = isSearchActive ? (searchProperties ?? properties) : properties;
+    const isExternalCollectedProperty = React.useCallback((property: any) => {
+        const processStatus = String(property?.processStatus || '');
+        return processStatus.includes('외부수집')
+            || Boolean(property?.externalSource)
+            || Boolean(property?.externalListingId)
+            || property?.externalImportMode === 'auto-created'
+            || property?.externalImportMode === 'auto-updated';
+    }, []);
 
     // UI Refs
     const filterContainerRef = React.useRef<HTMLDivElement>(null);
@@ -254,6 +262,7 @@ function PropertiesPageContent() {
 
     // Favorite Filter
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+    const [showExternalOnly, setShowExternalOnly] = useState(false);
 
     const [priceFilter, setPriceFilter] = useState({
         depositMin: '', depositMax: '',
@@ -433,6 +442,7 @@ function PropertiesPageContent() {
                     if (settings.areaFilter) setAreaFilter(settings.areaFilter);
                     if (settings.floorFilter) setFloorFilter(settings.floorFilter);
                     if (typeof settings.showFavoritesOnly === 'boolean') setShowFavoritesOnly(settings.showFavoritesOnly);
+                    if (typeof settings.showExternalOnly === 'boolean') setShowExternalOnly(settings.showExternalOnly);
 
                     // Merge column order & Migrate
                     if (settings.columnOrder) {
@@ -477,7 +487,8 @@ function PropertiesPageContent() {
             priceFilter,
             areaFilter,
             floorFilter,
-            showFavoritesOnly
+            showFavoritesOnly,
+            showExternalOnly
         };
 
         localStorage.setItem(`property_settings_${currentUser.id}`, JSON.stringify(settings));
@@ -486,7 +497,7 @@ function PropertiesPageContent() {
 
     }, [
         currentUser, sortRules, activeFilters, visibleColumns, columnOrder,
-        statusFilter, typeFilter, industryDetailFilter, addressFilter, managerFilters, priceFilter, areaFilter, floorFilter, showFavoritesOnly
+        statusFilter, typeFilter, industryDetailFilter, addressFilter, managerFilters, priceFilter, areaFilter, floorFilter, showFavoritesOnly, showExternalOnly
     ]);
 
     const handleColumnDragStart = (e: React.DragEvent, column: string) => {
@@ -881,6 +892,7 @@ function PropertiesPageContent() {
 
         // Favorite
         if (showFavoritesOnly) result = result.filter(p => p.isFavorite);
+        if (showExternalOnly) result = result.filter(isExternalCollectedProperty);
 
         // Floor
         if (floorFilter.min) result = result.filter(p => parseFloat(p.floor || p.currentFloor) >= parseFloat(floorFilter.min));
@@ -956,14 +968,16 @@ function PropertiesPageContent() {
         industryDetailFilter,
         operationTypeFilter,
         sortRules,
-        showFavoritesOnly
+        showFavoritesOnly,
+        showExternalOnly,
+        isExternalCollectedProperty
     ]);
 
     // Pagination
     const totalPages = Math.ceil(filteredProperties.length / itemsPerPage);
     const paginatedProperties = filteredProperties.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-    useEffect(() => setCurrentPage(1), [searchTerm, priceFilter, areaFilter, statusFilter, managerFilters, addressFilter, showFavoritesOnly]);
+    useEffect(() => setCurrentPage(1), [searchTerm, priceFilter, areaFilter, statusFilter, managerFilters, addressFilter, showFavoritesOnly, showExternalOnly]);
 
     // Excel Export
     const handleExcelExport = () => {
@@ -1101,7 +1115,14 @@ function PropertiesPageContent() {
                         </div>
                     </td>
                 );
-            case 'name': return <td className={styles.cellPrimary} title={item.name}>{item.name}</td>;
+            case 'name': return (
+                <td className={styles.cellPrimary} title={item.name}>
+                    <div className={styles.propertyNameCell}>
+                        <span>{item.name}</span>
+                        {isExternalCollectedProperty(item) && <span className={styles.externalBadge}>외부수집</span>}
+                    </div>
+                </td>
+            );
             case 'processStatus':
                 return (
                     <td className={styles.cellCompact} style={{ minWidth: '100px' }}>
@@ -1254,6 +1275,14 @@ function PropertiesPageContent() {
                     <div className="hidden md:block">
                         <ViewModeSwitcher currentMode={viewMode} onModeChange={handleModeChange} />
                     </div>
+
+                    <button
+                        className={`${styles.actionBtn} ${showExternalOnly ? styles.active : ''} flex-1 md:flex-none whitespace-nowrap`}
+                        onClick={() => setShowExternalOnly(prev => !prev)}
+                    >
+                        <FileSearch size={16} />
+                        <span>외부수집</span>
+                    </button>
 
                     {/* SORT BUTTON - Flexible on Mobile */}
                     <div className="relative flex-1 md:flex-none" ref={sortDropdownRef}>
@@ -2135,7 +2164,10 @@ function PropertiesPageContent() {
                                 {item.isFavorite && <Star size={14} fill="#fab005" color="#fab005" />}
                             </div>
 
-                            <div className="font-bold text-gray-900 text-lg mb-1 line-clamp-1">{item.name}</div>
+                            <div className="font-bold text-gray-900 text-lg mb-1 flex items-center gap-2 min-w-0">
+                                <span className="line-clamp-1">{item.name}</span>
+                                {isExternalCollectedProperty(item) && <span className={styles.externalBadge}>외부수집</span>}
+                            </div>
                             <div className="text-gray-500 text-sm mb-3 flex items-center gap-1">
                                 <MapPin size={12} />
                                 <span className="line-clamp-1">{item.address} {item.floor ? `${item.floor}층` : ''}</span>
