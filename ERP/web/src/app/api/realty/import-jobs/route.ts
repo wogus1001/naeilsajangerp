@@ -8,6 +8,10 @@ import {
     resolveUserUuid
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import {
+    buildExternalListingScopePayload,
+    canPersistRequesterScopedListing
+} from '@/lib/realty-import-schema';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
     buildExternalPropertyPayload,
@@ -368,14 +372,19 @@ async function upsertExternalListing(supabaseAdmin: any, params: {
     listing: RealtyListing;
     companyId: string | null;
     requesterId: string;
+    supportsRequesterId: boolean;
     importJobId: string;
     propertyId?: string | null;
     duplicateOfPropertyId?: string | null;
     existingListingId?: string | null;
+    existingData?: Record<string, unknown> | null;
 }) {
     const payload = {
-        company_id: params.companyId,
-        requester_id: params.requesterId,
+        ...buildExternalListingScopePayload({
+            companyId: params.companyId,
+            requesterId: params.requesterId,
+            supportsRequesterId: params.supportsRequesterId
+        }),
         import_job_id: params.importJobId,
         property_id: params.propertyId,
         duplicate_of_property_id: params.duplicateOfPropertyId || null,
@@ -402,6 +411,7 @@ async function upsertExternalListing(supabaseAdmin: any, params: {
         updated_at: new Date().toISOString(),
         raw: params.listing.raw,
         data: {
+            ...(params.existingData || {}),
             autoCreatedProperty: Boolean(params.propertyId)
         }
     };
@@ -457,12 +467,14 @@ async function collectListings(region: string, sources: RealtySource[], limit: u
     return { listings, warnings, errors, sourceUrls };
 }
 
-async function assertRealtyTrackingSchema(supabaseAdmin: any) {
+async function detectExternalListingRequesterIdSupport(supabaseAdmin: any) {
     const { error } = await supabaseAdmin
         .from('external_property_listings')
         .select('id, company_id, requester_id')
         .limit(1);
-    if (error) throw error;
+    if (!error) return true;
+    if (isMissingRealtySchemaError(error) && /requester_id/i.test(getErrorMessage(error))) return false;
+    throw error;
 }
 
 export async function POST(request: Request) {
@@ -533,7 +545,14 @@ export async function POST(request: Request) {
                 '외부 매물 원본 테이블이 아직 적용되지 않았습니다. supabase_realty_import_migration.sql 적용 후 다시 수집해주세요.'
             );
         }
-        await assertRealtyTrackingSchema(supabaseAdmin);
+        const supportsExternalListingRequesterId = await detectExternalListingRequesterIdSupport(supabaseAdmin);
+        if (!canPersistRequesterScopedListing(context.companyId, supportsExternalListingRequesterId)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '외부 상가 수집 테이블이 최신 스키마가 아닙니다. supabase_realty_import_migration.sql 최신 버전을 적용한 뒤 다시 수집해주세요.'
+            );
+        }
 
         const collection = await collectListings(region, sources, body.limit);
 
@@ -562,10 +581,12 @@ export async function POST(request: Request) {
                         listing,
                         companyId: context.companyId,
                         requesterId: context.requesterProfile.id,
+                        supportsRequesterId: supportsExternalListingRequesterId,
                         importJobId: job.id,
                         propertyId: existingExternal?.property_id || null,
                         duplicateOfPropertyId: duplicateProperty?.id || null,
-                        existingListingId: existingExternal?.id || null
+                        existingListingId: existingExternal?.id || null,
+                        existingData: existingExternal?.data || null
                     });
 
                     if (existingExternal) updatedCount++;
@@ -607,10 +628,12 @@ export async function POST(request: Request) {
                         listing,
                         companyId: context.companyId,
                         requesterId: context.requesterProfile.id,
+                        supportsRequesterId: supportsExternalListingRequesterId,
                         importJobId: job.id,
                         propertyId: property.id,
                         duplicateOfPropertyId: duplicateProperty?.id || null,
-                        existingListingId: existingExternal?.id || null
+                        existingListingId: existingExternal?.id || null,
+                        existingData: existingExternal?.data || null
                     })
                     : transformRuntimeListing({
                         listing,

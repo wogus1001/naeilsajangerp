@@ -166,7 +166,7 @@ npm run build
       - 실데이터 테스트 전 선행 적용 필요 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 브랜드 모니터링 실제 수집 전 선행 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - P0: SearchAPI 429/한도 초과 시 기존 Naver 리뷰/광고 성공 값을 덮어쓰지 않게 보호하고, UI를 `SearchAPI 한도초과`/`provider 미설정`/`결과 없음`으로 분리 표시.
-      - P1: `supabase_realty_import_migration.sql` 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 500/1000 리밋, 점포목록 미등록, 회사 격리 확인.
+  - P1: `supabase_realty_import_migration.sql` 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 점포목록 미등록, 회사 격리 확인.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
@@ -237,15 +237,15 @@ npm run build
   - 저장: `external_property_listings` 원본 추적. ERP `properties`에는 자동 생성하지 않는다.
   - 수집 지역은 자연어 입력이 아니라 시도/시군구 선택 방식이다. Daangn 구 단위 검색은 동 단위 후보로 자동 확장한다. 예: 서울 광진구 -> 자양동/화양동/구의동/광장동/군자동/중곡동/능동.
   - 등록 회사명 입력은 제거했다. 회사 범위가 있으면 `company_id`, 없으면 `requester_id` 기준 수집함에 저장한다.
-  - 하단 `저장된 상가` 목록과 `최신화` 버튼을 추가했다. 최신화는 기존 sourceListingId를 중복 추가하지 않고 새 매물만 신규 저장한다.
+  - 하단 `저장된 상가` 목록과 `최신화` 버튼을 추가했다. 저장 목록은 저장 시군구 칩, 동 단위 카드, 동 내부 페이지네이션, 저장일, 별표를 제공한다. 최신화는 기존 sourceListingId를 중복 추가하지 않고 새 매물만 신규 저장한다.
   - Daangn 목록 호출은 `salesType=store`를 명시한다. 결과 UI는 매물명보다 주소를 중심으로 표시하고 목록 응답의 관리비/승인일/등록일/반응수/설명 일부를 함께 보여준다.
   - 당근 지도 숫자는 지도 클러스터/필터/뷰포트 집계라 동별 목록 응답 수집 건수와 1:1로 맞지 않을 수 있다. 현재 MVP는 숫자 완전 일치보다 검토 가능한 후보 목록 정리를 우선한다.
-  - 화면 기본 수집 리밋은 500건, API 안전 상한은 1000건이다.
+  - 화면 수집 요청은 2000건, import API 안전 상한은 3000건이다. 저장 목록 API는 최대 2000건까지 조회한다.
   - 외부 원본 중복은 `company_id + source + source_listing_id` 기준으로 업데이트한다.
   - 물건지 목록의 `외부수집` 필터/배지는 과거 자동 등록 데이터 구분용으로만 유지.
   - 문서: `ERP/web/docs/realty-import-plan.md`.
   - 로컬 검증: `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 통과.
-  - 다음 QA: SQL 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 500/1000 리밋, 점포목록 미등록, 회사 격리 확인.
+  - 다음 QA: SQL 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 저장 지역 칩/동 카드/별표/저장일, 점포목록 미등록, 회사 격리 확인.
   - 다음 개발순서: 필터/점수화 -> 주소 지오코딩/지도화 -> 중복 후보 묶기 -> 상위 N건 상세 보강 -> 가격/상태 변동 추적 -> 선택 승격 플로우.
 - 점포/고객/명함 목록 검색 개선
   - 쉼표/띄어쓰기 OR 검색 공용 파서 적용

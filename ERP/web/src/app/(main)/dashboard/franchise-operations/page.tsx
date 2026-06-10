@@ -5,7 +5,6 @@ import {
     AlertTriangle,
     Building2,
     CheckCircle2,
-    ExternalLink,
     FileSearch,
     Plus,
     RefreshCw,
@@ -15,6 +14,7 @@ import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import KakaoAddressSearch, { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
 import LocationCompetitionPanel, { LocationCompetitionScan } from '@/components/franchise/LocationCompetitionPanel';
+import { RealtyImportPanel } from '@/components/franchise/RealtyImportPanel';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { normalizeRegion } from '@/lib/franchise-market-insights';
 import styles from '../franchise-leads/page.module.css';
@@ -81,77 +81,8 @@ type LocationFormState = {
 
 type OperationTab = 'locations' | 'realty-import';
 
-type RealtyImportedListing = {
-    action: 'collected' | 'created' | 'updated';
-    propertyId?: string;
-    duplicateOfPropertyId?: string | null;
-    listing?: {
-        id: string;
-        duplicateOfPropertyId?: string | null;
-        source: string;
-        sourceListingId?: string;
-        sourceUrl: string;
-        title: string;
-        address: string;
-        region: string;
-        tradeType: string;
-        propertyType: string;
-        depositAmount: number | null;
-        monthlyRent: number | null;
-        salePrice: number | null;
-        maintenanceFee: number | null;
-        areaSqm: number | null;
-        areaPyeong: string;
-        floorInfo: string;
-        imageUrls?: string[];
-        status: string;
-        collectedAt?: string;
-        raw?: Record<string, unknown>;
-        data?: Record<string, unknown>;
-    };
-};
-
-type RealtyListingRecord = NonNullable<RealtyImportedListing['listing']>;
-
-type RealtyImportResult = {
-    job?: {
-        id: string;
-        status: string;
-        source: string;
-        region: string;
-        totalCount: number;
-        createdCount: number;
-        updatedCount: number;
-        duplicateCount: number;
-        failedCount: number;
-        warnings?: string[];
-        errors?: Array<string | { message?: string; source?: string; listingId?: string }>;
-        data?: { sourceUrls?: Record<string, string> };
-    };
-    listings?: RealtyImportedListing[];
-};
-
 const FRANCHISE_LOCATION_TYPES: FranchiseLocationType[] = ['직영점', '가맹점', '예정점'];
 const FRANCHISE_LOCATION_STATUSES: FranchiseLocationStatus[] = ['운영중', '오픈준비', '검토중', '휴점', '폐점'];
-const REALTY_REGION_OPTIONS = [
-    { label: '서울특별시', queryName: '서울', districts: ['강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', '서초구', '성동구', '성북구', '송파구', '양천구', '영등포구', '용산구', '은평구', '종로구', '중구', '중랑구'] },
-    { label: '부산광역시', queryName: '부산', districts: ['강서구', '금정구', '기장군', '남구', '동구', '동래구', '부산진구', '북구', '사상구', '사하구', '서구', '수영구', '연제구', '영도구', '중구', '해운대구'] },
-    { label: '대구광역시', queryName: '대구', districts: ['군위군', '남구', '달서구', '달성군', '동구', '북구', '서구', '수성구', '중구'] },
-    { label: '인천광역시', queryName: '인천', districts: ['강화군', '계양구', '남동구', '동구', '미추홀구', '부평구', '서구', '연수구', '옹진군', '중구'] },
-    { label: '광주광역시', queryName: '광주', districts: ['광산구', '남구', '동구', '북구', '서구'] },
-    { label: '대전광역시', queryName: '대전', districts: ['대덕구', '동구', '서구', '유성구', '중구'] },
-    { label: '울산광역시', queryName: '울산', districts: ['남구', '동구', '북구', '울주군', '중구'] },
-    { label: '세종특별자치시', queryName: '세종', districts: ['세종시'] },
-    { label: '경기도', queryName: '경기', districts: ['가평군', '고양시', '과천시', '광명시', '광주시', '구리시', '군포시', '김포시', '남양주시', '동두천시', '부천시', '성남시', '수원시', '시흥시', '안산시', '안성시', '안양시', '양주시', '양평군', '여주시', '연천군', '오산시', '용인시', '의왕시', '의정부시', '이천시', '파주시', '평택시', '포천시', '하남시', '화성시'] },
-    { label: '강원특별자치도', queryName: '강원', districts: ['강릉시', '고성군', '동해시', '삼척시', '속초시', '양구군', '양양군', '영월군', '원주시', '인제군', '정선군', '철원군', '춘천시', '태백시', '평창군', '홍천군', '화천군', '횡성군'] },
-    { label: '충청북도', queryName: '충북', districts: ['괴산군', '단양군', '보은군', '영동군', '옥천군', '음성군', '제천시', '증평군', '진천군', '청주시', '충주시'] },
-    { label: '충청남도', queryName: '충남', districts: ['계룡시', '공주시', '금산군', '논산시', '당진시', '보령시', '부여군', '서산시', '서천군', '아산시', '예산군', '천안시', '청양군', '태안군', '홍성군'] },
-    { label: '전북특별자치도', queryName: '전북', districts: ['고창군', '군산시', '김제시', '남원시', '무주군', '부안군', '순창군', '완주군', '익산시', '임실군', '장수군', '전주시', '정읍시', '진안군'] },
-    { label: '전라남도', queryName: '전남', districts: ['강진군', '고흥군', '곡성군', '광양시', '구례군', '나주시', '담양군', '목포시', '무안군', '보성군', '순천시', '신안군', '여수시', '영광군', '영암군', '완도군', '장성군', '장흥군', '진도군', '함평군', '해남군', '화순군'] },
-    { label: '경상북도', queryName: '경북', districts: ['경산시', '경주시', '고령군', '구미시', '김천시', '문경시', '봉화군', '상주시', '성주군', '안동시', '영덕군', '영양군', '영주시', '영천시', '예천군', '울릉군', '울진군', '의성군', '청도군', '청송군', '칠곡군', '포항시'] },
-    { label: '경상남도', queryName: '경남', districts: ['거제시', '거창군', '고성군', '김해시', '남해군', '밀양시', '사천시', '산청군', '양산시', '의령군', '진주시', '창녕군', '창원시', '통영시', '하동군', '함안군', '함양군', '합천군'] },
-    { label: '제주특별자치도', queryName: '제주', districts: ['서귀포시', '제주시'] }
-];
 const EMPTY_LOCATION_FORM: LocationFormState = {
     name: '',
     locationType: '가맹점',
@@ -199,100 +130,7 @@ function getCompetitionKeyword(location: Pick<FranchiseLocation, 'brand' | 'comp
     return (location.competitionKeyword || location.brand || '').trim();
 }
 
-function formatRealtyMoney(listing?: RealtyImportedListing['listing']) {
-    if (!listing) return '-';
-    const format = (value: number | null | undefined) => {
-        if (value === null || value === undefined) return '';
-        return `${Number(value).toLocaleString()}만원`;
-    };
-    if (listing.salePrice) return `매매 ${format(listing.salePrice)}`;
-    if (listing.depositAmount || listing.monthlyRent) {
-        return `보증금 ${format(listing.depositAmount) || '0만원'} / 월세 ${format(listing.monthlyRent) || '0만원'}`;
-    }
-    return '-';
-}
-
-function getRealtySourceLabel(source?: string) {
-    if (source === 'daangn') return '당근';
-    return source || '-';
-}
-
-function formatRealtyMaintenance(listing?: RealtyImportedListing['listing']) {
-    if (!listing) return '-';
-    if (listing.maintenanceFee === null || listing.maintenanceFee === undefined) return '관리비 확인';
-    return `관리비 ${Number(listing.maintenanceFee).toLocaleString()}만원`;
-}
-
-function formatRealtyAreaAndFloor(listing?: RealtyImportedListing['listing']) {
-    if (!listing) return '-';
-    const parts = [
-        listing.areaPyeong || (listing.areaSqm ? `${listing.areaSqm}㎡` : ''),
-        listing.floorInfo ? `${listing.floorInfo}층` : ''
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : '-';
-}
-
-function formatRealtyDate(value: unknown) {
-    const dateValue = String(value || '').trim();
-    if (!dateValue) return '';
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return dateValue;
-    return date.toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-}
-
-function summarizeRealtyContent(value: unknown) {
-    const text = String(value || '')
-        .replace(/[^\S\r\n]+/g, ' ')
-        .split('\n')
-        .map(line => line.replace(/[^\w가-힣㎡.,/()~· -]/g, '').trim())
-        .filter(Boolean)
-        .find(line => !/매물번호|전화|010-|02-/.test(line));
-    return text ? text.slice(0, 70) : '';
-}
-
-function getRealtyDetailMeta(listing?: RealtyImportedListing['listing']) {
-    const raw = listing?.raw || {};
-    return [
-        formatRealtyMaintenance(listing),
-        raw.buildingApprovalDate ? `사용승인 ${formatRealtyDate(raw.buildingApprovalDate)}` : '',
-        raw.createdAt ? `등록 ${formatRealtyDate(raw.createdAt)}` : '',
-        raw.writerType === 'BROKER' ? '중개사' : raw.writerType === 'OWNER' ? '직거래' : ''
-    ].filter(Boolean);
-}
-
-function getRealtyReactionMeta(listing?: RealtyImportedListing['listing']) {
-    const raw = listing?.raw || {};
-    return [
-        raw.chatRoomCount !== undefined ? `채팅 ${Number(raw.chatRoomCount).toLocaleString()}` : '',
-        raw.watchCount !== undefined ? `관심 ${Number(raw.watchCount).toLocaleString()}` : ''
-    ].filter(Boolean);
-}
-
-function getRealtyRegionOption(sido: string) {
-    return REALTY_REGION_OPTIONS.find(option => option.label === sido) || REALTY_REGION_OPTIONS[0];
-}
-
-function buildRealtyRegionQuery(sido: string, district: string) {
-    const option = getRealtyRegionOption(sido);
-    return `${option.queryName} ${district}`.trim();
-}
-
-function parseRealtyRegionToSelection(region: string) {
-    const compact = region.replace(/\s+/g, '');
-    const sido = REALTY_REGION_OPTIONS.find(option => {
-        const labels = [option.label, option.queryName].map(value => value.replace(/\s+/g, ''));
-        return labels.some(label => compact.includes(label));
-    }) || REALTY_REGION_OPTIONS[0];
-    const district = sido.districts.find(item => compact.includes(item.replace(/\s+/g, ''))) || sido.districts[0];
-    return { sido: sido.label, district };
-}
-
 export default function FranchiseOperationsPage() {
-    const hasInitializedRealtyRegionRef = React.useRef(false);
     const [activeOperationsTab, setActiveOperationsTab] = React.useState<OperationTab>('locations');
     const [userId, setUserId] = React.useState('');
     const [companyName, setCompanyName] = React.useState('');
@@ -303,12 +141,6 @@ export default function FranchiseOperationsPage() {
     const [deletingLocationId, setDeletingLocationId] = React.useState('');
     const [scanningLocationId, setScanningLocationId] = React.useState('');
     const [updatingStatusId, setUpdatingStatusId] = React.useState('');
-    const [realtySido, setRealtySido] = React.useState('서울특별시');
-    const [realtyDistrict, setRealtyDistrict] = React.useState('광진구');
-    const [isRealtyImporting, setIsRealtyImporting] = React.useState(false);
-    const [isSavedRealtyLoading, setIsSavedRealtyLoading] = React.useState(false);
-    const [realtyImportResult, setRealtyImportResult] = React.useState<RealtyImportResult | null>(null);
-    const [savedRealtyListings, setSavedRealtyListings] = React.useState<RealtyImportedListing[]>([]);
 
     React.useEffect(() => {
         const stored = localStorage.getItem('user');
@@ -365,30 +197,9 @@ export default function FranchiseOperationsPage() {
     const pausedCount = operationalLocations.filter(location => location.status === '휴점').length;
     const scannedCount = operationalLocations.filter(location => location.competitionScan).length;
 
-    const realtyDistrictOptions = React.useMemo(
-        () => getRealtyRegionOption(realtySido).districts,
-        [realtySido]
-    );
-    const selectedRealtyRegion = React.useMemo(
-        () => buildRealtyRegionQuery(realtySido, realtyDistrict),
-        [realtyDistrict, realtySido]
-    );
-
-    React.useEffect(() => {
-        if (!realtyDistrictOptions.includes(realtyDistrict)) {
-            setRealtyDistrict(realtyDistrictOptions[0] || '');
-        }
-    }, [realtyDistrict, realtyDistrictOptions]);
-
-    React.useEffect(() => {
-        if (hasInitializedRealtyRegionRef.current) return;
-        const firstLocation = operationalLocations.find(location => location.region || location.address);
-        if (!firstLocation) return;
-        const parsed = parseRealtyRegionToSelection(firstLocation.region || normalizeRegion(firstLocation.address));
-        setRealtySido(parsed.sido);
-        setRealtyDistrict(parsed.district);
-        hasInitializedRealtyRegionRef.current = true;
-    }, [operationalLocations]);
+    const realtyInitialRegion = operationalLocations[0]?.region
+        || normalizeRegion(operationalLocations[0]?.address)
+        || '서울 광진구';
 
     const resetLocationForm = () => {
         setLocationForm(EMPTY_LOCATION_FORM);
@@ -578,82 +389,6 @@ export default function FranchiseOperationsPage() {
             window.alert(error instanceof Error ? error.message : '경쟁업체 스캔 중 오류가 발생했습니다.');
         } finally {
             setScanningLocationId('');
-        }
-    };
-
-    const fetchSavedRealtyListings = React.useCallback(async () => {
-        if (!userId) return;
-
-        setIsSavedRealtyLoading(true);
-        try {
-            const params = new URLSearchParams({
-                requesterId: userId,
-                source: 'daangn',
-                region: selectedRealtyRegion,
-                limit: '200'
-            });
-            const response = await fetch(`/api/realty/listings?${params.toString()}`, { cache: 'no-store' });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(readApiError(payload));
-
-            const data = unwrapApiData<{ listings: RealtyListingRecord[] }>(payload);
-            setSavedRealtyListings((data.listings || []).map(listing => ({
-                action: 'collected',
-                duplicateOfPropertyId: listing.duplicateOfPropertyId,
-                listing
-            })));
-        } catch (error) {
-            console.error('Failed to fetch saved realty listings:', error);
-            setSavedRealtyListings([]);
-        } finally {
-            setIsSavedRealtyLoading(false);
-        }
-    }, [selectedRealtyRegion, userId]);
-
-    React.useEffect(() => {
-        if (activeOperationsTab !== 'realty-import') return;
-        void fetchSavedRealtyListings();
-    }, [activeOperationsTab, fetchSavedRealtyListings]);
-
-    const runRealtyImport = async () => {
-        if (!userId) return;
-        const region = selectedRealtyRegion.trim();
-
-        if (!region) {
-            window.alert('수집할 지역을 선택해주세요.');
-            return;
-        }
-
-        setIsRealtyImporting(true);
-        try {
-            const response = await fetch('/api/realty/import-jobs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requesterId: userId,
-                    region,
-                    query: region,
-                    sources: ['daangn'],
-                    listingTypes: ['store'],
-                    limit: 500,
-                    registerToProperties: false
-                })
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(readApiError(payload));
-
-            const data = unwrapApiData<RealtyImportResult>(payload);
-            setRealtyImportResult(data);
-            if (data.job?.status === 'failed') {
-                window.alert('상가 수집이 완료되지 않았습니다. 수집 결과 영역의 오류/경고를 확인해주세요.');
-                return;
-            }
-            await fetchSavedRealtyListings();
-            window.alert(`상가 수집을 완료했습니다. 신규수집 ${data.job?.createdCount || 0}건, 업데이트 ${data.job?.updatedCount || 0}건`);
-        } catch (error) {
-            window.alert(error instanceof Error ? error.message : '외부 상가 수집 중 오류가 발생했습니다.');
-        } finally {
-            setIsRealtyImporting(false);
         }
     };
 
@@ -926,203 +661,7 @@ export default function FranchiseOperationsPage() {
             )}
 
             {activeOperationsTab === 'realty-import' && (
-                <section className={styles.marketInsightPanel}>
-                    <div className={styles.panelHeader}>
-                        <div>
-                            <h2>외부 상가 수집</h2>
-                            <p>지역 기준으로 외부 상가 매물을 수집해 별도 원본 목록으로 관리합니다. 점포목록에는 자동 등록하지 않습니다.</p>
-                        </div>
-                        <span>상가 전용 MVP</span>
-                    </div>
-                    <div className={styles.marketInsightBody}>
-                        <div className={styles.realtyImportGrid}>
-                            <div className={styles.realtyImportForm}>
-                                <div className={styles.realtyRegionPicker}>
-                                    <label>
-                                        시도
-                                        <select
-                                            value={realtySido}
-                                            onChange={(event) => {
-                                                const nextSido = event.target.value;
-                                                const nextDistrict = getRealtyRegionOption(nextSido).districts[0] || '';
-                                                setRealtySido(nextSido);
-                                                setRealtyDistrict(nextDistrict);
-                                                setRealtyImportResult(null);
-                                            }}
-                                        >
-                                            {REALTY_REGION_OPTIONS.map(option => (
-                                                <option key={option.label} value={option.label}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                    <label>
-                                        시군구
-                                        <select
-                                            value={realtyDistrict}
-                                            onChange={(event) => {
-                                                setRealtyDistrict(event.target.value);
-                                                setRealtyImportResult(null);
-                                            }}
-                                        >
-                                            {realtyDistrictOptions.map(district => (
-                                                <option key={district} value={district}>{district}</option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
-                                <div className={styles.realtySourceBox}>
-                                    <span>수집 소스</span>
-                                    <div>
-                                        <span className={styles.realtySourcePill}>당근 상가</span>
-                                    </div>
-                                    <small>네이버부동산은 향후 고도화 예정입니다. 현재 MVP는 당근 상가 공개 목록만 저장합니다.</small>
-                                </div>
-                                <button
-                                    className={styles.primaryButton}
-                                    onClick={() => void runRealtyImport()}
-                                    disabled={isRealtyImporting}
-                                >
-                                    <FileSearch size={15} />
-                                    {isRealtyImporting ? '수집 중' : '상가 수집 실행'}
-                                </button>
-                            </div>
-
-                            <div className={styles.realtyResultPanel}>
-                                <div className={styles.realtyResultHeader}>
-                                    <div>
-                                        <strong>수집 결과</strong>
-                                        <span>{realtyImportResult?.job ? `${realtyImportResult.job.region} · ${realtyImportResult.job.status}` : '아직 실행 전'}</span>
-                                    </div>
-                                    <span className={styles.realtySourcePill}>{selectedRealtyRegion}</span>
-                                </div>
-
-                                <div className={styles.realtySummaryCards}>
-                                    <article>
-                                        <span>수집</span>
-                                        <strong>{realtyImportResult?.job?.totalCount || 0}건</strong>
-                                    </article>
-                                    <article>
-                                        <span>신규수집</span>
-                                        <strong>{realtyImportResult?.job?.createdCount || 0}건</strong>
-                                    </article>
-                                    <article>
-                                        <span>업데이트</span>
-                                        <strong>{realtyImportResult?.job?.updatedCount || 0}건</strong>
-                                    </article>
-                                    <article>
-                                        <span>중복후보</span>
-                                        <strong>{realtyImportResult?.job?.duplicateCount || 0}건</strong>
-                                    </article>
-                                    <article>
-                                        <span>실패</span>
-                                        <strong>{realtyImportResult?.job?.failedCount || 0}건</strong>
-                                    </article>
-                                </div>
-
-                                {(realtyImportResult?.job?.warnings || []).length > 0 && (
-                                    <div className={styles.realtyNotice}>
-                                        {(realtyImportResult?.job?.warnings || []).map((warning, index) => (
-                                            <span key={`${warning}-${index}`}>{warning}</span>
-                                        ))}
-                                    </div>
-                                )}
-                                {(realtyImportResult?.job?.errors || []).length > 0 && (
-                                    <div className={styles.realtyErrorNotice}>
-                                        {(realtyImportResult?.job?.errors || []).map((error, index) => (
-                                            <span key={`realty-error-${index}`}>
-                                                {typeof error === 'string' ? error : error.message || '수집 오류'}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className={styles.realtyResultEmpty}>
-                                    {realtyImportResult?.job
-                                        ? '수집된 원본은 아래 저장된 상가 목록에 반영됩니다. 같은 매물은 중복 추가하지 않고 최신 정보만 갱신합니다.'
-                                        : '지역을 선택하고 상가 수집을 실행하면 수집 요약이 표시됩니다.'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={styles.realtySavedPanel}>
-                            <div className={styles.realtyResultHeader}>
-                                <div>
-                                    <strong>저장된 상가</strong>
-                                    <span>{selectedRealtyRegion} · {isSavedRealtyLoading ? '불러오는 중' : `${savedRealtyListings.length.toLocaleString()}건`}</span>
-                                </div>
-                                <button
-                                    className={styles.secondaryButton}
-                                    onClick={() => void runRealtyImport()}
-                                    disabled={isRealtyImporting}
-                                >
-                                    <RefreshCw size={14} />
-                                    {isRealtyImporting ? '최신화 중' : '최신화'}
-                                </button>
-                            </div>
-
-                            <div className={styles.realtyTableWrap}>
-                                {savedRealtyListings.length === 0 ? (
-                                    <div className={styles.locationEmpty}>저장된 상가 매물이 없습니다. 상가 수집 실행 후 이 목록에 누적됩니다.</div>
-                                ) : (
-                                    <table className={styles.realtyTable}>
-                                        <thead>
-                                            <tr>
-                                                <th>상태</th>
-                                                <th>소스</th>
-                                                <th>주소</th>
-                                                <th>가격</th>
-                                                <th>세부</th>
-                                                <th>반응</th>
-                                                <th>원문</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {savedRealtyListings.map(item => {
-                                                const listing = item.listing;
-                                                const detailMeta = getRealtyDetailMeta(listing);
-                                                const reactionMeta = getRealtyReactionMeta(listing);
-                                                const contentSummary = summarizeRealtyContent(listing?.raw?.content);
-                                                const statusLabel = item.duplicateOfPropertyId ? '중복후보' : '저장됨';
-                                                return (
-                                                    <tr key={`${listing?.source || 'source'}-${listing?.id || listing?.sourceListingId}`}>
-                                                        <td>
-                                                            <span className={item.duplicateOfPropertyId ? styles.realtyStatusWarn : styles.realtyStatusOk}>
-                                                                {statusLabel}
-                                                            </span>
-                                                        </td>
-                                                        <td>{getRealtySourceLabel(listing?.source)}</td>
-                                                        <td>
-                                                            <strong>{listing?.address || listing?.region || '-'}</strong>
-                                                            <small>{listing?.region || listing?.sourceListingId || ''}</small>
-                                                            {contentSummary && <small>{contentSummary}</small>}
-                                                        </td>
-                                                        <td>{formatRealtyMoney(listing)}</td>
-                                                        <td>
-                                                            <strong>{formatRealtyAreaAndFloor(listing)}</strong>
-                                                            <small>{detailMeta.join(' · ') || '-'}</small>
-                                                        </td>
-                                                        <td>
-                                                            <strong>{reactionMeta.join(' · ') || '-'}</strong>
-                                                            <small>{listing?.imageUrls?.length ? `사진 ${listing.imageUrls.length}장` : ''}</small>
-                                                        </td>
-                                                        <td>
-                                                            {listing?.sourceUrl ? (
-                                                                <a className={styles.realtyLinkButton} href={listing.sourceUrl} target="_blank" rel="noreferrer">
-                                                                    <ExternalLink size={13} />
-                                                                    열기
-                                                                </a>
-                                                            ) : '-'}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <RealtyImportPanel userId={userId} initialRegionHint={realtyInitialRegion} />
             )}
         </div>
     );

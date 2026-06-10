@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         const companyName = cleanString(searchParams.get('company'));
         const source = cleanString(searchParams.get('source'));
         const region = cleanString(searchParams.get('region'));
-        const limit = Math.max(1, Math.min(200, Number(searchParams.get('limit') || 80)));
+        const limit = Math.max(1, Math.min(2000, Number(searchParams.get('limit') || 80)));
         let companyId = requesterProfile.company_id;
 
         if (propertyId) {
@@ -136,5 +136,60 @@ export async function GET(request: Request) {
             );
         }
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch external realty listings');
+    }
+}
+
+export async function PATCH(request: Request) {
+    try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
+        if (!requesterProfile) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+
+        const body = await request.json() as Record<string, unknown>;
+        const listingId = cleanString(body.listingId || body.id);
+        if (!listingId) return fail(400, 'VALIDATION_ERROR', 'listingId is required');
+
+        const { data: listing, error } = await supabaseAdmin
+            .from('external_property_listings')
+            .select('*')
+            .eq('id', listingId)
+            .maybeSingle();
+        if (error) throw error;
+        if (!listing) return fail(404, 'NOT_FOUND', 'External realty listing not found');
+
+        if (!canAccessCompanyResource(requesterProfile, listing) && listing.requester_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+
+        const currentData = listing.data && typeof listing.data === 'object' && !Array.isArray(listing.data)
+            ? listing.data
+            : {};
+        const { data: updated, error: updateError } = await supabaseAdmin
+            .from('external_property_listings')
+            .update({
+                data: {
+                    ...currentData,
+                    favorite: body.favorite === true
+                },
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', listingId)
+            .select()
+            .single();
+        if (updateError) throw updateError;
+
+        return ok({
+            listing: transformListing(updated)
+        });
+    } catch (error) {
+        console.error('Realty listings PATCH error:', error);
+        if (isMissingRealtySchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '외부 상가 수집 테이블이 최신 스키마가 아닙니다. supabase_realty_import_migration.sql 최신 버전을 적용한 뒤 다시 저장해주세요.'
+            );
+        }
+        return fail(500, 'INTERNAL_ERROR', 'Failed to update external realty listing');
     }
 }

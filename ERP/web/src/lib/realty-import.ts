@@ -75,8 +75,8 @@ type DaangnPost = {
 const DAANGN_REGION_URL = 'https://www.daangn.com/kr/api/v1/regions/keyword';
 const DAANGN_REALTY_URL = 'https://www.daangn.com/kr/realty/';
 const DEFAULT_TIMEOUT_MS = 12000;
-const DEFAULT_LIMIT = 500;
-const MAX_LIMIT = 1000;
+const DEFAULT_LIMIT = 1000;
+const MAX_LIMIT = 3000;
 
 function cleanString(value: unknown): string {
     return String(value ?? '').trim();
