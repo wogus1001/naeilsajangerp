@@ -49,10 +49,22 @@ function transformListing(row: any) {
     };
 }
 
+function getErrorCode(error: unknown) {
+    if (!error || typeof error !== 'object' || !('code' in error)) return '';
+    return typeof error.code === 'string' ? error.code : '';
+}
+
+function getErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    if (!error || typeof error !== 'object' || !('message' in error)) return '';
+    return typeof error.message === 'string' ? error.message : '';
+}
+
 function isMissingRealtySchemaError(error: unknown) {
-    const payload = error as { code?: string; message?: string } | null;
-    return payload?.code === 'PGRST204'
-        && /requester_id|company_id/i.test(String(payload.message || ''));
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error);
+    return ['PGRST204', '42703'].includes(code)
+        && /requester_id|company_id|external_property_listings/i.test(message);
 }
 
 export async function GET(request: Request) {

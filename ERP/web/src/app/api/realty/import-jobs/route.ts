@@ -117,16 +117,29 @@ function transformListing(row: any) {
     };
 }
 
+function getErrorCode(error: unknown) {
+    if (!error || typeof error !== 'object' || !('code' in error)) return '';
+    return typeof error.code === 'string' ? error.code : '';
+}
+
+function getErrorMessage(error: unknown, fallback = '') {
+    if (error instanceof Error) return error.message;
+    if (!error || typeof error !== 'object' || !('message' in error)) return fallback;
+    return typeof error.message === 'string' && error.message ? error.message : fallback;
+}
+
 function isMissingRealtyTableError(error: unknown) {
-    const payload = error as { code?: string; message?: string } | null;
-    return payload?.code === 'PGRST205'
-        && /realty_import_jobs|external_property_listings/i.test(String(payload.message || ''));
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error);
+    return ['PGRST205', '42P01'].includes(code)
+        && /realty_import_jobs|external_property_listings/i.test(message);
 }
 
 function isMissingRealtySchemaError(error: unknown) {
-    const payload = error as { code?: string; message?: string } | null;
-    return payload?.code === 'PGRST204'
-        && /requester_id|company_id/i.test(String(payload.message || ''));
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error);
+    return ['PGRST204', '42703'].includes(code)
+        && /requester_id|company_id|realty_import_jobs|external_property_listings/i.test(message);
 }
 
 function transformRuntimeListing(params: {
@@ -444,6 +457,14 @@ async function collectListings(region: string, sources: RealtySource[], limit: u
     return { listings, warnings, errors, sourceUrls };
 }
 
+async function assertRealtyTrackingSchema(supabaseAdmin: any) {
+    const { error } = await supabaseAdmin
+        .from('external_property_listings')
+        .select('id, company_id, requester_id')
+        .limit(1);
+    if (error) throw error;
+}
+
 export async function POST(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
     let jobId: string | null = null;
@@ -459,8 +480,8 @@ export async function POST(request: Request) {
         if (!region || region.length < 2) {
             return fail(400, 'VALIDATION_ERROR', '수집할 지역을 확인할 수 없습니다.');
         }
-        if (registerToProperties && !context.companyId) {
-            return fail(400, 'VALIDATION_ERROR', 'ERP 물건지로 승격하려면 회사 범위가 필요합니다.');
+        if (registerToProperties) {
+            return fail(400, 'VALIDATION_ERROR', '외부 상가 수집은 원본 목록에만 저장합니다. ERP 물건지 등록은 별도 선택 승격 플로우에서 진행해주세요.');
         }
 
         let trackingTablesAvailable = true;
@@ -505,17 +526,16 @@ export async function POST(request: Request) {
         }
         jobId = job.id;
 
-        const collection = await collectListings(region, sources, body.limit);
         if (!trackingTablesAvailable) {
-            if (!registerToProperties) {
-                return fail(
-                    424,
-                    'VALIDATION_ERROR',
-                    '외부 매물 원본 테이블이 아직 적용되지 않았습니다. supabase_realty_import_migration.sql 적용 후 다시 수집해주세요.'
-                );
-            }
-            collection.warnings.unshift('realty_import_jobs/external_property_listings SQL이 아직 적용되지 않아 수집 이력 원본 테이블 저장은 건너뛰고 ERP 물건지만 등록했습니다.');
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '외부 매물 원본 테이블이 아직 적용되지 않았습니다. supabase_realty_import_migration.sql 적용 후 다시 수집해주세요.'
+            );
         }
+        await assertRealtyTrackingSchema(supabaseAdmin);
+
+        const collection = await collectListings(region, sources, body.limit);
 
         const importedListings: any[] = [];
         let createdCount = 0;
@@ -611,11 +631,12 @@ export async function POST(request: Request) {
                     duplicateOfPropertyId: duplicateProperty?.id || null
                 });
             } catch (error) {
+                if (isMissingRealtyTableError(error) || isMissingRealtySchemaError(error)) throw error;
                 failedCount++;
                 rowErrors.push({
                     source: listing.source,
                     listingId: listing.sourceListingId,
-                    message: error instanceof Error ? error.message : '매물 저장 실패'
+                    message: getErrorMessage(error, '매물 저장 실패')
                 });
             }
         }
@@ -683,25 +704,27 @@ export async function POST(request: Request) {
         }, 201);
     } catch (error) {
         console.error('Realty import job error:', error);
-        if (isMissingRealtySchemaError(error)) {
+        const message = getErrorMessage(error, 'Realty import failed');
+        if (jobId) {
+            const { error: failJobError } = await supabaseAdmin
+                .from('realty_import_jobs')
+                .update({
+                    status: 'failed',
+                    failed_count: 1,
+                    errors: [{ message }],
+                    completed_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', jobId);
+            if (failJobError) console.error('Failed to mark realty import job as failed:', failJobError);
+        }
+        if (isMissingRealtyTableError(error) || isMissingRealtySchemaError(error)) {
             return fail(
                 424,
                 'VALIDATION_ERROR',
                 '외부 상가 수집 테이블이 최신 스키마가 아닙니다. supabase_realty_import_migration.sql 최신 버전을 적용한 뒤 다시 수집해주세요.'
             );
         }
-        if (jobId) {
-            await supabaseAdmin
-                .from('realty_import_jobs')
-                .update({
-                    status: 'failed',
-                    failed_count: 1,
-                    errors: [{ message: error instanceof Error ? error.message : 'Realty import failed' }],
-                    completed_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', jobId);
-        }
-        return fail(500, 'INTERNAL_ERROR', error instanceof Error ? error.message : 'Realty import failed');
+        return fail(500, 'INTERNAL_ERROR', message);
     }
 }

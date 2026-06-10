@@ -61,6 +61,24 @@ function transformListing(row: any) {
     };
 }
 
+function getErrorCode(error: unknown) {
+    if (!error || typeof error !== 'object' || !('code' in error)) return '';
+    return typeof error.code === 'string' ? error.code : '';
+}
+
+function getErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    if (!error || typeof error !== 'object' || !('message' in error)) return '';
+    return typeof error.message === 'string' ? error.message : '';
+}
+
+function isMissingRealtySchemaError(error: unknown) {
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error);
+    return ['PGRST204', 'PGRST205', '42703', '42P01'].includes(code)
+        && /requester_id|company_id|realty_import_jobs|external_property_listings/i.test(message);
+}
+
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await context.params;
@@ -92,6 +110,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         });
     } catch (error) {
         console.error('Realty import job GET error:', error);
+        if (isMissingRealtySchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '외부 상가 수집 테이블이 최신 스키마가 아닙니다. supabase_realty_import_migration.sql 최신 버전을 적용한 뒤 다시 조회해주세요.'
+            );
+        }
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch import job');
     }
 }
