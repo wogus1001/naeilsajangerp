@@ -4081,6 +4081,233 @@
     color: #c2410c;
 }
 
+.leadLinkList {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.leadLinkSectionHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.leadLinkSectionHeader h3 {
+    margin-bottom: 6px;
+}
+
+.leadLinkCard,
+.leadLinkCandidate {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.leadLinkCard {
+    padding: 13px;
+}
+
+.leadLinkCardHead,
+.leadLinkCandidate {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.leadLinkCardHead strong,
+.leadLinkCardHead span,
+.leadLinkCandidate strong,
+.leadLinkCandidate span,
+.leadLinkCandidate small {
+    display: block;
+}
+
+.leadLinkCardHead strong,
+.leadLinkCandidate strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.leadLinkCardHead span,
+.leadLinkCandidate span,
+.leadLinkCandidate small {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.leadLinkCardHead select {
+    width: 116px;
+    height: 34px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 0 8px;
+}
+
+.leadLinkCard p {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 0 0;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.leadLinkMemoRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.leadLinkMemoRow textarea {
+    min-height: 58px;
+    border: 1px solid #d8dee8;
+    border-radius: 11px;
+    padding: 10px;
+    color: #0f172a;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+}
+
+.leadLinkMemoRow textarea:focus,
+.leadLinkSearch input:focus {
+    border-color: #6d5dfc;
+    box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.12);
+}
+
+.leadLinkMemoRow > div,
+.leadLinkCandidateActions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.leadLinkMemoRow > div {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.iconDangerButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fff1f2;
+    color: #dc2626;
+    cursor: pointer;
+}
+
+.iconDangerButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.leadLinkPicker {
+    display: grid;
+    gap: 10px;
+}
+
+.leadLinkPickerHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.leadLinkSearch {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 220px;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid #d8dee8;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #94a3b8;
+}
+
+.leadLinkSearch input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.leadLinkCandidateList {
+    display: grid;
+    gap: 8px;
+}
+
+.leadLinkCandidate {
+    padding: 12px;
+}
+
+.leadLinkCandidate > div:first-child {
+    min-width: 0;
+}
+
+.leadLinkDrawerOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(15, 23, 42, 0.34);
+}
+
+.leadLinkDrawer {
+    width: min(720px, 100%);
+    height: 100%;
+    padding: 22px;
+    background: #f8fafc;
+    border-left: 1px solid #d8dee8;
+    box-shadow: -18px 0 44px rgba(15, 23, 42, 0.18);
+    overflow-y: auto;
+}
+
+.leadLinkDrawerHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.leadLinkDrawerHeader strong,
+.leadLinkDrawerHeader span {
+    display: block;
+}
+
+.leadLinkDrawerHeader strong {
+    color: #0f172a;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.leadLinkDrawerHeader span {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 13px;
+}
+
 .activityComposer {
     display: grid;
     gap: 8px;
@@ -5204,5 +5431,28 @@
     .workflowActions {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .leadLinkSectionHeader,
+    .leadLinkPickerHead,
+    .leadLinkCardHead,
+    .leadLinkCandidate,
+    .leadLinkCandidateActions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .leadLinkMemoRow {
+        grid-template-columns: 1fr;
+    }
+
+    .leadLinkDrawer {
+        width: 100%;
+        padding: 16px;
+    }
+
+    .leadLinkSearch {
+        min-width: 0;
+        width: 100%;
     }
 }

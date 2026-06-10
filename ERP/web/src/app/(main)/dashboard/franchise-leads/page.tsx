@@ -51,10 +51,15 @@ import {
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStage, FranchiseLeadStatus } from '@/lib/franchise-leads';
-import { LeadLocationMatchSection } from '@/components/franchise/LeadLocationMatchSection';
+import { LeadLocationLinkSection } from '@/components/franchise/LeadLocationLinkSection';
 import { LeadWorkflowSection } from '@/components/franchise/LeadWorkflowSection';
-import { buildLeadLocationMatches } from '@/lib/franchise-lead-location-matching';
 import type { LeadLocationMatchLocation } from '@/lib/franchise-lead-location-matching';
+import {
+    createLeadLocationLink,
+    normalizeLeadLocationLinks,
+    updateLeadLocationLink
+} from '@/lib/franchise-lead-location-links';
+import type { LeadLocationLink, LeadLocationLinkStatus, LeadLocationTargetType } from '@/lib/franchise-lead-location-links';
 import {
     EMPTY_LEAD_WORKFLOW_DRAFT,
     buildLeadWorkflowDraft,
@@ -107,6 +112,7 @@ type FranchiseLead = {
     convertedCustomerId?: string;
     convertedCustomerName?: string;
     convertedAt?: string;
+    locationLinks?: LeadLocationLink[];
 };
 
 type LeadActivityType = '전화' | '문자' | '방문상담' | '계약검토' | '메모' | '상태변경' | '고객전환';
@@ -142,6 +148,22 @@ type FranchiseLocation = LeadLocationMatchLocation & {
     readonly managerId?: string | null;
     readonly createdAt?: string;
     readonly updatedAt?: string;
+};
+
+type ExternalPropertyListing = {
+    readonly id: string;
+    readonly source?: string | null;
+    readonly title?: string | null;
+    readonly address?: string | null;
+    readonly region?: string | null;
+    readonly sourceUrl?: string | null;
+    readonly depositAmount?: number | null;
+    readonly monthlyRent?: number | null;
+    readonly salePrice?: number | null;
+    readonly areaPyeong?: string | null;
+    readonly floorInfo?: string | null;
+    readonly collectedAt?: string | null;
+    readonly data?: Record<string, unknown> | null;
 };
 
 type LeadSummary = {
@@ -303,9 +325,7 @@ const WORK_QUEUE_OPTIONS: ReadonlyArray<{ key: LeadWorkQueueKey; label: string }
     { key: 'all', label: '전체 업무' },
     { key: 'overdue', label: '연락 지연' },
     { key: 'today', label: '오늘 연락' },
-    { key: 'no_response', label: '무응답' },
-    { key: 'contract', label: '계약 가능' },
-    { key: 'hot', label: '즉시상담' }
+    { key: 'no_response', label: '무응답' }
 ] as const;
 
 const LEAD_DB_LAYER_OPTIONS: ReadonlyArray<{ key: LeadDbLayer; label: string; description: string }> = [
@@ -568,7 +588,9 @@ export default function FranchiseLeadsPage() {
     const [relatedCustomers, setRelatedCustomers] = React.useState<RelatedCustomer[]>([]);
     const [relatedCards, setRelatedCards] = React.useState<RelatedBusinessCard[]>([]);
     const [franchiseLocations, setFranchiseLocations] = React.useState<FranchiseLocation[]>([]);
+    const [externalListings, setExternalListings] = React.useState<ExternalPropertyListing[]>([]);
     const [isLocationMatchLoading, setIsLocationMatchLoading] = React.useState(false);
+    const [isLocationLinkSaving, setIsLocationLinkSaving] = React.useState(false);
     const [managerOptions, setManagerOptions] = React.useState<ManagerOption[]>([]);
     const [managerMap, setManagerMap] = React.useState<Record<string, string>>({});
     const [uploadErrors, setUploadErrors] = React.useState<UploadErrorRow[]>([]);
@@ -602,9 +624,9 @@ export default function FranchiseLeadsPage() {
         () => leads.find(lead => lead.id === quickActivityLeadId) || null,
         [leads, quickActivityLeadId]
     );
-    const selectedLeadLocationMatches = React.useMemo(
-        () => buildLeadLocationMatches(selectedLead, franchiseLocations),
-        [franchiseLocations, selectedLead]
+    const selectedLeadLocationLinks = React.useMemo(
+        () => normalizeLeadLocationLinks(selectedLead?.locationLinks),
+        [selectedLead?.locationLinks]
     );
 
     React.useEffect(() => {
@@ -739,18 +761,44 @@ export default function FranchiseLeadsPage() {
         const params = new URLSearchParams({ requesterId: userId });
         if (companyName) params.set('company', companyName);
 
+        const listingParams = new URLSearchParams(params);
+        listingParams.set('limit', '500');
+
         setIsLocationMatchLoading(true);
-        fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
-            .then(async response => {
-                const payload = await response.json();
-                if (!response.ok) throw new Error(readApiError(payload));
-                return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
+        Promise.allSettled([
+            fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
+                .then(async response => {
+                    const payload = await response.json();
+                    if (!response.ok) throw new Error(readApiError(payload));
+                    return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
+                }),
+            fetch(`/api/realty/listings?${listingParams.toString()}`, { cache: 'no-store', signal: controller.signal })
+                .then(async response => {
+                    const payload = await response.json();
+                    if (!response.ok) throw new Error(readApiError(payload));
+                    return unwrapApiData<{ listings?: ExternalPropertyListing[] }>(payload);
+                })
+        ])
+            .then(([locationResult, listingResult]) => {
+                if (locationResult.status === 'fulfilled') {
+                    setFranchiseLocations(locationResult.value.locations || []);
+                } else {
+                    console.error('Failed to fetch franchise locations for lead links:', locationResult.reason);
+                    setFranchiseLocations([]);
+                }
+
+                if (listingResult.status === 'fulfilled') {
+                    setExternalListings(listingResult.value.listings || []);
+                } else {
+                    console.error('Failed to fetch external listings for lead links:', listingResult.reason);
+                    setExternalListings([]);
+                }
             })
-            .then(data => setFranchiseLocations(data.locations || []))
             .catch(error => {
                 if (error instanceof DOMException && error.name === 'AbortError') return;
-                console.error('Failed to fetch franchise locations for lead matching:', error);
+                console.error('Failed to fetch lead location link targets:', error);
                 setFranchiseLocations([]);
+                setExternalListings([]);
             })
             .finally(() => {
                 if (!controller.signal.aborted) setIsLocationMatchLoading(false);
@@ -1489,6 +1537,102 @@ export default function FranchiseLeadsPage() {
             showAlert(error instanceof Error ? error.message : '업무 큐 정보 저장에 실패했습니다.', 'error', '저장 실패');
         } finally {
             setIsWorkflowSaving(false);
+        }
+    };
+
+    const getLinkTargetName = (targetType: LeadLocationTargetType, targetId: string) => {
+        if (targetType === 'franchise_location') {
+            return franchiseLocations.find(location => location.id === targetId)?.name || '출점 후보지';
+        }
+        const listing = externalListings.find(item => item.id === targetId);
+        return listing?.title || listing?.address || '외부 상가';
+    };
+
+    const saveLocationLinks = async (links: readonly LeadLocationLink[], activityContent: string) => {
+        if (!selectedLead) return;
+
+        const nextActivity: LeadActivity = {
+            id: createActivityId(),
+            type: '메모',
+            content: activityContent,
+            createdAt: new Date().toISOString(),
+            createdBy: user?.name || userId
+        };
+
+        setIsLocationLinkSaving(true);
+        try {
+            await updateLeadWithPatch(selectedLead, {
+                locationLinks: links,
+                activityLog: [nextActivity, ...(selectedLead.activityLog || [])]
+            });
+        } finally {
+            setIsLocationLinkSaving(false);
+        }
+    };
+
+    const addLocationLink = async (targetType: LeadLocationTargetType, targetId: string) => {
+        if (!selectedLead) return;
+        const currentLinks = normalizeLeadLocationLinks(selectedLead.locationLinks);
+        const targetName = getLinkTargetName(targetType, targetId);
+        const nextLink = createLeadLocationLink({
+            id: createActivityId(),
+            targetType,
+            targetId,
+            createdAt: new Date().toISOString(),
+            createdBy: user?.name || userId
+        });
+
+        try {
+            await saveLocationLinks([nextLink, ...currentLinks], `후보지 연결: ${targetName}`);
+            showAlert('후보자에 후보지를 연결했습니다.', 'success', '연결 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '후보지 연결에 실패했습니다.', 'error', '연결 실패');
+        }
+    };
+
+    const updateLocationLink = async (
+        linkId: string,
+        patch: { readonly status?: LeadLocationLinkStatus; readonly memo?: string }
+    ) => {
+        if (!selectedLead) return;
+        const currentLinks = normalizeLeadLocationLinks(selectedLead.locationLinks);
+        const targetLink = currentLinks.find(link => link.id === linkId);
+        if (!targetLink) return;
+
+        const nextLinks = updateLeadLocationLink(currentLinks, linkId, {
+            ...patch,
+            updatedAt: new Date().toISOString()
+        });
+        const targetName = getLinkTargetName(targetLink.targetType, targetLink.targetId);
+        const activityContent = patch.status
+            ? `후보지 상태 변경: ${targetName} · ${patch.status}`
+            : `후보지 메모 업데이트: ${targetName}`;
+
+        try {
+            await saveLocationLinks(nextLinks, activityContent);
+            showAlert('후보지 연결 정보를 저장했습니다.', 'success', '저장 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '후보지 연결 정보 저장에 실패했습니다.', 'error', '저장 실패');
+        }
+    };
+
+    const removeLocationLink = async (linkId: string) => {
+        if (!selectedLead) return;
+        const currentLinks = normalizeLeadLocationLinks(selectedLead.locationLinks);
+        const targetLink = currentLinks.find(link => link.id === linkId);
+        if (!targetLink) return;
+
+        const targetName = getLinkTargetName(targetLink.targetType, targetLink.targetId);
+        const nextLinks = currentLinks.filter(link => link.id !== linkId);
+
+        try {
+            await saveLocationLinks(nextLinks, `후보지 연결 삭제: ${targetName}`);
+            showAlert('후보지 연결을 삭제했습니다.', 'success', '삭제 완료');
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '후보지 연결 삭제에 실패했습니다.', 'error', '삭제 실패');
         }
     };
 
@@ -2284,7 +2428,7 @@ export default function FranchiseLeadsPage() {
                                 : viewMode === 'pipeline'
                                 ? '상태별 카드에서 상담 흐름을 빠르게 이동합니다.'
                                 : viewMode === 'tasks'
-                                    ? '연락 지연, 오늘 연락, 무응답, 계약 가능 리드를 우선 처리합니다.'
+                                    ? '연락 지연, 오늘 연락, 무응답 리드를 우선 처리합니다.'
                                     : listPolicyText}
                         </p>
                     </div>
@@ -2951,9 +3095,15 @@ export default function FranchiseLeadsPage() {
                             onSave={() => void saveDetailWorkflow()}
                         />
 
-                        <LeadLocationMatchSection
-                            matches={selectedLeadLocationMatches}
+                        <LeadLocationLinkSection
+                            links={selectedLeadLocationLinks}
+                            locations={franchiseLocations}
+                            externalListings={externalListings}
                             isLoading={isLocationMatchLoading}
+                            isSaving={isLocationLinkSaving}
+                            onAddLinkAction={(targetType, targetId) => void addLocationLink(targetType, targetId)}
+                            onUpdateLinkAction={(linkId, patch) => void updateLocationLink(linkId, patch)}
+                            onRemoveLinkAction={(linkId) => void removeLocationLink(linkId)}
                         />
 
                         <section className={styles.detailSection}>

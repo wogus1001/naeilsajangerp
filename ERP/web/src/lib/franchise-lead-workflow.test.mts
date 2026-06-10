@@ -39,6 +39,51 @@ test('matchesLeadWorkQueue includes explicit no response leads in the no respons
     assert.equal(all, true);
 });
 
+test('matchesLeadWorkQueue keeps same-day contact in today queue after the scheduled time passes', () => {
+    const lead: LeadWorkflowInput = {
+        status: '상담중',
+        nextContactAt: '2026-06-10T09:00:00+09:00'
+    };
+
+    const today = matchesLeadWorkQueue(lead, 'today', now);
+    const overdue = matchesLeadWorkQueue(lead, 'overdue', now);
+    const label = getLeadWorkQueueLabel(lead, now);
+
+    assert.equal(today, true);
+    assert.equal(overdue, false);
+    assert.equal(label, '오늘 연락');
+});
+
+test('matchesLeadWorkQueue does not treat an untouched overdue lead as no response', () => {
+    const lead: LeadWorkflowInput = {
+        status: '상담중',
+        nextContactAt: '2026-06-09T10:00:00+09:00',
+        lastContactedAt: null,
+        consultationResult: '미상담'
+    };
+
+    const noResponse = matchesLeadWorkQueue(lead, 'no_response', now);
+    const overdue = matchesLeadWorkQueue(lead, 'overdue', now);
+
+    assert.equal(noResponse, false);
+    assert.equal(overdue, true);
+});
+
+test('matchesLeadWorkQueue excludes contract-ready leads from work queues', () => {
+    const lead: LeadWorkflowInput = {
+        status: '상담중',
+        nextContactAt: null,
+        nextAction: '계약 조건 확인',
+        consultationResult: '조건 조율'
+    };
+
+    const all = matchesLeadWorkQueue(lead, 'all', now);
+    const label = getLeadWorkQueueLabel(lead, now);
+
+    assert.equal(all, false);
+    assert.equal(label, '후속 관리');
+});
+
 test('getLeadWorkQueueSummary counts each actionable queue without losing overlap', () => {
     const leads: readonly LeadWorkflowInput[] = [
         { status: '상담중', nextContactAt: '2026-06-09T10:00:00+09:00' },
@@ -52,12 +97,10 @@ test('getLeadWorkQueueSummary counts each actionable queue without losing overla
 
     assert.deepEqual(summary, {
         all: 5,
-        actionable: 5,
+        actionable: 3,
         overdue: 1,
         today: 1,
-        noResponse: 2,
-        contract: 1,
-        hot: 1
+        noResponse: 1
     });
 });
 
