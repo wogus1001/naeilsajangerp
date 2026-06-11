@@ -236,9 +236,30 @@
     border-radius: 10px;
     background: #ffffff;
     color: #334155;
-    padding: 0 10px;
+    padding: 0 12px;
     font-size: 12px;
     font-weight: 650;
+}
+
+.dateRangeGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dateRangeGroup span {
+    color: #6b7684;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.filterGroup select {
+    appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%234E5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
 }
 
 .quickFilterButton,
@@ -2797,6 +2818,60 @@
     color: #6d5dfc;
 }
 
+.chartModeTabs {
+    display: inline-flex;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.chartModeTab,
+.chartModeTabActive {
+    height: 32px;
+    min-width: 44px;
+    padding: 0 10px;
+    border: 0;
+    border-right: 1px solid #e5e8eb;
+    background: transparent;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.chartModeTab:last-child,
+.chartModeTabActive:last-child {
+    border-right: 0;
+}
+
+.chartModeTabActive {
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.trendPanelHeader {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.trendPanelHeader .chartModeTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.trendPanelHeader .chartModeTab,
+.trendPanelHeader .chartModeTabActive {
+    height: 38px;
+    min-width: 0;
+    font-size: 13px;
+}
+
 .stageStrip {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3847,13 +3922,24 @@
 }
 
 .closeButton {
-    width: 36px;
-    height: 36px;
-    border: 1px solid #e5e7eb;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #d1d6db;
     border-radius: 10px;
-    background: white;
-    color: #64748b;
+    background: #f9fafb;
+    color: #333d4b;
     cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.closeButton:hover {
+    border-color: #b0b8c1;
+    background: #f2f4f6;
+    color: #191f28;
 }
 
 .formGrid {
@@ -3863,10 +3949,17 @@
 }
 
 .formGrid label,
+.formField,
 .memoLabel {
     display: flex;
     flex-direction: column;
     gap: 7px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.formField>span {
     color: #334155;
     font-size: 12px;
     font-weight: 850;
@@ -3888,6 +3981,81 @@
 .formGrid select {
     height: 42px;
     padding: 0 12px;
+}
+
+.regionMultiSelect {
+    display: grid;
+    gap: 8px;
+}
+
+.regionPickerRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.regionAddButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 42px;
+    min-width: 72px;
+    border: 1px solid #3182f6;
+    border-radius: 11px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.regionAddButton:disabled {
+    border-color: #e5e8eb;
+    background: #f2f4f6;
+    color: #8b95a1;
+    cursor: not-allowed;
+}
+
+.regionChipList {
+    display: flex;
+    min-height: 32px;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.regionChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 0 7px 0 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.regionChip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(49, 130, 246, 0.12);
+    color: #1d4ed8;
+    cursor: pointer;
+}
+
+.regionEmptyText {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 650;
 }
 
 .memoLabel {
@@ -3938,6 +4106,7 @@
 
 .formGrid input:focus,
 .formGrid select:focus,
+.regionAddButton:focus-visible,
 .memoLabel textarea:focus,
 .quickActivityBody select:focus,
 .quickActivityBody textarea:focus {
@@ -6674,5 +6843,531 @@
 
     .realtySavedRegionBar>strong {
         padding-top: 0;
+    }
+}
+
+.pageShell {
+    --fr-bg: #f2f4f6;
+    --fr-blue-soft: #e8f3ff;
+    --fr-green: #03b26c;
+    --fr-red: #f04452;
+    --fr-orange: #fe9800;
+    --fr-radius: 8px;
+    --fr-radius-sm: 8px;
+    --fr-radius-lg: 12px;
+    background: var(--fr-bg);
+    font-feature-settings: "tnum";
+}
+
+.toolbar {
+    display: grid;
+    grid-template-columns: minmax(250px, auto) minmax(320px, 1fr);
+    gap: 8px 10px;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+}
+
+.rangeGroup {
+    display: inline-flex;
+    justify-self: start;
+    width: max-content;
+    max-width: 100%;
+    height: 40px;
+    overflow: hidden;
+    border-radius: var(--fr-radius);
+    background: #f9fafb;
+}
+
+.rangeButton,
+.rangeButtonActive {
+    height: 38px;
+    min-width: 72px;
+    padding: 0 14px;
+    color: var(--fr-muted);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.rangeButtonActive {
+    background: var(--fr-blue);
+    color: #ffffff;
+}
+
+.searchBox {
+    height: 40px;
+    min-width: 0;
+    border-radius: var(--fr-radius);
+}
+
+.filterGroup {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--fr-line);
+}
+
+.filterGroup>svg {
+    flex: 0 0 auto;
+    margin-top: 12px;
+    color: var(--fr-muted);
+}
+
+.filterGroup select,
+.filterGroup input,
+.quickFilterButton,
+.quickFilterButtonActive {
+    height: 40px;
+    min-width: 128px;
+    border-radius: var(--fr-radius);
+}
+
+.dateRangeGroup {
+    flex: 0 1 auto;
+}
+
+.dateRangeGroup input {
+    min-width: 128px;
+}
+
+.filterGroup select {
+    appearance: none;
+    padding-right: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%234E5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px 16px;
+}
+
+.kpiGrid {
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.kpiCard,
+.kpiCardAccent,
+.kpiCardDanger {
+    min-height: 92px;
+    padding: 13px 14px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+    box-shadow: none;
+}
+
+.kpiCardAccent {
+    border-color: #b9d8ff;
+    background: #f7fbff;
+}
+
+.kpiCardDanger {
+    border-color: #ffd1d6;
+    background: #fff8f8;
+}
+
+.kpiCard span,
+.kpiCardAccent span,
+.kpiCardDanger span {
+    display: block;
+    color: var(--fr-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.kpiCard strong,
+.kpiCardAccent strong,
+.kpiCardDanger strong {
+    display: block;
+    margin: 8px 0 4px;
+    color: var(--fr-text);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.14;
+    letter-spacing: 0;
+}
+
+.kpiCard small,
+.kpiCardAccent small,
+.kpiCardDanger small {
+    display: block;
+    color: var(--fr-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.analyticsGrid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.panel,
+.panelWide,
+.tablePanel {
+    border-radius: var(--fr-radius);
+}
+
+.panel,
+.panelWide {
+    display: flex;
+    flex-direction: column;
+}
+
+.panelWide {
+    grid-column: auto;
+    grid-row: auto;
+}
+
+.panelHeader,
+.tableHeader {
+    padding: 14px 16px;
+}
+
+.panelHeader h2,
+.tableHeader h2 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.panelHeader p,
+.tableHeader p {
+    color: var(--fr-muted);
+}
+
+.stageStrip {
+    gap: 8px;
+    padding: 12px 16px 8px;
+}
+
+.stageCard,
+.stageCardActive {
+    min-height: 74px;
+    border-radius: var(--fr-radius);
+    background: #f9fafb;
+}
+
+.stageCardActive {
+    background: var(--fr-blue-soft);
+}
+
+.stageCard strong,
+.stageCardActive strong {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.chartBox,
+.chartBoxSmall {
+    flex: 1;
+}
+
+.emptyChart {
+    height: 260px;
+}
+
+.tableScroll {
+    border-radius: var(--fr-radius);
+}
+
+.leadTable {
+    min-width: 1640px;
+}
+
+.leadTable th {
+    height: 42px;
+    padding: 9px 12px;
+    background: #f9fafb;
+    color: var(--fr-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.leadTable td {
+    padding: 10px 12px;
+    color: var(--fr-text);
+    font-size: 13px;
+}
+
+.leadTable tr:hover td {
+    background: #f9fafb;
+}
+
+.nameButton strong,
+.leadTable td strong {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.statusSelect,
+.managerSelect,
+.bulkBar input {
+    height: 34px;
+    border-radius: 6px;
+}
+
+.rowActions {
+    gap: 4px;
+}
+
+.iconButton,
+.iconButtonDanger,
+.convertedActionPill {
+    min-width: 32px;
+    height: 32px;
+    border-radius: 6px;
+}
+
+.promoteButton {
+    height: 32px;
+    border-radius: 6px;
+    color: var(--fr-blue);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.bulkBar {
+    padding: 10px 14px;
+    border-bottom-color: var(--fr-line);
+    background: #f9fafb;
+}
+
+.taskQueueToolbar {
+    gap: 6px;
+    padding: 12px 12px 0;
+}
+
+.taskQueueFilter,
+.taskQueueFilterActive {
+    height: 34px;
+    border-radius: var(--fr-radius);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.taskQueueFilterActive {
+    background: var(--fr-blue-soft);
+    box-shadow: none;
+}
+
+.taskBoard {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+    background: var(--fr-surface);
+}
+
+.taskBoardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: #f9fafb;
+}
+
+.taskBoardHeader strong,
+.taskBoardHeader b {
+    color: var(--fr-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.taskBoardHeader span {
+    display: block;
+    margin-top: 2px;
+    color: var(--fr-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.taskBoardHeader b {
+    flex: 0 0 auto;
+}
+
+.taskCard {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.82fr) minmax(360px, 1.35fr) minmax(120px, 0.42fr);
+    gap: 10px 12px;
+    align-items: start;
+    padding: 12px;
+    border-radius: var(--fr-radius);
+    box-shadow: none;
+}
+
+.taskCard:hover {
+    border-color: var(--fr-line-strong);
+}
+
+.taskCardMain {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: start;
+}
+
+.taskCardMain button {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.taskCardMain>span {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.taskCardMain strong {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.taskInfoGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 0;
+}
+
+.taskInfoGrid div {
+    padding: 8px;
+    border-radius: 6px;
+    background: #f9fafb;
+}
+
+.taskInfoGrid span {
+    margin-bottom: 3px;
+    color: var(--fr-muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.taskInfoGrid strong {
+    color: var(--fr-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.fitPillRow {
+    grid-column: 1 / 3;
+    margin-top: 0;
+}
+
+.fitPillRow span {
+    height: 24px;
+    background: #ffffff;
+    color: var(--fr-muted);
+    font-weight: 700;
+}
+
+.taskCard p {
+    grid-column: 1 / 3;
+    min-height: 0;
+    margin: 0;
+    color: var(--fr-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.taskActions {
+    grid-column: 3;
+    grid-row: 1 / span 4;
+    display: grid;
+    gap: 6px;
+    align-self: stretch;
+}
+
+.taskActions button {
+    width: 100%;
+    justify-content: center;
+}
+
+.boardEmpty {
+    grid-column: 1 / -1;
+    border: 1px dashed var(--fr-line-strong);
+    border-radius: var(--fr-radius);
+    background: #f9fafb;
+}
+
+@media (max-width: 1180px) {
+    .analyticsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .panelWide {
+        grid-row: auto;
+    }
+
+    .taskCard {
+        grid-template-columns: 1fr;
+    }
+
+    .fitPillRow,
+    .taskCard p,
+    .taskActions {
+        grid-column: auto;
+    }
+
+    .taskActions {
+        grid-row: auto;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .heroActions .secondaryButton {
+        display: none;
+    }
+
+    .heroActions .primaryButton {
+        flex-basis: 100%;
+    }
+
+    .toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .filterGroup {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .filterGroup>svg {
+        display: none;
+    }
+
+    .kpiGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .kpiCard,
+    .kpiCardAccent,
+    .kpiCardDanger {
+        min-height: 88px;
+    }
+
+    .stageStrip {
+        display: none;
+    }
+
+    .regionPickerRow {
+        grid-template-columns: 1fr;
+    }
+
+    .regionAddButton {
+        width: 100%;
+    }
+
+    .taskInfoGrid,
+    .taskActions {
+        grid-template-columns: 1fr;
     }
 }

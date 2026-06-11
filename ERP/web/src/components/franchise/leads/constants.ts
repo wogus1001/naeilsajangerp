@@ -29,7 +29,7 @@ export const EMPTY_FORM: LeadFormState = {
 
 export const ACTIVITY_TYPES = ['전화', '문자', '방문상담', '계약검토', '메모', '상태변경', '고객전환'] satisfies readonly LeadActivityType[];
 export const SOURCE_FILTER_OPTIONS = ['전체', ...FRANCHISE_LEAD_SOURCES] as const;
-export const RANGE_OPTIONS = ['7D', '30D', '3M', '전체'] as const;
+export const RANGE_OPTIONS = ['최근 7일', '최근 30일', '최근 3개월', '전체'] as const;
 export const PAGE_SIZE_OPTIONS = [50, 100, 200] as const;
 
 export const EMPTY_META_STATE: MetaIntegrationState = {

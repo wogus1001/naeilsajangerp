@@ -37,6 +37,8 @@ export function LeadTaskBoard({
     onCompleteTodayTask,
     onConvertLead
 }: LeadTaskBoardProps) {
+    const currentQueue = taskQueueOptions.find(option => option.key === taskQueueFilter);
+
     return (
         <>
             <div className={styles.taskQueueToolbar}>
@@ -53,6 +55,13 @@ export function LeadTaskBoard({
                 ))}
             </div>
             <div className={styles.taskBoard}>
+                <div className={styles.taskBoardHeader}>
+                    <div>
+                        <strong>{currentQueue?.label || '업무 큐'}</strong>
+                        <span>연락, 무응답, 전환 대상을 한 화면에서 처리합니다.</span>
+                    </div>
+                    <b>{isLoading ? '-' : `${taskLeads.length.toLocaleString()}건`}</b>
+                </div>
                 {isLoading ? (
                     <div className={styles.boardEmpty}>업무 큐를 불러오고 있습니다.</div>
                 ) : taskLeads.length === 0 ? (
@@ -105,7 +114,7 @@ export function LeadTaskBoard({
                         <p>{lead.churnReason || lead.memo || '등록된 메모가 없습니다.'}</p>
                         <div className={styles.taskActions}>
                             <button type="button" className={styles.secondaryButton} onClick={() => onSelectLead(lead.id)}>
-                                상세 보기
+                                상세
                             </button>
                             <button type="button" className={styles.secondaryButton} onClick={() => onCompleteTodayTask(lead)}>
                                 연락 완료

@@ -41,7 +41,7 @@ export function toDateInputValue(date: Date) {
 
 export function buildDateFromRange(range: typeof RANGE_OPTIONS[number]) {
     if (range === '전체') return '';
-    const days = range === '7D' ? 7 : range === '30D' ? 30 : 90;
+    const days = range === '최근 7일' ? 7 : range === '최근 30일' ? 30 : 90;
     const date = new Date();
     date.setDate(date.getDate() - days + 1);
     return toDateInputValue(date);
@@ -183,18 +183,91 @@ export function getLeadTaskRank(lead: FranchiseLead) {
     return getLeadWorkQueueRank(lead);
 }
 
-export function buildTrendData(summary: LeadSummary) {
-    const items = [];
-    for (let i = 6; i >= 0; i--) {
+export type LeadTrendMode = 'daily' | 'weekly' | 'monthly';
+
+export type LeadTrendDatum = {
+    readonly date: string;
+    readonly count: number;
+};
+
+export type LeadTrendSeriesData = Record<LeadTrendMode, readonly LeadTrendDatum[]>;
+
+function sumCreatedCountByDateRange(summary: LeadSummary, startDate: Date, dayCount: number) {
+    let count = 0;
+    for (let i = 0; i < dayCount; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        count += summary.createdByDate[toDateInputValue(date)] || 0;
+    }
+    return count;
+}
+
+function getWeekStart(date: Date) {
+    const start = new Date(date);
+    const day = start.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + mondayOffset);
+    return start;
+}
+
+function buildDailyTrendData(summary: LeadSummary): readonly LeadTrendDatum[] {
+    const items: LeadTrendDatum[] = [];
+    for (let i = 13; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
         const key = toDateInputValue(date);
         items.push({
-            date: key.slice(5),
+            date: key.slice(5).replace('-', '.'),
             count: summary.createdByDate[key] || 0
         });
     }
     return items;
+}
+
+function buildWeeklyTrendData(summary: LeadSummary): readonly LeadTrendDatum[] {
+    const items: LeadTrendDatum[] = [];
+    const currentWeekStart = getWeekStart(new Date());
+    for (let i = 7; i >= 0; i--) {
+        const weekStart = new Date(currentWeekStart);
+        weekStart.setDate(currentWeekStart.getDate() - i * 7);
+        const key = toDateInputValue(weekStart);
+        items.push({
+            date: `${key.slice(5).replace('-', '.')}주`,
+            count: sumCreatedCountByDateRange(summary, weekStart, 7)
+        });
+    }
+    return items;
+}
+
+function buildMonthlyTrendData(summary: LeadSummary): readonly LeadTrendDatum[] {
+    const items: LeadTrendDatum[] = [];
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    for (let i = 5; i >= 0; i--) {
+        const month = new Date(currentMonth);
+        month.setMonth(currentMonth.getMonth() - i);
+        const keyPrefix = toDateInputValue(month).slice(0, 7);
+        const count = Object.entries(summary.createdByDate)
+            .filter(([key]) => key.startsWith(keyPrefix))
+            .reduce((sum, [, value]) => sum + value, 0);
+        items.push({
+            date: keyPrefix.slice(2).replace('-', '.'),
+            count
+        });
+    }
+    return items;
+}
+
+export function buildTrendSeriesData(summary: LeadSummary): LeadTrendSeriesData {
+    return {
+        daily: buildDailyTrendData(summary),
+        weekly: buildWeeklyTrendData(summary),
+        monthly: buildMonthlyTrendData(summary)
+    };
+}
+
+export function buildTrendData(summary: LeadSummary) {
+    return buildDailyTrendData(summary);
 }
 
 export function createFormFromLead(lead: FranchiseLead): LeadFormState {

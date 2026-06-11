@@ -28,6 +28,7 @@ import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspac
 import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import { LeadDashboard } from '@/components/franchise/leads/LeadDashboard';
 import { LeadPipelineBoard } from '@/components/franchise/leads/LeadPipelineBoard';
+import { LeadRegionMultiSelect } from '@/components/franchise/leads/LeadRegionMultiSelect';
 import { LeadTableView } from '@/components/franchise/leads/LeadTableView';
 import { LeadTaskBoard } from '@/components/franchise/leads/LeadTaskBoard';
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
@@ -108,6 +109,10 @@ import {
     toSourceFilterOption
 } from '@/components/franchise/leads/utils';
 import {
+    formatLeadPhoneInput,
+    normalizeLeadDesiredRegionValue
+} from '@/components/franchise/leads/leadFormFormatters';
+import {
     EMPTY_LEAD_WORKFLOW_DRAFT,
     buildLeadWorkflowDraft
 } from '@/lib/franchise-lead-workflow';
@@ -137,14 +142,14 @@ export default function FranchiseLeadsPage() {
     const [statusFilter, setStatusFilter] = React.useState<'전체' | FranchiseLeadStatus>('전체');
     const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
     const [managerFilter, setManagerFilter] = React.useState('전체');
-    const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('30D');
+    const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('최근 30일');
     const [workspaceTab, setWorkspaceTab] = React.useState<LeadWorkspaceTab>('dashboard');
     const [leadDbLayer, setLeadDbLayer] = React.useState<LeadDbLayer>('candidate');
     const [viewMode, setViewMode] = React.useState<LeadViewMode>('table');
     const [taskQueueFilter, setTaskQueueFilter] = React.useState<LeadWorkQueueKey>('all');
     const [pageSize, setPageSize] = React.useState<typeof PAGE_SIZE_OPTIONS[number]>(50);
     const [currentPage, setCurrentPage] = React.useState(1);
-    const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('30D'));
+    const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('최근 30일'));
     const [createdTo, setCreatedTo] = React.useState('');
     const [selectedLeadId, setSelectedLeadId] = React.useState('');
     const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
@@ -535,7 +540,7 @@ export default function FranchiseLeadsPage() {
         metaEnabledForms,
         metaErrorCount,
         metaLastSyncAt,
-        trendData,
+        trendSeriesData,
         conversionRate,
         dueContactCount,
         overdueContactCount,
@@ -573,6 +578,18 @@ export default function FranchiseLeadsPage() {
         return managerMap[managerId] || managerId;
     };
 
+    const managerChartData = React.useMemo(() => {
+        const counts = new Map<string, number>();
+        candidateLeads.forEach(lead => {
+            const managerName = lead.managerId ? managerMap[lead.managerId] || lead.managerId : '미배정';
+            counts.set(managerName, (counts.get(managerName) || 0) + 1);
+        });
+        return Array.from(counts.entries())
+            .map(([manager, count]) => ({ manager, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8);
+    }, [candidateLeads, managerMap]);
+
     const getManagerOptionValue = (manager: ManagerOption) => manager.uuid || manager.id;
 
     const scopedManagerOptions = React.useMemo(() => {
@@ -607,13 +624,6 @@ export default function FranchiseLeadsPage() {
         const matched = scopedManagerOptions.find(manager => manager.id === currentUserId || manager.uuid === currentUserId);
         return matched ? getManagerOptionValue(matched) : currentUserId;
     }, [scopedManagerOptions, user, userId]);
-
-    const isMyManagerFilterActive = Boolean(defaultManagerId && managerFilter === defaultManagerId);
-
-    const toggleMyLeadsOnly = () => {
-        if (!defaultManagerId) return;
-        setManagerFilter(prev => prev === defaultManagerId ? '전체' : defaultManagerId);
-    };
 
     const toggleSelectAllVisible = (checked: boolean) => {
         setSelectedLeadIds(checked ? paginatedLeads.map(lead => lead.id) : []);
@@ -764,7 +774,12 @@ export default function FranchiseLeadsPage() {
     };
 
     const openEditModal = (lead: FranchiseLead) => {
-        setForm(createFormFromLead(lead));
+        const nextForm = createFormFromLead(lead);
+        setForm({
+            ...nextForm,
+            mobile: formatLeadPhoneInput(nextForm.mobile),
+            desiredRegion: normalizeLeadDesiredRegionValue(nextForm.desiredRegion)
+        });
         setIsModalOpen(true);
     };
 
@@ -796,6 +811,8 @@ export default function FranchiseLeadsPage() {
                 requesterId: userId,
                 companyName,
                 leadStage: 'candidate',
+                mobile: formatLeadPhoneInput(form.mobile),
+                desiredRegion: normalizeLeadDesiredRegionValue(form.desiredRegion),
                 managerId: form.managerId || userId,
                 budgetMin: parseBudgetInputToWon(form.budgetMin),
                 budgetMax: parseBudgetInputToWon(form.budgetMax),
@@ -1523,16 +1540,6 @@ export default function FranchiseLeadsPage() {
                 description="가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다."
                 actions={(
                     <>
-                    <button
-                        className={styles.secondaryButton}
-                        onClick={() => {
-                            void fetchLeads();
-                        }}
-                        disabled={isLoading}
-                    >
-                        <RefreshCw size={16} />
-                        새로고침
-                    </button>
                     <button className={styles.secondaryButton} onClick={() => setIsMetaPanelOpen(prev => !prev)}>
                         <Link2 size={16} />
                         Meta 연동
@@ -1585,21 +1592,18 @@ export default function FranchiseLeadsPage() {
                 sourceOptions={SOURCE_FILTER_OPTIONS}
                 managerFilter={managerFilter}
                 managerOptions={renderManagerOptions()}
-                isMyManagerFilterActive={isMyManagerFilterActive}
-                canUseMyManagerFilter={Boolean(defaultManagerId)}
                 createdFrom={createdFrom}
                 createdTo={createdTo}
-                onRangeClick={(nextRange) => handleRangeClick(toRangeOption(nextRange))}
-                onSearchTermChange={setSearchTerm}
-                onStatusFilterChange={setStatusFilter}
-                onSourceFilterChange={(source) => setSourceFilter(toSourceFilterOption(source))}
-                onManagerFilterChange={setManagerFilter}
-                onToggleMyLeadsOnly={toggleMyLeadsOnly}
-                onCreatedFromChange={(date) => {
+                onRangeClickAction={(nextRange) => handleRangeClick(toRangeOption(nextRange))}
+                onSearchTermChangeAction={setSearchTerm}
+                onStatusFilterChangeAction={setStatusFilter}
+                onSourceFilterChangeAction={(source) => setSourceFilter(toSourceFilterOption(source))}
+                onManagerFilterChangeAction={setManagerFilter}
+                onCreatedFromChangeAction={(date) => {
                     setRange('전체');
                     setCreatedFrom(date);
                 }}
-                onCreatedToChange={(date) => {
+                onCreatedToChangeAction={(date) => {
                     setRange('전체');
                     setCreatedTo(date);
                 }}
@@ -1784,12 +1788,12 @@ export default function FranchiseLeadsPage() {
                     dueContactCount={dueContactCount}
                     overdueContactCount={overdueContactCount}
                     conversionRate={conversionRate}
-                    hotCount={candidateLeads.filter(lead => lead.grade === 'HOT').length}
                     statusFilter={statusFilter}
                     stageData={stageData}
                     sourceChartData={sourceChartData}
-                    trendData={trendData}
-                    onStatusFilterChange={setStatusFilter}
+                    managerChartData={managerChartData}
+                    trendSeriesData={trendSeriesData}
+                    onStatusFilterChangeAction={setStatusFilter}
                 />
             )}
 
@@ -1930,8 +1934,8 @@ export default function FranchiseLeadsPage() {
                                 <h2>{form.id ? '후보자 수정' : '후보자 등록'}</h2>
                                 <p>본사 모객 DB에 필요한 핵심 정보만 빠르게 기록합니다.</p>
                             </div>
-                            <button type="button" onClick={closeModal} className={styles.closeButton}>
-                                <X size={18} />
+                            <button type="button" onClick={closeModal} className={styles.closeButton} aria-label="후보자 등록 닫기">
+                                <X size={20} strokeWidth={2.2} />
                             </button>
                         </div>
 
@@ -1942,7 +1946,13 @@ export default function FranchiseLeadsPage() {
                             </label>
                             <label>
                                 연락처
-                                <input value={form.mobile} onChange={(event) => setForm(prev => ({ ...prev, mobile: event.target.value }))} placeholder="010-0000-0000" />
+                                <input
+                                    value={form.mobile}
+                                    onChange={(event) => setForm(prev => ({ ...prev, mobile: formatLeadPhoneInput(event.target.value) }))}
+                                    placeholder="010-0000-0000"
+                                    inputMode="numeric"
+                                    autoComplete="tel"
+                                />
                             </label>
                             <label>
                                 상태
@@ -1970,10 +1980,13 @@ export default function FranchiseLeadsPage() {
                                     ))}
                                 </select>
                             </label>
-                            <label>
-                                희망지역
-                                <input value={form.desiredRegion} onChange={(event) => setForm(prev => ({ ...prev, desiredRegion: event.target.value }))} placeholder="서울 강남구" />
-                            </label>
+                            <div className={styles.formField}>
+                                <span>희망지역</span>
+                                <LeadRegionMultiSelect
+                                    value={form.desiredRegion}
+                                    onChangeAction={(desiredRegion) => setForm(prev => ({ ...prev, desiredRegion }))}
+                                />
+                            </div>
                             <label>
                                 예산 최소(만원)
                                 <input value={form.budgetMin} onChange={(event) => setForm(prev => ({ ...prev, budgetMin: event.target.value }))} placeholder="10000" />
@@ -2021,8 +2034,8 @@ export default function FranchiseLeadsPage() {
                                 <h2>상담 이력 빠른 추가</h2>
                                 <p>{quickActivityLead.name} · {quickActivityLead.mobile || '연락처 미입력'} · 담당자 {getManagerName(quickActivityLead.managerId)}</p>
                             </div>
-                            <button type="button" onClick={closeQuickActivityModal} className={styles.closeButton}>
-                                <X size={18} />
+                            <button type="button" onClick={closeQuickActivityModal} className={styles.closeButton} aria-label="빠른 활동 기록 닫기">
+                                <X size={20} strokeWidth={2.2} />
                             </button>
                         </div>
                         <div className={styles.quickActivityBody}>
@@ -2064,7 +2077,7 @@ export default function FranchiseLeadsPage() {
                                 <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'} · 담당자 {getManagerName(selectedLead.managerId)}</p>
                             </div>
                             <button className={styles.closeButton} onClick={() => setSelectedLeadId('')} aria-label="상세 패널 닫기">
-                                <X size={18} />
+                                <X size={20} strokeWidth={2.2} />
                             </button>
                         </div>
 

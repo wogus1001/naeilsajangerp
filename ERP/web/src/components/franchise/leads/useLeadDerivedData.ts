@@ -16,7 +16,7 @@ import type {
     MetaIntegrationState
 } from './types';
 import {
-    buildTrendData,
+    buildTrendSeriesData,
     getLeadTaskRank,
     isRawIntakeLead
 } from './utils';
@@ -66,12 +66,12 @@ export function useLeadDerivedData({
         ...metaState.connections.map(connection => connection.lastSyncAt || connection.lastWebhookAt || ''),
         ...metaState.forms.map(form => form.lastSyncedAt || '')
     ].filter(Boolean).sort().at(-1) || null;
-    const trendData = buildTrendData(summary);
+    const trendSeriesData = buildTrendSeriesData(summary);
     const contractReadyCount = candidateLeads.filter(lead => lead.status === '계약예정' || lead.status === '계약완료').length;
     const conversionRate = candidateLeads.length > 0 ? Math.round((contractReadyCount / candidateLeads.length) * 1000) / 10 : 0;
     const activeFollowupLeads = candidateLeads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
     const workQueueSummary = getLeadWorkQueueSummary(activeFollowupLeads);
-    const dueContactCount = workQueueSummary.overdue + workQueueSummary.today;
+    const dueContactCount = workQueueSummary.today;
     const overdueContactCount = workQueueSummary.overdue;
     const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
@@ -124,7 +124,7 @@ export function useLeadDerivedData({
         metaEnabledForms,
         metaErrorCount,
         metaLastSyncAt,
-        trendData,
+        trendSeriesData,
         conversionRate,
         dueContactCount,
         overdueContactCount,

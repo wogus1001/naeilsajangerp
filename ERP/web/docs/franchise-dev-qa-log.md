@@ -110,6 +110,10 @@
 - 2026-06-11 `franchise-p0-lead-ingress-qa.mjs` 리뷰 개선을 반영했다. runId를 ms+UUID로 바꾸고, fixture를 OS 임시 폴더에 만들며, fetch 15초 timeout과 실패 경로 cleanup을 추가해 assertion 실패 시에도 생성 리드/fixture 정리를 시도한다.
 - 2026-06-11 `supabase_franchise_opening_projects_migration.sql` 적용 후 오픈 준비 프로젝트 API live QA를 통과했다. `admin` requester와 `오픈준비` location id로 생성, location scoped 조회, checklist 수정, 삭제, 삭제 후 404를 확인했다.
 - 2026-06-11 외부 상가 scale/raw runner를 live로 실행했다. `서울 광진구 화양동`, collect limit 3000, saved limit 2000에서 Daangn 원본 238건을 수집해 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, `registerToProperties=false` 기준 ERP `properties` 생성 0건을 확인했다.
+- 2026-06-11 모객 DB 화면 UI 정리를 진행했다. 상단 기간 필터를 `최근 7일/최근 30일/최근 3개월/전체`로 명확화하고, 필터 아이콘과 `내 담당만` 빠른 필터를 제거했으며, 등록일 기간에는 `~` 구분자를 추가했다.
+- 2026-06-11 모객 대시보드 그래프를 정리했다. `유입 경로` 색상을 정보성 teal 톤으로 조정하고, `일별/주별/월별 DB 유입` 전환 그래프와 `담당자별 모객` 그래프를 추가했다. 그래프 값은 직접 라벨로 노출하고 중복 y축 숫자는 숨겼다.
+- 2026-06-11 모바일 모객 DB 화면에서는 `Meta 연동`, `Meta 계정 연결`, `샘플 양식`, `엑셀 업로드` 보조 액션을 숨기고 `후보자 등록`만 노출한다. 모바일 파이프라인 단계 선택 카드는 숨겨 첫 화면 세로 점유를 줄였다.
+- 2026-06-11 후보자 등록 폼 데이터 품질 개선을 반영했다. 연락처는 입력 중 `01012345678 -> 010-1234-5678`로 자동 포맷되고, 희망지역은 시도/시군구 선택 후 여러 지역을 칩으로 추가하며 같은 지역 중복 추가는 차단한다. 저장 값은 기존 `desiredRegion` 문자열 필드에 쉼표 구분 문자열로 정규화한다.
 
 ## QA 결과
 
@@ -155,6 +159,10 @@
 - 2026-06-11 오픈 준비 프로젝트 API live QA 통과: `FRANCHISE_QA_REQUESTER_ID=admin FRANCHISE_QA_OPENING_LOCATION_ID=<오픈준비 location>`로 `scripts/franchise-opening-projects-api-qa.mjs` 실행, requester 없는 GET 401, POST 200, filtered GET 200, PUT 200, DELETE 200, 삭제 후 GET 404 확인
 - 2026-06-11 엑셀 유입 runner live QA 통과: `FRANCHISE_QA_REQUESTER_ID=admin node --env-file=.env.local scripts/franchise-p0-lead-ingress-qa.mjs --base-url http://localhost:3000 --cleanup` 실행, 실제 `.xlsx` fixture 1건 생성, `raw_intake` 저장, `candidate` 승격, cleanup 확인. Meta는 `BLOCKED_META_ENV` 유지
 - 2026-06-11 외부 상가 scale/raw runner live QA 통과: `FRANCHISE_QA_REQUESTER_ID=admin node --env-file=.env.local scripts/franchise-realty-scale-raw-qa.mjs --base-url http://localhost:3000 --region '서울 광진구 화양동' --saved-limit 2000 --collect-limit 3000 --live-collect` 실행, 원본 238건, 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, ERP `properties` 생성 0건 확인
+- 2026-06-11 후보자 등록 포맷/지역 정규화 유닛 테스트 통과: `npx tsc ... --outDir /tmp/franchise-lead-formatters-test ... && node --test /tmp/franchise-lead-formatters-test/leadFormFormatters.test.mjs` 결과 3건 통과
+- 2026-06-11 모객 DB UI/등록 폼 최종 검증 통과: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint`, `npm run build` 통과. `npm run lint`는 기존 경고 981개, 0 errors 상태다.
+- 2026-06-11 Playwright 모바일 QA 통과: 390px에서 보조 액션 4개는 실제 크기 0으로 숨겨지고 `후보자 등록`만 표시, 파이프라인 단계 카드 visible count 0, 가로 overflow 0, 후보자 등록 모달에서 연락처 자동 하이픈/지역 2개 칩 추가/중복 추가 비활성화를 확인했다.
+- 2026-06-11 Playwright 데스크톱 QA 통과: 1440px에서 `Meta 연동`, `Meta 계정 연결`, `샘플 양식`, `엑셀 업로드`, `후보자 등록` 버튼이 모두 표시되고 파이프라인 단계 카드 7개가 유지되며 가로 overflow 0을 확인했다.
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인

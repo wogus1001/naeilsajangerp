@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { Search, SlidersHorizontal, UserRound, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
@@ -15,18 +15,15 @@ type LeadToolbarProps = {
     readonly sourceOptions: readonly string[];
     readonly managerFilter: string;
     readonly managerOptions: ReactNode;
-    readonly isMyManagerFilterActive: boolean;
-    readonly canUseMyManagerFilter: boolean;
     readonly createdFrom: string;
     readonly createdTo: string;
-    readonly onRangeClick: (range: string) => void;
-    readonly onSearchTermChange: (term: string) => void;
-    readonly onStatusFilterChange: (status: '전체' | FranchiseLeadStatus) => void;
-    readonly onSourceFilterChange: (source: string) => void;
-    readonly onManagerFilterChange: (managerId: string) => void;
-    readonly onToggleMyLeadsOnly: () => void;
-    readonly onCreatedFromChange: (date: string) => void;
-    readonly onCreatedToChange: (date: string) => void;
+    readonly onRangeClickAction: (range: string) => void;
+    readonly onSearchTermChangeAction: (term: string) => void;
+    readonly onStatusFilterChangeAction: (status: '전체' | FranchiseLeadStatus) => void;
+    readonly onSourceFilterChangeAction: (source: string) => void;
+    readonly onManagerFilterChangeAction: (managerId: string) => void;
+    readonly onCreatedFromChangeAction: (date: string) => void;
+    readonly onCreatedToChangeAction: (date: string) => void;
 };
 
 function parseStatusFilter(value: string, statuses: readonly FranchiseLeadStatus[]) {
@@ -44,18 +41,15 @@ export function LeadToolbar({
     sourceOptions,
     managerFilter,
     managerOptions,
-    isMyManagerFilterActive,
-    canUseMyManagerFilter,
     createdFrom,
     createdTo,
-    onRangeClick,
-    onSearchTermChange,
-    onStatusFilterChange,
-    onSourceFilterChange,
-    onManagerFilterChange,
-    onToggleMyLeadsOnly,
-    onCreatedFromChange,
-    onCreatedToChange
+    onRangeClickAction,
+    onSearchTermChangeAction,
+    onStatusFilterChangeAction,
+    onSourceFilterChangeAction,
+    onManagerFilterChangeAction,
+    onCreatedFromChangeAction,
+    onCreatedToChangeAction
 }: LeadToolbarProps) {
     return (
         <section className={styles.toolbar}>
@@ -64,7 +58,7 @@ export function LeadToolbar({
                     <button
                         key={option}
                         className={range === option ? styles.rangeButtonActive : styles.rangeButton}
-                        onClick={() => onRangeClick(option)}
+                        onClick={() => onRangeClickAction(option)}
                     >
                         {option}
                     </button>
@@ -74,51 +68,46 @@ export function LeadToolbar({
                 <Search size={16} />
                 <input
                     value={searchTerm}
-                    onChange={(event) => onSearchTermChange(event.target.value)}
+                    onChange={(event) => onSearchTermChangeAction(event.target.value)}
                     placeholder="이름, 연락처, 브랜드, 지역, 메모 검색"
                 />
                 {searchTerm && (
-                    <button onClick={() => onSearchTermChange('')} aria-label="검색어 지우기">
+                    <button onClick={() => onSearchTermChangeAction('')} aria-label="검색어 지우기">
                         <X size={14} />
                     </button>
                 )}
             </div>
             <div className={styles.filterGroup}>
-                <SlidersHorizontal size={16} />
-                <select value={statusFilter} onChange={(event) => onStatusFilterChange(parseStatusFilter(event.target.value, statusOptions))}>
+                <select value={statusFilter} onChange={(event) => onStatusFilterChangeAction(parseStatusFilter(event.target.value, statusOptions))}>
                     <option value="전체">전체 상태</option>
                     {statusOptions.map(status => (
                         <option key={status} value={status}>{status}</option>
                     ))}
                 </select>
-                <select value={sourceFilter} onChange={(event) => onSourceFilterChange(event.target.value)}>
+                <select value={sourceFilter} onChange={(event) => onSourceFilterChangeAction(event.target.value)}>
                     {sourceOptions.map(source => (
                         <option key={source} value={source}>{source === '전체' ? '전체 유입' : source}</option>
                     ))}
                 </select>
-                <select value={managerFilter} onChange={(event) => onManagerFilterChange(event.target.value)}>
+                <select value={managerFilter} onChange={(event) => onManagerFilterChangeAction(event.target.value)}>
                     <option value="전체">전체 담당자</option>
                     {managerOptions}
                 </select>
-                <button
-                    type="button"
-                    className={isMyManagerFilterActive ? styles.quickFilterButtonActive : styles.quickFilterButton}
-                    onClick={onToggleMyLeadsOnly}
-                    disabled={!canUseMyManagerFilter}
-                >
-                    <UserRound size={14} />
-                    내 담당만
-                </button>
-                <input
-                    type="date"
-                    value={createdFrom}
-                    onChange={(event) => onCreatedFromChange(event.target.value)}
-                />
-                <input
-                    type="date"
-                    value={createdTo}
-                    onChange={(event) => onCreatedToChange(event.target.value)}
-                />
+                <div className={styles.dateRangeGroup} aria-label="등록일 기간">
+                    <input
+                        type="date"
+                        value={createdFrom}
+                        onChange={(event) => onCreatedFromChangeAction(event.target.value)}
+                        aria-label="등록 시작일"
+                    />
+                    <span aria-hidden="true">~</span>
+                    <input
+                        type="date"
+                        value={createdTo}
+                        onChange={(event) => onCreatedToChangeAction(event.target.value)}
+                        aria-label="등록 종료일"
+                    />
+                </div>
             </div>
         </section>
     );
