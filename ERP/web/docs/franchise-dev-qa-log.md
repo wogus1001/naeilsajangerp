@@ -87,6 +87,14 @@
 - 2026-06-11 외부 상가 승격 재호출은 `action='existing'`으로 같은 `propertyId`를 반환해 중복 ERP 물건지를 만들지 않음을 확인했다.
 - 2026-06-11 외부 상가 저장 목록 시각 QA에서 승격 열 추가 후 가격/반응 열이 좁아져 글자가 세로로 쪼개지는 문제를 발견하고, 테이블 최소 폭과 핵심 열 너비를 보정했다.
 - 2026-06-11 시각 QA 재확인: 데스크톱 저장 상가 표의 가격/저장일/세부/승격 열은 정상 폭으로 표시된다. 모바일 폭에서는 기존 앱의 고정 사이드바/데스크톱형 레이아웃 때문에 전체 페이지 가로 스크롤이 남아 있어 별도 모바일 레이아웃 과제로 분리한다.
+- 2026-06-11 안정화 QA에서 `연락 완료` 저장 흐름을 API/DB 기준으로 재검증했다. `lastContactedAt` 저장, `nextContactAt=null`, `consultationResult='연락 성공'`, `nextAction='미정'`이 유지되고 업무 큐의 무응답/오늘/지연 조건에서 빠지는 것을 확인했다.
+- 2026-06-11 후보자 상세의 출점 후보지 연결 상태/메모 저장을 재검증했다. QA 출점 후보지를 연결한 뒤 상태를 `우선검토`, 메모를 `QA 상태 변경 저장`으로 바꾸고 GET reload에서도 그대로 유지됐다.
+- 2026-06-11 기존 단계값이 없는 legacy 모객 DB는 `leadStage='candidate'`로 정규화되어 후보자 레이어에 남는 것을 확인했다.
+- 2026-06-11 `manual-promoted` 외부 상가 승격 물건지가 점포목록의 외부수집 필터/배지에서 빠지는 문제를 발견했다. `src/lib/property-external-status.ts` 헬퍼와 테스트를 추가하고 `/properties` 목록 필터가 `manual-promoted`를 외부수집으로 인식하도록 수정했다.
+- 2026-06-11 외부 상가 수집 scale QA를 진행했다. `서울 마포구 합정동`, limit 5는 기존 저장 행 5건 업데이트로 처리됐고, 같은 조건 재수집도 5건 업데이트로 중복 생성 없이 동작했다.
+- 2026-06-11 `서울 광진구`, limit 8 구 단위 수집은 화양동/자양동/구의동/광장동/군자동/중곡동/능동 확장 warning 9건을 반환했고, 기존 저장 행 8건 업데이트로 처리됐다. `registerToProperties: true` 요청은 400으로 차단됐으며 수집 전후 ERP `properties` 수 변화는 0건이었다.
+- 2026-06-11 Playwright 로그인 세션에서 `/properties` 외부수집 필터를 클릭해 `manual-promoted` 외부 물건지가 1건 표시되고 배지가 유지되는 것을 확인했다. 새 콘솔 error는 0건이었다.
+- 2026-06-11 안정화 QA용으로 만든 리드 3건, 출점 후보지 1건, 수동 QA 외부 원본 1건, 승격 물건지 1건, import job 3건은 검증 후 삭제했다. QA run id는 `QA_STAB_1781140739040`이다.
 
 ## QA 결과
 
@@ -118,6 +126,10 @@
 - 2026-06-11 후보지 연결 중복 방지 및 외부 상가 선택 승격 최종 검증으로 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, 관련 `tsx --test`, `npm run build`, `git diff --check` 통과
 - 2026-06-11 Playwright 브라우저에서 모객 DB P0 로그인 QA 통과: `1차 유입 DB -> 후보자` 승격, 업무 큐 필터별 목록/숫자 일치, 후보자 상세 업무 필드 저장/새로고침 유지, 출점 후보지/외부 상가 DB 연결/메모/삭제/중복 방지 확인
 - 2026-06-11 Playwright/API로 외부 상가 P1 QA 통과: Daangn 화양동 상가 수집, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단, 선택 외부 상가 ERP 물건지 승격/새로고침 유지/재호출 existing 확인
+- 2026-06-11 안정화 API/DB QA 통과: `연락 완료` 필드 저장/업무 큐 조건 해제, 후보지 연결 상태/메모 reload 유지, no-stage legacy 리드 후보자 정규화, 수동 승격 물건지 상세/검색 표시, 합정동 재수집 update, 광진구 구 단위 확장 warning, `registerToProperties` 차단, 수집 전후 `properties` 자동 생성 0건 확인
+- 2026-06-11 `/properties` 외부수집 필터 Playwright QA 통과: 로그인 세션에서 필터 클릭 후 외부 물건지 1건 표시, `외부수집` 배지 유지, 새 console error 0건
+- 2026-06-11 안정화 테스트 통과: `npx tsx --test src/lib/property-external-status.test.mts src/lib/franchise-lead-workflow.test.mts src/lib/franchise-lead-location-links.test.mts src/lib/realty-listing-promotion.test.mts src/lib/realty-import-schema.test.mts src/components/franchise/realty-import/scoring.test.mts src/components/franchise/realty-import/utils.test.mts src/components/franchise/realty-import/map-utils.test.mts` 결과 31건 통과
+- 2026-06-11 안정화 최종 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
@@ -138,14 +150,14 @@
 - SearchAPI 현재 키는 `monthly_allowance=0`, `remaining_credits=-3` 상태라 Naver 신규 수집이 429로 차단된다.
 - SearchAPI 한도 초과 상태에서 기존 Naver 성공 값이 덮어쓰기되는 문제는 P0로 남아 있다.
 - Playwright MCP 스크린샷 확인은 Chrome 프로필 잠금 이슈로 완료하지 못한 이력이 있다.
-- 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. 남은 것은 `연락 완료` 버튼과 여러 권한/회사 계정별 회귀 QA다.
+- 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. `연락 완료` 저장 흐름도 API/DB 기준으로 재검증했다. 남은 것은 실제 Meta/엑셀 파일 유입과 여러 권한/회사 계정별 회귀 QA다.
 - `/dashboard/franchise-leads/market-insights?tab=realty-import` 모바일 폭은 기존 사이드바 레이아웃 제약 때문에 전체 화면이 데스크톱 기준으로 흐른다. 저장 상가 표 자체는 가로 스크롤 전제로 동작하지만, 모바일 전용 레이아웃은 별도 과제다.
 - 이번 Docs Steward 감사에서는 새 브라우저/빌드 QA를 실행하지 않았고, 문서와 코드 검색 기준으로 최신성만 확인했다.
-- 외부 상가 수집은 2026-06-11에 `서울 광진구 화양동` 실수집 QA를 완료했다. `합정동`, 구 단위 동 확장 대량 수집, 회사 범위 없는 계정 QA는 남아 있다.
+- 외부 상가 수집은 2026-06-11에 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 QA를 완료했다. 회사 범위 없는 계정과 실제 2000/3000 상한 근접 수집 QA는 남아 있다.
 - 네이버부동산 POC는 지역 코드 조회는 가능해도 목록 응답이 빈 값일 수 있어 운영 데이터 소스로 확정하지 않았다.
 - 네이버부동산 보조 POC의 `clusterList -> articleList` 흐름은 빈 응답/429 가능성이 있어 현재 MVP QA에서 분리하고, 향후 과제 트랙에서 반복 QA한다.
 - 네이버부동산은 향후 과제로 이관했으므로 현재 외부 상가 수집 MVP의 차단 이슈로 보지 않는다.
-- API에는 `registerToProperties` 분기가 남아 있으므로 현재 UI의 `false` 기본값과 운영 정책상 자동 등록 금지가 유지되는지 회귀 QA가 필요하다.
+- API에는 `registerToProperties` 분기가 남아 있지만 2026-06-11 안정화 QA에서 400 차단과 자동 등록 0건을 재확인했다. 향후 import API 변경 시 회귀 QA 항목으로 유지한다.
 - `salesType=store` 적용은 2026-06-11 화양동 실데이터 QA에서 원본 237건 중 상가 237건 응답과 limit 20 저장으로 확인했다.
 - 주소 중심 결과 표가 실제 로그인 화면에서 가격/면적/층/관리비/승인일/등록일/반응수/사진 수/설명 일부/원문 링크를 기대대로 보여주는지 확인이 필요하다.
 - `external_property_listings.raw/data` 저장은 2026-06-11 선택 승격 QA에서 QA 원본의 raw/data와 승격 메타데이터 보존으로 확인했다. 실제 Daangn 원본 raw 상세 샘플 감사는 추가로 남아 있다.
@@ -186,10 +198,7 @@
 ### P0
 
 - Meta 실제 유입, 엑셀 업로드 파일 기준으로 `1차 유입 DB` 저장과 후보자 승격 회귀 QA
-- 기존 단계값 없는 모객 DB가 후보자 레이어에 유지되는지 확인
-- `연락 완료` 처리 시 다음 연락일이 비워지고 상담 결과가 `연락 성공`으로 저장되는지 확인
-- 후보자 상세 후보지 연결 상태 변경 저장 회귀 QA
-- 같은 출점 후보지 또는 외부 상가를 여러 후보자에게는 연결할 수 있고, 같은 후보자 안에서는 동일 대상이 중복 저장되지 않는지 회귀 QA
+- 여러 권한/회사 계정 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
 
 ### P1
@@ -199,23 +208,19 @@
 - SearchAPI 유료 결제 후 경쟁스캔 재실행 시 외부 provider 호출 남발을 막는지 확인
 - 기존 스캔 캐시가 있을 때 상세 모달이 정상 렌더링되는지 확인
 - `supabase_realty_import_migration.sql` 적용 후 `/dashboard/franchise-leads/market-insights?tab=realty-import`의 `외부 상가 수집` 탭에서 당근 상가 수집을 확인
-- `합정동`, `광진구` 구 단위 대량 수집에서 동 단위 확장 warning과 저장량을 확인
-- 시도/시군구 선택으로 `서울특별시 / 광진구` 수집이 실행되는지 확인
-- 선택한 시군구가 당근 동 단위 확장 warning으로 표시되는지 확인
-- 같은 `source + listingId` 재수집 시 `external_property_listings`가 신규 생성이 아니라 업데이트되는지 확인
+- 실제 2000/3000 상한에 가까운 수집 요청에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 확인
 - 회사 범위가 없는 계정에서도 `requester_id` 기준으로 저장 목록이 조회되는지 확인
 - 하단 `저장된 상가` 목록, 저장 지역 칩, 동 카드, 동 내부 페이지네이션, 최신화 버튼이 동작하고, 최신화 시 기존 매물이 중복 표시되지 않는지 확인
-- 화면 2000건 수집 요청, import API 3000건 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 확인
 - 저장일 컬럼과 별표 토글이 동작하고, 재수집 후에도 별표가 유지되는지 확인
 - 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 정렬이 저장 지역 칩과 동 카드 페이지네이션을 깨지 않는지 확인
 - 동 카드 안의 저장 상가 지도 패널이 로그인 세션에서 Kakao 지도 도메인 설정, 주소 지오코딩, 마커 선택, 표의 지도 번호/주소 클릭 선택, 원문 링크를 정상 처리하는지 확인
 - 기존 물건지와 주소가 같은 외부 매물이 `duplicate_candidate`로 표시되는지 확인
-- 외부 수집 결과가 점포목록에 자동 등록되지 않는지 확인
+- import API 변경 후에도 외부 수집 결과가 점포목록에 자동 등록되지 않는지 회귀 확인
 - `external_property_listings`에 원본 raw/data가 저장되는지 확인
-- 선택 외부 상가 승격 후 실제 점포목록 상세/검색에서 `operation_type=external`, `manual-promoted` 물건지가 운영 화면에 맞게 표시되는지 확인
+- 선택 외부 상가 승격 후 운영 화면에서 `operation_type=external`, `manual-promoted` 물건지가 운영 워크플로에 맞게 표시되는지 확인
 - 결과 표가 주소 중심으로 표시되고, 저장일/별표/가격/세부/반응/승격/원문 링크가 깨지지 않는지 회귀 확인
 - 네이버부동산 향후 트랙은 URL/CSV import부터 별도 POC로 검증하고, 현재 당근 상가 수집 QA와 분리
-- API `registerToProperties` 분기가 실수로 켜지지 않는지 확인
+- API `registerToProperties` 분기가 실수로 켜지지 않는지 향후 변경 때마다 회귀 확인
 - 실제 로그인 계정에서 출점 후보지 등록 -> 브랜드 선택 -> 주소 선택 -> 경쟁스캔 -> 상세 모달 확인
 - 가맹 운영 화면에서도 같은 `LocationCompetitionPanel`이 깨지지 않는지 확인
 - 정보공개서 브랜드 검색이 공식 API 지연/실패 시 로컬 캐시로 fallback 되는지 확인

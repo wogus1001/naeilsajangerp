@@ -175,6 +175,7 @@ npm run build
   - P1: 2026-06-11 `서울 광진구 화양동` 실수집 QA 완료. 원본 237건 중 20건 저장, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단 확인. 남은 QA는 `합정동`/`광진구` 구 단위 대량 수집, 회사 범위 없는 계정, 점포목록 상세/운영 화면 회귀.
   - 2026-06-10 결정: 외부 상가 수집은 Daangn 저장/지도/점수화 MVP까지 우선 마감하고, 다음 신규 개발은 모객 DB 업무 큐 강화 후 점포·상권 매칭으로 진행한다. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 1~3순위를 묶어서 진행한다.
   - 2026-06-11 완료: 저장 외부 상가 행에서 `물건지 등록`을 눌러 선택 승격하는 1차 흐름 추가. `/api/realty/listings/promote`가 ERP `properties.operation_type='external'`, `data.externalImportMode='manual-promoted'` 물건지를 만들고, 원본 행은 `status='promoted'`, `property_id`로 연결한다. 재호출은 `existing`으로 같은 물건지를 반환.
+  - 2026-06-11 안정화 완료: P0 `연락 완료`, 기존 단계값 없는 리드, 후보지 연결 상태/메모 reload를 API/DB로 재검증했다. `manual-promoted` 물건지가 `/properties` 상세/검색/외부수집 필터와 배지에 포함되도록 수정했다. 합정동 재수집과 광진구 구 단위 확장 수집은 기존 외부 원본 업데이트로 통과했고, `registerToProperties` 차단 및 ERP `properties` 자동 생성 0건을 재확인했다.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.

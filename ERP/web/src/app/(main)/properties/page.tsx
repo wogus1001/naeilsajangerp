@@ -13,6 +13,7 @@ import PropertyUploadModal from '@/components/properties/PropertyUploadModal';
 import ViewModeSwitcher, { ViewMode } from '@/components/properties/ViewModeSwitcher';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { isExternalCollectedProperty } from '@/lib/property-external-status';
 import { parseSearchTerms } from '@/utils/search';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
@@ -170,15 +171,6 @@ function PropertiesPageContent() {
     const searchTerms = useMemo(() => parseSearchTerms(searchTerm), [searchTerm]);
     const isSearchActive = searchTerms.length > 0;
     const sourceProperties = isSearchActive ? (searchProperties ?? properties) : properties;
-    const isExternalCollectedProperty = React.useCallback((property: any) => {
-        const processStatus = String(property?.processStatus || '');
-        return processStatus.includes('외부수집')
-            || Boolean(property?.externalSource)
-            || Boolean(property?.externalListingId)
-            || property?.externalImportMode === 'auto-created'
-            || property?.externalImportMode === 'auto-updated';
-    }, []);
-
     // UI Refs
     const filterContainerRef = React.useRef<HTMLDivElement>(null);
     const toolbarFilterRef = React.useRef<HTMLDivElement>(null);
