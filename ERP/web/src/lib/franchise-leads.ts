@@ -34,7 +34,7 @@ export const FRANCHISE_LEAD_GRADES = [
 export type FranchiseLeadGrade = typeof FRANCHISE_LEAD_GRADES[number];
 
 export const FRANCHISE_LEAD_GRADE_LABELS: Record<FranchiseLeadGrade, string> = {
-    HOT: '즉시상담',
+    HOT: '중요',
     WARM: '관심확인',
     COLD: '장기관리'
 } as const;
@@ -45,7 +45,7 @@ export type FranchiseLeadStage = typeof FRANCHISE_LEAD_STAGES[number];
 
 export const FRANCHISE_LEAD_STAGE_LABELS: Record<FranchiseLeadStage, string> = {
     raw_intake: '1차 유입 DB',
-    candidate: '후보자'
+    candidate: '가맹 희망자'
 } as const;
 
 export function normalizeLeadPhone(value: unknown): string {
@@ -70,7 +70,7 @@ export function normalizeLeadStatus(value: unknown): FranchiseLeadStatus {
 export function normalizeLeadGrade(value: unknown): string {
     const raw = String(value || '').trim().toUpperCase();
     if (!raw) return '';
-    if (raw.includes('HOT') || raw.includes('즉시') || raw.includes('긴급') || raw.includes('우선') || raw.includes('상')) return 'HOT';
+    if (raw.includes('HOT') || raw.includes('중요') || raw.includes('핵심') || raw.includes('즉시') || raw.includes('긴급') || raw.includes('우선') || raw.includes('상')) return 'HOT';
     if (raw.includes('WARM') || raw.includes('관심') || raw.includes('확인') || raw.includes('중')) return 'WARM';
     if (raw.includes('COLD') || raw.includes('장기') || raw.includes('낮') || raw.includes('하')) return 'COLD';
     return raw;

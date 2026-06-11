@@ -86,7 +86,7 @@ export function LeadDashboard({
                     <small>의사 확인 전 원천 DB</small>
                 </article>
                 <article className={styles.kpiCard}>
-                    <span>후보자</span>
+                    <span>가맹 희망자</span>
                     <strong>{candidateCount.toLocaleString()}</strong>
                     <small>파이프라인 관리 대상</small>
                 </article>
@@ -117,7 +117,7 @@ export function LeadDashboard({
                     <div className={styles.panelHeader}>
                         <div>
                             <h2>모객 파이프라인</h2>
-                            <p>상태별 후보자 분포와 병목 구간을 확인합니다.</p>
+                            <p>상태별 가맹 희망자 분포와 병목 구간을 확인합니다.</p>
                         </div>
                         {statusFilter !== '전체' && (
                             <button className={styles.clearStageButton} onClick={() => onStatusFilterChangeAction('전체')}>
@@ -219,7 +219,7 @@ export function LeadDashboard({
                     <div className={styles.panelHeader}>
                         <div>
                             <h2>담당자별 모객</h2>
-                            <p>직원별 후보자 담당 수</p>
+                            <p>직원별 가맹 희망자 담당 수</p>
                         </div>
                     </div>
                     <div className={styles.chartBoxSmall}>

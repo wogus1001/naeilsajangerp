@@ -65,5 +65,5 @@ export const WORK_QUEUE_OPTIONS: ReadonlyArray<{ readonly key: LeadWorkQueueKey;
 
 export const LEAD_DB_LAYER_OPTIONS: ReadonlyArray<{ readonly key: LeadDbLayer; readonly label: string; readonly description: string }> = [
     { key: 'raw_intake', label: '1차 유입 DB', description: 'Meta/엑셀 등에서 들어온 원천 DB' },
-    { key: 'candidate', label: '후보자', description: '의사가 확인되어 파이프라인에서 관리할 DB' }
+    { key: 'candidate', label: '가맹 희망자', description: '가맹 의사가 확인되어 관리할 DB' }
 ];

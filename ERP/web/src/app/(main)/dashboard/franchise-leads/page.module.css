@@ -2960,7 +2960,6 @@
 .tableMeta {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
     color: #64748b;
     border: 1px solid #e5e7eb;
     background: #f8fafc;
@@ -2968,6 +2967,22 @@
     padding: 7px 10px;
     font-size: 12px;
     font-weight: 800;
+}
+
+.tableControls {
+    display: grid;
+    gap: 10px;
+    padding: 12px 18px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.tableControlRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .pageSizeControl {
@@ -2983,11 +2998,132 @@
     height: 34px;
     border: 1px solid #d8dee8;
     border-radius: 10px;
-    background: #ffffff;
+    appearance: none;
+    background:
+        url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center,
+        #ffffff;
     color: #334155;
-    padding: 0 9px;
+    min-width: 78px;
+    padding: 0 34px 0 12px;
     font-size: 12px;
     font-weight: 850;
+}
+
+.columnPicker {
+    position: relative;
+}
+
+.columnPicker summary {
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    padding: 0 12px 0 13px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+    list-style: none;
+}
+
+.columnPicker summary::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    background: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+.columnPicker summary::-webkit-details-marker {
+    display: none;
+}
+
+.columnPickerPanel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 10;
+    width: 180px;
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.columnPickerPanel label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.columnPickerPanel input {
+    width: 15px;
+    height: 15px;
+    accent-color: #3182f6;
+}
+
+.tableFilterBar {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.7fr) minmax(180px, 1fr) repeat(2, minmax(132px, 0.6fr)) auto;
+    gap: 8px;
+    align-items: end;
+}
+
+.tableFilterBar label {
+    display: grid;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.tableFilterBar input,
+.tableFilterBar select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid #d8dee8;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #191f28;
+    padding: 0 11px;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.tableFilterBar select {
+    appearance: none;
+    background:
+        url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center,
+        #ffffff;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+.filterResetButton {
+    height: 38px;
+    border: 1px solid #d8dee8;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #4e5968;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.filterResetButton:disabled {
+    color: #b0b8c1;
+    background: #f9fafb;
+    cursor: not-allowed;
 }
 
 .tableHeaderActions {
@@ -3040,8 +3176,7 @@
 }
 
 .leadTable {
-    width: 100%;
-    min-width: 1710px;
+    min-width: 1280px;
     border-collapse: separate;
     border-spacing: 0;
     table-layout: fixed;
@@ -3051,40 +3186,44 @@
     width: 44px;
 }
 
+.colPriority {
+    width: 64px;
+}
+
 .colCandidate {
-    width: 140px;
+    width: 160px;
 }
 
 .colPhone {
-    width: 132px;
-}
-
-.colStatus {
-    width: 128px;
-}
-
-.colManager {
     width: 142px;
 }
 
+.colStatus {
+    width: 136px;
+}
+
+.colManager {
+    width: 152px;
+}
+
 .colSource {
-    width: 98px;
+    width: 108px;
 }
 
 .colRegion {
-    width: 124px;
+    width: 150px;
 }
 
 .colBudget {
-    width: 176px;
+    width: 184px;
 }
 
 .colBrand {
-    width: 124px;
+    width: 132px;
 }
 
 .colNextContact {
-    width: 132px;
+    width: 142px;
 }
 
 .colMemo {
@@ -3121,22 +3260,8 @@
     vertical-align: middle;
 }
 
-.leadTable th:nth-child(3),
-.leadTable th:nth-child(4),
-.leadTable th:nth-child(5),
-.leadTable th:nth-child(8),
-.leadTable th:nth-child(9),
-.leadTable th:nth-child(10),
-.leadTable th:nth-child(12),
-.leadTable th:nth-child(13),
-.leadTable td:nth-child(3),
-.leadTable td:nth-child(4),
-.leadTable td:nth-child(5),
-.leadTable td:nth-child(8),
-.leadTable td:nth-child(9),
-.leadTable td:nth-child(10),
-.leadTable td:nth-child(12),
-.leadTable td:nth-child(13) {
+.leadTable th,
+.leadTable td {
     white-space: nowrap;
 }
 
@@ -3147,7 +3272,7 @@
 .paginationBar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 12px;
     padding: 12px 18px;
     border-top: 1px solid #e5e7eb;
@@ -3164,11 +3289,19 @@
 }
 
 .paginationControls strong {
-    min-width: 68px;
+    min-width: 132px;
     color: #0f172a;
     text-align: center;
     font-size: 12px;
     font-weight: 900;
+}
+
+.paginationControls strong span {
+    display: block;
+    margin-bottom: 2px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 750;
 }
 
 .paginationButton {
@@ -3201,6 +3334,38 @@
     height: 16px;
     accent-color: #0f172a;
     cursor: pointer;
+}
+
+.priorityCell {
+    text-align: center;
+}
+
+.priorityButton,
+.priorityButtonActive {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d8dee8;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #8b95a1;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.priorityButton:hover,
+.priorityButtonActive {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #fe9800;
+}
+
+.priorityButton:focus-visible,
+.priorityButtonActive:focus-visible {
+    outline: 2px solid rgba(49, 130, 246, 0.28);
+    outline-offset: 2px;
 }
 
 .bulkBar {
@@ -3256,6 +3421,7 @@
     text-align: left;
     cursor: pointer;
     color: #0f172a;
+    white-space: normal;
 }
 
 .nameButton strong {
@@ -3315,14 +3481,63 @@
     height: 32px;
     border: 1px solid #d8dee8;
     border-radius: 9px;
-    background: white;
-    color: #334155;
+    appearance: none;
+    background:
+        url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center,
+        #ffffff;
+    color: transparent;
+    padding: 0 32px;
     font-size: 12px;
     font-weight: 750;
+    text-align: center;
+    text-align-last: center;
+}
+
+.statusSelect option,
+.managerSelect option {
+    color: #334155;
 }
 
 .managerSelect {
     max-width: 126px;
+}
+
+.selectCell {
+    text-align: center;
+}
+
+.centerColumnHeader {
+    text-align: center !important;
+}
+
+.tableSelectWrap {
+    position: relative;
+    display: inline-flex;
+    width: 100%;
+    max-width: 116px;
+    height: 34px;
+}
+
+.managerSelectWrap {
+    max-width: 126px;
+}
+
+.tableSelectWrap select {
+    max-width: none;
+}
+
+.tableSelectValue {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 32px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 750;
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .memoCell {
@@ -7078,7 +7293,19 @@
 }
 
 .leadTable {
-    min-width: 1640px;
+    min-width: 1280px;
+}
+
+.tableControls {
+    padding: 12px 14px;
+}
+
+.tableControlRow {
+    justify-content: flex-start;
+}
+
+.tableFilterBar {
+    grid-template-columns: minmax(150px, 0.7fr) minmax(160px, 1fr) repeat(2, minmax(120px, 0.6fr)) auto;
 }
 
 .leadTable th {
@@ -7342,6 +7569,30 @@
 
     .filterGroup>svg {
         display: none;
+    }
+
+    .tableControlRow {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .pageSizeControl,
+    .pageSizeControl select,
+    .columnPicker summary,
+    .tableMeta,
+    .filterResetButton {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .columnPickerPanel {
+        left: 0;
+        right: auto;
+        width: 100%;
+    }
+
+    .tableFilterBar {
+        grid-template-columns: 1fr;
     }
 
     .kpiGrid {

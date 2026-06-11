@@ -1,6 +1,5 @@
 "use client";
 
-import { LayoutDashboard, Table2 } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
 export type LeadWorkspaceTab = 'dashboard' | 'db';
@@ -18,7 +17,6 @@ export function LeadWorkspaceTabs({ activeTab, onTabChange }: LeadWorkspaceTabsP
                 className={activeTab === 'dashboard' ? styles.workspaceTabActive : styles.workspaceTab}
                 onClick={() => onTabChange('dashboard')}
             >
-                <LayoutDashboard size={15} />
                 대시보드
             </button>
             <button
@@ -26,7 +24,6 @@ export function LeadWorkspaceTabs({ activeTab, onTabChange }: LeadWorkspaceTabsP
                 className={activeTab === 'db' ? styles.workspaceTabActive : styles.workspaceTab}
                 onClick={() => onTabChange('db')}
             >
-                <Table2 size={15} />
                 DB 관리
             </button>
         </nav>

@@ -26,7 +26,7 @@ export function LeadTableBulkActions({
         <div className={styles.bulkBar}>
             <div>
                 <strong>{selectedCount.toLocaleString()}건 선택</strong>
-                <span>선택한 후보자의 다음 연락일을 한 번에 지정합니다.</span>
+                <span>선택한 가맹 희망자의 다음 연락일을 한 번에 지정합니다.</span>
             </div>
             <input
                 type="datetime-local"

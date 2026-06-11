@@ -9,12 +9,14 @@ import {
 
 test('normalizeLeadGrade accepts task-oriented Korean priority labels', () => {
     assert.equal(normalizeLeadGrade('즉시상담'), 'HOT');
+    assert.equal(normalizeLeadGrade('핵심'), 'HOT');
+    assert.equal(normalizeLeadGrade('중요'), 'HOT');
     assert.equal(normalizeLeadGrade('관심확인'), 'WARM');
     assert.equal(normalizeLeadGrade('장기관리'), 'COLD');
 });
 
 test('getFranchiseLeadGradeLabel hides ambiguous English grade codes in UI labels', () => {
-    assert.equal(getFranchiseLeadGradeLabel('HOT'), '즉시상담');
+    assert.equal(getFranchiseLeadGradeLabel('HOT'), '중요');
     assert.equal(getFranchiseLeadGradeLabel('WARM'), '관심확인');
     assert.equal(getFranchiseLeadGradeLabel('COLD'), '장기관리');
     assert.equal(getFranchiseLeadGradeLabel('VIP'), 'VIP');

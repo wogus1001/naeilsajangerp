@@ -4,7 +4,6 @@ import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
 type LeadTablePaginationProps = {
     readonly visibleLeadCount: number;
-    readonly pageRangeText: string;
     readonly safeCurrentPage: number;
     readonly totalPages: number;
     readonly onPreviousPage: () => void;
@@ -13,7 +12,6 @@ type LeadTablePaginationProps = {
 
 export function LeadTablePagination({
     visibleLeadCount,
-    pageRangeText,
     safeCurrentPage,
     totalPages,
     onPreviousPage,
@@ -23,7 +21,6 @@ export function LeadTablePagination({
 
     return (
         <div className={styles.paginationBar}>
-            <span>{pageRangeText}</span>
             <div className={styles.paginationControls}>
                 <button
                     type="button"
@@ -33,7 +30,10 @@ export function LeadTablePagination({
                 >
                     이전
                 </button>
-                <strong>{safeCurrentPage.toLocaleString()} / {totalPages.toLocaleString()}</strong>
+                <strong>
+                    <span>총 {visibleLeadCount.toLocaleString()}건</span>
+                    {safeCurrentPage.toLocaleString()} / {totalPages.toLocaleString()}
+                </strong>
                 <button
                     type="button"
                     className={styles.paginationButton}

@@ -114,6 +114,8 @@
 - 2026-06-11 모객 대시보드 그래프를 정리했다. `유입 경로` 색상을 정보성 teal 톤으로 조정하고, `일별/주별/월별 DB 유입` 전환 그래프와 `담당자별 모객` 그래프를 추가했다. 그래프 값은 직접 라벨로 노출하고 중복 y축 숫자는 숨겼다.
 - 2026-06-11 모바일 모객 DB 화면에서는 `Meta 연동`, `Meta 계정 연결`, `샘플 양식`, `엑셀 업로드` 보조 액션을 숨기고 `후보자 등록`만 노출한다. 모바일 파이프라인 단계 선택 카드는 숨겨 첫 화면 세로 점유를 줄였다.
 - 2026-06-11 후보자 등록 폼 데이터 품질 개선을 반영했다. 연락처는 입력 중 `01012345678 -> 010-1234-5678`로 자동 포맷되고, 희망지역은 시도/시군구 선택 후 여러 지역을 칩으로 추가하며 같은 지역 중복 추가는 차단한다. 저장 값은 기존 `desiredRegion` 문자열 필드에 쉼표 구분 문자열로 정규화한다.
+- 2026-06-11 모객 DB의 `DB 관리` 영역을 `LeadDbWorkspace`와 테이블 전용 설정/필터 유틸로 분리했다. 화면에서는 `표시 컬럼 N개`, 지역 OR 검색, 예산 범위 필터, 등록순/예산순/`중요 희망자만 보기` 정렬, 페이지당 표시 수, 가운데 페이지네이션을 제공한다.
+- 2026-06-11 테이블의 핵심 고객 표현은 `중요`로 정리했다. 별표 토글은 `franchise_leads.grade`를 `HOT`/`WARM`으로 전환하며, 기존 `핵심` 값은 데이터 호환용 normalize만 유지하고 화면 문구에서는 노출하지 않는다.
 
 ## QA 결과
 
@@ -163,6 +165,9 @@
 - 2026-06-11 모객 DB UI/등록 폼 최종 검증 통과: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint`, `npm run build` 통과. `npm run lint`는 기존 경고 981개, 0 errors 상태다.
 - 2026-06-11 Playwright 모바일 QA 통과: 390px에서 보조 액션 4개는 실제 크기 0으로 숨겨지고 `후보자 등록`만 표시, 파이프라인 단계 카드 visible count 0, 가로 overflow 0, 후보자 등록 모달에서 연락처 자동 하이픈/지역 2개 칩 추가/중복 추가 비활성화를 확인했다.
 - 2026-06-11 Playwright 데스크톱 QA 통과: 1440px에서 `Meta 연동`, `Meta 계정 연결`, `샘플 양식`, `엑셀 업로드`, `후보자 등록` 버튼이 모두 표시되고 파이프라인 단계 카드 7개가 유지되며 가로 overflow 0을 확인했다.
+- 2026-06-11 모객 DB 테이블 유닛 테스트 통과: `leadTableConfig.test.mts`, `leadTableFilters.test.mts`, `franchise-leads.test.mts`를 컴파일 후 Node test로 실행해 총 11건 통과. 지역 필터는 `송파, 제주` 같은 쉼표 입력을 OR 조건으로 처리하고, 예산 필터는 희망 최소/최대 예산의 겹침 기준으로 동작한다.
+- 2026-06-11 모객 DB 테이블 최종 검증 통과: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
+- 2026-06-11 Playwright 데스크톱 DB 관리 QA 통과: `중요 희망자만 보기` 선택 시 7건만 표시되고 모든 행이 `중요 표시 해제` 상태였으며, 화면에서 `핵심` 문구가 보이지 않음을 확인했다. `송파, 제주` 지역 검색은 3건을 반환했고, 예산 높은순 정렬과 별표 off/on persistence도 확인했다.
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인

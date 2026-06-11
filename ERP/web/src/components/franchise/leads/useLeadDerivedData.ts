@@ -1,20 +1,20 @@
 import React from 'react';
-import {
-    FRANCHISE_LEAD_STATUSES,
-    getFranchiseLeadStageLabel
-} from '@/lib/franchise-leads';
+import { FRANCHISE_LEAD_STATUSES } from '@/lib/franchise-leads';
 import {
     getLeadWorkQueueSummary,
     matchesLeadWorkQueue,
     type LeadWorkQueueKey
 } from '@/lib/franchise-lead-workflow';
 import { WORK_QUEUE_OPTIONS } from './constants';
+import { hasActiveLeadTableFilters } from './leadTableConfig';
+import { filterLeadTableLeads, sortLeadTableLeads } from './leadTableFilters';
 import type {
     FranchiseLead,
     LeadDbLayer,
     LeadSummary,
     MetaIntegrationState
 } from './types';
+import type { LeadTableFilters, LeadTableSortKey } from './leadTableTypes';
 import {
     buildTrendSeriesData,
     getLeadTaskRank,
@@ -28,6 +28,8 @@ type UseLeadDerivedDataArgs = {
     readonly metaState: MetaIntegrationState;
     readonly leadDbLayer: LeadDbLayer;
     readonly taskQueueFilter: LeadWorkQueueKey;
+    readonly tableFilters: LeadTableFilters;
+    readonly tableSort: LeadTableSortKey;
     readonly searchTerm: string;
     readonly pageSize: number;
     readonly currentPage: number;
@@ -41,6 +43,8 @@ export function useLeadDerivedData({
     metaState,
     leadDbLayer,
     taskQueueFilter,
+    tableFilters,
+    tableSort,
     searchTerm,
     pageSize,
     currentPage,
@@ -49,7 +53,8 @@ export function useLeadDerivedData({
     const rawIntakeLeads = leads.filter(isRawIntakeLead);
     const candidateLeads = leads.filter(lead => !isRawIntakeLead(lead));
     const pipelineStageCandidateLeads = pipelineStageLeads.filter(lead => !isRawIntakeLead(lead));
-    const visibleLayerLeads = leadDbLayer === 'raw_intake' ? rawIntakeLeads : candidateLeads;
+    const sourceLayerLeads = leadDbLayer === 'raw_intake' ? rawIntakeLeads : candidateLeads;
+    const visibleLayerLeads = sortLeadTableLeads(filterLeadTableLeads(sourceLayerLeads, tableFilters), tableSort);
     const stageData = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
         count: pipelineStageCandidateLeads.filter(lead => lead.status === status).length
@@ -94,16 +99,19 @@ export function useLeadDerivedData({
                 : workQueueSummary[option.key];
         return { ...option, count };
     });
-    const listPolicyText = searchTerm.trim()
-        ? `검색 중에는 전체 데이터 범위에서 찾고, 화면에는 ${pageSize}건씩 표시합니다.`
-        : `기본 조회: 최신 500건 · 화면 표시: ${pageSize}건씩 · 검색 시 전체 범위 조회`;
+    const listPolicyText = tableSort === 'priority_only'
+        ? `중요 희망자: ${visibleLayerLeads.length.toLocaleString()}건 · 별표 표시된 가맹 희망자만 표시합니다.`
+        : hasActiveLeadTableFilters(tableFilters)
+        ? `필터 적용: ${visibleLayerLeads.length.toLocaleString()}건 · 지역/예산 조건을 반영했습니다.`
+        : searchTerm.trim()
+            ? `검색 중에는 전체 데이터 범위에서 찾고, 화면에는 ${pageSize}건씩 표시합니다.`
+            : `기본 조회: 최신 500건 · 화면 표시: ${pageSize}건씩 · 검색 시 전체 범위 조회`;
     const totalPages = Math.max(1, Math.ceil(visibleLayerLeads.length / pageSize));
     const safeCurrentPage = Math.min(currentPage, totalPages);
     const pageStartIndex = visibleLayerLeads.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
-    const pageEndIndex = Math.min(pageStartIndex + pageSize, visibleLayerLeads.length);
     const paginatedLeads = React.useMemo(
-        () => visibleLayerLeads.slice(pageStartIndex, pageEndIndex),
-        [pageEndIndex, pageStartIndex, visibleLayerLeads]
+        () => visibleLayerLeads.slice(pageStartIndex, pageStartIndex + pageSize),
+        [pageSize, pageStartIndex, visibleLayerLeads]
     );
     const selectedLeadSet = React.useMemo(() => new Set(selectedLeadIds), [selectedLeadIds]);
     const selectedLeads = React.useMemo(
@@ -111,10 +119,6 @@ export function useLeadDerivedData({
         [paginatedLeads, selectedLeadSet]
     );
     const allVisibleSelected = paginatedLeads.length > 0 && paginatedLeads.every(lead => selectedLeadSet.has(lead.id));
-    const pageRangeText = visibleLayerLeads.length === 0
-        ? '0건 표시'
-        : `${getFranchiseLeadStageLabel(leadDbLayer)} ${visibleLayerLeads.length.toLocaleString()}건 중 ${(pageStartIndex + 1).toLocaleString()}-${pageEndIndex.toLocaleString()}건 표시`;
-
     return {
         rawIntakeLeads,
         candidateLeads,
@@ -136,7 +140,6 @@ export function useLeadDerivedData({
         safeCurrentPage,
         paginatedLeads,
         selectedLeads,
-        allVisibleSelected,
-        pageRangeText
+        allVisibleSelected
     };
 }

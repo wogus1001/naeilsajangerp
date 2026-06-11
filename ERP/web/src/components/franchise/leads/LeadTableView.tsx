@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { LEAD_TABLE_COLUMNS } from './leadTableConfig';
+import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead, LeadDbLayer } from './types';
 import { LeadTableBulkActions } from './LeadTableBulkActions';
 import { LeadTablePagination } from './LeadTablePagination';
@@ -19,10 +21,11 @@ type LeadTableViewProps = {
     readonly isBulkUpdating: boolean;
     readonly convertingLeadId: string;
     readonly statusOptions: readonly FranchiseLeadStatus[];
-    readonly pageRangeText: string;
     readonly safeCurrentPage: number;
     readonly totalPages: number;
+    readonly visibleColumns: readonly LeadTableColumnKey[];
     readonly renderManagerOptions: (selectedManagerId?: string) => ReactNode;
+    readonly getManagerName: (managerId?: string) => string;
     readonly onBulkNextContactAtChange: (value: string) => void;
     readonly onApplyBulkNextContact: () => void;
     readonly onClearSelected: () => void;
@@ -31,6 +34,7 @@ type LeadTableViewProps = {
     readonly onSelectLead: (leadId: string) => void;
     readonly onStatusChange: (lead: FranchiseLead, status: FranchiseLeadStatus) => void;
     readonly onManagerChange: (lead: FranchiseLead, managerId: string) => void;
+    readonly onTogglePriority: (lead: FranchiseLead) => void;
     readonly onPromoteLeadToCandidate: (lead: FranchiseLead) => void;
     readonly onConvertLead: (lead: FranchiseLead) => void;
     readonly onOpenQuickActivityModal: (lead: FranchiseLead) => void;
@@ -51,10 +55,11 @@ export function LeadTableView({
     isBulkUpdating,
     convertingLeadId,
     statusOptions,
-    pageRangeText,
     safeCurrentPage,
     totalPages,
+    visibleColumns,
     renderManagerOptions,
+    getManagerName,
     onBulkNextContactAtChange,
     onApplyBulkNextContact,
     onClearSelected,
@@ -63,6 +68,7 @@ export function LeadTableView({
     onSelectLead,
     onStatusChange,
     onManagerChange,
+    onTogglePriority,
     onPromoteLeadToCandidate,
     onConvertLead,
     onOpenQuickActivityModal,
@@ -72,6 +78,39 @@ export function LeadTableView({
     onNextPage
 }: LeadTableViewProps) {
     const selectedLeadSet = new Set(selectedLeadIds);
+    const columnClassNames: Record<LeadTableColumnKey, string> = {
+        priority: styles.colPriority,
+        name: styles.colCandidate,
+        mobile: styles.colPhone,
+        status: styles.colStatus,
+        manager: styles.colManager,
+        source: styles.colSource,
+        desiredRegion: styles.colRegion,
+        budget: styles.colBudget,
+        interestedBrand: styles.colBrand,
+        nextContactAt: styles.colNextContact,
+        memo: styles.colMemo,
+        links: styles.colLink,
+        actions: styles.colActions
+    };
+    const columnWidths: Record<LeadTableColumnKey, number> = {
+        priority: 64,
+        name: 160,
+        mobile: 142,
+        status: 136,
+        manager: 152,
+        source: 108,
+        desiredRegion: 150,
+        budget: 184,
+        interestedBrand: 132,
+        nextContactAt: 142,
+        memo: 250,
+        links: 92,
+        actions: 168
+    };
+    const activeColumns = LEAD_TABLE_COLUMNS.filter(column => visibleColumns.includes(column.key));
+    const emptyColumnSpan = activeColumns.length + 1;
+    const tableWidth = `${44 + activeColumns.reduce((sum, column) => sum + columnWidths[column.key], 0)}px`;
 
     return (
         <>
@@ -84,21 +123,12 @@ export function LeadTableView({
                 onClearSelected={onClearSelected}
             />
             <div className={styles.tableScroll}>
-                <table className={styles.leadTable}>
+                <table className={styles.leadTable} style={{ width: tableWidth, minWidth: tableWidth }}>
                     <colgroup>
                         <col className={styles.colCheck} />
-                        <col className={styles.colCandidate} />
-                        <col className={styles.colPhone} />
-                        <col className={styles.colStatus} />
-                        <col className={styles.colManager} />
-                        <col className={styles.colSource} />
-                        <col className={styles.colRegion} />
-                        <col className={styles.colBudget} />
-                        <col className={styles.colBrand} />
-                        <col className={styles.colNextContact} />
-                        <col className={styles.colMemo} />
-                        <col className={styles.colLink} />
-                        <col className={styles.colActions} />
+                        {activeColumns.map(column => (
+                            <col key={column.key} className={columnClassNames[column.key]} />
+                        ))}
                     </colgroup>
                     <thead>
                         <tr>
@@ -111,29 +141,25 @@ export function LeadTableView({
                                     aria-label="현재 페이지 전체 선택"
                                 />
                             </th>
-                            <th>후보자</th>
-                            <th>연락처</th>
-                            <th>상태</th>
-                            <th>담당자</th>
-                            <th>유입</th>
-                            <th>희망지역</th>
-                            <th>예산</th>
-                            <th>브랜드</th>
-                            <th>다음 연락</th>
-                            <th>메모</th>
-                            <th>연결</th>
-                            <th />
+                            {activeColumns.map(column => (
+                                <th
+                                    key={column.key}
+                                    className={column.key === 'status' || column.key === 'manager' ? styles.centerColumnHeader : undefined}
+                                >
+                                    {column.key === 'actions' ? '' : column.label}
+                                </th>
+                            ))}
                         </tr>
                     </thead>
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={13} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
+                                <td colSpan={emptyColumnSpan} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
                             </tr>
                         ) : visibleLeadCount === 0 ? (
                             <tr>
-                                <td colSpan={13} className={styles.emptyRow}>
-                                    {leadDbLayer === 'raw_intake' ? '1차 유입 DB에 쌓인 원천 DB가 없습니다.' : '조건에 맞는 후보자가 없습니다.'}
+                                <td colSpan={emptyColumnSpan} className={styles.emptyRow}>
+                                    {leadDbLayer === 'raw_intake' ? '1차 유입 DB에 쌓인 원천 DB가 없습니다.' : '조건에 맞는 가맹 희망자가 없습니다.'}
                                 </td>
                             </tr>
                         ) : paginatedLeads.map(lead => (
@@ -143,11 +169,14 @@ export function LeadTableView({
                                 isSelected={selectedLeadSet.has(lead.id)}
                                 convertingLeadId={convertingLeadId}
                                 statusOptions={statusOptions}
+                                visibleColumns={visibleColumns}
                                 renderManagerOptions={renderManagerOptions}
+                                getManagerName={getManagerName}
                                 onToggleSelectLead={onToggleSelectLead}
                                 onSelectLead={onSelectLead}
                                 onStatusChange={onStatusChange}
                                 onManagerChange={onManagerChange}
+                                onTogglePriority={onTogglePriority}
                                 onPromoteLeadToCandidate={onPromoteLeadToCandidate}
                                 onConvertLead={onConvertLead}
                                 onOpenQuickActivityModal={onOpenQuickActivityModal}
@@ -160,7 +189,6 @@ export function LeadTableView({
             </div>
             <LeadTablePagination
                 visibleLeadCount={visibleLeadCount}
-                pageRangeText={pageRangeText}
                 safeCurrentPage={safeCurrentPage}
                 totalPages={totalPages}
                 onPreviousPage={onPreviousPage}

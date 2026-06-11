@@ -229,3 +229,48 @@ source_context: "ERP/web/src/components/franchise/leads/LeadRegionMultiSelect.ts
 ```
 
 Candidate registration forms should normalize contact and region data at input time instead of leaving free-form cleanup to DB management.
+
+## 2026-06-11T07:40:20.000Z — lead-tables-should-be-configurable-and-filterable
+
+```omd-meta
+id: pref_mq96w704_9bbff0aa
+timestamp: 2026-06-11T07:40:20.000Z
+scope: components.table
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadTableView.tsx"
+```
+
+Lead management tables should avoid unnecessary view/status icons, expose practical filters such as region and budget, and let users choose which columns are visible.
+
+## 2026-06-11T07:40:20.000Z — franchise-leads-should-use-warmer-business-copy
+
+```omd-meta
+id: pref_mq96w704_c615625a
+timestamp: 2026-06-11T07:40:20.000Z
+scope: copy
+signal: user-question
+confidence: medium
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/lib/franchise-leads.ts"
+```
+
+Use `가맹 희망자` for customer-facing lead labels instead of the colder `후보자` wording when the record represents a person considering a franchise contract.
+
+## 2026-06-11T07:57:51.000Z — lead-tables-should-support-key-account-stars
+
+```omd-meta
+id: pref_mq97k8lc_7d12a3e4
+timestamp: 2026-06-11T07:57:51.000Z
+scope: components.table
+signal: user-statement
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadTableRow.tsx"
+```
+
+Lead management tables should support a visible star marker for important leads, labeled as `중요` in Korean UI copy.

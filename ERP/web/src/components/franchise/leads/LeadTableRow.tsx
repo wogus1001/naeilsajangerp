@@ -6,11 +6,13 @@ import {
     Megaphone,
     MessageSquare,
     Pencil,
+    Star,
     Trash2,
     UserCheck
 } from 'lucide-react';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead } from './types';
 import {
     formatBudget,
@@ -29,11 +31,14 @@ type LeadTableRowProps = {
     readonly isSelected: boolean;
     readonly convertingLeadId: string;
     readonly statusOptions: readonly FranchiseLeadStatus[];
+    readonly visibleColumns: readonly LeadTableColumnKey[];
     readonly renderManagerOptions: (selectedManagerId?: string) => ReactNode;
+    readonly getManagerName: (managerId?: string) => string;
     readonly onToggleSelectLead: (leadId: string, checked: boolean) => void;
     readonly onSelectLead: (leadId: string) => void;
     readonly onStatusChange: (lead: FranchiseLead, status: FranchiseLeadStatus) => void;
     readonly onManagerChange: (lead: FranchiseLead, managerId: string) => void;
+    readonly onTogglePriority: (lead: FranchiseLead) => void;
     readonly onPromoteLeadToCandidate: (lead: FranchiseLead) => void;
     readonly onConvertLead: (lead: FranchiseLead) => void;
     readonly onOpenQuickActivityModal: (lead: FranchiseLead) => void;
@@ -50,17 +55,23 @@ export function LeadTableRow({
     isSelected,
     convertingLeadId,
     statusOptions,
+    visibleColumns,
     renderManagerOptions,
+    getManagerName,
     onToggleSelectLead,
     onSelectLead,
     onStatusChange,
     onManagerChange,
+    onTogglePriority,
     onPromoteLeadToCandidate,
     onConvertLead,
     onOpenQuickActivityModal,
     onOpenEditModal,
     onRequestDelete
 }: LeadTableRowProps) {
+    const visibleColumnSet = new Set(visibleColumns);
+    const isPriorityLead = lead.grade === 'HOT';
+
     return (
         <tr>
             <td className={styles.checkboxCell}>
@@ -71,40 +82,59 @@ export function LeadTableRow({
                     aria-label={`${lead.name} 선택`}
                 />
             </td>
-            <td>
+            {visibleColumnSet.has('priority') && <td className={styles.priorityCell}>
+                <button
+                    type="button"
+                    className={isPriorityLead ? styles.priorityButtonActive : styles.priorityButton}
+                    onClick={() => onTogglePriority(lead)}
+                    aria-label={isPriorityLead ? `${lead.name} 중요 표시 해제` : `${lead.name} 중요 표시`}
+                    title={isPriorityLead ? '중요 표시 해제' : '중요 표시'}
+                >
+                    <Star size={16} fill={isPriorityLead ? 'currentColor' : 'none'} aria-hidden="true" />
+                </button>
+            </td>}
+            {visibleColumnSet.has('name') && <td>
                 <button type="button" className={styles.nameButton} onClick={() => onSelectLead(lead.id)}>
                     <strong>{lead.name}</strong>
                     <span>{formatDate(lead.createdAt)} 등록</span>
                 </button>
-            </td>
-            <td>
+            </td>}
+            {visibleColumnSet.has('mobile') && <td>
                 <span className={styles.phone}>{lead.mobile || '-'}</span>
-            </td>
-            <td>
-                <select
-                    className={styles.statusSelect}
-                    value={lead.status}
-                    onChange={(event) => {
-                        const nextStatus = parseStatus(event.target.value, statusOptions);
-                        if (nextStatus) onStatusChange(lead, nextStatus);
-                    }}
-                >
-                    {statusOptions.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                    ))}
-                </select>
-            </td>
-            <td>
-                <select
-                    className={styles.managerSelect}
-                    value={lead.managerId || ''}
-                    onChange={(event) => onManagerChange(lead, event.target.value)}
-                >
-                    <option value="">담당자 선택</option>
-                    {renderManagerOptions(lead.managerId)}
-                </select>
-            </td>
-            <td>
+            </td>}
+            {visibleColumnSet.has('status') && <td className={styles.selectCell}>
+                <span className={styles.tableSelectWrap}>
+                    <select
+                        className={styles.statusSelect}
+                        value={lead.status}
+                        aria-label={`${lead.name} 상태 변경`}
+                        onChange={(event) => {
+                            const nextStatus = parseStatus(event.target.value, statusOptions);
+                            if (nextStatus) onStatusChange(lead, nextStatus);
+                        }}
+                    >
+                        {statusOptions.map(status => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                    <span className={styles.tableSelectValue} aria-hidden="true">{lead.status}</span>
+                </span>
+            </td>}
+            {visibleColumnSet.has('manager') && <td className={styles.selectCell}>
+                <span className={`${styles.tableSelectWrap} ${styles.managerSelectWrap}`}>
+                    <select
+                        className={styles.managerSelect}
+                        value={lead.managerId || ''}
+                        aria-label={`${lead.name} 담당자 변경`}
+                        onChange={(event) => onManagerChange(lead, event.target.value)}
+                    >
+                        <option value="">담당자 선택</option>
+                        {renderManagerOptions(lead.managerId)}
+                    </select>
+                    <span className={styles.tableSelectValue} aria-hidden="true">{lead.managerId ? getManagerName(lead.managerId) : '담당자 선택'}</span>
+                </span>
+            </td>}
+            {visibleColumnSet.has('source') && <td>
                 {lead.source ? (
                     <span
                         className={isMetaLeadSource(lead) ? `${styles.sourceBadge} ${styles.sourceBadgeMeta}` : styles.sourceBadge}
@@ -114,34 +144,34 @@ export function LeadTableRow({
                         <span>{getLeadSourceBadgeLabel(lead)}</span>
                     </span>
                 ) : '-'}
-            </td>
-            <td>{lead.desiredRegion || '-'}</td>
-            <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>
-            <td>{lead.interestedBrand || '-'}</td>
-            <td>
+            </td>}
+            {visibleColumnSet.has('desiredRegion') && <td>{lead.desiredRegion || '-'}</td>}
+            {visibleColumnSet.has('budget') && <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>}
+            {visibleColumnSet.has('interestedBrand') && <td>{lead.interestedBrand || '-'}</td>}
+            {visibleColumnSet.has('nextContactAt') && <td>
                 <span className={isPastDue(lead.nextContactAt) ? styles.dueBadgeDanger : isDueToday(lead.nextContactAt) ? styles.dueBadge : undefined}>
                     {formatDateTime(lead.nextContactAt)}
                 </span>
-            </td>
-            <td className={styles.memoCell}>{lead.memo || '-'}</td>
-            <td>
+            </td>}
+            {visibleColumnSet.has('memo') && <td className={styles.memoCell}>{lead.memo || '-'}</td>}
+            {visibleColumnSet.has('links') && <td>
                 <div className={styles.linkBadges}>
                     {lead.linkedCustomerId && <span>고객</span>}
                     {lead.linkedBusinessCardId && <span>명함</span>}
                     {!lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
                 </div>
-            </td>
-            <td>
+            </td>}
+            {visibleColumnSet.has('actions') && <td>
                 <div className={styles.rowActions}>
                     {isRawIntakeLead(lead) && (
                         <button
                             type="button"
                             className={styles.promoteButton}
                             onClick={() => onPromoteLeadToCandidate(lead)}
-                            aria-label={`${lead.name} 후보자 승격`}
-                            data-tooltip="후보자 목록으로 승격"
+                            aria-label={`${lead.name} 가맹 희망자 승격`}
+                            data-tooltip="가맹 희망자 목록으로 승격"
                         >
-                            후보자
+                            승격
                         </button>
                     )}
                     {!isRawIntakeLead(lead) && (
@@ -191,7 +221,7 @@ export function LeadTableRow({
                         <Trash2 size={15} />
                     </button>
                 </div>
-            </td>
+            </td>}
         </tr>
     );
 }

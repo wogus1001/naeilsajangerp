@@ -6,16 +6,12 @@ import {
     BriefcaseBusiness,
     CalendarClock,
     CheckCircle2,
-    Columns3,
     Download,
-    FileSpreadsheet,
-    ListChecks,
     Link2,
     MessageSquare,
     Pencil,
     Plus,
     RefreshCw,
-    Table2,
     Trash2,
     Upload,
     UserCheck,
@@ -27,10 +23,8 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import { LeadDashboard } from '@/components/franchise/leads/LeadDashboard';
-import { LeadPipelineBoard } from '@/components/franchise/leads/LeadPipelineBoard';
+import { LeadDbWorkspace } from '@/components/franchise/leads/LeadDbWorkspace';
 import { LeadRegionMultiSelect } from '@/components/franchise/leads/LeadRegionMultiSelect';
-import { LeadTableView } from '@/components/franchise/leads/LeadTableView';
-import { LeadTaskBoard } from '@/components/franchise/leads/LeadTaskBoard';
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
 import { LeadWorkspaceTabs, type LeadWorkspaceTab } from '@/components/franchise/leads/LeadWorkspaceTabs';
 import { useLeadDerivedData } from '@/components/franchise/leads/useLeadDerivedData';
@@ -57,13 +51,18 @@ import {
     ACTIVITY_TYPES,
     EMPTY_FORM,
     EMPTY_META_STATE,
-    LEAD_DB_LAYER_OPTIONS,
     META_FIELD_LABELS,
     PAGE_SIZE_OPTIONS,
     RANGE_OPTIONS,
-    SOURCE_FILTER_OPTIONS,
-    VIEW_OPTIONS
+    SOURCE_FILTER_OPTIONS
 } from '@/components/franchise/leads/constants';
+import {
+    DEFAULT_LEAD_TABLE_COLUMN_KEYS,
+    EMPTY_LEAD_TABLE_FILTERS,
+    LEAD_TABLE_COLUMNS_STORAGE_KEY,
+    normalizeLeadTableColumnKeys
+} from '@/components/franchise/leads/leadTableConfig';
+import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
 import type {
     AuthUser,
     ExternalPropertyListing,
@@ -151,6 +150,9 @@ export default function FranchiseLeadsPage() {
     const [currentPage, setCurrentPage] = React.useState(1);
     const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('최근 30일'));
     const [createdTo, setCreatedTo] = React.useState('');
+    const [tableFilters, setTableFilters] = React.useState<LeadTableFilters>(EMPTY_LEAD_TABLE_FILTERS);
+    const [tableSort, setTableSort] = React.useState<LeadTableSortKey>('created_desc');
+    const [visibleTableColumns, setVisibleTableColumns] = React.useState<readonly LeadTableColumnKey[]>(DEFAULT_LEAD_TABLE_COLUMN_KEYS);
     const [selectedLeadId, setSelectedLeadId] = React.useState('');
     const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
     const [activityType, setActivityType] = React.useState<LeadActivityType>('전화');
@@ -225,6 +227,29 @@ export default function FranchiseLeadsPage() {
         setUserId(currentUserId);
         setCompanyName(parsedUser.role === 'admin' ? '' : parsedUser.companyName || '');
     }, []);
+
+    React.useEffect(() => {
+        const storedColumns = localStorage.getItem(LEAD_TABLE_COLUMNS_STORAGE_KEY);
+        if (!storedColumns) return;
+
+        try {
+            const parsed: unknown = JSON.parse(storedColumns);
+            if (!Array.isArray(parsed)) return;
+            setVisibleTableColumns(normalizeLeadTableColumnKeys(
+                parsed.filter((item): item is string => typeof item === 'string')
+            ));
+        } catch (error) {
+            if (error instanceof Error) {
+                console.error('Failed to parse stored lead table columns:', error.message);
+                return;
+            }
+            console.error('Failed to parse stored lead table columns.');
+        }
+    }, []);
+
+    React.useEffect(() => {
+        localStorage.setItem(LEAD_TABLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleTableColumns));
+    }, [visibleTableColumns]);
 
     const fetchLeads = React.useCallback(async () => {
         if (!userId) return;
@@ -388,11 +413,11 @@ export default function FranchiseLeadsPage() {
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [createdFrom, createdTo, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+    }, [createdFrom, createdTo, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter, tableFilters, tableSort]);
 
     React.useEffect(() => {
         setSelectedLeadIds([]);
-    }, [createdFrom, createdTo, currentPage, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+    }, [createdFrom, createdTo, currentPage, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter, tableFilters, tableSort]);
 
     React.useEffect(() => {
         setSelectedDisclosureEligibility(null);
@@ -552,8 +577,7 @@ export default function FranchiseLeadsPage() {
         safeCurrentPage,
         paginatedLeads,
         selectedLeads,
-        allVisibleSelected,
-        pageRangeText
+        allVisibleSelected
     } = useLeadDerivedData({
         leads,
         pipelineStageLeads,
@@ -561,6 +585,8 @@ export default function FranchiseLeadsPage() {
         metaState,
         leadDbLayer,
         taskQueueFilter,
+        tableFilters,
+        tableSort,
         searchTerm,
         pageSize,
         currentPage,
@@ -761,7 +787,7 @@ export default function FranchiseLeadsPage() {
             }
 
             await fetchMetaIntegration();
-            showAlert('Meta 연결을 해제했습니다. 기존 후보자 데이터는 유지됩니다.', 'success', '연결 해제');
+            showAlert('Meta 연결을 해제했습니다. 기존 가맹 희망자 데이터는 유지됩니다.', 'success', '연결 해제');
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : 'Meta 연결 해제에 실패했습니다.', 'error', '연결 해제 실패');
@@ -800,7 +826,7 @@ export default function FranchiseLeadsPage() {
         if (!userId) return;
 
         if (!form.name.trim()) {
-            showAlert('후보자명을 입력해주세요.', 'error');
+            showAlert('가맹 희망자명을 입력해주세요.', 'error');
             return;
         }
 
@@ -834,7 +860,7 @@ export default function FranchiseLeadsPage() {
             closeModal();
             await fetchLeads();
             showAlert(
-                data.deduplicated ? '같은 연락처의 기존 후보자를 업데이트했습니다.' : '모객 DB가 저장되었습니다.',
+                data.deduplicated ? '같은 연락처의 기존 가맹 희망자를 업데이트했습니다.' : '모객 DB가 저장되었습니다.',
                 'success',
                 '저장 완료'
             );
@@ -918,12 +944,28 @@ export default function FranchiseLeadsPage() {
         return updatedLead;
     };
 
+    const toggleLeadPriority = async (lead: FranchiseLead) => {
+        const nextGrade = lead.grade === 'HOT' ? 'WARM' : 'HOT';
+
+        try {
+            await updateLeadWithPatch(lead, { grade: nextGrade });
+            showAlert(
+                nextGrade === 'HOT' ? '중요 가맹 희망자로 표시했습니다.' : '중요 표시를 해제했습니다.',
+                'success',
+                '중요 표시 변경'
+            );
+        } catch (error) {
+            console.error(error);
+            showAlert(error instanceof Error ? error.message : '중요 표시 변경에 실패했습니다.', 'error', '중요 표시 실패');
+        }
+    };
+
     const promoteLeadToCandidate = async (lead: FranchiseLead) => {
         const now = new Date().toISOString();
         const nextActivity: LeadActivity = {
             id: createActivityId(),
             type: '메모',
-            content: '1차 유입 DB에서 후보자 목록으로 승격',
+            content: '1차 유입 DB에서 가맹 희망자 목록으로 승격',
             createdAt: now,
             createdBy: user?.name || userId
         };
@@ -934,10 +976,10 @@ export default function FranchiseLeadsPage() {
                 activityLog: [nextActivity, ...(lead.activityLog || [])]
             });
             setLeadDbLayer('candidate');
-            showAlert('후보자 목록으로 승격했습니다.', 'success', '승격 완료');
+            showAlert('가맹 희망자 목록으로 승격했습니다.', 'success', '승격 완료');
         } catch (error) {
             console.error(error);
-            showAlert(error instanceof Error ? error.message : '후보자 승격에 실패했습니다.', 'error', '승격 실패');
+            showAlert(error instanceof Error ? error.message : '가맹 희망자 승격에 실패했습니다.', 'error', '승격 실패');
         }
     };
 
@@ -1017,7 +1059,7 @@ export default function FranchiseLeadsPage() {
 
     const applyBulkNextContact = async () => {
         if (selectedLeads.length === 0) {
-            showAlert('변경할 후보자를 선택해주세요.', 'error', '일괄 변경 실패');
+            showAlert('변경할 가맹 희망자를 선택해주세요.', 'error', '일괄 변경 실패');
             return;
         }
 
@@ -1162,7 +1204,7 @@ export default function FranchiseLeadsPage() {
             }
 
             await saveLocationLinks(nextLinks, `후보지 연결: ${targetName}`);
-            showAlert('후보자에 후보지를 연결했습니다.', 'success', '연결 완료');
+            showAlert('가맹 희망자에 후보지를 연결했습니다.', 'success', '연결 완료');
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '후보지 연결에 실패했습니다.', 'error', '연결 실패');
@@ -1430,7 +1472,7 @@ export default function FranchiseLeadsPage() {
             }
 
             await fetchLeads();
-            showAlert('후보자가 삭제되었습니다.', 'success', '삭제 완료');
+            showAlert('가맹 희망자가 삭제되었습니다.', 'success', '삭제 완료');
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.', 'error', '삭제 실패');
@@ -1519,7 +1561,7 @@ export default function FranchiseLeadsPage() {
                 연락처: '010-1234-5678',
                 유입경로: '랜딩페이지',
                 상태: '문의접수',
-                등급: '즉시상담',
+                등급: '중요',
                 희망지역: '서울 강남구',
                 '창업예산(만원)': '10000~20000',
                 관심브랜드: '미카도',
@@ -1566,7 +1608,7 @@ export default function FranchiseLeadsPage() {
                     )}
                     <button className={styles.primaryButton} onClick={openCreateModal}>
                         <Plus size={16} />
-                        후보자 등록
+                        가맹 희망자 등록
                     </button>
                     <input
                         ref={uploadInputRef}
@@ -1798,132 +1840,57 @@ export default function FranchiseLeadsPage() {
             )}
 
             {workspaceTab === 'db' && (
-                <section className={styles.tablePanel}>
-                <div className={styles.leadLayerTabs}>
-                    {LEAD_DB_LAYER_OPTIONS.map(option => {
-                        const count = option.key === 'raw_intake' ? rawIntakeLeads.length : candidateLeads.length;
-                        return (
-                            <button
-                                key={option.key}
-                                type="button"
-                                className={leadDbLayer === option.key ? styles.leadLayerTabActive : styles.leadLayerTab}
-                                onClick={() => setLeadDbLayer(option.key)}
-                            >
-                                <strong>{option.label}</strong>
-                                <span>{option.description}</span>
-                                <b>{count.toLocaleString()}건</b>
-                            </button>
-                        );
-                    })}
-                </div>
-                <div className={styles.tableHeader}>
-                    <div>
-                        <h2>{leadDbLayer === 'raw_intake' ? '1차 유입 DB' : viewMode === 'pipeline' ? '상태별 파이프라인' : viewMode === 'tasks' ? '업무 큐' : '후보자 목록'}</h2>
-                        <p>
-                            {leadDbLayer === 'raw_intake'
-                                ? 'Meta 광고, 엑셀 업로드 등 원천 유입을 먼저 모아두고 의사가 확인된 DB만 후보자로 승격합니다.'
-                                : viewMode === 'pipeline'
-                                ? '상태별 카드에서 상담 흐름을 빠르게 이동합니다.'
-                                : viewMode === 'tasks'
-                                    ? '연락 지연, 오늘 연락, 무응답 리드를 우선 처리합니다.'
-                                    : listPolicyText}
-                        </p>
-                    </div>
-                    <div className={styles.tableHeaderActions}>
-                        <div className={styles.viewTabs} aria-label="모객 DB 보기 전환">
-                            {VIEW_OPTIONS.filter(option => leadDbLayer === 'candidate' || option.mode === 'table').map(option => (
-                                <button
-                                    key={option.mode}
-                                    className={viewMode === option.mode ? styles.viewTabActive : styles.viewTab}
-                                    onClick={() => setViewMode(option.mode)}
-                                    title={option.description}
-                                >
-                                    {option.mode === 'table' && <Table2 size={14} />}
-                                    {option.mode === 'pipeline' && <Columns3 size={14} />}
-                                    {option.mode === 'tasks' && <ListChecks size={14} />}
-                                    {option.label}
-                                </button>
-                            ))}
-                        </div>
-                        {viewMode === 'table' && (
-                            <label className={styles.pageSizeControl}>
-                                표시
-                                <select
-                                    value={pageSize}
-                                    onChange={(event) => setPageSize(Number(event.target.value) as typeof PAGE_SIZE_OPTIONS[number])}
-                                >
-                                    {PAGE_SIZE_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}건</option>
-                                    ))}
-                                </select>
-                            </label>
-                        )}
-                        <div className={styles.tableMeta}>
-                            <FileSpreadsheet size={16} />
-                            {isLoading ? '불러오는 중' : pageRangeText}
-                        </div>
-                    </div>
-                </div>
-                {viewMode === 'table' && (
-                    <LeadTableView
-                        isLoading={isLoading}
-                        leadDbLayer={leadDbLayer}
-                        visibleLeadCount={visibleLayerLeads.length}
-                        paginatedLeads={paginatedLeads}
-                        selectedLeadIds={selectedLeadIds}
-                        allVisibleSelected={allVisibleSelected}
-                        bulkNextContactAt={bulkNextContactAt}
-                        isBulkUpdating={isBulkUpdating}
-                        convertingLeadId={convertingLeadId}
-                        statusOptions={FRANCHISE_LEAD_STATUSES}
-                        pageRangeText={pageRangeText}
-                        safeCurrentPage={safeCurrentPage}
-                        totalPages={totalPages}
-                        renderManagerOptions={renderManagerOptions}
-                        onBulkNextContactAtChange={setBulkNextContactAt}
-                        onApplyBulkNextContact={() => void applyBulkNextContact()}
-                        onClearSelected={() => setSelectedLeadIds([])}
-                        onToggleSelectAllVisible={toggleSelectAllVisible}
-                        onToggleSelectLead={toggleSelectLead}
-                        onSelectLead={setSelectedLeadId}
-                        onStatusChange={(lead, status) => void updateLeadStatus(lead, status)}
-                        onManagerChange={(lead, managerId) => void updateLeadManager(lead, managerId)}
-                        onPromoteLeadToCandidate={(lead) => void promoteLeadToCandidate(lead)}
-                        onConvertLead={(lead) => void convertLeadToCustomer(lead)}
-                        onOpenQuickActivityModal={openQuickActivityModal}
-                        onOpenEditModal={openEditModal}
-                        onRequestDelete={(lead) => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
-                        onPreviousPage={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        onNextPage={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    />
-                )}
-                {viewMode === 'pipeline' && (
-                    <LeadPipelineBoard
-                        isLoading={isLoading}
-                        columns={pipelineColumns}
-                        convertingLeadId={convertingLeadId}
-                        getManagerName={getManagerName}
-                        onSelectLead={setSelectedLeadId}
-                        onStatusChange={(lead, status) => void updateLeadStatus(lead, status)}
-                        onConvertLead={(lead) => void convertLeadToCustomer(lead)}
-                    />
-                )}
-
-                {viewMode === 'tasks' && (
-                    <LeadTaskBoard
-                        isLoading={isLoading}
-                        taskQueueOptions={taskQueueOptions}
-                        taskQueueFilter={taskQueueFilter}
-                        taskLeads={taskLeads}
-                        convertingLeadId={convertingLeadId}
-                        getManagerName={getManagerName}
-                        onTaskQueueFilterChange={setTaskQueueFilter}
-                        onSelectLead={setSelectedLeadId}
-                        onCompleteTodayTask={(lead) => void completeTodayTask(lead)}
-                        onConvertLead={(lead) => void convertLeadToCustomer(lead)}
-                    />
-                )}
-                </section>
+                <LeadDbWorkspace
+                    isLoading={isLoading}
+                    leadDbLayer={leadDbLayer}
+                    viewMode={viewMode}
+                    rawIntakeCount={rawIntakeLeads.length}
+                    candidateCount={candidateLeads.length}
+                    listPolicyText={listPolicyText}
+                    pageSize={pageSize}
+                    visibleLayerLeadCount={visibleLayerLeads.length}
+                    paginatedLeads={paginatedLeads}
+                    selectedLeadIds={selectedLeadIds}
+                    allVisibleSelected={allVisibleSelected}
+                    bulkNextContactAt={bulkNextContactAt}
+                    isBulkUpdating={isBulkUpdating}
+                    convertingLeadId={convertingLeadId}
+                    tableFilters={tableFilters}
+                    tableSort={tableSort}
+                    visibleTableColumns={visibleTableColumns}
+                    pipelineColumns={pipelineColumns}
+                    taskQueueOptions={taskQueueOptions}
+                    taskQueueFilter={taskQueueFilter}
+                    taskLeads={taskLeads}
+                    safeCurrentPage={safeCurrentPage}
+                    totalPages={totalPages}
+                    renderManagerOptions={renderManagerOptions}
+                    getManagerName={getManagerName}
+                    onLeadDbLayerChangeAction={setLeadDbLayer}
+                    onViewModeChangeAction={setViewMode}
+                    onPageSizeChangeAction={setPageSize}
+                    onTableFiltersChangeAction={setTableFilters}
+                    onTableSortChangeAction={setTableSort}
+                    onVisibleTableColumnsChangeAction={setVisibleTableColumns}
+                    onBulkNextContactAtChangeAction={setBulkNextContactAt}
+                    onApplyBulkNextContactAction={() => void applyBulkNextContact()}
+                    onClearSelectedAction={() => setSelectedLeadIds([])}
+                    onToggleSelectAllVisibleAction={toggleSelectAllVisible}
+                    onToggleSelectLeadAction={toggleSelectLead}
+                    onSelectLeadAction={setSelectedLeadId}
+                    onStatusChangeAction={(lead, status) => void updateLeadStatus(lead, status)}
+                    onManagerChangeAction={(lead, managerId) => void updateLeadManager(lead, managerId)}
+                    onTogglePriorityAction={(lead) => void toggleLeadPriority(lead)}
+                    onPromoteLeadToCandidateAction={(lead) => void promoteLeadToCandidate(lead)}
+                    onConvertLeadAction={(lead) => void convertLeadToCustomer(lead)}
+                    onOpenQuickActivityModalAction={openQuickActivityModal}
+                    onOpenEditModalAction={openEditModal}
+                    onRequestDeleteAction={(lead) => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
+                    onPreviousPageAction={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    onNextPageAction={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    onTaskQueueFilterChangeAction={setTaskQueueFilter}
+                    onCompleteTodayTaskAction={(lead) => void completeTodayTask(lead)}
+                />
             )}
 
             {isModalOpen && (
@@ -1931,17 +1898,17 @@ export default function FranchiseLeadsPage() {
                     <form className={styles.modalCard} onSubmit={submitLead}>
                         <div className={styles.modalHeader}>
                             <div>
-                                <h2>{form.id ? '후보자 수정' : '후보자 등록'}</h2>
-                                <p>본사 모객 DB에 필요한 핵심 정보만 빠르게 기록합니다.</p>
+                                <h2>{form.id ? '가맹 희망자 수정' : '가맹 희망자 등록'}</h2>
+                                <p>본사 모객 DB에 필요한 중요 정보만 빠르게 기록합니다.</p>
                             </div>
-                            <button type="button" onClick={closeModal} className={styles.closeButton} aria-label="후보자 등록 닫기">
+                            <button type="button" onClick={closeModal} className={styles.closeButton} aria-label="가맹 희망자 등록 닫기">
                                 <X size={20} strokeWidth={2.2} />
                             </button>
                         </div>
 
                         <div className={styles.formGrid}>
                             <label>
-                                후보자명 *
+                                가맹 희망자명 *
                                 <input value={form.name} onChange={(event) => setForm(prev => ({ ...prev, name: event.target.value }))} placeholder="홍길동" />
                             </label>
                             <label>
@@ -2072,7 +2039,7 @@ export default function FranchiseLeadsPage() {
                     <aside className={styles.detailPanel} onClick={(event) => event.stopPropagation()}>
                         <div className={styles.detailHeader}>
                             <div>
-                                <span className={styles.detailEyebrow}>후보자 상세</span>
+                                <span className={styles.detailEyebrow}>가맹 희망자 상세</span>
                                 <h2>{selectedLead.name}</h2>
                                 <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'} · 담당자 {getManagerName(selectedLead.managerId)}</p>
                             </div>
@@ -2094,7 +2061,7 @@ export default function FranchiseLeadsPage() {
                         <div className={styles.detailQuickActions}>
                             {isRawIntakeLead(selectedLead) && (
                                 <button className={styles.promoteButtonLarge} onClick={() => void promoteLeadToCandidate(selectedLead)}>
-                                    후보자 승격
+                                    가맹 희망자 승격
                                 </button>
                             )}
                             <select
@@ -2315,8 +2282,8 @@ export default function FranchiseLeadsPage() {
             />
             <ConfirmModal
                 isOpen={confirmConfig.isOpen}
-                title="후보자 삭제"
-                message={`${confirmConfig.leadName} 후보자를 삭제할까요?`}
+                title="가맹 희망자 삭제"
+                message={`${confirmConfig.leadName} 가맹 희망자를 삭제할까요?`}
                 confirmText="삭제"
                 isDanger
                 onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
