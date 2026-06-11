@@ -76,3 +76,11 @@ npm run build
 - Treating protected-route browser redirects as full feature QA; logged-in flows require an actual session and configured provider env.
 - Broad refactors inside large legacy TSX files unless the task explicitly calls for them.
 - Collapsing provider states into one UI/error state; distinguish unconfigured, quota exceeded, timeout/error, and no result.
+
+<!-- omd:start v=1 hash=be71c8d154c9 -->
+## Design System (oh-my-design)
+
+**Before any UI, styling, copy, or motion change, open and read `./DESIGN.md` in full.** It is the authoritative brand/design spec. Treat its tokens, voice, and component rules as binding unless the user overrides in chat.
+
+If present, read `./.omd/preferences.md` — pending corrections not yet folded into DESIGN.md. Apply them; flag conflicts.
+<!-- omd:end -->
