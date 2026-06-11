@@ -71,6 +71,16 @@ export function createLeadLocationLink(input: LeadLocationLinkInput): LeadLocati
     };
 }
 
+export function addUniqueLeadLocationLink(
+    links: readonly LeadLocationLink[],
+    nextLink: LeadLocationLink
+): readonly LeadLocationLink[] {
+    const alreadyLinked = links.some(link => {
+        return link.targetType === nextLink.targetType && link.targetId === nextLink.targetId;
+    });
+    return alreadyLinked ? links : [nextLink, ...links];
+}
+
 export function updateLeadLocationLink(
     links: readonly LeadLocationLink[],
     linkId: string,

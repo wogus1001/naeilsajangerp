@@ -31,7 +31,7 @@ my_project/
 | Web app code | `ERP/web/src` | Next App Router, API routes, components, lib. |
 | Franchise roadmap | `ERP/web/docs/franchise-growth-roadmap.md` | Product priorities and provider policy. |
 | Franchise QA history | `ERP/web/docs/franchise-dev-qa-log.md` | Verification status and unresolved QA gaps. |
-| Realty import plan | `ERP/web/docs/realty-import-plan.md` | Daangn MVP scope and next phases. |
+| External realty import status | `ERP/web/docs/franchise-growth-roadmap.md`, `ERP/web/docs/franchise-dev-qa-log.md` | Daangn MVP scope, current status, and remaining QA. |
 | OCR crawler | `ERP/crawler` | Windows-only pywinauto/PIL/win32 tooling. |
 
 ## COMMANDS

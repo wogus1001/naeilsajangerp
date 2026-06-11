@@ -3,7 +3,6 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     filterRealtyListings,
-    REALTY_SORT_OPTIONS,
     sortRealtyListings,
     type RealtyFilterState,
     type RealtySortKey
@@ -12,18 +11,28 @@ import type { RealtyImportedListing, RealtyListingRecord } from './types';
 import { RealtyGroupPagination } from './RealtyGroupPagination';
 import { RealtyListingRow } from './RealtyListingRow';
 import { RealtySavedMap, type RealtyMapMarkerIndex } from './RealtySavedMap';
+import { RealtySavedListControls } from './RealtySavedListControls';
 import { getRealtyListingMapKey } from './map-utils';
-import { DEFAULT_REALTY_PAGE_SIZE, getPageItems, REALTY_PAGE_SIZE_OPTIONS } from './pagination-utils';
+import { DEFAULT_REALTY_PAGE_SIZE, getPageItems } from './pagination-utils';
 import { groupListings } from './utils';
 
 type Props = {
     readonly listings: readonly RealtyImportedListing[];
     readonly isLoading: boolean;
     readonly favoriteUpdatingId: string;
+    readonly promotingListingId: string;
     readonly onToggleFavoriteAction: (listing: RealtyListingRecord) => void;
+    readonly onPromoteListingAction: (listing: RealtyListingRecord) => void;
 };
 
-export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, onToggleFavoriteAction }: Props) {
+export function RealtySavedListings({
+    listings,
+    isLoading,
+    favoriteUpdatingId,
+    promotingListingId,
+    onToggleFavoriteAction,
+    onPromoteListingAction
+}: Props) {
     const [expandedGroups, setExpandedGroups] = React.useState<ReadonlySet<string>>(() => new Set());
     const [activeMapGroupKey, setActiveMapGroupKey] = React.useState('');
     const [activeMapKeys, setActiveMapKeys] = React.useState<Readonly<Record<string, string>>>({});
@@ -123,39 +132,17 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
 
     return (
         <>
-            <div className={styles.realtySavedToolbar}>
-                <div>
-                    <button type="button" onClick={() => setAllGroupsExpanded(true)}>전체 열기</button>
-                    <button type="button" onClick={() => setAllGroupsExpanded(false)}>전체 닫기</button>
-                </div>
-                <span>{sortedListings.length.toLocaleString()} / {listings.length.toLocaleString()}건 표시</span>
-            </div>
-
-            <div className={styles.realtySavedFilterBar}>
-                <div>
-                    <button type="button" className={filters.favoriteOnly ? styles.realtyFilterActive : ''} onClick={() => toggleFilter('favoriteOnly')}>별표만</button>
-                    <button type="button" className={filters.groundFloorOnly ? styles.realtyFilterActive : ''} onClick={() => toggleFilter('groundFloorOnly')}>1층만</button>
-                    <button type="button" className={filters.clearMaintenanceOnly ? styles.realtyFilterActive : ''} onClick={() => toggleFilter('clearMaintenanceOnly')}>관리비 확인</button>
-                </div>
-                <div>
-                    <label>
-                        정렬
-                        <select value={filters.sortKey} onChange={(event) => setSortKey(event.target.value as RealtySortKey)}>
-                            {REALTY_SORT_OPTIONS.map(option => (
-                                <option key={option.key} value={option.key}>{option.label}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <label>
-                        동별 페이지당
-                        <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
-                            {REALTY_PAGE_SIZE_OPTIONS.map(size => (
-                                <option key={size} value={size}>{size}건</option>
-                            ))}
-                        </select>
-                    </label>
-                </div>
-            </div>
+            <RealtySavedListControls
+                filters={filters}
+                pageSize={pageSize}
+                shownCount={sortedListings.length}
+                totalCount={listings.length}
+                onExpandAllAction={() => setAllGroupsExpanded(true)}
+                onCollapseAllAction={() => setAllGroupsExpanded(false)}
+                onToggleFilterAction={toggleFilter}
+                onSetSortKeyAction={setSortKey}
+                onSetPageSizeAction={setPageSize}
+            />
 
             <div className={styles.realtyGroupList}>
                 {listings.length === 0 ? (
@@ -214,6 +201,7 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
                                                     <th>저장일</th>
                                                     <th>세부</th>
                                                     <th>반응</th>
+                                                    <th>승격</th>
                                                     <th>원문</th>
                                                 </tr>
                                             </thead>
@@ -228,11 +216,13 @@ export function RealtySavedListings({ listings, isLoading, favoriteUpdatingId, o
                                                             favoriteUpdatingId={favoriteUpdatingId}
                                                             mapMarkerNumber={mapMarkerNumber}
                                                             isMapMarkerSelected={Boolean(mapKey && activeMapKey === mapKey)}
+                                                            promotingListingId={promotingListingId}
                                                             onSelectMapMarkerAction={mapKey ? () => {
                                                                 setActiveMapGroupKey(group.key);
                                                                 setGroupMapSelectedKey(group.key, mapKey);
                                                             } : undefined}
                                                             onToggleFavoriteAction={onToggleFavoriteAction}
+                                                            onPromoteListingAction={onPromoteListingAction}
                                                         />
                                                     );
                                                 })}

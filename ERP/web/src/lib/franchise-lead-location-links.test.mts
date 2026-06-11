@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    addUniqueLeadLocationLink,
     createLeadLocationLink,
     normalizeLeadLocationLinks,
     updateLeadLocationLink
@@ -49,27 +50,51 @@ test('createLeadLocationLink defaults manual links to review status', () => {
     });
 });
 
-test('manual links allow the same target to be connected more than once', () => {
-    const links = [
+test('addUniqueLeadLocationLink prevents duplicate target connections', () => {
+    const existingLinks = [
         createLeadLocationLink({
             id: 'link-1',
             targetType: 'franchise_location',
             targetId: 'loc-1',
             createdAt: '2026-06-10T10:00:00.000Z'
-        }),
-        createLeadLocationLink({
+        })
+    ];
+    const nextLink = createLeadLocationLink({
             id: 'link-2',
             targetType: 'franchise_location',
             targetId: 'loc-1',
             status: '제안 예정',
             createdAt: '2026-06-10T11:00:00.000Z'
+        });
+    const links = addUniqueLeadLocationLink(existingLinks, nextLink);
+
+    assert.equal(links.length, 1);
+    assert.equal(links[0]?.id, 'link-1');
+    assert.equal(links[0]?.status, '검토 예정');
+});
+
+test('addUniqueLeadLocationLink prepends a new target connection', () => {
+    const existingLinks = [
+        createLeadLocationLink({
+            id: 'link-1',
+            targetType: 'franchise_location',
+            targetId: 'loc-1',
+            createdAt: '2026-06-10T10:00:00.000Z'
         })
     ];
+    const nextLink = createLeadLocationLink({
+        id: 'link-2',
+        targetType: 'external_property_listing',
+        targetId: 'listing-1',
+        status: '제안 예정',
+        createdAt: '2026-06-10T11:00:00.000Z'
+    });
+
+    const links = addUniqueLeadLocationLink(existingLinks, nextLink);
 
     assert.equal(links.length, 2);
-    assert.equal(links[0]?.targetId, links[1]?.targetId);
-    assert.notEqual(links[0]?.id, links[1]?.id);
-    assert.equal(links[1]?.status, '제안 예정');
+    assert.equal(links[0]?.id, 'link-2');
+    assert.equal(links[1]?.id, 'link-1');
 });
 
 test('updateLeadLocationLink updates status and trims memo', () => {

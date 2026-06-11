@@ -13,7 +13,7 @@
 | Docs steward rules | `documentation-agent.md` | Authority, approved docs, required report format. |
 | Product roadmap | `franchise-growth-roadmap.md` | Priorities, provider policies, next work. |
 | Development/QA log | `franchise-dev-qa-log.md` | Verified commands, open QA, blocked provider checks. |
-| External realty import | `realty-import-plan.md` | Daangn MVP, limits, deferred Naver Land approach. |
+| External realty import | `franchise-growth-roadmap.md`, `franchise-dev-qa-log.md` | Daangn MVP status, limits, deferred Naver Land approach, and QA gaps. |
 | FDAM reference | `fdam-reference.md` | Competitive ERP reference, not live status. |
 
 ## CONVENTIONS

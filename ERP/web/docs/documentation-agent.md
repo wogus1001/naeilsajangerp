@@ -21,7 +21,6 @@ The agent keeps project documents current while product and engineering work mov
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-growth-roadmap.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-dev-qa-log.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/fdam-reference.md`
-- `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/realty-import-plan.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/documentation-agent.md`
 
 ## Responsibilities
@@ -32,7 +31,7 @@ The agent keeps project documents current while product and engineering work mov
 - Keep `MAC_CONTEXT.md` concise enough for a new session to resume work.
 - Keep `README.md` focused on setup, env, SQL, and operational instructions.
 - Keep reference documents separate from live status documents.
-- Keep `realty-import-plan.md` current when external listing import scope, limits, source behavior, QA status, or promotion flow changes.
+- Keep external listing import scope, limits, source behavior, QA status, and promotion flow aligned between the roadmap and QA log.
 
 ## Separate Codex Thread
 
@@ -80,7 +79,6 @@ Doc Update Brief
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-growth-roadmap.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-dev-qa-log.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/fdam-reference.md
-- /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/realty-import-plan.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/documentation-agent.md
 
 작업 루트:

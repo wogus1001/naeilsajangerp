@@ -55,6 +55,7 @@ import { LeadLocationLinkSection } from '@/components/franchise/LeadLocationLink
 import { LeadWorkflowSection } from '@/components/franchise/LeadWorkflowSection';
 import type { LeadLocationMatchLocation } from '@/lib/franchise-lead-location-matching';
 import {
+    addUniqueLeadLocationLink,
     createLeadLocationLink,
     normalizeLeadLocationLinks,
     updateLeadLocationLink
@@ -1583,7 +1584,13 @@ export default function FranchiseLeadsPage() {
         });
 
         try {
-            await saveLocationLinks([nextLink, ...currentLinks], `후보지 연결: ${targetName}`);
+            const nextLinks = addUniqueLeadLocationLink(currentLinks, nextLink);
+            if (nextLinks.length === currentLinks.length) {
+                showAlert('이미 연결된 후보지입니다.', 'info', '중복 연결');
+                return;
+            }
+
+            await saveLocationLinks(nextLinks, `후보지 연결: ${targetName}`);
             showAlert('후보자에 후보지를 연결했습니다.', 'success', '연결 완료');
         } catch (error) {
             console.error(error);

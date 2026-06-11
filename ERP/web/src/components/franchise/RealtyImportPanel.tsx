@@ -1,14 +1,13 @@
 "use client";
 
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     RealtyImportForm,
     RealtyImportResultPanel
 } from './realty-import/RealtyImportControls';
-import { RealtySavedListings } from './realty-import/RealtySavedListings';
+import { RealtySavedPanel } from './realty-import/RealtySavedPanel';
 import {
     buildRealtyRegionQuery,
     getRealtyRegionOption,
@@ -22,6 +21,7 @@ import {
     isFavorite,
     mergeFavorite
 } from './realty-import/utils';
+import { usePromoteRealtyListing } from './realty-import/usePromoteRealtyListing';
 
 type Props = {
     readonly userId: string;
@@ -100,6 +100,7 @@ export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
             setAllSavedRealtyListings((data.listings || []).map(listing => ({
                 action: 'collected',
                 duplicateOfPropertyId: listing.duplicateOfPropertyId,
+                propertyId: listing.propertyId || undefined,
                 listing
             })));
         } catch (error) {
@@ -113,6 +114,11 @@ export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
     React.useEffect(() => {
         void fetchSavedRealtyListings();
     }, [fetchSavedRealtyListings]);
+
+    const { promotingListingId, promoteListing } = usePromoteRealtyListing({
+        userId,
+        onPromotedAction: fetchSavedRealtyListings
+    });
 
     const runRealtyImport = async (regionOverride?: string) => {
         if (!userId) return;
@@ -211,47 +217,21 @@ export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
                     <RealtyImportResultPanel result={realtyImportResult} selectedRegion={selectedRealtyRegion} />
                 </div>
 
-                <div className={styles.realtySavedPanel}>
-                    <div className={styles.realtyResultHeader}>
-                        <div>
-                            <strong>저장된 상가</strong>
-                            <span>
-                                {selectedSavedRegion} · {isSavedRealtyLoading ? '불러오는 중' : `${selectedSavedRegionListings.length.toLocaleString()}건`}
-                                {allSavedRealtyListings.length > selectedSavedRegionListings.length ? ` · 전체 ${allSavedRealtyListings.length.toLocaleString()}건` : ''}
-                                {favoriteCount > 0 ? ` · 별표 ${favoriteCount.toLocaleString()}건` : ''}
-                            </span>
-                        </div>
-                        <button className={styles.secondaryButton} onClick={() => void runRealtyImport(selectedSavedRegion)} disabled={isRealtyImporting}>
-                            <RefreshCw size={14} />
-                            {isRealtyImporting ? '최신화 중' : '최신화'}
-                        </button>
-                    </div>
-                    <div className={styles.realtySavedRegionBar}>
-                        <strong>저장 지역</strong>
-                        <div>
-                            {visibleSavedRegions.map(region => (
-                                <button
-                                    key={region.key}
-                                    type="button"
-                                    className={region.key === selectedSavedRegion ? styles.realtySavedRegionActive : ''}
-                                    onClick={() => setSelectedSavedRegion(region.key)}
-                                >
-                                    <span>{region.key}</span>
-                                    <small>
-                                        {region.count.toLocaleString()}건
-                                        {region.favoriteCount > 0 ? ` · 별표 ${region.favoriteCount.toLocaleString()}` : ''}
-                                    </small>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <RealtySavedListings
-                        listings={selectedSavedRegionListings}
-                        isLoading={isSavedRealtyLoading}
-                        favoriteUpdatingId={favoriteUpdatingId}
-                        onToggleFavoriteAction={toggleFavorite}
-                    />
-                </div>
+                <RealtySavedPanel
+                    selectedSavedRegion={selectedSavedRegion}
+                    selectedSavedRegionListings={selectedSavedRegionListings}
+                    allListingCount={allSavedRealtyListings.length}
+                    favoriteCount={favoriteCount}
+                    visibleSavedRegions={visibleSavedRegions}
+                    isSavedRealtyLoading={isSavedRealtyLoading}
+                    isRealtyImporting={isRealtyImporting}
+                    favoriteUpdatingId={favoriteUpdatingId}
+                    promotingListingId={promotingListingId}
+                    onRefreshRegionAction={(region) => void runRealtyImport(region)}
+                    onSelectSavedRegionAction={setSelectedSavedRegion}
+                    onToggleFavoriteAction={toggleFavorite}
+                    onPromoteListingAction={(listing) => void promoteListing(listing)}
+                />
             </div>
         </section>
     );

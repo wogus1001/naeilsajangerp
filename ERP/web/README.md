@@ -37,7 +37,6 @@ npm run start -- -p 3000
 - `docs/franchise-growth-roadmap.md`: 프랜차이즈 고도화 우선순위, API 정책, 다음 작업 목록.
 - `docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크.
 - `docs/fdam-reference.md`: FDAM ERP 레퍼런스 분석.
-- `docs/realty-import-plan.md`: 가맹 운영 외부 상가 매물 수집 MVP 계획과 QA 체크리스트.
 - `docs/documentation-agent.md`: Docs Steward 권한, 금지 범위, 보고 형식.
 - `handoff.md`: 단일 작성자 규칙 때문에 Codex는 수정하지 않고 읽기 참고만 한다.
 
@@ -112,7 +111,7 @@ Franchise location screens are split by operating intent:
 
 Run `supabase_realty_import_migration.sql` before enabling external store listing import.
 
-The MVP lives under `/dashboard/franchise-operations` as the `외부 상가 수집` tab. It collects store-only listings by region, stores import history in `realty_import_jobs`, and stores raw source records in `external_property_listings`. It does not automatically create ERP `properties`; selected listings can be promoted later through a separate review flow.
+The MVP lives under `/dashboard/franchise-leads/market-insights?tab=realty-import` as the `외부 상가 수집` tab. It collects store-only listings by region, stores import history in `realty_import_jobs`, and stores raw source records in `external_property_listings`. It does not automatically create ERP `properties`; selected listings can be manually promoted to ERP `properties` from the saved-list row.
 
 Current source policy:
 

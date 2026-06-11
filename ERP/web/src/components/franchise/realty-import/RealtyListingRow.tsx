@@ -1,4 +1,4 @@
-import { ExternalLink, Star } from 'lucide-react';
+import { Building2, ExternalLink, Star } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { scoreRealtyListing } from './scoring';
 import type { RealtyImportedListing, RealtyListingRecord } from './types';
@@ -21,6 +21,8 @@ type Props = {
     readonly isMapMarkerSelected?: boolean;
     readonly onSelectMapMarkerAction?: () => void;
     readonly onToggleFavoriteAction: (listing: RealtyListingRecord) => void;
+    readonly promotingListingId: string;
+    readonly onPromoteListingAction: (listing: RealtyListingRecord) => void;
 };
 
 export function RealtyListingRow({
@@ -29,7 +31,9 @@ export function RealtyListingRow({
     mapMarkerNumber,
     isMapMarkerSelected = false,
     onSelectMapMarkerAction,
-    onToggleFavoriteAction
+    onToggleFavoriteAction,
+    promotingListingId,
+    onPromoteListingAction
 }: Props) {
     const listing = item.listing;
     const favorite = isFavorite(item);
@@ -39,6 +43,8 @@ export function RealtyListingRow({
     const candidateScore = scoreRealtyListing(item);
     const canSelectMapMarker = Boolean(mapMarkerNumber && onSelectMapMarkerAction);
     const addressText = listing?.address || listing?.region || '-';
+    const propertyId = listing?.propertyId || item.propertyId || '';
+    const isPromoting = Boolean(listing && promotingListingId === listing.id);
 
     return (
         <tr className={isMapMarkerSelected ? styles.realtyTableRowSelected : undefined}>
@@ -103,6 +109,26 @@ export function RealtyListingRow({
             <td>
                 <strong>{reactionMeta.join(' · ') || '-'}</strong>
                 <small>{listing?.imageUrls?.length ? `사진 ${listing.imageUrls.length}장` : ''}</small>
+            </td>
+            <td>
+                {listing ? (
+                    propertyId ? (
+                        <span className={styles.realtyPromotedButton}>
+                            <Building2 size={13} />
+                            승격됨
+                        </span>
+                    ) : (
+                        <button
+                            type="button"
+                            className={styles.realtyPromoteButton}
+                            onClick={() => onPromoteListingAction(listing)}
+                            disabled={isPromoting}
+                        >
+                            <Building2 size={13} />
+                            {isPromoting ? '등록 중' : '물건지 등록'}
+                        </button>
+                    )
+                ) : '-'}
             </td>
             <td>
                 {listing?.sourceUrl ? (

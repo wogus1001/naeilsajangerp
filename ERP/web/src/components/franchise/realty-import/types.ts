@@ -8,6 +8,7 @@ export type RealtyImportedListing = {
 export type RealtyListingRecord = {
     readonly id: string;
     readonly duplicateOfPropertyId?: string | null;
+    readonly propertyId?: string | null;
     readonly source: string;
     readonly sourceListingId?: string;
     readonly sourceUrl: string;

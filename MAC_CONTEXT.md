@@ -123,6 +123,7 @@ npm run build
     - 기존 고객/명함/엑셀 유입은 유지하고, Meta 유입은 HOLD 상태로 표시만 남긴다.
     - 2026-06-10 완료: 모객 DB의 `오늘 할 일` 뷰를 `업무 큐`로 확장하고, 업무 필드는 `franchise_leads.data` JSON에 저장한다.
     - 2026-06-10 완료: Meta/엑셀 원천 유입은 `1차 유입 DB`에 쌓고, 의사 확인 후 `후보자`로 승격해 파이프라인/업무 큐/점포 매칭에 연결하는 단계 구조를 추가했다.
+    - 2026-06-11 QA 완료: admin 로그인 세션에서 `1차 유입 DB -> 후보자` 승격, 업무 큐 `전체 업무/연락 지연/오늘 연락/무응답` 숫자/목록 일치, 후보자 상세 업무 필드 저장/새로고침 유지 확인.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외
@@ -131,7 +132,8 @@ npm run build
     - 모객 리드의 `희망지역`, `예산`, `관심브랜드`와 기존 점포 DB를 연결
     - 후보자 상세에서 출점 후보지와 외부 상가 DB를 담당자가 직접 연결하고, 상담 상태/메모를 남기는 방향
     - 지도/상권 분석은 기본 매칭 이후 별도 고도화로 진행
-    - 2026-06-10 완료: 후보자 상세 패널에 `franchise_locations` 출점 후보지와 `external_property_listings` 외부 상가 DB를 수동 연결하는 패널을 추가했다. 연결 상태/메모는 `franchise_leads.data.locationLinks`에 저장하고, 같은 후보지를 여러 후보자에게 중복 연결할 수 있다.
+    - 2026-06-10 완료: 후보자 상세 패널에 `franchise_locations` 출점 후보지와 `external_property_listings` 외부 상가 DB를 수동 연결하는 패널을 추가했다. 연결 상태/메모는 `franchise_leads.data.locationLinks`에 저장한다.
+    - 2026-06-11 수정/QA 완료: 같은 후보지/외부 상가는 여러 후보자에게 연결 가능하지만, 같은 후보자 안에서는 동일 대상 중복 연결을 차단한다. 출점 후보지/외부 상가 DB 연결, 메모 저장, 삭제까지 확인.
   - 2026-06-09 개발 순서:
     - 1차 완료: 기존 모객DB와 점포 DB만 사용해 `출점 후보지 인사이트` 추가
     - 2차 완료: 본사 직영점/가맹점/예정점 위치 마스터 DB/API/UI 분리
@@ -170,8 +172,9 @@ npm run build
       - 실데이터 테스트 전 선행 적용 필요 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 브랜드 모니터링 실제 수집 전 선행 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - P0: SearchAPI 429/한도 초과 시 기존 Naver 리뷰/광고 성공 값을 덮어쓰지 않게 보호하고, UI를 `SearchAPI 한도초과`/`provider 미설정`/`결과 없음`으로 분리 표시.
-  - P1: `supabase_realty_import_migration.sql` 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 저장 상가 추천점수/필터/정렬, 점포목록 미등록, 회사 격리 확인.
+  - P1: 2026-06-11 `서울 광진구 화양동` 실수집 QA 완료. 원본 237건 중 20건 저장, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단 확인. 남은 QA는 `합정동`/`광진구` 구 단위 대량 수집, 회사 범위 없는 계정, 점포목록 상세/운영 화면 회귀.
   - 2026-06-10 결정: 외부 상가 수집은 Daangn 저장/지도/점수화 MVP까지 우선 마감하고, 다음 신규 개발은 모객 DB 업무 큐 강화 후 점포·상권 매칭으로 진행한다. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 1~3순위를 묶어서 진행한다.
+  - 2026-06-11 완료: 저장 외부 상가 행에서 `물건지 등록`을 눌러 선택 승격하는 1차 흐름 추가. `/api/realty/listings/promote`가 ERP `properties.operation_type='external'`, `data.externalImportMode='manual-promoted'` 물건지를 만들고, 원본 행은 `status='promoted'`, `property_id`로 연결한다. 재호출은 `existing`으로 같은 물건지를 반환.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
@@ -248,10 +251,10 @@ npm run build
   - 화면 수집 요청은 2000건, import API 안전 상한은 3000건이다. 저장 목록 API는 최대 2000건까지 조회한다.
   - 외부 원본 중복은 `company_id + source + source_listing_id` 기준으로 업데이트한다.
   - 물건지 목록의 `외부수집` 필터/배지는 과거 자동 등록 데이터 구분용으로만 유지.
-  - 문서: `ERP/web/docs/realty-import-plan.md`.
+  - 문서: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 `ERP/web/docs/franchise-dev-qa-log.md`에서 관리한다.
   - 로컬 검증: `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 통과.
-  - 다음 QA: SQL 적용 후 당근 `합정동`/`광진구` 상가 수집, 동 단위 확장 warning, `salesType=store` 적용 후 수집량 변화, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 저장 지역 칩/동별 현재 페이지 지도 패널/표-지도 마커 번호 매칭/동 카드/별표/저장일/추천점수/필터/정렬, 점포목록 미등록, 회사 격리 확인.
-  - 다음 개발순서: 중복 후보 묶기 -> 상위 N건 상세 보강 -> 가격/상태 변동 추적 -> 선택 승격 플로우. 필터/점수화와 지도화는 기초 구현 완료이며, 지도화는 서버 좌표 영구 저장과 기존 점포/출점 후보지/경쟁환경 지도 통합이 남아 있다.
+  - 다음 QA: 당근 `합정동`/`광진구` 구 단위 대량 수집, 동 단위 확장 warning, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 회사 범위 없는 계정 저장/조회, 승격 물건지의 점포목록 상세/검색/운영 화면 표시 확인.
+  - 다음 개발순서: 중복 후보 묶기 -> 상위 N건 상세 보강 -> 가격/상태 변동 추적 -> 승격 후 점포목록 상세/운영 워크플로 연결. 필터/점수화와 지도화는 기초 구현 완료이며, 지도화는 서버 좌표 영구 저장과 기존 점포/출점 후보지/경쟁환경 지도 통합이 남아 있다.
 - 점포/고객/명함 목록 검색 개선
   - 쉼표/띄어쓰기 OR 검색 공용 파서 적용
   - 검색 시 `limit=500` 밖 데이터까지 전체 범위에서 조회
