@@ -1,0 +1,8 @@
+{
+  "status": "BLOCKED_QA_ENV",
+  "startedAt": "2026-06-11T02:16:04.275Z",
+  "reason": "FRANCHISE_QA_REQUESTER_ID or QA_REQUESTER_ID is required for live Excel ingress QA.",
+  "metaStatus": "BLOCKED_META_ENV",
+  "metaReason": "Meta account/app/env is still HOLD and is not exercised by this Excel runner.",
+  "command": "node scripts/franchise-p0-lead-ingress-qa.mjs --base-url <url>"
+}

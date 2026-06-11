@@ -1,0 +1,19 @@
+Task: T7 Client request/UI state wiring
+Date: 2026-06-11
+
+Implementation note:
+- Opening project state is panel-local in `OpeningProjectPanel` instead of being added to the existing operations controller.
+- This keeps the existing manual-promoted conversion controller behavior unchanged while adding fetch/create/update/delete request functions in `requests.ts`.
+
+Commands:
+- npx tsc --noEmit --pretty false
+- npm run lint -- --quiet
+
+Result:
+- TypeScript passed.
+- ESLint passed.
+- File size check after split:
+  - src/components/franchise/operations/OpeningProjectPanel.tsx: 198 pure LOC
+  - src/components/franchise/operations/OpeningProjectTaskList.tsx: 62 pure LOC
+  - src/components/franchise/operations/requests.ts: 204 pure LOC
+  - src/components/franchise/operations/types.ts: 109 pure LOC

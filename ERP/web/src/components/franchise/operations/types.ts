@@ -1,4 +1,9 @@
 import type { LocationCompetitionScan } from '@/components/franchise/LocationCompetitionPanel';
+import type {
+    OpeningProjectStatus,
+    OpeningProjectSummary,
+    OpeningProjectTask
+} from '@/lib/franchise-opening-projects';
 
 export const FRANCHISE_LOCATION_TYPES = ['직영점', '가맹점', '예정점'] as const;
 export const FRANCHISE_LOCATION_STATUSES = ['운영중', '오픈준비', '검토중', '휴점', '폐점'] as const;
@@ -39,6 +44,29 @@ export type FranchiseLocation = {
     readonly categoryMajor?: string;
     readonly categoryMiddle?: string;
     readonly categorySmall?: string;
+};
+
+export type FranchiseOpeningProject = {
+    readonly id: string;
+    readonly companyId: string;
+    readonly locationId: string;
+    readonly managerId: string | null;
+    readonly status: OpeningProjectStatus;
+    readonly targetOpenDate: string | null;
+    readonly memo: string;
+    readonly tasks: readonly OpeningProjectTask[];
+    readonly summary: OpeningProjectSummary;
+    readonly createdAt?: string;
+    readonly updatedAt?: string;
+};
+
+export type OpeningProjectDraft = {
+    readonly id?: string;
+    readonly locationId: string;
+    readonly status: OpeningProjectStatus;
+    readonly targetOpenDate: string;
+    readonly memo: string;
+    readonly tasks: readonly OpeningProjectTask[];
 };
 
 export type LocationFormState = {

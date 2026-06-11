@@ -1912,6 +1912,149 @@
     font-size: 11px;
 }
 
+.openingProjectList {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.openingProjectCard {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fbfdff;
+}
+
+.openingProjectHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.openingProjectHeader div {
+    min-width: 0;
+}
+
+.openingProjectHeader strong,
+.openingProjectHeader span {
+    display: block;
+}
+
+.openingProjectHeader strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.openingProjectHeader span {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.openingProgress {
+    display: inline-flex;
+    min-width: 54px;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.openingProjectMeta {
+    display: grid;
+    grid-template-columns: minmax(126px, 0.9fr) minmax(150px, 0.9fr) repeat(3, minmax(88px, 0.7fr));
+    gap: 8px;
+    align-items: center;
+}
+
+.openingProjectMeta select,
+.openingProjectMeta input,
+.openingProjectCard textarea,
+.openingTaskRow select,
+.openingTaskRow input {
+    width: 100%;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.openingProjectMeta select,
+.openingProjectMeta input,
+.openingTaskRow select,
+.openingTaskRow input {
+    height: 36px;
+    padding: 0 9px;
+}
+
+.openingProjectMeta span {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.openingProjectCard textarea {
+    min-height: 64px;
+    padding: 10px;
+    resize: vertical;
+}
+
+.openingTaskList {
+    display: grid;
+    gap: 6px;
+}
+
+.openingTaskHeader,
+.openingTaskRow {
+    display: grid;
+    grid-template-columns: minmax(74px, 0.7fr) minmax(102px, 0.7fr) minmax(92px, 0.7fr) minmax(130px, 0.8fr) minmax(160px, 1.2fr);
+    gap: 6px;
+    align-items: center;
+}
+
+.openingTaskHeader {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.openingTaskRow {
+    padding: 8px;
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.openingTaskRow strong {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.openingProjectActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .locationScanSummary {
     display: flex;
     flex-wrap: wrap;
@@ -5181,6 +5324,15 @@
         grid-template-columns: 1fr;
     }
 
+    .openingProjectMeta {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .openingTaskHeader,
+    .openingTaskRow {
+        grid-template-columns: minmax(72px, 0.7fr) minmax(96px, 0.8fr) minmax(86px, 0.8fr) minmax(128px, 0.9fr) minmax(140px, 1fr);
+    }
+
     .realtyImportGrid {
         grid-template-columns: 1fr;
     }
@@ -5375,6 +5527,25 @@
     .locationItem {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .openingProjectHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .openingProgress {
+        width: fit-content;
+    }
+
+    .openingProjectMeta,
+    .openingTaskHeader,
+    .openingTaskRow {
+        grid-template-columns: 1fr;
+    }
+
+    .openingTaskHeader {
+        display: none;
     }
 
     .locationFormGrid {

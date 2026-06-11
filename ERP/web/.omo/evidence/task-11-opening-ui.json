@@ -1,0 +1,17 @@
+{
+  "task": "T11 Opening project operations UI",
+  "date": "2026-06-11",
+  "baseUrl": "http://localhost:3000",
+  "route": "/dashboard/franchise-operations",
+  "browserSignals": {
+    "hasOpeningPanel": true,
+    "hasChecklistOrEmptyText": true,
+    "hasInlineMigrationFailure": true
+  },
+  "result": "PARTIAL_PASS_BLOCKED_DB_MIGRATION",
+  "notes": [
+    "The operations page renders the new 오픈 준비 프로젝트 section.",
+    "The local DB has not applied the new franchise_opening_projects migration, so persistence CRUD could not be browser-verified in this session.",
+    "The panel now shows the fetch failure inline in Korean instead of opening a blocking alert."
+  ]
+}

@@ -1,0 +1,18 @@
+Task: T3 Specify opening-project data contract and SQL migration
+Date: 2026-06-11
+
+Commands:
+- rg -n "franchise_opening_projects|get_my_company_id|unique|target_open_date|supabase_franchise_opening_projects_migration" supabase_franchise_opening_projects_migration.sql supabase_schema.sql README.md
+- git diff --check -- supabase_franchise_opening_projects_migration.sql supabase_schema.sql README.md
+- awk pure LOC check for supabase_franchise_opening_projects_migration.sql
+
+Result:
+- README migration list includes supabase_franchise_opening_projects_migration.sql.
+- Migration and schema include public.franchise_opening_projects.
+- RLS policies use get_my_company_id().
+- Unique company/location and company/status/date indexes are present.
+- git diff --check returned no whitespace errors.
+- Migration pure LOC: 34.
+
+Blocked:
+- Live Supabase migration apply was not run in this task; it requires the target project database and operator approval.

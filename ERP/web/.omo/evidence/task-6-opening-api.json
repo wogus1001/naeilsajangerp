@@ -1,0 +1,10 @@
+{
+  "status": "BLOCKED_OPENING_API_ENV",
+  "startedAt": "2026-06-11T02:18:44.093Z",
+  "missing": [
+    "FRANCHISE_QA_REQUESTER_ID or QA_REQUESTER_ID",
+    "FRANCHISE_QA_OPENING_LOCATION_ID"
+  ],
+  "reason": "Opening project API QA needs a requester and an existing 오픈준비 franchise_locations id.",
+  "command": "node scripts/franchise-opening-projects-api-qa.mjs --base-url <url>"
+}

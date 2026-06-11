@@ -1,0 +1,6 @@
+{
+  "status": "BLOCKED_QA_ENV",
+  "startedAt": "2026-06-11T02:16:53.230Z",
+  "reason": "FRANCHISE_QA_REQUESTER_ID or QA_REQUESTER_ID is required for external realty QA.",
+  "command": "node scripts/franchise-realty-scale-raw-qa.mjs --base-url <url> [--live-collect]"
+}

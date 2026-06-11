@@ -1,6 +1,14 @@
 import type { ManualPromotedLocationDraft, ManualPromotedOperationProperty } from '@/lib/manual-promoted-operations';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
-import type { AuthUser, FranchiseLocation, FranchiseLocationStatus, LocationFormState } from './types';
+import type { OpeningProjectTask } from '@/lib/franchise-opening-projects';
+import type {
+    AuthUser,
+    FranchiseLocation,
+    FranchiseLocationStatus,
+    FranchiseOpeningProject,
+    LocationFormState,
+    OpeningProjectDraft
+} from './types';
 
 type RequestScope = {
     readonly userId: string;
@@ -31,6 +39,19 @@ type DeleteLocationParams = RequestScope & {
 type ScanLocationCompetitorsParams = RequestScope & {
     readonly locationId: string;
     readonly query: string;
+};
+
+type SaveOpeningProjectParams = RequestScope & {
+    readonly draft: OpeningProjectDraft;
+};
+
+type UpdateOpeningProjectTaskParams = RequestScope & {
+    readonly projectId: string;
+    readonly tasks: readonly OpeningProjectTask[];
+};
+
+type DeleteOpeningProjectParams = RequestScope & {
+    readonly projectId: string;
 };
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -88,6 +109,15 @@ export async function fetchFranchiseLocations(scope: RequestScope): Promise<Fran
     return data.locations || [];
 }
 
+export async function fetchOpeningProjects(scope: RequestScope): Promise<FranchiseOpeningProject[]> {
+    const params = new URLSearchParams({ requesterId: scope.userId });
+    if (scope.companyName) params.set('company', scope.companyName);
+    const response = await fetch(`/api/franchise-opening-projects?${params.toString()}`, { cache: 'no-store' });
+    const payload = await readResponsePayload(response);
+    const data = unwrapApiData<{ projects: FranchiseOpeningProject[] }>(payload);
+    return data.projects || [];
+}
+
 export async function fetchManualPromotedProperties(scope: RequestScope): Promise<ManualPromotedOperationProperty[]> {
     const params = new URLSearchParams({ requesterId: scope.userId, limit: 'all' });
     if (scope.companyName) params.set('company', scope.companyName);
@@ -122,6 +152,36 @@ export async function saveFranchiseLocation({ userId, companyName, form }: SaveL
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, requesterId: userId, companyName })
     });
+    await readResponsePayload(response);
+}
+
+export async function saveOpeningProject({ userId, companyName, draft }: SaveOpeningProjectParams): Promise<FranchiseOpeningProject> {
+    const response = await fetch('/api/franchise-opening-projects', {
+        method: draft.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...draft, requesterId: userId, companyName })
+    });
+    const payload = await readResponsePayload(response);
+    return unwrapApiData<{ project: FranchiseOpeningProject }>(payload).project;
+}
+
+export async function updateOpeningProjectTasks({
+    userId,
+    projectId,
+    tasks
+}: UpdateOpeningProjectTaskParams): Promise<FranchiseOpeningProject> {
+    const response = await fetch('/api/franchise-opening-projects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: projectId, requesterId: userId, tasks })
+    });
+    const payload = await readResponsePayload(response);
+    return unwrapApiData<{ project: FranchiseOpeningProject }>(payload).project;
+}
+
+export async function deleteOpeningProject({ userId, projectId }: DeleteOpeningProjectParams): Promise<void> {
+    const params = new URLSearchParams({ id: projectId, requesterId: userId });
+    const response = await fetch(`/api/franchise-opening-projects?${params.toString()}`, { method: 'DELETE' });
     await readResponsePayload(response);
 }
 

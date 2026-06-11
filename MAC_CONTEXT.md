@@ -177,6 +177,8 @@ npm run build
   - 2026-06-11 완료: 저장 외부 상가 행에서 `물건지 등록`을 눌러 선택 승격하는 1차 흐름 추가. `/api/realty/listings/promote`가 ERP `properties.operation_type='external'`, `data.externalImportMode='manual-promoted'` 물건지를 만들고, 원본 행은 `status='promoted'`, `property_id`로 연결한다. 재호출은 `existing`으로 같은 물건지를 반환.
   - 2026-06-11 안정화 완료: P0 `연락 완료`, 기존 단계값 없는 리드, 후보지 연결 상태/메모 reload를 API/DB로 재검증했다. `manual-promoted` 물건지가 `/properties` 상세/검색/외부수집 필터와 배지에 포함되도록 수정했다. 합정동 재수집과 광진구 구 단위 확장 수집은 기존 외부 원본 업데이트로 통과했고, `registerToProperties` 차단 및 ERP `properties` 자동 생성 0건을 재확인했다.
   - 2026-06-11 완료: 권한/회사 범위 API QA와 `manual-promoted` 운영 화면 전환 워크플로를 완료했다. 교차 회사 승격/조회는 403, 회사 없는 requester 승격은 400으로 차단되고, 운영 화면은 수동 승격 물건지를 명시 `운영점 등록` 후 `franchise_locations.source_property_id`로 연결해 새로고침 후에도 유지한다.
+  - 2026-06-11 완료: 오픈 준비 프로젝트 MVP 추가. `supabase_franchise_opening_projects_migration.sql`, `/api/franchise-opening-projects`, 운영 화면 `OpeningProjectPanel`을 추가해 `오픈준비` 운영점별 상태/목표 오픈일/메모/checklist를 전용 테이블에 저장하는 구조로 분리했다. 전역 모바일 사이드바는 390px 첫 진입 기본 접힘, 1440px 기본 열림으로 route sweep 통과.
+  - 2026-06-11 QA runner 추가: 엑셀 유입, role matrix, 오픈 준비 API, 외부 상가 scale/raw runner를 만들었다. 현재 로컬 세션에는 QA requester/실운영 role/env와 새 opening-project SQL 적용 DB가 없어 각각 `BLOCKED_QA_ENV`, `BLOCKED_REAL_ROLE_MATRIX`, `BLOCKED_OPENING_API_ENV`로 기록했다. Meta는 계속 HOLD/`BLOCKED_META_ENV`.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
@@ -255,7 +257,7 @@ npm run build
   - 물건지 목록의 `외부수집` 필터/배지는 과거 자동 등록 데이터 구분용으로만 유지.
   - 문서: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 `ERP/web/docs/franchise-dev-qa-log.md`에서 관리한다.
   - 로컬 검증: `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 통과.
-  - 다음 QA: 실제 2000/3000 수집 리밋, 저장 목록 2000건 상한, 실운영 계정 role matrix, 모바일 전역 레이아웃 자동 접힘, Daangn raw/data 샘플 감사.
+  - 다음 QA: 실제 2000/3000 수집 리밋, 저장 목록 2000건 상한, 실운영 계정 role matrix, Daangn raw/data live 샘플 감사, opening-project SQL 적용 후 저장/새로고침 persistence 확인.
   - 다음 개발순서: 중복 후보 묶기 -> 상위 N건 상세 보강 -> 가격/상태 변동 추적 -> 승격 후 점포목록 상세/운영 워크플로 연결. 필터/점수화와 지도화는 기초 구현 완료이며, 지도화는 서버 좌표 영구 저장과 기존 점포/출점 후보지/경쟁환경 지도 통합이 남아 있다.
 - 점포/고객/명함 목록 검색 개선
   - 쉼표/띄어쓰기 OR 검색 공용 파서 적용

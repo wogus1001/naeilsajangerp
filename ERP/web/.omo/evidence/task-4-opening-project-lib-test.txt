@@ -1,0 +1,21 @@
+Task: T4 opening project normalization helpers and tests
+Command: npx tsx --test src/lib/franchise-opening-projects.test.mts
+Result: PASS
+
+Covered:
+- Default six-task HQ opening checklist: 계약, 인테리어, 교육, 초도물류, 홍보, 오픈일.
+- Saved task merge without losing existing status/owner/dueDate/memo.
+- Single task update without mutating the original task list.
+- Progress, blocker, overdue, and due-soon summary.
+- Unknown project status fallback to 준비중.
+
+Pure LOC:
+- src/lib/franchise-opening-projects.ts: 139
+- src/lib/franchise-opening-projects.test.mts: 70
+
+Post-write review:
+- Single responsibility: opening-project task normalization and summary only.
+- Boundary purity: helper accepts typed task inputs; API boundary parsing is handled separately.
+- Variant discrimination: fixed literal unions are normalized centrally.
+- Escape hatches: no any, no ts-ignore, no non-null assertion.
+- Tests: reverting the helper implementation fails the added unit tests.

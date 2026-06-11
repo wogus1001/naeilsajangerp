@@ -1,0 +1,20 @@
+{
+  "task": "T17 Full mobile and realty/lead regression verification",
+  "date": "2026-06-11",
+  "result": "PASS_WITH_DATA_ENV_WARNINGS",
+  "layoutEvidenceFile": ".omo/evidence/task-10-mobile-layout.json",
+  "routes": [
+    "/dashboard/franchise-leads",
+    "/dashboard/franchise-leads/market-insights?tab=realty-import",
+    "/dashboard/franchise-operations"
+  ],
+  "viewports": [
+    "390x844",
+    "1440x900"
+  ],
+  "layoutResult": "No horizontal overflow. Mobile sidebar starts collapsed at 0px. Desktop sidebar starts open at 240px.",
+  "warnings": [
+    "Some existing data fetches show alerts/errors when local provider/database state is incomplete.",
+    "Opening project fetch failure is now inline and no longer blocks route rendering."
+  ]
+}

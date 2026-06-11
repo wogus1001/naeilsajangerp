@@ -49,6 +49,14 @@
 - 초기 구현은 기존 ERP 위치 DB와 저장된 외부 상가 DB만 사용한다. SearchAPI 유료 결제 전까지 외부 검색 API 의존성 없이 담당자 수동 매칭을 우선한다.
 - 다음 단계는 연결된 후보지에서 출점 후보지 인사이트/경쟁스캔 상세로 이동하는 흐름이다. 선택 외부 매물을 ERP 물건지로 승격하는 1차 흐름은 완료했다.
 
+### 본사 운영관리
+
+- `/dashboard/franchise-operations`는 운영 가맹점 마스터, 수동 승격 외부 상가 운영 전환, 오픈 준비 프로젝트를 본사 운영 화면으로 묶는다.
+- 2026-06-11 `franchise_opening_projects` 전용 테이블/API/UI MVP를 추가했다. 프로젝트는 `오픈준비` 상태의 `franchise_locations`에만 연결하고, 상태/목표 오픈일/메모/계약-인테리어-교육-초도물류-홍보-오픈일 checklist를 별도 저장한다.
+- 오픈 준비 프로젝트는 회사 범위가 확인된 requester만 생성/수정/삭제할 수 있다. 회사 없는 requester나 교차 회사 requester는 mutation을 차단한다.
+- 로컬 브라우저 QA에서 `/dashboard/franchise-leads`, `/dashboard/franchise-leads/market-insights?tab=realty-import`, `/dashboard/franchise-operations` 390px 모바일 진입 시 전역 사이드바가 기본 접힘 상태로 시작하고, 1440px 데스크톱에서는 기본 열림 상태를 유지함을 확인했다.
+- 로컬 DB에는 `supabase_franchise_opening_projects_migration.sql`이 아직 적용되지 않아 오픈 준비 프로젝트 CRUD/새로고침 persistence의 실제 DB QA는 blocked로 남긴다. SQL 적용 후 `scripts/franchise-opening-projects-api-qa.mjs`로 재검증한다.
+
 ### Naver 공식 API MVP
 
 - `/api/franchise-market-monitoring`와 `/dashboard/franchise-leads/brand-monitoring` 기반 구조를 추가했다.
@@ -152,7 +160,8 @@
 - 모객 DB 핵심 플로우는 2026-06-11 로그인 세션 QA를 통과했다.
   - `1차 유입 DB -> 후보자` 승격, 업무 큐 `전체 업무/연락 지연/오늘 연락/무응답`, 후보자 상세 업무 필드 저장, 출점 후보지/외부 상가 DB 연결/메모/삭제/중복 방지를 확인했다.
 - 2026-06-11 안정화 QA에서 기존 단계값 없는 리드 유지, `연락 완료` 처리, 후보지 연결 상태/메모 reload 유지를 추가 확인했다.
-- 남은 P0 회귀 QA는 실제 Meta/엑셀 업로드 파일 유입과 실운영 계정 role matrix 확인이다. 임시 회사/사용자 기준 권한/회사 범위 API QA는 2026-06-11 통과했다.
+- 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)를 추가했다. 현재 세션에는 `FRANCHISE_QA_REQUESTER_ID`/`QA_REQUESTER_ID`가 없어 live QA는 `BLOCKED_QA_ENV`로 기록했다.
+- 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.
 
 ### P1
 
@@ -164,7 +173,7 @@
 - 외부 상가 수집 MVP를 실제 Supabase migration 적용 후 검증한다.
   - 2026-06-11 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 수집은 통과했다. 합정동 재수집과 광진구 구 단위 수집은 기존 행 업데이트로 처리됐다.
   - 시도/시군구 선택, 저장 지역 칩, 저장된 상가 동 카드, 최신화 버튼이 의도대로 동작하는지 확인한다.
-  - 실제 2000/3000 상한에 가까운 수집 요청에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 의도대로 동작하는지 확인한다.
+  - 실제 2000/3000 상한에 가까운 수집 요청에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 의도대로 동작하는지 확인한다. `scripts/franchise-realty-scale-raw-qa.mjs` runner는 추가했지만 live QA requester env가 없어 `BLOCKED_QA_ENV`로 남았다.
   - 외부 수집 결과가 ERP `properties`에 자동 등록되지 않는지는 2026-06-11에 재확인했다. import API 변경 때마다 회귀 확인한다.
   - 선택 외부 상가 수동 승격은 2026-06-11 1차 구현/QA, 점포목록 상세/검색/외부수집 필터 회귀, 운영 화면 전환 워크플로 확인을 통과했다.
 - 외부 상가 수집 고도화는 아래 순서로 진행한다.
@@ -173,7 +182,7 @@
   - 3순위: 같은 주소와 비슷한 가격/면적의 중복 후보 묶기
   - 4순위: 점수 상위 30~50건 상세 페이지 추가 조회
   - 5순위: 재수집 기반 가격/상태 변동 추적
-  - 6순위: 사용자가 선택한 외부 매물만 ERP 물건지로 승격 완료. 점포목록 상세/검색/외부수집 필터, 권한/회사 범위, 승격 후 운영 워크플로 QA까지 통과했으며, 다음은 실운영 계정 role matrix와 모바일 전역 레이아웃 회귀
+  - 6순위: 사용자가 선택한 외부 매물만 ERP 물건지로 승격 완료. 점포목록 상세/검색/외부수집 필터, 권한/회사 범위, 승격 후 운영 워크플로 QA까지 통과했다. 모바일 전역 사이드바 기본 접힘 회귀는 2026-06-11 통과했고, 다음은 실운영 계정 role matrix live QA다.
 - 네이버부동산은 위 고도화 이후 별도 트랙으로 진행한다.
   - 1순위: 사용자가 복사한 네이버부동산 URL/CSV/JSON을 ERP 외부 원본 목록으로 import
   - 2순위: 로컬 Chrome 로그인 세션에서 사용자가 직접 연 페이지의 목록 데이터를 읽는 캡처 POC

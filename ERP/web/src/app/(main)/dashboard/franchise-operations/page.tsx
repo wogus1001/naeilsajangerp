@@ -5,6 +5,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
 import { ManualPromotedPropertyPanel } from '@/components/franchise/operations/ManualPromotedPropertyPanel';
+import { OpeningProjectPanel } from '@/components/franchise/operations/OpeningProjectPanel';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
 import styles from '../franchise-leads/page.module.css';
@@ -89,6 +90,12 @@ export default function FranchiseOperationsPage() {
                         creatingPropertyId={controller.creatingLocationPropertyId}
                         onRefresh={() => void controller.fetchManualPromotedProperties()}
                         onCreateLocation={(entry) => void controller.createLocationFromManualPromotedProperty(entry)}
+                    />
+
+                    <OpeningProjectPanel
+                        userId={controller.userId}
+                        companyName={controller.companyName}
+                        locations={controller.operationalLocations}
                     />
 
                     <div className={styles.marketRoadmap}>

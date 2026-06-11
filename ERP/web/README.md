@@ -46,6 +46,7 @@ npm run start -- -p 3000
 
 ```text
 supabase_franchise_locations_migration.sql
+supabase_franchise_opening_projects_migration.sql
 supabase_franchise_brands_migration.sql
 supabase_franchise_market_monitoring_migration.sql
 supabase_meta_lead_ads_migration.sql

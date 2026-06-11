@@ -1,0 +1,27 @@
+Task: T18 Commit-ready audit and final commit
+Date: 2026-06-11
+
+Pre-commit commands:
+- git status --short --branch
+- git diff --check
+- git diff -- ERP/web/handoff.md
+- npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/layout/useResponsiveSidebar.test.mts src/lib/manual-promoted-operations.test.mts src/lib/property-external-status.test.mts src/lib/realty-listing-promotion.test.mts src/lib/realty-import-schema.test.mts src/components/franchise/realty-import/scoring.test.mts src/components/franchise/realty-import/utils.test.mts src/components/franchise/realty-import/map-utils.test.mts src/lib/franchise-lead-workflow.test.mts
+- npx tsc --noEmit --pretty false
+- npm run lint -- --quiet
+- npm run build
+
+Result:
+- git diff --check passed.
+- ERP/web/handoff.md diff is empty.
+- Targeted tests passed: 36 tests.
+- TypeScript passed.
+- ESLint passed.
+- Build passed.
+- Browser MCP route sweep passed for the three franchise routes at 390x844 and 1440x900.
+
+Known blocked live QA:
+- Meta stays HOLD/BLOCKED_META_ENV.
+- Live Excel ingress requires FRANCHISE_QA_REQUESTER_ID or QA_REQUESTER_ID.
+- Live role matrix requires real admin/company A/company B/no-company QA account env.
+- Opening project CRUD/reload persistence requires supabase_franchise_opening_projects_migration.sql applied and an existing 오픈준비 franchise_locations id.
+- External realty 2000/3000 live scale/raw QA requires live QA requester env.
