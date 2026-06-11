@@ -3,35 +3,18 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
-} from 'recharts';
-import {
-    ArrowLeft,
-    ArrowRight,
     BriefcaseBusiness,
     CalendarClock,
     CheckCircle2,
     Columns3,
     Download,
     FileSpreadsheet,
-    LayoutDashboard,
     ListChecks,
     Link2,
-    Megaphone,
     MessageSquare,
     Pencil,
     Plus,
     RefreshCw,
-    Search,
-    SlidersHorizontal,
     Table2,
     Trash2,
     Upload,
@@ -41,7 +24,15 @@ import {
 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
+import { LeadDashboard } from '@/components/franchise/leads/LeadDashboard';
+import { LeadPipelineBoard } from '@/components/franchise/leads/LeadPipelineBoard';
+import { LeadTableView } from '@/components/franchise/leads/LeadTableView';
+import { LeadTaskBoard } from '@/components/franchise/leads/LeadTaskBoard';
+import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
+import { LeadWorkspaceTabs, type LeadWorkspaceTab } from '@/components/franchise/leads/LeadWorkspaceTabs';
+import { useLeadDerivedData } from '@/components/franchise/leads/useLeadDerivedData';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     FRANCHISE_LEAD_GRADES,
@@ -51,29 +42,76 @@ import {
     getFranchiseLeadStageLabel,
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
-import type { FranchiseLeadStage, FranchiseLeadStatus } from '@/lib/franchise-leads';
+import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import { LeadLocationLinkSection } from '@/components/franchise/LeadLocationLinkSection';
 import { LeadWorkflowSection } from '@/components/franchise/LeadWorkflowSection';
-import type { LeadLocationMatchLocation } from '@/lib/franchise-lead-location-matching';
 import {
     addUniqueLeadLocationLink,
     createLeadLocationLink,
     normalizeLeadLocationLinks,
     updateLeadLocationLink
 } from '@/lib/franchise-lead-location-links';
-import type { LeadLocationLink, LeadLocationLinkStatus, LeadLocationTargetType } from '@/lib/franchise-lead-location-links';
+import type { LeadLocationLinkStatus, LeadLocationTargetType } from '@/lib/franchise-lead-location-links';
+import {
+    ACTIVITY_TYPES,
+    EMPTY_FORM,
+    EMPTY_META_STATE,
+    LEAD_DB_LAYER_OPTIONS,
+    META_FIELD_LABELS,
+    PAGE_SIZE_OPTIONS,
+    RANGE_OPTIONS,
+    SOURCE_FILTER_OPTIONS,
+    VIEW_OPTIONS
+} from '@/components/franchise/leads/constants';
+import type {
+    AuthUser,
+    ExternalPropertyListing,
+    FranchiseLead,
+    FranchiseLocation,
+    LeadActivity,
+    LeadActivityType,
+    LeadDbLayer,
+    LeadFormState,
+    LeadListResponse,
+    LeadLocationLink,
+    LeadSummary,
+    LeadViewMode,
+    ManagerOption,
+    MetaConnection,
+    MetaFieldMapping,
+    MetaIntegrationState,
+    MetaLeadForm,
+    RelatedBusinessCard,
+    RelatedCustomer,
+    UploadErrorRow
+} from '@/components/franchise/leads/types';
+import {
+    buildDateFromRange,
+    createActivityId,
+    createEmptySummary,
+    createFormFromLead,
+    formatBudget,
+    formatFullDateTime,
+    formatDate,
+    formatDateTime,
+    isContactActionDue,
+    isDueToday,
+    isPastDue,
+    isRawIntakeLead,
+    mapLeadGradeToCustomerClass,
+    mapLeadGradeToCustomerGrade,
+    mapLeadStatusToCustomerStatus,
+    parseBudgetInputToWon,
+    toCustomerBudgetValue,
+    toDatetimeLocalValue,
+    toRangeOption,
+    toSourceFilterOption
+} from '@/components/franchise/leads/utils';
 import {
     EMPTY_LEAD_WORKFLOW_DRAFT,
-    buildLeadWorkflowDraft,
-    getLeadWorkQueueLabel,
-    getLeadWorkQueueRank,
-    getLeadWorkQueueSummary,
-    isLeadContactActionDue,
-    isLeadDueToday,
-    isLeadPastDue,
-    matchesLeadWorkQueue
+    buildLeadWorkflowDraft
 } from '@/lib/franchise-lead-workflow';
-import type { LeadConsultationResult, LeadFitLevel, LeadNextAction, LeadWorkflowDraft, LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
+import type { LeadWorkflowDraft, LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
 import {
     canEnterContractStatus,
     getContractLockMessage,
@@ -82,479 +120,6 @@ import {
 } from '@/lib/franchise-disclosure-deliveries';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from './page.module.css';
-
-type FranchiseLead = {
-    id: string;
-    companyId?: string;
-    managerId?: string;
-    name: string;
-    mobile: string;
-    mobileNormalized?: string;
-    source: string;
-    status: FranchiseLeadStatus;
-    grade: string;
-    leadStage?: FranchiseLeadStage;
-    desiredRegion: string;
-    budgetMin: number | null;
-    budgetMax: number | null;
-    interestedBrand: string;
-    memo: string;
-    nextContactAt: string | null;
-    lastContactedAt: string | null;
-    nextAction?: LeadNextAction;
-    consultationResult?: LeadConsultationResult;
-    churnReason?: string;
-    budgetFit?: LeadFitLevel;
-    regionFit?: LeadFitLevel;
-    brandFit?: LeadFitLevel;
-    createdAt: string;
-    updatedAt: string;
-    activityLog?: LeadActivity[];
-    linkedCustomerId?: string;
-    linkedCustomerName?: string;
-    linkedBusinessCardId?: string;
-    linkedBusinessCardName?: string;
-    sourceType?: string;
-    sourceId?: string;
-    companyName?: string;
-    convertedCustomerId?: string;
-    convertedCustomerName?: string;
-    convertedAt?: string;
-    locationLinks?: LeadLocationLink[];
-};
-
-type LeadActivityType = '전화' | '문자' | '방문상담' | '계약검토' | '메모' | '상태변경' | '고객전환';
-
-type LeadActivity = {
-    id: string;
-    type: LeadActivityType;
-    content: string;
-    createdAt: string;
-    createdBy?: string;
-};
-
-type RelatedCustomer = {
-    id: string;
-    name: string;
-    mobile?: string;
-    companyPhone?: string;
-    wantedArea?: string;
-    memoInterest?: string;
-};
-
-type RelatedBusinessCard = {
-    id: string;
-    name: string;
-    companyName?: string;
-    mobile?: string;
-    companyPhone1?: string;
-    memo?: string;
-};
-
-type FranchiseLocation = LeadLocationMatchLocation & {
-    readonly companyId?: string;
-    readonly managerId?: string | null;
-    readonly createdAt?: string;
-    readonly updatedAt?: string;
-};
-
-type ExternalPropertyListing = {
-    readonly id: string;
-    readonly source?: string | null;
-    readonly title?: string | null;
-    readonly address?: string | null;
-    readonly region?: string | null;
-    readonly sourceUrl?: string | null;
-    readonly depositAmount?: number | null;
-    readonly monthlyRent?: number | null;
-    readonly salePrice?: number | null;
-    readonly areaPyeong?: string | null;
-    readonly floorInfo?: string | null;
-    readonly collectedAt?: string | null;
-    readonly data?: Record<string, unknown> | null;
-};
-
-type LeadSummary = {
-    total: number;
-    byStatus: Record<string, number>;
-    bySource: Record<string, number>;
-    hotCount: number;
-    nextContactCount: number;
-    createdByDate: Record<string, number>;
-};
-
-type LeadListResponse = {
-    leads: FranchiseLead[];
-    summary: LeadSummary;
-    total: number;
-};
-
-type AuthUser = {
-    id?: string;
-    uid?: string;
-    name?: string;
-    role?: string;
-    companyName?: string;
-    companyId?: string | null;
-};
-
-type ManagerOption = {
-    id: string;
-    uuid?: string;
-    name?: string;
-    companyName?: string;
-    companyId?: string | null;
-    role?: string;
-};
-
-type MetaFieldMapping = {
-    name: string[];
-    mobile: string[];
-    desiredRegion: string[];
-    budget: string[];
-    budgetMin: string[];
-    budgetMax: string[];
-    interestedBrand: string[];
-    memo: string[];
-};
-
-type MetaConnection = {
-    id: string;
-    companyId: string;
-    connectedBy?: string;
-    metaPageId: string;
-    metaPageName: string;
-    status: string;
-    lastSyncAt?: string | null;
-    lastWebhookAt?: string | null;
-    lastError?: string | null;
-    pageCategory?: string;
-    subscribeError?: string;
-};
-
-type MetaLeadForm = {
-    id: string;
-    companyId: string;
-    connectionId: string;
-    metaFormId: string;
-    metaFormName: string;
-    enabled: boolean;
-    defaultManagerId?: string | null;
-    fieldMapping: MetaFieldMapping;
-    lastSyncedAt?: string | null;
-    lastError?: string | null;
-};
-
-type MetaLeadImportLog = {
-    id: string;
-    metaLeadId: string;
-    franchiseLeadId?: string | null;
-    status: string;
-    errorMessage?: string | null;
-    receivedAt?: string | null;
-    importedAt?: string | null;
-};
-
-type MetaIntegrationState = {
-    connections: MetaConnection[];
-    forms: MetaLeadForm[];
-    imports: MetaLeadImportLog[];
-    configReady: boolean;
-};
-
-type LeadFormState = {
-    id?: string;
-    name: string;
-    mobile: string;
-    source: string;
-    status: FranchiseLeadStatus;
-    grade: string;
-    desiredRegion: string;
-    budgetMin: string;
-    budgetMax: string;
-    interestedBrand: string;
-    managerId: string;
-    nextContactAt: string;
-    memo: string;
-};
-
-type LeadViewMode = 'table' | 'pipeline' | 'tasks';
-type LeadDbLayer = 'candidate' | 'raw_intake';
-type LeadWorkspaceTab = 'dashboard' | 'db';
-
-type UploadErrorRow = {
-    row: number;
-    reason: string;
-    data?: Record<string, any>;
-};
-
-const EMPTY_FORM: LeadFormState = {
-    name: '',
-    mobile: '',
-    source: '',
-    status: DEFAULT_FRANCHISE_LEAD_STATUS,
-    grade: '',
-    desiredRegion: '',
-    budgetMin: '',
-    budgetMax: '',
-    interestedBrand: '',
-    managerId: '',
-    nextContactAt: '',
-    memo: ''
-};
-
-const ACTIVITY_TYPES: LeadActivityType[] = ['전화', '문자', '방문상담', '계약검토', '메모', '상태변경', '고객전환'];
-const SOURCE_FILTER_OPTIONS = ['전체', ...FRANCHISE_LEAD_SOURCES] as const;
-const RANGE_OPTIONS = ['7D', '30D', '3M', '전체'] as const;
-const PAGE_SIZE_OPTIONS = [50, 100, 200] as const;
-const EMPTY_META_STATE: MetaIntegrationState = {
-    connections: [],
-    forms: [],
-    imports: [],
-    configReady: false
-};
-const META_FIELD_LABELS: Array<{ key: keyof MetaFieldMapping; label: string; hint: string }> = [
-    { key: 'name', label: '이름', hint: 'full_name, 이름, 성명' },
-    { key: 'mobile', label: '연락처', hint: 'phone_number, 연락처, 휴대폰' },
-    { key: 'desiredRegion', label: '희망지역', hint: '희망지역, 지역, area' },
-    { key: 'budget', label: '예산 통합', hint: '예산, 창업예산' },
-    { key: 'budgetMin', label: '예산 최소', hint: 'budget_min, 예산최소' },
-    { key: 'budgetMax', label: '예산 최대', hint: 'budget_max, 예산최대' },
-    { key: 'interestedBrand', label: '관심브랜드', hint: 'brand, 관심브랜드' },
-    { key: 'memo', label: '메모', hint: 'memo, 문의내용, 비고' }
-];
-const VIEW_OPTIONS: Array<{ mode: LeadViewMode; label: string; description: string }> = [
-    { mode: 'table', label: '테이블', description: '전체 필드 중심으로 확인' },
-    { mode: 'pipeline', label: '파이프라인', description: '상태별 상담 흐름 관리' },
-    { mode: 'tasks', label: '업무 큐', description: '우선 처리할 리드 분류' }
-];
-
-const WORK_QUEUE_OPTIONS: ReadonlyArray<{ key: LeadWorkQueueKey; label: string }> = [
-    { key: 'all', label: '전체 업무' },
-    { key: 'overdue', label: '연락 지연' },
-    { key: 'today', label: '오늘 연락' },
-    { key: 'no_response', label: '무응답' }
-] as const;
-
-const LEAD_DB_LAYER_OPTIONS: ReadonlyArray<{ key: LeadDbLayer; label: string; description: string }> = [
-    { key: 'raw_intake', label: '1차 유입 DB', description: 'Meta/엑셀 등에서 들어온 원천 DB' },
-    { key: 'candidate', label: '후보자', description: '의사가 확인되어 파이프라인에서 관리할 DB' }
-] as const;
-
-function createEmptySummary(): LeadSummary {
-    return {
-        total: 0,
-        byStatus: FRANCHISE_LEAD_STATUSES.reduce<Record<string, number>>((acc, status) => {
-            acc[status] = 0;
-            return acc;
-        }, {}),
-        bySource: {},
-        hotCount: 0,
-        nextContactCount: 0,
-        createdByDate: {}
-    };
-}
-
-function toDateInputValue(date: Date) {
-    return date.toISOString().slice(0, 10);
-}
-
-function buildDateFromRange(range: typeof RANGE_OPTIONS[number]) {
-    if (range === '전체') return '';
-    const days = range === '7D' ? 7 : range === '30D' ? 30 : 90;
-    const date = new Date();
-    date.setDate(date.getDate() - days + 1);
-    return toDateInputValue(date);
-}
-
-function formatDate(value?: string | null) {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
-}
-
-function formatDateTime(value?: string | null) {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-
-function formatFullDateTime(value?: string | null) {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function formatBudgetValue(value: number | null | undefined) {
-    const manwonValue = toBudgetManwonValue(value);
-    if (manwonValue === null) return '';
-    return `${new Intl.NumberFormat('ko-KR').format(manwonValue)}만원`;
-}
-
-function formatBudget(min: number | null, max: number | null) {
-    const minText = formatBudgetValue(min);
-    const maxText = formatBudgetValue(max);
-    if (!minText && !maxText) return '-';
-    if (minText && maxText) return `${minText} ~ ${maxText}`;
-    return minText || maxText;
-}
-
-function toBudgetManwonValue(value: number | null | undefined) {
-    if (value === null || value === undefined) return null;
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return null;
-    if (Math.abs(numericValue) > 0 && Math.abs(numericValue) < 1_000_000) {
-        return Math.round(numericValue);
-    }
-    return Math.round(numericValue / 10_000);
-}
-
-function toBudgetInputValue(value: number | null | undefined) {
-    const manwonValue = toBudgetManwonValue(value);
-    return manwonValue === null ? '' : String(manwonValue);
-}
-
-function parseBudgetInputToWon(value: string) {
-    const normalized = value.replace(/,/g, '').trim();
-    if (!normalized) return null;
-    const parsed = Number(normalized.replace(/[^\d.-]/g, ''));
-    if (!Number.isFinite(parsed)) return null;
-    return Math.abs(parsed) >= 1_000_000 ? parsed : parsed * 10_000;
-}
-
-function toCustomerBudgetValue(value: number | null | undefined) {
-    const manwonValue = toBudgetManwonValue(value);
-    return manwonValue === null ? '' : String(manwonValue);
-}
-
-function toDatetimeLocalValue(value?: string | null) {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
-function isPastDue(value?: string | null) {
-    return isLeadPastDue(value);
-}
-
-function isDueToday(value?: string | null) {
-    return isLeadDueToday(value);
-}
-
-function isContactActionDue(value?: string | null) {
-    return isLeadContactActionDue(value);
-}
-
-function createActivityId() {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-        return crypto.randomUUID();
-    }
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function getStatusIndex(status: FranchiseLeadStatus) {
-    return FRANCHISE_LEAD_STATUSES.findIndex(item => item === status);
-}
-
-function getAdjacentStatus(status: FranchiseLeadStatus, direction: 'prev' | 'next') {
-    const index = getStatusIndex(status);
-    if (index < 0) return null;
-    const nextIndex = direction === 'next' ? index + 1 : index - 1;
-    return FRANCHISE_LEAD_STATUSES[nextIndex] || null;
-}
-
-function mapLeadStatusToCustomerStatus(status: FranchiseLeadStatus) {
-    if (status === '계약완료') return '계약완료';
-    if (status === '계약예정') return '계약진행';
-    if (status === '보류/이탈') return '계약보류';
-    if (status === '문의접수') return '물건문의';
-    return '물건진행';
-}
-
-function mapLeadGradeToCustomerGrade(grade: string) {
-    if (grade === 'COLD') return 'manage';
-    if (grade === 'HOT' || grade === 'WARM') return 'progress';
-    return 'progress';
-}
-
-function mapLeadGradeToCustomerClass(grade: string) {
-    if (grade === 'HOT') return 'A';
-    if (grade === 'WARM') return 'B';
-    if (grade === 'COLD') return 'C';
-    return 'A';
-}
-
-function getLeadTaskLabel(lead: FranchiseLead) {
-    return getLeadWorkQueueLabel(lead);
-}
-
-function getLeadTaskRank(lead: FranchiseLead) {
-    return getLeadWorkQueueRank(lead);
-}
-
-function buildTrendData(summary: LeadSummary) {
-    const items = [];
-    for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const key = toDateInputValue(date);
-        items.push({
-            date: key.slice(5),
-            count: summary.createdByDate[key] || 0
-        });
-    }
-    return items;
-}
-
-function createFormFromLead(lead: FranchiseLead): LeadFormState {
-    return {
-        id: lead.id,
-        name: lead.name || '',
-        mobile: lead.mobile || '',
-        source: lead.source || '',
-        status: lead.status || DEFAULT_FRANCHISE_LEAD_STATUS,
-        grade: lead.grade || '',
-        desiredRegion: lead.desiredRegion || '',
-        budgetMin: toBudgetInputValue(lead.budgetMin),
-        budgetMax: toBudgetInputValue(lead.budgetMax),
-        interestedBrand: lead.interestedBrand || '',
-        managerId: lead.managerId || '',
-        nextContactAt: toDatetimeLocalValue(lead.nextContactAt),
-        memo: lead.memo || ''
-    };
-}
-
-function isRawIntakeLead(lead: FranchiseLead) {
-    return lead.leadStage === 'raw_intake';
-}
-
-function isMetaLeadSource(lead: FranchiseLead) {
-    return lead.sourceType === 'meta-lead-ad' || lead.source === 'Meta Lead Ads';
-}
-
-function getLeadSourceTitle(lead: FranchiseLead) {
-    return isMetaLeadSource(lead) ? 'Meta Lead Ads' : lead.source || '유입 미지정';
-}
-
-function getLeadSourceBadgeLabel(lead: FranchiseLead) {
-    const source = getLeadSourceTitle(lead);
-    if (source === 'Meta Lead Ads') return 'Meta';
-    if (source.includes('랜딩')) return '랜딩';
-    if (source.includes('전화')) return '전화';
-    if (source.includes('고객')) return '고객DB';
-    return source;
-}
 
 export default function FranchiseLeadsPage() {
     const router = useRouter();
@@ -960,76 +525,42 @@ export default function FranchiseLeadsPage() {
         return () => controller.abort();
     }, [companyName, selectedLead, userId]);
 
-    const rawIntakeLeads = leads.filter(isRawIntakeLead);
-    const candidateLeads = leads.filter(lead => !isRawIntakeLead(lead));
-    const pipelineStageCandidateLeads = pipelineStageLeads.filter(lead => !isRawIntakeLead(lead));
-    const visibleLayerLeads = leadDbLayer === 'raw_intake' ? rawIntakeLeads : candidateLeads;
-    const stageData = FRANCHISE_LEAD_STATUSES.map(status => ({
-        status,
-        count: pipelineStageCandidateLeads.filter(lead => lead.status === status).length
-    }));
-    const maxStageCount = Math.max(1, ...stageData.map(item => item.count));
-    const sourceChartData = Object.entries(summary.bySource || {})
-        .map(([source, count]) => ({ source, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 8);
-    const metaEnabledForms = metaState.forms.filter(form => form.enabled);
-    const metaErrorCount = metaState.connections.filter(connection => connection.lastError || connection.subscribeError).length +
-        metaState.forms.filter(form => form.lastError).length +
-        metaState.imports.filter(item => item.status === 'error').length;
-    const metaLastSyncAt = [
-        ...metaState.connections.map(connection => connection.lastSyncAt || connection.lastWebhookAt || ''),
-        ...metaState.forms.map(form => form.lastSyncedAt || '')
-    ].filter(Boolean).sort().at(-1) || null;
     const canManageMeta = user?.role === 'admin' || user?.role === 'manager';
-    const trendData = buildTrendData(summary);
-    const contractReadyCount = candidateLeads.filter(lead => lead.status === '계약예정' || lead.status === '계약완료').length;
-    const conversionRate = candidateLeads.length > 0 ? Math.round((contractReadyCount / candidateLeads.length) * 1000) / 10 : 0;
-    const activeFollowupLeads = candidateLeads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
-    const workQueueSummary = getLeadWorkQueueSummary(activeFollowupLeads);
-    const dueContactCount = workQueueSummary.overdue + workQueueSummary.today;
-    const overdueContactCount = workQueueSummary.overdue;
-    const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({
-        status,
-        leads: candidateLeads.filter(lead => lead.status === status)
-    }));
-    const taskLeads = [...activeFollowupLeads]
-        .filter(lead => matchesLeadWorkQueue(lead, taskQueueFilter))
-        .sort((a, b) => {
-            const rankDiff = getLeadTaskRank(a) - getLeadTaskRank(b);
-            if (rankDiff !== 0) return rankDiff;
-            const aTime = a.nextContactAt ? new Date(a.nextContactAt).getTime() : Number.MAX_SAFE_INTEGER;
-            const bTime = b.nextContactAt ? new Date(b.nextContactAt).getTime() : Number.MAX_SAFE_INTEGER;
-            return aTime - bTime;
-        });
-    const taskQueueOptions = WORK_QUEUE_OPTIONS.map(option => {
-        const count = option.key === 'all'
-            ? workQueueSummary.actionable
-            : option.key === 'no_response'
-                ? workQueueSummary.noResponse
-                : workQueueSummary[option.key];
-        return { ...option, count };
+    const {
+        rawIntakeLeads,
+        candidateLeads,
+        visibleLayerLeads,
+        stageData,
+        sourceChartData,
+        metaEnabledForms,
+        metaErrorCount,
+        metaLastSyncAt,
+        trendData,
+        conversionRate,
+        dueContactCount,
+        overdueContactCount,
+        pipelineColumns,
+        taskLeads,
+        taskQueueOptions,
+        listPolicyText,
+        totalPages,
+        safeCurrentPage,
+        paginatedLeads,
+        selectedLeads,
+        allVisibleSelected,
+        pageRangeText
+    } = useLeadDerivedData({
+        leads,
+        pipelineStageLeads,
+        summary,
+        metaState,
+        leadDbLayer,
+        taskQueueFilter,
+        searchTerm,
+        pageSize,
+        currentPage,
+        selectedLeadIds
     });
-    const listPolicyText = searchTerm.trim()
-        ? `검색 중에는 전체 데이터 범위에서 찾고, 화면에는 ${pageSize}건씩 표시합니다.`
-        : `기본 조회: 최신 500건 · 화면 표시: ${pageSize}건씩 · 검색 시 전체 범위 조회`;
-    const totalPages = Math.max(1, Math.ceil(visibleLayerLeads.length / pageSize));
-    const safeCurrentPage = Math.min(currentPage, totalPages);
-    const pageStartIndex = visibleLayerLeads.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
-    const pageEndIndex = Math.min(pageStartIndex + pageSize, visibleLayerLeads.length);
-    const paginatedLeads = React.useMemo(
-        () => visibleLayerLeads.slice(pageStartIndex, pageEndIndex),
-        [pageEndIndex, pageStartIndex, visibleLayerLeads]
-    );
-    const selectedLeadSet = React.useMemo(() => new Set(selectedLeadIds), [selectedLeadIds]);
-    const selectedLeads = React.useMemo(
-        () => paginatedLeads.filter(lead => selectedLeadSet.has(lead.id)),
-        [paginatedLeads, selectedLeadSet]
-    );
-    const allVisibleSelected = paginatedLeads.length > 0 && paginatedLeads.every(lead => selectedLeadSet.has(lead.id));
-    const pageRangeText = visibleLayerLeads.length === 0
-        ? '0건 표시'
-        : `${getFranchiseLeadStageLabel(leadDbLayer)} ${visibleLayerLeads.length.toLocaleString()}건 중 ${(pageStartIndex + 1).toLocaleString()}-${pageEndIndex.toLocaleString()}건 표시`;
 
     React.useEffect(() => {
         if (currentPage > totalPages) {
@@ -1987,12 +1518,11 @@ export default function FranchiseLeadsPage() {
 
     return (
         <div className={styles.pageShell}>
-            <section className={styles.hero}>
-                <div>
-                    <h1>모객 DB</h1>
-                    <p>가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다.</p>
-                </div>
-                <div className={styles.heroActions}>
+            <FranchiseWorkspaceHero
+                title="모객 DB"
+                description="가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다."
+                actions={(
+                    <>
                     <button
                         className={styles.secondaryButton}
                         onClick={() => {
@@ -2041,97 +1571,41 @@ export default function FranchiseLeadsPage() {
                             if (file) void handleUploadFile(file);
                         }}
                     />
-                </div>
-            </section>
+                    </>
+                )}
+            />
 
-            <section className={styles.toolbar}>
-                <div className={styles.rangeGroup} aria-label="기간 필터">
-                    {RANGE_OPTIONS.map(option => (
-                        <button
-                            key={option}
-                            className={range === option ? styles.rangeButtonActive : styles.rangeButton}
-                            onClick={() => handleRangeClick(option)}
-                        >
-                            {option}
-                        </button>
-                    ))}
-                </div>
-                <div className={styles.searchBox}>
-                    <Search size={16} />
-                    <input
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="이름, 연락처, 브랜드, 지역, 메모 검색"
-                    />
-                    {searchTerm && (
-                        <button onClick={() => setSearchTerm('')} aria-label="검색어 지우기">
-                            <X size={14} />
-                        </button>
-                    )}
-                </div>
-                <div className={styles.filterGroup}>
-                    <SlidersHorizontal size={16} />
-                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as '전체' | FranchiseLeadStatus)}>
-                        <option value="전체">전체 상태</option>
-                        {FRANCHISE_LEAD_STATUSES.map(status => (
-                            <option key={status} value={status}>{status}</option>
-                        ))}
-                    </select>
-                    <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as typeof SOURCE_FILTER_OPTIONS[number])}>
-                        {SOURCE_FILTER_OPTIONS.map(source => (
-                            <option key={source} value={source}>{source === '전체' ? '전체 유입' : source}</option>
-                        ))}
-                    </select>
-                    <select value={managerFilter} onChange={(event) => setManagerFilter(event.target.value)}>
-                        <option value="전체">전체 담당자</option>
-                        {renderManagerOptions()}
-                    </select>
-                    <button
-                        type="button"
-                        className={isMyManagerFilterActive ? styles.quickFilterButtonActive : styles.quickFilterButton}
-                        onClick={toggleMyLeadsOnly}
-                        disabled={!defaultManagerId}
-                    >
-                        <UserRound size={14} />
-                        내 담당만
-                    </button>
-                    <input
-                        type="date"
-                        value={createdFrom}
-                        onChange={(event) => {
-                            setRange('전체');
-                            setCreatedFrom(event.target.value);
-                        }}
-                    />
-                    <input
-                        type="date"
-                        value={createdTo}
-                        onChange={(event) => {
-                            setRange('전체');
-                            setCreatedTo(event.target.value);
-                        }}
-                    />
-                </div>
-            </section>
+            <LeadToolbar
+                rangeOptions={RANGE_OPTIONS}
+                range={range}
+                searchTerm={searchTerm}
+                statusFilter={statusFilter}
+                statusOptions={FRANCHISE_LEAD_STATUSES}
+                sourceFilter={sourceFilter}
+                sourceOptions={SOURCE_FILTER_OPTIONS}
+                managerFilter={managerFilter}
+                managerOptions={renderManagerOptions()}
+                isMyManagerFilterActive={isMyManagerFilterActive}
+                canUseMyManagerFilter={Boolean(defaultManagerId)}
+                createdFrom={createdFrom}
+                createdTo={createdTo}
+                onRangeClick={(nextRange) => handleRangeClick(toRangeOption(nextRange))}
+                onSearchTermChange={setSearchTerm}
+                onStatusFilterChange={setStatusFilter}
+                onSourceFilterChange={(source) => setSourceFilter(toSourceFilterOption(source))}
+                onManagerFilterChange={setManagerFilter}
+                onToggleMyLeadsOnly={toggleMyLeadsOnly}
+                onCreatedFromChange={(date) => {
+                    setRange('전체');
+                    setCreatedFrom(date);
+                }}
+                onCreatedToChange={(date) => {
+                    setRange('전체');
+                    setCreatedTo(date);
+                }}
+            />
 
-            <nav className={styles.workspaceTabs} aria-label="모객 DB 작업 영역">
-                <button
-                    type="button"
-                    className={workspaceTab === 'dashboard' ? styles.workspaceTabActive : styles.workspaceTab}
-                    onClick={() => setWorkspaceTab('dashboard')}
-                >
-                    <LayoutDashboard size={15} />
-                    대시보드
-                </button>
-                <button
-                    type="button"
-                    className={workspaceTab === 'db' ? styles.workspaceTabActive : styles.workspaceTab}
-                    onClick={() => setWorkspaceTab('db')}
-                >
-                    <Table2 size={15} />
-                    DB 관리
-                </button>
-            </nav>
+            <LeadWorkspaceTabs activeTab={workspaceTab} onTabChange={setWorkspaceTab} />
 
             {isMetaPanelOpen && (
                 <section className={styles.metaPanel}>
@@ -2303,131 +1777,20 @@ export default function FranchiseLeadsPage() {
             )}
 
             {workspaceTab === 'dashboard' && (
-                <>
-                    <section className={styles.kpiGrid}>
-                        <article className={styles.kpiCard}>
-                            <span>총 후보자</span>
-                            <strong>{candidateLeads.length.toLocaleString()}</strong>
-                            <small>파이프라인 관리 대상</small>
-                        </article>
-                        <article className={styles.kpiCard}>
-                            <span>1차 유입 DB</span>
-                            <strong>{rawIntakeLeads.length.toLocaleString()}</strong>
-                            <small>의사 확인 전 원천 DB</small>
-                        </article>
-                        <article className={styles.kpiCard}>
-                            <span>상담 진행</span>
-                            <strong>{candidateLeads.filter(lead => lead.status === '상담중' || lead.status === '가맹검토').length.toLocaleString()}</strong>
-                            <small>상담중 + 가맹검토</small>
-                        </article>
-                        <article className={styles.kpiCardAccent}>
-                            <span>오늘 연락</span>
-                            <strong>{dueContactCount.toLocaleString()}</strong>
-                            <small>오늘이거나 이미 지난 연락</small>
-                        </article>
-                        <article className={styles.kpiCard}>
-                            <span>연락 지연</span>
-                            <strong>{overdueContactCount.toLocaleString()}</strong>
-                            <small>다음 연락일이 지난 후보</small>
-                        </article>
-                        <article className={styles.kpiCard}>
-                            <span>계약 전환율</span>
-                            <strong>{conversionRate}%</strong>
-                            <small>계약예정/완료 기준</small>
-                        </article>
-                        <article className={styles.kpiCard}>
-                            <span>즉시상담</span>
-                            <strong>{candidateLeads.filter(lead => lead.grade === 'HOT').length.toLocaleString()}</strong>
-                            <small>빠른 연락 필요 후보</small>
-                        </article>
-                    </section>
-
-                    <section className={styles.analyticsGrid}>
-                        <article className={styles.panelWide}>
-                            <div className={styles.panelHeader}>
-                                <div>
-                                    <h2>모객 파이프라인</h2>
-                                    <p>상태별 후보자 분포와 병목 구간을 확인합니다.</p>
-                                </div>
-                                {statusFilter !== '전체' && (
-                                    <button className={styles.clearStageButton} onClick={() => setStatusFilter('전체')}>
-                                        전체 보기
-                                    </button>
-                                )}
-                            </div>
-                            <div className={styles.stageStrip}>
-                                {stageData.map((item, index) => (
-                                    <button
-                                        key={item.status}
-                                        className={statusFilter === item.status ? styles.stageCardActive : styles.stageCard}
-                                        onClick={() => setStatusFilter(statusFilter === item.status ? '전체' : item.status)}
-                                    >
-                                        <span>{index + 1}. {item.status}</span>
-                                        <strong>{item.count.toLocaleString()}</strong>
-                                        <div className={styles.stageBarTrack}>
-                                            <div className={styles.stageBarFill} style={{ width: `${Math.max(4, (item.count / maxStageCount) * 100)}%` }} />
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                            <div className={styles.chartBox}>
-                                <ResponsiveContainer width="100%" height={180}>
-                                    <BarChart data={stageData}>
-                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
-                                        <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                        <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                                        <Bar dataKey="count" fill="#6d5dfc" radius={[8, 8, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </article>
-
-                        <article className={styles.panel}>
-                            <div className={styles.panelHeader}>
-                                <div>
-                                    <h2>유입 경로</h2>
-                                    <p>채널별 모객 볼륨</p>
-                                </div>
-                            </div>
-                            <div className={styles.chartBoxSmall}>
-                                {sourceChartData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={230}>
-                                        <BarChart data={sourceChartData} layout="vertical" margin={{ left: 12, right: 12 }}>
-                                            <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#e5e7eb" />
-                                            <XAxis type="number" allowDecimals={false} hide />
-                                            <YAxis dataKey="source" type="category" width={78} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                            <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                                            <Bar dataKey="count" fill="#ff725e" radius={[0, 8, 8, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className={styles.emptyChart}>유입 데이터가 없습니다.</div>
-                                )}
-                            </div>
-                        </article>
-
-                        <article className={styles.panel}>
-                            <div className={styles.panelHeader}>
-                                <div>
-                                    <h2>최근 7일 유입</h2>
-                                    <p>원천 DB와 후보자 유입 추이</p>
-                                </div>
-                            </div>
-                            <div className={styles.chartBoxSmall}>
-                                <ResponsiveContainer width="100%" height={230}>
-                                    <LineChart data={trendData}>
-                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
-                                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                        <Tooltip />
-                                        <Line type="monotone" dataKey="count" stroke="#18a999" strokeWidth={3} dot={{ r: 3 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </article>
-                    </section>
-                </>
+                <LeadDashboard
+                    candidateCount={candidateLeads.length}
+                    rawIntakeCount={rawIntakeLeads.length}
+                    activeConsultingCount={candidateLeads.filter(lead => lead.status === '상담중' || lead.status === '가맹검토').length}
+                    dueContactCount={dueContactCount}
+                    overdueContactCount={overdueContactCount}
+                    conversionRate={conversionRate}
+                    hotCount={candidateLeads.filter(lead => lead.grade === 'HOT').length}
+                    statusFilter={statusFilter}
+                    stageData={stageData}
+                    sourceChartData={sourceChartData}
+                    trendData={trendData}
+                    onStatusFilterChange={setStatusFilter}
+                />
             )}
 
             {workspaceTab === 'db' && (
@@ -2498,386 +1861,63 @@ export default function FranchiseLeadsPage() {
                     </div>
                 </div>
                 {viewMode === 'table' && (
-                    <>
-                    {selectedLeadIds.length > 0 && (
-                        <div className={styles.bulkBar}>
-                            <div>
-                                <strong>{selectedLeadIds.length.toLocaleString()}건 선택</strong>
-                                <span>선택한 후보자의 다음 연락일을 한 번에 지정합니다.</span>
-                            </div>
-                            <input
-                                type="datetime-local"
-                                value={bulkNextContactAt}
-                                onChange={(event) => setBulkNextContactAt(event.target.value)}
-                            />
-                            <button className={styles.primaryButton} onClick={() => void applyBulkNextContact()} disabled={isBulkUpdating}>
-                                <CalendarClock size={15} />
-                                {isBulkUpdating ? '적용 중' : '연락일 적용'}
-                            </button>
-                            <button className={styles.secondaryButton} onClick={() => setSelectedLeadIds([])} disabled={isBulkUpdating}>
-                                선택 해제
-                            </button>
-                        </div>
-                    )}
-                    <div className={styles.tableScroll}>
-                        <table className={styles.leadTable}>
-                            <colgroup>
-                                <col className={styles.colCheck} />
-                                <col className={styles.colCandidate} />
-                                <col className={styles.colPhone} />
-                                <col className={styles.colStatus} />
-                                <col className={styles.colManager} />
-                                <col className={styles.colSource} />
-                                <col className={styles.colRegion} />
-                                <col className={styles.colBudget} />
-                                <col className={styles.colBrand} />
-                                <col className={styles.colNextContact} />
-                                <col className={styles.colMemo} />
-                                <col className={styles.colLink} />
-                                <col className={styles.colActions} />
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th className={styles.checkboxCell}>
-                                        <input
-                                            type="checkbox"
-                                            checked={allVisibleSelected}
-                                            onChange={(event) => toggleSelectAllVisible(event.target.checked)}
-                                            disabled={paginatedLeads.length === 0 || isLoading}
-                                            aria-label="현재 페이지 전체 선택"
-                                        />
-                                    </th>
-                                    <th>후보자</th>
-                                    <th>연락처</th>
-                                    <th>상태</th>
-                                    <th>담당자</th>
-                                    <th>유입</th>
-                                    <th>희망지역</th>
-                                    <th>예산</th>
-                                    <th>브랜드</th>
-                                    <th>다음 연락</th>
-                                    <th>메모</th>
-                                    <th>연결</th>
-                                    <th />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={13} className={styles.emptyRow}>모객 DB를 불러오고 있습니다.</td>
-                                    </tr>
-                                ) : visibleLayerLeads.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={13} className={styles.emptyRow}>
-                                            {leadDbLayer === 'raw_intake' ? '1차 유입 DB에 쌓인 원천 DB가 없습니다.' : '조건에 맞는 후보자가 없습니다.'}
-                                        </td>
-                                    </tr>
-                                ) : paginatedLeads.map(lead => (
-                                    <tr key={lead.id}>
-                                        <td className={styles.checkboxCell}>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedLeadSet.has(lead.id)}
-                                                onChange={(event) => toggleSelectLead(lead.id, event.target.checked)}
-                                                aria-label={`${lead.name} 선택`}
-                                            />
-                                        </td>
-                                        <td>
-                                            <button className={styles.nameButton} onClick={() => setSelectedLeadId(lead.id)}>
-                                                <strong>{lead.name}</strong>
-                                                <span>{formatDate(lead.createdAt)} 등록</span>
-                                            </button>
-                                        </td>
-                                        <td>
-                                            <span className={styles.phone}>{lead.mobile || '-'}</span>
-                                        </td>
-                                        <td>
-                                            <select
-                                                className={styles.statusSelect}
-                                                value={lead.status}
-                                                onChange={(event) => void updateLeadStatus(lead, event.target.value as FranchiseLeadStatus)}
-                                            >
-                                                {FRANCHISE_LEAD_STATUSES.map(status => (
-                                                    <option key={status} value={status}>{status}</option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select
-                                                className={styles.managerSelect}
-                                                value={lead.managerId || ''}
-                                                onChange={(event) => void updateLeadManager(lead, event.target.value)}
-                                            >
-                                                <option value="">담당자 선택</option>
-                                                {renderManagerOptions(lead.managerId)}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            {lead.source ? (
-                                                <span
-                                                    className={isMetaLeadSource(lead) ? `${styles.sourceBadge} ${styles.sourceBadgeMeta}` : styles.sourceBadge}
-                                                    title={getLeadSourceTitle(lead)}
-                                                >
-                                                    <Megaphone size={12} aria-hidden="true" />
-                                                    <span>{getLeadSourceBadgeLabel(lead)}</span>
-                                                </span>
-                                            ) : '-'}
-                                        </td>
-                                        <td>{lead.desiredRegion || '-'}</td>
-                                        <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>
-                                        <td>{lead.interestedBrand || '-'}</td>
-                                        <td>
-                                            <span className={isPastDue(lead.nextContactAt) ? styles.dueBadgeDanger : isDueToday(lead.nextContactAt) ? styles.dueBadge : undefined}>
-                                                {formatDateTime(lead.nextContactAt)}
-                                            </span>
-                                        </td>
-                                        <td className={styles.memoCell}>{lead.memo || '-'}</td>
-                                        <td>
-                                            <div className={styles.linkBadges}>
-                                                {lead.linkedCustomerId && <span>고객</span>}
-                                                {lead.linkedBusinessCardId && <span>명함</span>}
-                                                {!lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className={styles.rowActions}>
-                                                {isRawIntakeLead(lead) && (
-                                                    <button
-                                                        className={styles.promoteButton}
-                                                        onClick={() => void promoteLeadToCandidate(lead)}
-                                                        aria-label={`${lead.name} 후보자 승격`}
-                                                        data-tooltip="후보자 목록으로 승격"
-                                                    >
-                                                        후보자
-                                                    </button>
-                                                )}
-                                                {!isRawIntakeLead(lead) && (
-                                                    lead.convertedCustomerId ? (
-                                                        <span className={styles.convertedActionPill} data-tooltip="고객 DB 전환 완료">
-                                                            <CheckCircle2 size={14} />
-                                                            완료
-                                                        </span>
-                                                    ) : (
-                                                        <button
-                                                            className={styles.iconButton}
-                                                            onClick={() => void convertLeadToCustomer(lead)}
-                                                            disabled={convertingLeadId === lead.id}
-                                                            aria-label={`${lead.name} 고객 전환`}
-                                                            data-tooltip="고객전환"
-                                                        >
-                                                            <UserCheck size={15} />
-                                                        </button>
-                                                    )
-                                                )}
-                                                <button
-                                                    className={styles.iconButton}
-                                                    onClick={() => openQuickActivityModal(lead)}
-                                                    aria-label={`${lead.name} 상담 이력 추가`}
-                                                    data-tooltip="이력추가"
-                                                >
-                                                    <MessageSquare size={15} />
-                                                </button>
-                                                <button
-                                                    className={styles.iconButton}
-                                                    onClick={() => openEditModal(lead)}
-                                                    aria-label={`${lead.name} 수정`}
-                                                    data-tooltip="수정"
-                                                >
-                                                    <Pencil size={15} />
-                                                </button>
-                                                <button
-                                                    className={styles.iconButtonDanger}
-                                                    onClick={() => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
-                                                    aria-label={`${lead.name} 삭제`}
-                                                    data-tooltip="삭제"
-                                                >
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    {visibleLayerLeads.length > 0 && (
-                        <div className={styles.paginationBar}>
-                            <span>{pageRangeText}</span>
-                            <div className={styles.paginationControls}>
-                                <button
-                                    type="button"
-                                    className={styles.paginationButton}
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                    disabled={safeCurrentPage <= 1}
-                                >
-                                    이전
-                                </button>
-                                <strong>{safeCurrentPage.toLocaleString()} / {totalPages.toLocaleString()}</strong>
-                                <button
-                                    type="button"
-                                    className={styles.paginationButton}
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                    disabled={safeCurrentPage >= totalPages}
-                                >
-                                    다음
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    </>
+                    <LeadTableView
+                        isLoading={isLoading}
+                        leadDbLayer={leadDbLayer}
+                        visibleLeadCount={visibleLayerLeads.length}
+                        paginatedLeads={paginatedLeads}
+                        selectedLeadIds={selectedLeadIds}
+                        allVisibleSelected={allVisibleSelected}
+                        bulkNextContactAt={bulkNextContactAt}
+                        isBulkUpdating={isBulkUpdating}
+                        convertingLeadId={convertingLeadId}
+                        statusOptions={FRANCHISE_LEAD_STATUSES}
+                        pageRangeText={pageRangeText}
+                        safeCurrentPage={safeCurrentPage}
+                        totalPages={totalPages}
+                        renderManagerOptions={renderManagerOptions}
+                        onBulkNextContactAtChange={setBulkNextContactAt}
+                        onApplyBulkNextContact={() => void applyBulkNextContact()}
+                        onClearSelected={() => setSelectedLeadIds([])}
+                        onToggleSelectAllVisible={toggleSelectAllVisible}
+                        onToggleSelectLead={toggleSelectLead}
+                        onSelectLead={setSelectedLeadId}
+                        onStatusChange={(lead, status) => void updateLeadStatus(lead, status)}
+                        onManagerChange={(lead, managerId) => void updateLeadManager(lead, managerId)}
+                        onPromoteLeadToCandidate={(lead) => void promoteLeadToCandidate(lead)}
+                        onConvertLead={(lead) => void convertLeadToCustomer(lead)}
+                        onOpenQuickActivityModal={openQuickActivityModal}
+                        onOpenEditModal={openEditModal}
+                        onRequestDelete={(lead) => setConfirmConfig({ isOpen: true, leadId: lead.id, leadName: lead.name })}
+                        onPreviousPage={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onNextPage={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    />
                 )}
                 {viewMode === 'pipeline' && (
-                    <div className={styles.pipelineBoard}>
-                        {isLoading ? (
-                            <div className={styles.boardEmpty}>파이프라인을 불러오고 있습니다.</div>
-                        ) : pipelineColumns.map(column => (
-                            <section key={column.status} className={styles.pipelineColumn}>
-                                <div className={styles.pipelineColumnHeader}>
-                                    <strong>{column.status}</strong>
-                                    <span>{column.leads.length.toLocaleString()}</span>
-                                </div>
-                                <div className={styles.pipelineCardList}>
-                                    {column.leads.length === 0 ? (
-                                        <div className={styles.pipelineEmpty}>해당 상태의 리드가 없습니다.</div>
-                                    ) : column.leads.map(lead => {
-                                        const prevStatus = getAdjacentStatus(lead.status, 'prev');
-                                        const nextStatus = getAdjacentStatus(lead.status, 'next');
-
-                                        return (
-                                            <article key={lead.id} className={styles.pipelineCard}>
-                                                <button className={styles.pipelineCardMain} onClick={() => setSelectedLeadId(lead.id)}>
-                                                    <span className={styles.pipelineName}>{lead.name}</span>
-                                                    <span className={styles.pipelinePhone}>{lead.mobile || '연락처 미입력'}</span>
-                                                    <span className={styles.pipelineMeta}>{lead.interestedBrand || '브랜드 미지정'} · {lead.desiredRegion || '지역 미지정'}</span>
-                                                    <span className={styles.pipelineMeta}>담당자 {getManagerName(lead.managerId)}</span>
-                                                </button>
-                                                <div className={styles.pipelineCardFooter}>
-                                                    <span className={lead.grade === 'HOT' ? styles.hotBadge : styles.pipelineBadge}>{getFranchiseLeadGradeLabel(lead.grade)}</span>
-                                                    {lead.convertedCustomerId && <span className={styles.convertedBadge}>전환완료</span>}
-                                                    {isPastDue(lead.nextContactAt) && <span className={styles.dueBadgeDanger}>지연</span>}
-                                                    {isDueToday(lead.nextContactAt) && !isPastDue(lead.nextContactAt) && <span className={styles.dueBadge}>오늘</span>}
-                                                </div>
-                                                <div className={styles.pipelineActions}>
-                                                    <button
-                                                        className={styles.miniButton}
-                                                        disabled={!prevStatus}
-                                                        onClick={() => prevStatus && void updateLeadStatus(lead, prevStatus)}
-                                                    >
-                                                        <ArrowLeft size={13} />
-                                                        이전
-                                                    </button>
-                                                    <button
-                                                        className={styles.miniButton}
-                                                        disabled={!nextStatus}
-                                                        onClick={() => nextStatus && void updateLeadStatus(lead, nextStatus)}
-                                                    >
-                                                        다음
-                                                        <ArrowRight size={13} />
-                                                    </button>
-                                                    <button
-                                                        className={styles.miniButtonStrong}
-                                                        disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                                        onClick={() => void convertLeadToCustomer(lead)}
-                                                    >
-                                                        <UserCheck size={13} />
-                                                        고객전환
-                                                    </button>
-                                                </div>
-                                            </article>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        ))}
-                    </div>
+                    <LeadPipelineBoard
+                        isLoading={isLoading}
+                        columns={pipelineColumns}
+                        convertingLeadId={convertingLeadId}
+                        getManagerName={getManagerName}
+                        onSelectLead={setSelectedLeadId}
+                        onStatusChange={(lead, status) => void updateLeadStatus(lead, status)}
+                        onConvertLead={(lead) => void convertLeadToCustomer(lead)}
+                    />
                 )}
 
                 {viewMode === 'tasks' && (
-                    <>
-                        <div className={styles.taskQueueToolbar}>
-                            {taskQueueOptions.map(option => (
-                                <button
-                                    key={option.key}
-                                    type="button"
-                                    className={taskQueueFilter === option.key ? styles.taskQueueFilterActive : styles.taskQueueFilter}
-                                    onClick={() => setTaskQueueFilter(option.key)}
-                                >
-                                    <span>{option.label}</span>
-                                    <strong>{option.count.toLocaleString()}</strong>
-                                </button>
-                            ))}
-                        </div>
-                        <div className={styles.taskBoard}>
-                            {isLoading ? (
-                                <div className={styles.boardEmpty}>업무 큐를 불러오고 있습니다.</div>
-                            ) : taskLeads.length === 0 ? (
-                                <div className={styles.boardEmpty}>
-                                    <CheckCircle2 size={28} />
-                                    현재 필터에 처리할 리드가 없습니다.
-                                </div>
-                            ) : taskLeads.map(lead => (
-                                <article key={lead.id} className={styles.taskCard}>
-                                    <div className={styles.taskCardMain}>
-                                        <span className={getLeadTaskRank(lead) === 0 ? styles.taskLabelDanger : styles.taskLabel}>
-                                            {getLeadTaskLabel(lead)}
-                                        </span>
-                                        <button type="button" onClick={() => setSelectedLeadId(lead.id)}>
-                                            <strong>{lead.name}</strong>
-                                            <span>{lead.mobile || '연락처 미입력'} · 담당자 {getManagerName(lead.managerId)}</span>
-                                        </button>
-                                    </div>
-                                    <div className={styles.taskInfoGrid}>
-                                        <div>
-                                            <span>다음 액션</span>
-                                            <strong>{lead.nextAction || '미정'}</strong>
-                                        </div>
-                                        <div>
-                                            <span>상담 결과</span>
-                                            <strong>{lead.consultationResult || '미상담'}</strong>
-                                        </div>
-                                        <div>
-                                            <span>다음 연락</span>
-                                            <strong>{formatDateTime(lead.nextContactAt)}</strong>
-                                        </div>
-                                        <div>
-                                            <span>상태</span>
-                                            <strong>{lead.status}</strong>
-                                        </div>
-                                        <div>
-                                            <span>관심브랜드</span>
-                                            <strong>{lead.interestedBrand || '-'}</strong>
-                                        </div>
-                                        <div>
-                                            <span>희망지역</span>
-                                            <strong>{lead.desiredRegion || '-'}</strong>
-                                        </div>
-                                    </div>
-                                    <div className={styles.fitPillRow}>
-                                        <span>자금 {lead.budgetFit || '미확인'}</span>
-                                        <span>지역 {lead.regionFit || '미확인'}</span>
-                                        <span>브랜드 {lead.brandFit || '미확인'}</span>
-                                    </div>
-                                    <p>{lead.churnReason || lead.memo || '등록된 메모가 없습니다.'}</p>
-                                    <div className={styles.taskActions}>
-                                        <button type="button" className={styles.secondaryButton} onClick={() => setSelectedLeadId(lead.id)}>
-                                            상세 보기
-                                        </button>
-                                        <button type="button" className={styles.secondaryButton} onClick={() => void completeTodayTask(lead)}>
-                                            연락 완료
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={styles.primaryButton}
-                                            disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                            onClick={() => void convertLeadToCustomer(lead)}
-                                        >
-                                            고객 전환
-                                        </button>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    </>
+                    <LeadTaskBoard
+                        isLoading={isLoading}
+                        taskQueueOptions={taskQueueOptions}
+                        taskQueueFilter={taskQueueFilter}
+                        taskLeads={taskLeads}
+                        convertingLeadId={convertingLeadId}
+                        getManagerName={getManagerName}
+                        onTaskQueueFilterChange={setTaskQueueFilter}
+                        onSelectLead={setSelectedLeadId}
+                        onCompleteTodayTask={(lead) => void completeTodayTask(lead)}
+                        onConvertLead={(lead) => void convertLeadToCustomer(lead)}
+                    />
                 )}
                 </section>
             )}

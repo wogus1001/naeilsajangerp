@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
+import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
 import { ManualPromotedPropertyPanel } from '@/components/franchise/operations/ManualPromotedPropertyPanel';
@@ -15,12 +16,10 @@ export default function FranchiseOperationsPage() {
 
     return (
         <div className={styles.pageShell}>
-            <section className={styles.hero}>
-                <div>
-                    <h1>가맹 운영</h1>
-                    <p>운영중인 직영점과 가맹점의 상태, 주소, 경쟁환경을 본사용 운영 관점에서 관리합니다.</p>
-                </div>
-                <div className={styles.heroActions}>
+            <FranchiseWorkspaceHero
+                title="가맹 운영"
+                description="운영중인 직영점과 가맹점의 상태, 주소, 경쟁환경을 본사용 운영 관점에서 관리합니다."
+                actions={(
                     <button
                         className={styles.secondaryButton}
                         onClick={() => void controller.fetchLocations()}
@@ -29,8 +28,8 @@ export default function FranchiseOperationsPage() {
                         <RefreshCw size={16} />
                         {controller.isLoading ? '불러오는 중' : '새로고침'}
                     </button>
-                </div>
-            </section>
+                )}
+            />
 
             <section className={styles.marketInsightPanel}>
                 <div className={styles.panelHeader}>

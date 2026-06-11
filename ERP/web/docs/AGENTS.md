@@ -5,13 +5,15 @@
 - Documentation-only subtree. Parent `ERP/web/AGENTS.md` still applies.
 
 ## OVERVIEW
-- Working docs for franchise roadmap, QA logs, FDAM reference, realty import planning, and the Docs Steward role.
+- Working docs for franchise product direction, UI redesign planning, roadmap, QA logs, FDAM reference, realty import planning, and the Docs Steward role.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
 | Docs steward rules | `documentation-agent.md` | Authority, approved docs, required report format. |
 | Product roadmap | `franchise-growth-roadmap.md` | Priorities, provider policies, next work. |
+| Product direction | `franchise-product-direction.md` | Macro product principles and long-term module structure. |
+| UI redesign | `franchise-ui-redesign-plan.md` | User-facing UI audit, Toss-like design direction, phased redesign plan. |
 | Development/QA log | `franchise-dev-qa-log.md` | Verified commands, open QA, blocked provider checks. |
 | External realty import | `franchise-growth-roadmap.md`, `franchise-dev-qa-log.md` | Daangn MVP status, limits, deferred Naver Land approach, and QA gaps. |
 | FDAM reference | `fdam-reference.md` | Competitive ERP reference, not live status. |

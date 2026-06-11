@@ -2,19 +2,17 @@
 
 import React from 'react';
 import {
-    BriefcaseBusiness,
-    FileSearch,
-    MapPin,
     Plus,
-    RefreshCw,
-    Target,
-    TrendingUp
+    RefreshCw
 } from 'lucide-react';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import KakaoAddressSearch, { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
 import LocationCompetitionPanel, { LocationCompetitionScan } from '@/components/franchise/LocationCompetitionPanel';
 import { RealtyImportPanel } from '@/components/franchise/RealtyImportPanel';
+import { MarketInsightOverview } from '@/components/franchise/market-insights/MarketInsightOverview';
+import { MarketInsightWorkspaceTabs, type MarketInsightTab } from '@/components/franchise/market-insights/MarketInsightWorkspaceTabs';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import {
     buildMarketInsights,
@@ -25,7 +23,6 @@ import styles from '../page.module.css';
 
 type FranchiseLocationType = '직영점' | '가맹점' | '예정점';
 type FranchiseLocationStatus = '운영중' | '오픈준비' | '검토중' | '휴점' | '폐점';
-type MarketInsightTab = 'market-insights' | 'realty-import';
 
 type AuthUser = {
     id?: string;
@@ -122,11 +119,6 @@ const EMPTY_LOCATION_FORM: LocationFormState = {
     openedAt: '',
     memo: ''
 };
-
-function formatBudgetManwon(value: number | null) {
-    if (value === null) return '-';
-    return `${value.toLocaleString()}만원`;
-}
 
 function formatScanDate(value?: string) {
     if (!value) return '미수집';
@@ -466,37 +458,18 @@ export default function FranchiseMarketInsightsPage() {
 
     return (
         <div className={styles.pageShell}>
-            <section className={styles.hero}>
-                <div>
-                    <h1>출점 후보지</h1>
-                    <p>향후 입점 후보지와 모객 리드의 희망지역을 연결해 지역별 반응과 경쟁강도를 확인합니다.</p>
-                </div>
-                <div className={styles.heroActions}>
+            <FranchiseWorkspaceHero
+                title="출점 후보지"
+                description="향후 입점 후보지와 모객 리드의 희망지역을 연결해 지역별 반응과 경쟁강도를 확인합니다."
+                actions={(
                     <button className={styles.secondaryButton} onClick={() => void fetchInsightData()} disabled={isLoading}>
                         <RefreshCw size={16} />
                         {isLoading ? '불러오는 중' : '새로고침'}
                     </button>
-                </div>
-            </section>
+                )}
+            />
 
-            <nav className={styles.workspaceTabs} aria-label="출점 후보지 작업 영역">
-                <button
-                    type="button"
-                    className={activeMarketTab === 'market-insights' ? styles.workspaceTabActive : styles.workspaceTab}
-                    onClick={() => selectMarketTab('market-insights')}
-                >
-                    <BriefcaseBusiness size={15} />
-                    출점 후보지
-                </button>
-                <button
-                    type="button"
-                    className={activeMarketTab === 'realty-import' ? styles.workspaceTabActive : styles.workspaceTab}
-                    onClick={() => selectMarketTab('realty-import')}
-                >
-                    <FileSearch size={15} />
-                    외부 상가 수집
-                </button>
-            </nav>
+            <MarketInsightWorkspaceTabs activeTab={activeMarketTab} onTabChange={selectMarketTab} />
 
             {activeMarketTab === 'market-insights' && (
             <section className={styles.marketInsightPanel}>
@@ -508,97 +481,13 @@ export default function FranchiseMarketInsightsPage() {
                     <span>출점 계획 · 경쟁스캔</span>
                 </div>
                 <div className={styles.marketInsightBody}>
-                    <div className={styles.marketSummaryCards}>
-                        <article>
-                            <MapPin size={18} />
-                            <span>우선 검토 지역</span>
-                            <strong>{topMarketInsight?.region || '-'}</strong>
-                            <small>{topMarketInsight ? `기회점수 ${topMarketInsight.opportunityScore}점` : '지역 데이터 없음'}</small>
-                        </article>
-                        <article>
-                            <TrendingUp size={18} />
-                            <span>마케팅 반응 우수</span>
-                            <strong>{strongMarketingCount.toLocaleString()}곳</strong>
-                            <small>마케팅 반응 70점 이상</small>
-                        </article>
-                        <article>
-                            <Target size={18} />
-                            <span>경쟁 주의 지역</span>
-                            <strong>{highCompetitionCount.toLocaleString()}곳</strong>
-                            <small>내부+외부 경쟁강도 70점 이상</small>
-                        </article>
-                        <article>
-                            <BriefcaseBusiness size={18} />
-                            <span>분석 후보지</span>
-                            <strong>{locationInsightItems.length.toLocaleString()}개</strong>
-                            <small>점포DB + 출점 후보지</small>
-                        </article>
-                    </div>
-
-                    {marketInsights.length === 0 ? (
-                        <div className={styles.marketEmpty}>
-                            희망지역이 있는 후보자나 주소가 있는 출점 후보지가 쌓이면 지역별 인사이트가 표시됩니다.
-                        </div>
-                    ) : (
-                        <div className={styles.marketInsightTableWrap}>
-                            <table className={styles.marketInsightTable}>
-                                <thead>
-                                    <tr>
-                                        <th>지역</th>
-                                        <th>리드</th>
-                                        <th>즉시상담</th>
-                                        <th>계약권</th>
-                                        <th>내부점포</th>
-                                        <th>평균예산</th>
-                                        <th>경쟁업체</th>
-                                        <th>마케팅</th>
-                                        <th>경쟁</th>
-                                        <th>추천 액션</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {marketInsights.map(item => (
-                                        <tr key={item.region}>
-                                            <td>
-                                                <strong>{item.region}</strong>
-                                                <small>유입 {item.sourceCount.toLocaleString()}채널</small>
-                                            </td>
-                                            <td>{item.leadCount.toLocaleString()}</td>
-                                            <td>{item.hotCount.toLocaleString()}</td>
-                                            <td>{item.contractCount.toLocaleString()}</td>
-                                            <td>{item.propertyCount.toLocaleString()}</td>
-                                            <td>{formatBudgetManwon(item.avgBudgetManwon)}</td>
-                                            <td>{item.externalCompetitorCount.toLocaleString()}</td>
-                                            <td><div className={styles.scorePill}>{item.marketingScore}</div></td>
-                                            <td>
-                                                <div className={item.competitionScore >= 70 ? styles.scorePillWarn : styles.scorePill}>
-                                                    {item.competitionScore}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={
-                                                    item.tone === 'good'
-                                                        ? styles.marketActionGood
-                                                        : item.tone === 'warning'
-                                                            ? styles.marketActionWarn
-                                                            : styles.marketActionNeutral
-                                                }>
-                                                    {item.action}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    <div className={styles.marketRoadmap}>
-                        <strong>다음 확장</strong>
-                        <span>후보자-후보지 추천 매칭</span>
-                        <span>Naver 검색 트렌드</span>
-                        <span>Meta 광고 성과는 HOLD 해제 후 연결</span>
-                    </div>
+                    <MarketInsightOverview
+                        topMarketInsight={topMarketInsight}
+                        strongMarketingCount={strongMarketingCount}
+                        highCompetitionCount={highCompetitionCount}
+                        locationInsightCount={locationInsightItems.length}
+                        marketInsights={marketInsights}
+                    />
 
                     <div className={styles.locationMasterPanel}>
                         <div className={styles.locationMasterHeader}>

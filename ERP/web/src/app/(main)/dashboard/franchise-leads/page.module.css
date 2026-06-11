@@ -5941,3 +5941,738 @@
         width: 100%;
     }
 }
+.pageShell {
+    --fr-surface: #ffffff;
+    --fr-bg: #f7f8fa;
+    --fr-bg-soft: #f2f4f6;
+    --fr-line: #e5e8eb;
+    --fr-line-strong: #d1d6db;
+    --fr-text: #191f28;
+    --fr-muted: #6b7684;
+    --fr-faint: #8b95a1;
+    --fr-blue: #3182f6;
+    --fr-blue-soft: #eef6ff;
+    --fr-green: #00a66a;
+    --fr-green-soft: #e9f8f0;
+    --fr-red: #e5484d;
+    --fr-red-soft: #fff0f1;
+    --fr-orange: #f59e0b;
+    --fr-orange-soft: #fff7e5;
+    --fr-radius: 12px;
+    --fr-radius-sm: 8px;
+    --fr-shadow-float: 0 18px 44px rgba(25, 31, 40, 0.14);
+    padding: 0;
+    color: var(--fr-text);
+}
+
+.hero {
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 18px;
+    padding: 4px 0 2px;
+}
+
+.hero h1 {
+    margin: 0 0 6px;
+    color: var(--fr-text);
+    font-size: 28px;
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.hero p {
+    max-width: 720px;
+    color: var(--fr-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.eyebrow,
+.metaEyebrow {
+    border-color: var(--fr-line);
+    background: var(--fr-bg-soft);
+    color: var(--fr-muted);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.heroActions {
+    gap: 6px;
+}
+
+.primaryButton,
+.secondaryButton,
+.secondaryButtonSuccess,
+.quickFilterButton,
+.quickFilterButtonActive,
+.clearStageButton,
+.miniButton,
+.miniButtonStrong,
+.paginationButton {
+    border-radius: var(--fr-radius-sm);
+    font-weight: 700;
+    box-shadow: none;
+    transform: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.primaryButton,
+.miniButtonStrong {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue);
+    color: #ffffff;
+}
+
+.secondaryButton,
+.quickFilterButton,
+.clearStageButton,
+.miniButton,
+.paginationButton {
+    border-color: var(--fr-line);
+    background: var(--fr-surface);
+    color: var(--fr-text);
+}
+
+.secondaryButtonSuccess {
+    border-color: #b9e9d0;
+    background: var(--fr-green-soft);
+    color: #008f5a;
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.secondaryButtonSuccess:hover,
+.quickFilterButton:hover,
+.clearStageButton:hover,
+.miniButton:hover,
+.miniButtonStrong:hover,
+.paginationButton:hover:not(:disabled) {
+    transform: none;
+    border-color: var(--fr-blue);
+    box-shadow: none;
+}
+
+.secondaryButton:hover,
+.quickFilterButton:hover,
+.clearStageButton:hover,
+.miniButton:hover,
+.paginationButton:hover:not(:disabled) {
+    background: var(--fr-blue-soft);
+    color: var(--fr-blue);
+}
+
+.workspaceTabs {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 4px;
+    margin: 0 0 16px;
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-bg-soft);
+    box-shadow: none;
+}
+
+.workspaceTab,
+.workspaceTabActive {
+    min-height: 34px;
+    padding: 0 13px;
+    border-radius: 9px;
+    color: var(--fr-muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.workspaceTab:hover {
+    background: var(--fr-surface);
+    color: var(--fr-text);
+}
+
+.workspaceTabActive {
+    background: var(--fr-surface);
+    color: var(--fr-blue);
+    box-shadow: none;
+}
+
+.toolbar {
+    margin-bottom: 14px;
+    padding: 10px;
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+    box-shadow: none;
+}
+
+.rangeGroup,
+.searchBox,
+.filterGroup select,
+.filterGroup input {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+}
+
+.rangeGroup {
+    background: var(--fr-bg-soft);
+}
+
+.rangeButton,
+.rangeButtonActive {
+    font-weight: 650;
+}
+
+.rangeButtonActive,
+.quickFilterButtonActive {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue);
+    color: #ffffff;
+}
+
+.metaPanel,
+.kpiCard,
+.kpiCardAccent,
+.marketInsightPanel,
+.panel,
+.panelWide,
+.tablePanel,
+.locationMasterPanel,
+.realtyImportForm,
+.realtyResultPanel,
+.realtySavedPanel,
+.openingProjectCard,
+.modalCard {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+    background-image: none;
+    box-shadow: none;
+}
+
+.marketInsightPanel {
+    overflow: visible;
+}
+
+.marketInsightBody {
+    padding: 16px;
+}
+
+.panelHeader,
+.tableHeader,
+.locationMasterHeader,
+.realtyResultHeader {
+    padding: 15px 16px;
+    border-bottom-color: var(--fr-line);
+}
+
+.panelHeader h2,
+.tableHeader h2,
+.locationMasterHeader h3,
+.realtyResultHeader strong {
+    color: var(--fr-text);
+    font-size: 16px;
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.panelHeader p,
+.tableHeader p,
+.locationMasterHeader p,
+.realtyResultHeader span {
+    color: var(--fr-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.panelHeader span,
+.marketRoadmap strong,
+.marketRoadmap span,
+.realtySourcePill,
+.realtySavedRegionBar button,
+.scorePill,
+.scorePillWarn,
+.marketActionGood,
+.marketActionWarn,
+.marketActionNeutral,
+.pipelineBadge,
+.hotBadge,
+.dueBadge,
+.dueBadgeDanger,
+.convertedBadge,
+.sourceBadge,
+.linkBadges span,
+.openingProgress,
+.openingProjectMeta span {
+    border-radius: 999px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.panelHeader span {
+    border-color: var(--fr-line);
+    background: var(--fr-bg-soft);
+    color: var(--fr-muted);
+}
+
+.kpiGrid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.kpiCard,
+.kpiCardAccent {
+    min-height: 104px;
+    padding: 16px;
+}
+
+.kpiCard span,
+.kpiCardAccent span,
+.marketSummaryCards span,
+.realtySummaryCards span {
+    color: var(--fr-muted);
+    font-weight: 650;
+}
+
+.kpiCard strong,
+.kpiCardAccent strong {
+    margin: 10px 0 5px;
+    color: var(--fr-text);
+    font-size: 28px;
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.marketSummaryCards {
+    gap: 8px;
+}
+
+.marketSummaryCards article,
+.realtySummaryCards article,
+.metaSummaryGrid article {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-bg);
+}
+
+.marketSummaryCards svg {
+    color: var(--fr-blue);
+}
+
+.marketSummaryCards strong,
+.realtySummaryCards strong {
+    color: var(--fr-text);
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.leadLayerTabs {
+    gap: 8px;
+    padding: 12px 14px 0;
+}
+
+.leadLayerTab,
+.leadLayerTabActive {
+    min-height: 64px;
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-bg);
+}
+
+.leadLayerTab strong,
+.leadLayerTabActive strong {
+    color: var(--fr-text);
+    font-weight: 760;
+}
+
+.leadLayerTab span,
+.leadLayerTabActive span {
+    color: var(--fr-muted);
+}
+
+.leadLayerTab b,
+.leadLayerTabActive b {
+    background: var(--fr-surface);
+    color: var(--fr-blue);
+    font-weight: 700;
+}
+
+.leadLayerTabActive {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue-soft);
+    box-shadow: none;
+}
+
+.stageStrip {
+    gap: 8px;
+    padding: 14px 16px 8px;
+}
+
+.stageCard,
+.stageCardActive {
+    min-height: 82px;
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-bg);
+    box-shadow: none;
+}
+
+.stageCardActive {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue-soft);
+}
+
+.stageCard:hover,
+.stageCardActive:hover {
+    transform: none;
+    border-color: var(--fr-blue);
+}
+
+.stageCard strong,
+.stageCardActive strong {
+    margin: 9px 0;
+    color: var(--fr-text);
+    font-size: 22px;
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.stageBarFill {
+    background: var(--fr-blue);
+}
+
+.tableScroll,
+.marketInsightTableWrap,
+.realtyTableWrap {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+}
+
+.leadTable th,
+.marketInsightTable th,
+.realtyTable th {
+    background: var(--fr-bg);
+    color: var(--fr-muted);
+    font-weight: 700;
+}
+
+.leadTable td,
+.marketInsightTable td,
+.realtyTable td {
+    border-bottom-color: var(--fr-line);
+    color: var(--fr-text);
+}
+
+.leadTable tr:hover td,
+.realtyTableRowSelected td {
+    background: var(--fr-blue-soft);
+}
+
+.nameButton,
+.pipelineName,
+.locationItem strong,
+.openingProjectHeader strong,
+.taskCardMain strong,
+.taskCardMain b,
+.leadTable td strong,
+.marketInsightTable td strong,
+.realtyTable td strong {
+    color: var(--fr-text);
+    font-weight: 760;
+}
+
+.phone,
+.pipelinePhone,
+.pipelineMeta,
+.locationItem span,
+.locationItem small,
+.openingProjectHeader span,
+.realtyTable td small,
+.leadTable small {
+    color: var(--fr-muted);
+}
+
+.pipelineBoard,
+.taskBoard {
+    background: var(--fr-surface);
+}
+
+.pipelineColumn {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-bg);
+}
+
+.pipelineCard,
+.taskCard,
+.locationItem,
+.openingTaskRow {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+    box-shadow: none;
+}
+
+.taskQueueToolbar {
+    padding: 14px 16px 0;
+}
+
+.taskQueueFilter,
+.taskQueueFilterActive {
+    border-color: var(--fr-line);
+    border-radius: 999px;
+    background: var(--fr-surface);
+    color: var(--fr-muted);
+    font-weight: 700;
+}
+
+.taskQueueFilterActive {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue-soft);
+    color: var(--fr-blue);
+}
+
+.locationMasterGrid {
+    grid-template-columns: minmax(320px, 0.78fr) minmax(480px, 1.22fr);
+    gap: 12px;
+    padding: 14px;
+}
+
+.locationFormGrid {
+    padding: 14px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-bg);
+}
+
+.locationFormGrid label,
+.realtyImportForm label,
+.realtySourceBox,
+.realtySavedToolbar label,
+.realtySavedFilterBar label {
+    color: var(--fr-muted);
+    font-weight: 700;
+}
+
+.locationFormGrid input,
+.locationFormGrid select,
+.locationFormGrid textarea,
+.realtyImportForm input,
+.realtyImportForm select,
+.realtySavedToolbar select,
+.realtySavedFilterBar select,
+.openingProjectMeta select,
+.openingProjectMeta input,
+.openingProjectCard textarea,
+.openingTaskRow select,
+.openingTaskRow input {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    color: var(--fr-text);
+    font-weight: 600;
+}
+
+.locationAddressSearchButton,
+.locationScanButton {
+    border-color: var(--fr-blue);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-blue);
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.locationList {
+    gap: 10px;
+}
+
+.locationItem {
+    padding: 14px;
+}
+
+.locationItemActions,
+.locationFormActions,
+.openingProjectActions {
+    gap: 6px;
+}
+
+.openingProjectList {
+    padding: 14px;
+}
+
+.openingProjectCard {
+    padding: 16px;
+}
+
+.openingProjectMeta span {
+    background: var(--fr-bg-soft);
+    color: var(--fr-muted);
+}
+
+.openingProgress,
+.scorePill,
+.marketActionGood {
+    background: var(--fr-green-soft);
+    color: var(--fr-green);
+}
+
+.scorePillWarn,
+.marketActionWarn {
+    background: var(--fr-orange-soft);
+    color: var(--fr-orange);
+}
+
+.marketActionNeutral,
+.pipelineBadge,
+.sourceBadge,
+.linkBadges span {
+    background: var(--fr-bg-soft);
+    color: var(--fr-muted);
+}
+
+.hotBadge,
+.dueBadgeDanger {
+    background: var(--fr-red-soft);
+    color: var(--fr-red);
+}
+
+.dueBadge {
+    background: var(--fr-orange-soft);
+    color: var(--fr-orange);
+}
+
+.realtyImportGrid {
+    grid-template-columns: minmax(260px, 0.58fr) minmax(520px, 1.42fr);
+    gap: 12px;
+}
+
+.realtyImportForm,
+.realtyResultPanel {
+    background: var(--fr-bg);
+}
+
+.realtySavedPanel {
+    margin-top: 12px;
+}
+
+.realtySavedRegionBar {
+    grid-template-columns: auto minmax(0, 1fr);
+    border-bottom-color: var(--fr-line);
+    background: var(--fr-surface);
+}
+
+.realtySavedRegionBar button {
+    min-height: 32px;
+    border-color: var(--fr-line);
+    background: var(--fr-surface);
+}
+
+.realtySavedRegionBar button:hover,
+.realtySavedRegionBar button.realtySavedRegionActive {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue-soft);
+    color: var(--fr-blue);
+}
+
+.realtyDistrictCard,
+.realtyMapPanel {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+}
+
+.realtyDistrictHeader,
+.realtyMapHeader,
+.realtySavedToolbar,
+.realtySavedFilterBar {
+    background: var(--fr-bg);
+    border-bottom-color: var(--fr-line);
+}
+
+.realtyNotice {
+    border-color: #ffe2a8;
+    background: var(--fr-orange-soft);
+    color: #9a6700;
+}
+
+.realtyErrorNotice {
+    border-color: #ffd0d2;
+    background: var(--fr-red-soft);
+    color: var(--fr-red);
+}
+
+.detailPanel,
+.leadLinkDrawer,
+.locationCompetitionModal {
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+    box-shadow: var(--fr-shadow-float);
+}
+
+.detailSection,
+.leadLinkCard,
+.leadLinkPicker,
+.leadLinkCandidate,
+.disclosurePanel,
+.disclosureForm,
+.disclosureHistoryItem {
+    border-color: var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-surface);
+    box-shadow: none;
+}
+
+@media (max-width: 1180px) {
+    .locationMasterGrid,
+    .realtyImportGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .hero {
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .hero h1 {
+        font-size: 24px;
+    }
+
+    .hero p {
+        font-size: 12px;
+    }
+
+    .heroActions {
+        width: 100%;
+    }
+
+    .heroActions .primaryButton,
+    .heroActions .secondaryButton {
+        flex: 1 1 132px;
+    }
+
+    .toolbar,
+    .marketInsightBody,
+    .locationMasterGrid,
+    .openingProjectList {
+        padding: 12px;
+    }
+
+    .workspaceTabs {
+        overflow-x: auto;
+    }
+
+    .kpiCard,
+    .kpiCardAccent {
+        min-height: 92px;
+    }
+
+    .realtySavedRegionBar {
+        grid-template-columns: 1fr;
+    }
+
+    .realtySavedRegionBar>strong {
+        padding-top: 0;
+    }
+}

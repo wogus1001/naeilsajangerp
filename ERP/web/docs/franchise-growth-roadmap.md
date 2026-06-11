@@ -11,11 +11,14 @@
 - `ERP/web/README.md`는 실행, 환경변수, SQL 적용 순서처럼 개발자가 바로 따라야 하는 설정 정보를 관리한다.
 - `ERP/web/docs/franchise-growth-roadmap.md`는 프랜차이즈 고도화 계획, API 정책, 다음 작업 목록을 관리한다.
 - `ERP/web/docs/franchise-dev-qa-log.md`는 개발 과정, 검증 결과, 미검증 리스크, 다음 QA 체크리스트를 관리한다.
+- `ERP/web/docs/franchise-product-direction.md`는 프랜차이즈 본사 임직원용 통합 운영 OS의 거시 제품 방향과 장기 모듈 구조를 관리한다.
 - `ERP/web/docs/documentation-agent.md`는 Docs Steward의 문서 직접 반영 권한, 금지 범위, 보고 형식을 관리한다.
 - `ERP/web/docs/fdam-reference.md`는 외부 ERP 레퍼런스 분석 문서로 유지하고, 현재 구현 상태 문서로 사용하지 않는다.
 - Docs Steward는 approved docs를 직접 수정할 수 있지만, `ERP/web/handoff.md`, 코드, SQL migration, env, package 파일은 수정하지 않는다.
 
 ## 현재 우선순위
+
+제품의 장기 방향은 `ERP/web/docs/franchise-product-direction.md`를 기준으로 한다. 이 로드맵은 그 방향을 현재 구현 순서와 QA 상태로 쪼개 관리한다.
 
 1. 모객 DB 업무 큐 강화
 2. 점포·상권 매칭
