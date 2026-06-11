@@ -2454,12 +2454,22 @@
 .locationItemActions {
     display: inline-flex;
     flex-shrink: 0;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
-.locationItemActions button {
+.locationItemActions button,
+.locationItemActions a,
+.locationItemActions .locationScanButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     height: 30px;
     padding: 0 9px;
+    white-space: nowrap;
+}
+
+.locationItemActions button {
     border: 1px solid #d8dee8;
     border-radius: 9px;
     background: #ffffff;
@@ -5427,7 +5437,12 @@
 
     .locationFormActions button,
     .locationItemActions button {
-        flex: 1;
+        flex: 0 0 auto;
+        min-width: 64px;
+    }
+
+    .locationStatusSelect {
+        flex: 1 1 116px;
     }
 
     .metaSummaryGrid,

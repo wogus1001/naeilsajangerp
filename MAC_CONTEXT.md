@@ -172,10 +172,11 @@ npm run build
       - 실데이터 테스트 전 선행 적용 필요 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 브랜드 모니터링 실제 수집 전 선행 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - P0: SearchAPI 429/한도 초과 시 기존 Naver 리뷰/광고 성공 값을 덮어쓰지 않게 보호하고, UI를 `SearchAPI 한도초과`/`provider 미설정`/`결과 없음`으로 분리 표시.
-  - P1: 2026-06-11 `서울 광진구 화양동` 실수집 QA 완료. 원본 237건 중 20건 저장, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단 확인. 남은 QA는 `합정동`/`광진구` 구 단위 대량 수집, 회사 범위 없는 계정, 점포목록 상세/운영 화면 회귀.
+  - P1: 2026-06-11 `서울 광진구 화양동` 실수집 QA 완료. 원본 237건 중 20건 저장, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단 확인. `합정동`/`광진구` 구 단위 수집, 회사 없는 requester API 범위, 점포목록 상세/검색/운영 화면 회귀도 후속 QA에서 완료했다. 남은 QA는 실제 2000/3000 상한 근접 수집과 실운영 계정 role matrix다.
   - 2026-06-10 결정: 외부 상가 수집은 Daangn 저장/지도/점수화 MVP까지 우선 마감하고, 다음 신규 개발은 모객 DB 업무 큐 강화 후 점포·상권 매칭으로 진행한다. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 1~3순위를 묶어서 진행한다.
   - 2026-06-11 완료: 저장 외부 상가 행에서 `물건지 등록`을 눌러 선택 승격하는 1차 흐름 추가. `/api/realty/listings/promote`가 ERP `properties.operation_type='external'`, `data.externalImportMode='manual-promoted'` 물건지를 만들고, 원본 행은 `status='promoted'`, `property_id`로 연결한다. 재호출은 `existing`으로 같은 물건지를 반환.
   - 2026-06-11 안정화 완료: P0 `연락 완료`, 기존 단계값 없는 리드, 후보지 연결 상태/메모 reload를 API/DB로 재검증했다. `manual-promoted` 물건지가 `/properties` 상세/검색/외부수집 필터와 배지에 포함되도록 수정했다. 합정동 재수집과 광진구 구 단위 확장 수집은 기존 외부 원본 업데이트로 통과했고, `registerToProperties` 차단 및 ERP `properties` 자동 생성 0건을 재확인했다.
+  - 2026-06-11 완료: 권한/회사 범위 API QA와 `manual-promoted` 운영 화면 전환 워크플로를 완료했다. 교차 회사 승격/조회는 403, 회사 없는 requester 승격은 400으로 차단되고, 운영 화면은 수동 승격 물건지를 명시 `운영점 등록` 후 `franchise_locations.source_property_id`로 연결해 새로고침 후에도 유지한다.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
@@ -254,7 +255,7 @@ npm run build
   - 물건지 목록의 `외부수집` 필터/배지는 과거 자동 등록 데이터 구분용으로만 유지.
   - 문서: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 `ERP/web/docs/franchise-dev-qa-log.md`에서 관리한다.
   - 로컬 검증: `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 통과.
-  - 다음 QA: 당근 `합정동`/`광진구` 구 단위 대량 수집, 동 단위 확장 warning, 재수집 업데이트, 2000/3000 수집 리밋, 저장 목록 2000건 상한, 회사 범위 없는 계정 저장/조회, 승격 물건지의 점포목록 상세/검색/운영 화면 표시 확인.
+  - 다음 QA: 실제 2000/3000 수집 리밋, 저장 목록 2000건 상한, 실운영 계정 role matrix, 모바일 전역 레이아웃 자동 접힘, Daangn raw/data 샘플 감사.
   - 다음 개발순서: 중복 후보 묶기 -> 상위 N건 상세 보강 -> 가격/상태 변동 추적 -> 승격 후 점포목록 상세/운영 워크플로 연결. 필터/점수화와 지도화는 기초 구현 완료이며, 지도화는 서버 좌표 영구 저장과 기존 점포/출점 후보지/경쟁환경 지도 통합이 남아 있다.
 - 점포/고객/명함 목록 검색 개선
   - 쉼표/띄어쓰기 OR 검색 공용 파서 적용

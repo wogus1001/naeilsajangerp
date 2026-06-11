@@ -95,6 +95,9 @@
 - 2026-06-11 `서울 광진구`, limit 8 구 단위 수집은 화양동/자양동/구의동/광장동/군자동/중곡동/능동 확장 warning 9건을 반환했고, 기존 저장 행 8건 업데이트로 처리됐다. `registerToProperties: true` 요청은 400으로 차단됐으며 수집 전후 ERP `properties` 수 변화는 0건이었다.
 - 2026-06-11 Playwright 로그인 세션에서 `/properties` 외부수집 필터를 클릭해 `manual-promoted` 외부 물건지가 1건 표시되고 배지가 유지되는 것을 확인했다. 새 콘솔 error는 0건이었다.
 - 2026-06-11 안정화 QA용으로 만든 리드 3건, 출점 후보지 1건, 수동 QA 외부 원본 1건, 승격 물건지 1건, import job 3건은 검증 후 삭제했다. QA run id는 `QA_STAB_1781140739040`이다.
+- 2026-06-11 권한/회사 범위 API QA를 임시 회사 A/B, 회사 없는 requester 2명으로 진행했다. 교차 회사 외부 상가 승격 403, 교차 회사 물건지 상세 403, 교차 회사 가맹 운영 목록 403을 확인했다. 회사 없는 requester는 본인 외부 원본만 조회 가능하고 다른 requester 원본은 숨겨지며, ERP 물건지 승격은 회사 범위 필요 400으로 차단되고 `properties` 자동 생성 0건을 확인했다.
+- 2026-06-11 `manual-promoted` 운영 화면 워크플로를 정의하고 구현했다. 점포목록에서 수동 승격한 외부 상가는 `/dashboard/franchise-operations`의 `외부 승격 물건지 운영 전환` 패널에 표시되며, 사용자가 `운영점 등록`을 눌러야 `franchise_locations.source_property_id`가 연결된 `오픈준비` 운영점으로 등록된다. 자동 등록은 하지 않는다.
+- 2026-06-11 Playwright 로그인 세션에서 운영 화면 워크플로를 확인했다. `오픈준비 등록 대기` 상태의 `manual-promoted` 물건지를 `운영점 등록`으로 전환하고, 새로고침 후 `운영점 ... 연결됨` 상태가 유지되는 것을 확인했다. 데스크톱 패널과 모바일 사이드바 접힘 상태에서 액션 버튼/배지 줄바꿈도 확인했다.
 
 ## QA 결과
 
@@ -130,6 +133,10 @@
 - 2026-06-11 `/properties` 외부수집 필터 Playwright QA 통과: 로그인 세션에서 필터 클릭 후 외부 물건지 1건 표시, `외부수집` 배지 유지, 새 console error 0건
 - 2026-06-11 안정화 테스트 통과: `npx tsx --test src/lib/property-external-status.test.mts src/lib/franchise-lead-workflow.test.mts src/lib/franchise-lead-location-links.test.mts src/lib/realty-listing-promotion.test.mts src/lib/realty-import-schema.test.mts src/components/franchise/realty-import/scoring.test.mts src/components/franchise/realty-import/utils.test.mts src/components/franchise/realty-import/map-utils.test.mts` 결과 31건 통과
 - 2026-06-11 안정화 최종 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`
+- 2026-06-11 운영 화면 `manual-promoted` 워크플로 테스트 통과: `npx tsx --test src/lib/manual-promoted-operations.test.mts src/lib/property-external-status.test.mts src/lib/realty-listing-promotion.test.mts src/lib/realty-import-schema.test.mts` 결과 12건 통과
+- 2026-06-11 운영 화면 최종 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`
+- 2026-06-11 권한/회사 범위 API QA 통과: 임시 회사 A/B 및 회사 없는 requester 기준 교차 회사 승격/조회 차단, no-company requester 소유 범위 조회, no-company 승격 400 및 `properties` 생성 0건 확인
+- 2026-06-11 운영 화면 Playwright QA 통과: `manual-promoted` 물건지 패널 표시, `운영점 등록`, `sourcePropertyId` reload 유지, 데스크톱/모바일 접힘 상태 시각 확인
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
@@ -150,10 +157,11 @@
 - SearchAPI 현재 키는 `monthly_allowance=0`, `remaining_credits=-3` 상태라 Naver 신규 수집이 429로 차단된다.
 - SearchAPI 한도 초과 상태에서 기존 Naver 성공 값이 덮어쓰기되는 문제는 P0로 남아 있다.
 - Playwright MCP 스크린샷 확인은 Chrome 프로필 잠금 이슈로 완료하지 못한 이력이 있다.
-- 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. `연락 완료` 저장 흐름도 API/DB 기준으로 재검증했다. 남은 것은 실제 Meta/엑셀 파일 유입과 여러 권한/회사 계정별 회귀 QA다.
+- 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. `연락 완료` 저장 흐름도 API/DB 기준으로 재검증했다. 남은 것은 실제 Meta/엑셀 파일 유입과 실운영 계정 권한 조합별 회귀 QA다.
 - `/dashboard/franchise-leads/market-insights?tab=realty-import` 모바일 폭은 기존 사이드바 레이아웃 제약 때문에 전체 화면이 데스크톱 기준으로 흐른다. 저장 상가 표 자체는 가로 스크롤 전제로 동작하지만, 모바일 전용 레이아웃은 별도 과제다.
+- `/dashboard/franchise-operations` 모바일 기본 진입도 기존 고정 사이드바가 열려 있으면 본문 폭이 과도하게 줄어든다. 사이드바 접힘 상태에서는 `manual-promoted` 운영 전환 패널과 액션 버튼/배지가 표시되지만, 모바일 기본 레이아웃 자동 접힘은 전역 레이아웃 과제로 남긴다.
 - 이번 Docs Steward 감사에서는 새 브라우저/빌드 QA를 실행하지 않았고, 문서와 코드 검색 기준으로 최신성만 확인했다.
-- 외부 상가 수집은 2026-06-11에 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 QA를 완료했다. 회사 범위 없는 계정과 실제 2000/3000 상한 근접 수집 QA는 남아 있다.
+- 외부 상가 수집은 2026-06-11에 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 QA와 회사 없는 requester API 범위 QA를 완료했다. 실제 2000/3000 상한 근접 수집과 실운영 계정 UI 회귀는 남아 있다.
 - 네이버부동산 POC는 지역 코드 조회는 가능해도 목록 응답이 빈 값일 수 있어 운영 데이터 소스로 확정하지 않았다.
 - 네이버부동산 보조 POC의 `clusterList -> articleList` 흐름은 빈 응답/429 가능성이 있어 현재 MVP QA에서 분리하고, 향후 과제 트랙에서 반복 QA한다.
 - 네이버부동산은 향후 과제로 이관했으므로 현재 외부 상가 수집 MVP의 차단 이슈로 보지 않는다.
@@ -198,7 +206,7 @@
 ### P0
 
 - Meta 실제 유입, 엑셀 업로드 파일 기준으로 `1차 유입 DB` 저장과 후보자 승격 회귀 QA
-- 여러 권한/회사 계정 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
+- 실운영 계정 role matrix 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
 
 ### P1
@@ -209,7 +217,7 @@
 - 기존 스캔 캐시가 있을 때 상세 모달이 정상 렌더링되는지 확인
 - `supabase_realty_import_migration.sql` 적용 후 `/dashboard/franchise-leads/market-insights?tab=realty-import`의 `외부 상가 수집` 탭에서 당근 상가 수집을 확인
 - 실제 2000/3000 상한에 가까운 수집 요청에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 확인
-- 회사 범위가 없는 계정에서도 `requester_id` 기준으로 저장 목록이 조회되는지 확인
+- 회사 범위가 없는 계정의 `requester_id` 기준 저장 목록 조회와 승격 차단은 2026-06-11 API QA를 통과했다. 향후 실운영 계정으로 UI 회귀만 확인
 - 하단 `저장된 상가` 목록, 저장 지역 칩, 동 카드, 동 내부 페이지네이션, 최신화 버튼이 동작하고, 최신화 시 기존 매물이 중복 표시되지 않는지 확인
 - 저장일 컬럼과 별표 토글이 동작하고, 재수집 후에도 별표가 유지되는지 확인
 - 추천점수 컬럼, 별표만/1층만/관리비 확인 필터, 정렬이 저장 지역 칩과 동 카드 페이지네이션을 깨지 않는지 확인
@@ -217,7 +225,7 @@
 - 기존 물건지와 주소가 같은 외부 매물이 `duplicate_candidate`로 표시되는지 확인
 - import API 변경 후에도 외부 수집 결과가 점포목록에 자동 등록되지 않는지 회귀 확인
 - `external_property_listings`에 원본 raw/data가 저장되는지 확인
-- 선택 외부 상가 승격 후 운영 화면에서 `operation_type=external`, `manual-promoted` 물건지가 운영 워크플로에 맞게 표시되는지 확인
+- 선택 외부 상가 승격 후 운영 화면에서 `operation_type=external`, `manual-promoted` 물건지가 운영 전환 패널에 표시되고, 명시 등록 후 `sourcePropertyId`가 유지되는지 2026-06-11 확인
 - 결과 표가 주소 중심으로 표시되고, 저장일/별표/가격/세부/반응/승격/원문 링크가 깨지지 않는지 회귀 확인
 - 네이버부동산 향후 트랙은 URL/CSV import부터 별도 POC로 검증하고, 현재 당근 상가 수집 QA와 분리
 - API `registerToProperties` 분기가 실수로 켜지지 않는지 향후 변경 때마다 회귀 확인
