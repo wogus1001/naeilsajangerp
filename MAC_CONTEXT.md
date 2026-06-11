@@ -167,7 +167,7 @@ npm run build
       - 정보공개서 브랜드 검색은 공공데이터포털 `공정거래위원회_가맹정보_브랜드 목록 정보 제공 서비스` 실시간 API(`FftcBrandRlsInfo2_Service/getBrandinfo`)를 우선 사용한다. 공식 API는 브랜드명 검색 파라미터가 없어 기준년도 데이터를 페이지 단위로 받아 서버에서 검색어를 필터링한다.
       - 공식 API 검색 속도 개선: 기준년도 기본 우선순위는 `FRANCHISE_DISCLOSURE_BASE_YEAR` 미설정 시 최근 완료 가능성이 높은 연도부터 조회하고, 페이지 조회는 병렬 처리 후 서버 프로세스 메모리에 6시간 캐시한다. 프론트는 로컬 캐시 결과를 먼저 표시하고 공식 API는 최대 3.5초만 버튼 로딩 상태로 기다린 뒤 늦게 도착하면 결과를 갱신한다.
       - 공식 API 키가 없거나 결과가 없으면 기존 `/api/franchise?query=` 로컬 정보공개서 캐시(`src/data/franchises.json`)를 보조로 병합한다. 저장 브랜드를 먼저 보여주고, 공식/캐시 검색 결과를 뒤에 병합한다.
-      - 2026-06-11 신규 계획: 본사별 정보공개서 문서함과 후보자별 발송 이력을 추가한다. 후보자에게 정보공개서를 발송한 일시/채널/문서 버전/수신자/증빙 상태를 저장하고, 정보공개서 발송 후 14일이 지나야 계약 생성과 가맹금 수령 단계로 진행할 수 있도록 계약 잠금을 둔다. 법령 기준은 가맹사업법 제7조 제3항의 정보공개서 제공 후 14일 제한을 기준으로 한다.
+      - 2026-06-11 구현/QA 완료: 본사별 정보공개서 문서함과 후보자별 발송 이력 MVP를 추가했다. `supabase_franchise_disclosures_migration.sql`, `/api/franchise-disclosure-documents`, `/api/franchise-lead-disclosures`, 후보자 상세 정보공개서 섹션, `franchise-leads` 계약 상태 전환 서버 가드를 추가했다. 정보공개서 파일은 기존 Supabase Storage `property-documents/franchise-disclosures/<company>/...` 경로로 업로드하고, 같은 회사 직원이 회사 문서함을 공유한다. 발송 기록 UI에서는 증빙 URL을 제거했다. 최신 정보공개서 발송 후 14일이 지나야 `계약예정`/`계약완료`로 변경할 수 있으며, SQL 적용 후 업로드/저장/발송/새로고침 persistence/계약 단계 400 차단을 Playwright로 확인했다. 2차 계획은 이메일 또는 카카오 알림톡 자동발송 연동이다.
       - 출점 후보지/가맹 운영 주소 검색도 점포 신규등록과 같은 Daum 우편번호 검색 모달 방식으로 맞췄다. 주소 선택 시 주소/지역을 채우고 좌표는 비워두며, 경쟁스캔은 기존처럼 서버에서 주소 기반 좌표 변환을 수행한다.
       - 적용 SQL: `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 실데이터 테스트 전 선행 적용 필요 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`

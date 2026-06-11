@@ -101,8 +101,13 @@
 - 2026-06-11 오픈 준비 프로젝트 MVP를 추가했다. `supabase_franchise_opening_projects_migration.sql`, `/api/franchise-opening-projects`, `OpeningProjectPanel`을 추가해 `오픈준비` 운영점별 상태/목표 오픈일/메모/checklist를 전용 테이블에 저장하도록 했다.
 - 2026-06-11 모바일 전역 레이아웃을 보정했다. `MainLayout`의 첫 진입 사이드바 상태를 viewport 기준 hook으로 분리해 390px에서는 기본 접힘, 1440px에서는 기본 열림으로 시작한다.
 - 2026-06-11 QA runner를 추가했다. 엑셀 유입(`franchise-p0-lead-ingress-qa.mjs`), role matrix(`franchise-role-matrix-qa.mjs`), 오픈 준비 API(`franchise-opening-projects-api-qa.mjs`), 외부 상가 scale/raw(`franchise-realty-scale-raw-qa.mjs`)는 실제 QA requester/env가 준비되면 live 검증을 수행한다.
-- 2026-06-11 신규 계획으로 본사별 정보공개서 문서함과 후보자별 발송 이력, 발송 후 14일 계약 잠금 요구사항을 추가했다. 후보자에게 정보공개서를 발송한 일시/채널/문서 버전/수신자/증빙 상태를 남기고, 계약 생성과 가맹금 수령 단계는 계약 가능일 이후로 제한한다. 법령 기준은 국가법령정보센터 가맹사업법 제7조 제3항의 정보공개서 제공 후 14일 제한을 기준으로 한다.
+- 2026-06-11 신규 계획으로 본사별 정보공개서 문서함과 후보자별 발송 이력, 발송 후 14일 계약 잠금 요구사항을 추가했다. 후보자에게 정보공개서를 발송한 일시/채널/문서 버전/수신 연락처/메모를 남기고, 계약 생성과 가맹금 수령 단계는 계약 가능일 이후로 제한한다. 법령 기준은 국가법령정보센터 가맹사업법 제7조 제3항의 정보공개서 제공 후 14일 제한을 기준으로 한다.
+- 2026-06-11 정보공개서 발송/계약 컴플라이언스 MVP를 구현했다. `supabase_franchise_disclosures_migration.sql`, `/api/franchise-disclosure-documents`, `/api/franchise-lead-disclosures`, 후보자 상세 `정보공개서` 섹션, `franchise-leads` 계약 상태 전환 서버 가드를 추가했다. 최신 발송 이력 기준 14일이 지나야 `계약예정`/`계약완료` 상태로 변경 가능하다.
+- 2026-06-11 정보공개서 14일 계산/업로드 경로 유닛 테스트 통과: `npx tsx --test src/components/franchise/leadDisclosureFormUtils.test.mts src/lib/franchise-disclosure-deliveries.test.mts src/lib/franchise-leads.test.mts` 결과 10건 통과. `npx tsc --noEmit`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`도 통과했다.
+- 2026-06-11 `supabase_franchise_disclosures_migration.sql` 적용 후 Playwright 로그인 세션에서 후보자 상세 정보공개서 live QA를 완료했다. `property-documents/franchise-disclosures/<company>/...` 업로드, 회사 문서함 저장, 후보자 발송 기록, 새로고침 후 문서/발송 이력 유지, 발송 직후 `계약예정` PUT 400 차단과 기존 상태 유지까지 확인했다. 발송 기록 UI에는 `증빙 URL` 입력/링크가 노출되지 않는다. 1440px/390px 시각 QA에서 정보공개서 섹션 내부 overflow 0건을 확인했다.
+- 2026-06-11 정보공개서 2차 고도화 계획으로 이메일 자동발송 또는 카카오 알림톡 자동발송을 추가했다. provider 연동 시 발송 요청/성공/실패/수신자/템플릿/재시도 상태를 별도 로그로 남기고, 계약 가능일 계산은 동일한 발송 이력 기준을 유지한다.
 - 2026-06-11 `franchise-p0-lead-ingress-qa.mjs`가 `xlsx` ESM namespace import에서 `readFile`을 찾지 못해 실패했다. 실제 import shape 확인 결과 `readFile`은 default export에 있어 runner import를 default로 보정했고, 동일 명령 재실행으로 엑셀 fixture 기반 원천 DB 저장/후보자 승격/cleanup을 통과했다.
+- 2026-06-11 `franchise-p0-lead-ingress-qa.mjs` 리뷰 개선을 반영했다. runId를 ms+UUID로 바꾸고, fixture를 OS 임시 폴더에 만들며, fetch 15초 timeout과 실패 경로 cleanup을 추가해 assertion 실패 시에도 생성 리드/fixture 정리를 시도한다.
 - 2026-06-11 `supabase_franchise_opening_projects_migration.sql` 적용 후 오픈 준비 프로젝트 API live QA를 통과했다. `admin` requester와 `오픈준비` location id로 생성, location scoped 조회, checklist 수정, 삭제, 삭제 후 404를 확인했다.
 - 2026-06-11 외부 상가 scale/raw runner를 live로 실행했다. `서울 광진구 화양동`, collect limit 3000, saved limit 2000에서 Daangn 원본 238건을 수집해 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, `registerToProperties=false` 기준 ERP `properties` 생성 0건을 확인했다.
 
@@ -221,7 +226,6 @@
 - Meta 실제 유입은 계정/env 준비 전까지 HOLD. 엑셀 업로드 runner 기준 `1차 유입 DB` 저장과 후보자 승격은 2026-06-11 통과했으며, 실제 운영 엑셀 샘플 파일이 생기면 같은 runner로 추가 회귀한다.
 - 실운영 계정 role matrix 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
-- 본사별 정보공개서 문서함, 후보자 발송 이력, 발송 후 14일 계약 잠금 정책을 설계/구현/QA
 - 오픈 준비 프로젝트 브라우저 UI 저장과 새로고침 persistence 확인
 
 ### P1

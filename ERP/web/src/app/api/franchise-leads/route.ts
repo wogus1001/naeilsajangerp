@@ -17,6 +17,12 @@ import {
     normalizeLeadStage,
     normalizeLeadStatus
 } from '@/lib/franchise-leads';
+import {
+    canEnterContractStatus,
+    getContractLockMessage,
+    getDisclosureEligibility,
+    isContractLockedLeadStatus
+} from '@/lib/franchise-disclosure-deliveries';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
 export const dynamic = 'force-dynamic';
@@ -355,6 +361,54 @@ function buildUpdatePayload(body: Record<string, any>, existingData: Record<stri
     return updates;
 }
 
+function getErrorCode(error: unknown) {
+    if (!error || typeof error !== 'object' || !('code' in error)) return '';
+    return typeof error.code === 'string' ? error.code : '';
+}
+
+function getErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    if (!error || typeof error !== 'object' || !('message' in error)) return '';
+    return typeof error.message === 'string' ? error.message : '';
+}
+
+function isMissingLeadDisclosureSchemaError(error: unknown) {
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error);
+    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code)
+        && /franchise_lead_disclosure_deliveries/i.test(message);
+}
+
+async function validateDisclosureBeforeContractStatus(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    leadId: string,
+    nextStatus: ReturnType<typeof normalizeLeadStatus>
+) {
+    if (!isContractLockedLeadStatus(nextStatus)) return null;
+
+    const { data, error } = await supabaseAdmin
+        .from('franchise_lead_disclosure_deliveries')
+        .select('id, sent_at, document_title, document_version')
+        .eq('lead_id', leadId);
+
+    if (error) {
+        if (isMissingLeadDisclosureSchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '정보공개서 발송 이력 테이블이 아직 적용되지 않았습니다. supabase_franchise_disclosures_migration.sql 적용 후 다시 확인해주세요.'
+            );
+        }
+        throw error;
+    }
+
+    const eligibility = getDisclosureEligibility(data || []);
+    if (!canEnterContractStatus(nextStatus, eligibility)) {
+        return fail(400, 'VALIDATION_ERROR', getContractLockMessage(eligibility));
+    }
+    return null;
+}
+
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
@@ -601,6 +655,14 @@ export async function PUT(request: Request) {
 
         if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, targetCompanyId)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
+        }
+
+        if (hasAny(body, ['status', '상태'])) {
+            const nextStatus = normalizeLeadStatus(getFirst(body, ['status', '상태']));
+            if (nextStatus !== existing.status && isContractLockedLeadStatus(nextStatus)) {
+                const disclosureGuard = await validateDisclosureBeforeContractStatus(supabaseAdmin, existing.id, nextStatus);
+                if (disclosureGuard) return disclosureGuard;
+            }
         }
 
         if (updates.mobile_normalized) {

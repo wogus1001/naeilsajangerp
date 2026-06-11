@@ -48,12 +48,13 @@ npm run start -- -p 3000
 supabase_franchise_locations_migration.sql
 supabase_franchise_opening_projects_migration.sql
 supabase_franchise_brands_migration.sql
+supabase_franchise_disclosures_migration.sql
 supabase_franchise_market_monitoring_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands` 또는 `franchise_market_monitoring` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, 또는 `franchise_market_monitoring` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Meta Lead Ads Setup
 
@@ -147,6 +148,14 @@ FRANCHISE_DISCLOSURE_CACHE_TTL_SECONDS=
 ```
 
 The brand selector shows company-saved brands first, then shared disclosure brands. Saving a site/store with a brand also stores that brand in the company brand master, and the recommended competitor-search keyword remains editable per site/store. The public disclosure API does not provide a direct brand-name search parameter, so the server fetches year/page data and filters it locally with a short-lived memory cache.
+
+## Franchise Disclosure Compliance Setup
+
+Run `supabase_franchise_disclosures_migration.sql` before enabling HQ disclosure document storage and candidate disclosure delivery tracking.
+
+The candidate detail panel uploads disclosure files through `/api/upload` to the existing Supabase Storage `property-documents` bucket under `franchise-disclosures/<company>/...`, then stores company-scoped document metadata in `franchise_disclosure_documents`. Company employees reuse the same company disclosure document list, while per-lead delivery records keep sent time, channel, recipient contact, memo, and the document version snapshot.
+
+Lead status changes to `계약예정` or `계약완료` are blocked until 14 days after the latest disclosure delivery. Future delivery automation should integrate either email or Kakao AlimTalk and write provider send status back into the disclosure delivery workflow.
 
 ## Franchise Brand Monitoring Setup
 

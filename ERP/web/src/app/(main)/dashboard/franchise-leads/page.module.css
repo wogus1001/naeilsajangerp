@@ -4116,6 +4116,241 @@
     line-height: 1.6;
 }
 
+.disclosureHeader,
+.disclosureBlockTitle,
+.disclosureHistoryItem {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.disclosureHeader h3 {
+    margin-bottom: 6px;
+}
+
+.disclosureReady,
+.disclosureLocked {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.disclosureReady {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #bbf7d0;
+}
+
+.disclosureLocked {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.disclosureError,
+.disclosureMessage {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.disclosureError {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.disclosureMessage {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.disclosureGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.disclosureFormBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 13px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.disclosureBlockTitle strong,
+.disclosureHistoryItem strong {
+    display: block;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.disclosureBlockTitle span,
+.disclosureHistoryItem span {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.disclosureFormGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.disclosureFormGrid label,
+.disclosureMemoLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.disclosureFormGrid input,
+.disclosureFormGrid select,
+.disclosureMemoLabel textarea {
+    width: 100%;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13px;
+    outline: none;
+}
+
+.disclosureFormGrid input,
+.disclosureFormGrid select {
+    height: 36px;
+    padding: 0 9px;
+}
+
+.disclosureMemoLabel textarea {
+    min-height: 62px;
+    padding: 9px;
+    resize: vertical;
+}
+
+.disclosureFormGrid input:focus,
+.disclosureFormGrid select:focus,
+.disclosureMemoLabel textarea:focus {
+    border-color: #6d5dfc;
+    box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.12);
+}
+
+.disclosureUploadLabel {
+    min-width: 0;
+}
+
+.disclosureUploadControl {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 36px;
+    border: 1px dashed #a5b4fc;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 900;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.disclosureUploadControl input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.disclosureUploadControl:has(input:disabled) {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.disclosureUploadedFile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background: #eff6ff;
+}
+
+.disclosureUploadedFile span {
+    min-width: 0;
+    color: #1e293b;
+    font-size: 12px;
+    font-weight: 850;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.disclosureUploadedFile a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    text-decoration: none;
+}
+
+.disclosureFileLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    text-decoration: none;
+}
+
+.disclosureHistory {
+    display: grid;
+    gap: 9px;
+    margin-top: 12px;
+}
+
+.disclosureHistoryItem {
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.disclosureHistoryItem span {
+    display: block;
+    margin-top: 4px;
+}
+
 .nextContactBox {
     display: flex;
     gap: 8px;
@@ -5644,7 +5879,9 @@
     .detailInfoGrid,
     .relatedGrid,
     .taskInfoGrid,
-    .workflowGrid {
+    .workflowGrid,
+    .disclosureGrid,
+    .disclosureFormGrid {
         grid-template-columns: 1fr;
     }
 
@@ -5675,12 +5912,19 @@
     }
 
     .leadLinkSectionHeader,
+    .disclosureHeader,
+    .disclosureHistoryItem,
     .leadLinkPickerHead,
     .leadLinkCardHead,
     .leadLinkCandidate,
     .leadLinkCandidateActions {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .disclosureReady,
+    .disclosureLocked {
+        width: fit-content;
     }
 
     .leadLinkMemoRow {

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     FRANCHISE_LEAD_GRADES,
@@ -73,6 +74,12 @@ import {
     matchesLeadWorkQueue
 } from '@/lib/franchise-lead-workflow';
 import type { LeadConsultationResult, LeadFitLevel, LeadNextAction, LeadWorkflowDraft, LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
+import {
+    canEnterContractStatus,
+    getContractLockMessage,
+    isContractLockedLeadStatus,
+    type DisclosureEligibility
+} from '@/lib/franchise-disclosure-deliveries';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from './page.module.css';
 
@@ -598,6 +605,7 @@ export default function FranchiseLeadsPage() {
     const [isRelatedLoading, setIsRelatedLoading] = React.useState(false);
     const [detailWorkflow, setDetailWorkflow] = React.useState<LeadWorkflowDraft>(EMPTY_LEAD_WORKFLOW_DRAFT);
     const [isWorkflowSaving, setIsWorkflowSaving] = React.useState(false);
+    const [selectedDisclosureEligibility, setSelectedDisclosureEligibility] = React.useState<DisclosureEligibility | null>(null);
     const [metaState, setMetaState] = React.useState<MetaIntegrationState>(EMPTY_META_STATE);
     const [isMetaLoading, setIsMetaLoading] = React.useState(false);
     const [isMetaPanelOpen, setIsMetaPanelOpen] = React.useState(false);
@@ -815,6 +823,10 @@ export default function FranchiseLeadsPage() {
     React.useEffect(() => {
         setSelectedLeadIds([]);
     }, [createdFrom, createdTo, currentPage, leadDbLayer, managerFilter, pageSize, searchTerm, sourceFilter, statusFilter]);
+
+    React.useEffect(() => {
+        setSelectedDisclosureEligibility(null);
+    }, [selectedLeadId]);
 
     React.useEffect(() => {
         if (leadDbLayer === 'raw_intake' && viewMode !== 'table') {
@@ -1288,6 +1300,17 @@ export default function FranchiseLeadsPage() {
 
     const updateLeadStatus = async (lead: FranchiseLead, status: FranchiseLeadStatus) => {
         if (!userId || lead.status === status) return;
+
+        if (selectedLead?.id === lead.id && isContractLockedLeadStatus(status)) {
+            if (!selectedDisclosureEligibility) {
+                showAlert('정보공개서 발송 이력을 확인한 뒤 계약 단계로 변경할 수 있습니다.', 'info', '정보공개서 확인 필요');
+                return;
+            }
+            if (!canEnterContractStatus(status, selectedDisclosureEligibility)) {
+                showAlert(getContractLockMessage(selectedDisclosureEligibility), 'error', '계약 단계 변경 불가');
+                return;
+            }
+        }
 
         try {
             const nextActivity: LeadActivity = {
@@ -3100,6 +3123,17 @@ export default function FranchiseLeadsPage() {
                             isSaving={isWorkflowSaving}
                             onChange={setDetailWorkflow}
                             onSave={() => void saveDetailWorkflow()}
+                        />
+
+                        <LeadDisclosureSection
+                            leadId={selectedLead.id}
+                            userId={userId}
+                            companyId={selectedLead.companyId}
+                            companyName={selectedLead.companyName || companyName}
+                            leadName={selectedLead.name}
+                            leadContact={selectedLead.mobile}
+                            interestedBrand={selectedLead.interestedBrand}
+                            onEligibilityChange={setSelectedDisclosureEligibility}
                         />
 
                         <LeadLocationLinkSection
