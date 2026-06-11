@@ -167,18 +167,20 @@ npm run build
       - 정보공개서 브랜드 검색은 공공데이터포털 `공정거래위원회_가맹정보_브랜드 목록 정보 제공 서비스` 실시간 API(`FftcBrandRlsInfo2_Service/getBrandinfo`)를 우선 사용한다. 공식 API는 브랜드명 검색 파라미터가 없어 기준년도 데이터를 페이지 단위로 받아 서버에서 검색어를 필터링한다.
       - 공식 API 검색 속도 개선: 기준년도 기본 우선순위는 `FRANCHISE_DISCLOSURE_BASE_YEAR` 미설정 시 최근 완료 가능성이 높은 연도부터 조회하고, 페이지 조회는 병렬 처리 후 서버 프로세스 메모리에 6시간 캐시한다. 프론트는 로컬 캐시 결과를 먼저 표시하고 공식 API는 최대 3.5초만 버튼 로딩 상태로 기다린 뒤 늦게 도착하면 결과를 갱신한다.
       - 공식 API 키가 없거나 결과가 없으면 기존 `/api/franchise?query=` 로컬 정보공개서 캐시(`src/data/franchises.json`)를 보조로 병합한다. 저장 브랜드를 먼저 보여주고, 공식/캐시 검색 결과를 뒤에 병합한다.
+      - 2026-06-11 신규 계획: 본사별 정보공개서 문서함과 후보자별 발송 이력을 추가한다. 후보자에게 정보공개서를 발송한 일시/채널/문서 버전/수신자/증빙 상태를 저장하고, 정보공개서 발송 후 14일이 지나야 계약 생성과 가맹금 수령 단계로 진행할 수 있도록 계약 잠금을 둔다. 법령 기준은 가맹사업법 제7조 제3항의 정보공개서 제공 후 14일 제한을 기준으로 한다.
       - 출점 후보지/가맹 운영 주소 검색도 점포 신규등록과 같은 Daum 우편번호 검색 모달 방식으로 맞췄다. 주소 선택 시 주소/지역을 채우고 좌표는 비워두며, 경쟁스캔은 기존처럼 서버에서 주소 기반 좌표 변환을 수행한다.
       - 적용 SQL: `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 실데이터 테스트 전 선행 적용 필요 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - 브랜드 모니터링 실제 수집 전 선행 SQL: `ERP/web/supabase_franchise_brands_migration.sql`, `ERP/web/supabase_franchise_market_monitoring_migration.sql`
       - P0: SearchAPI 429/한도 초과 시 기존 Naver 리뷰/광고 성공 값을 덮어쓰지 않게 보호하고, UI를 `SearchAPI 한도초과`/`provider 미설정`/`결과 없음`으로 분리 표시.
-  - P1: 2026-06-11 `서울 광진구 화양동` 실수집 QA 완료. 원본 237건 중 20건 저장, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단 확인. `합정동`/`광진구` 구 단위 수집, 회사 없는 requester API 범위, 점포목록 상세/검색/운영 화면 회귀도 후속 QA에서 완료했다. 남은 QA는 실제 2000/3000 상한 근접 수집과 실운영 계정 role matrix다.
+  - P1: 2026-06-11 `서울 광진구 화양동` 실수집 QA 완료. 원본 237건 중 20건 저장, 저장 목록 773건 조회, 점포목록 자동 등록 0건, `registerToProperties` 차단 확인. `합정동`/`광진구` 구 단위 수집, 회사 없는 requester API 범위, 점포목록 상세/검색/운영 화면 회귀도 후속 QA에서 완료했다. 2026-06-11 추가로 collect limit 3000/saved limit 2000 runner를 `admin` requester로 실행해 원본 238건, 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, ERP `properties` 생성 0건을 확인했다. 실제 2000/3000에 근접한 대량 데이터셋과 실운영 계정 role matrix는 남아 있다.
   - 2026-06-10 결정: 외부 상가 수집은 Daangn 저장/지도/점수화 MVP까지 우선 마감하고, 다음 신규 개발은 모객 DB 업무 큐 강화 후 점포·상권 매칭으로 진행한다. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 1~3순위를 묶어서 진행한다.
   - 2026-06-11 완료: 저장 외부 상가 행에서 `물건지 등록`을 눌러 선택 승격하는 1차 흐름 추가. `/api/realty/listings/promote`가 ERP `properties.operation_type='external'`, `data.externalImportMode='manual-promoted'` 물건지를 만들고, 원본 행은 `status='promoted'`, `property_id`로 연결한다. 재호출은 `existing`으로 같은 물건지를 반환.
   - 2026-06-11 안정화 완료: P0 `연락 완료`, 기존 단계값 없는 리드, 후보지 연결 상태/메모 reload를 API/DB로 재검증했다. `manual-promoted` 물건지가 `/properties` 상세/검색/외부수집 필터와 배지에 포함되도록 수정했다. 합정동 재수집과 광진구 구 단위 확장 수집은 기존 외부 원본 업데이트로 통과했고, `registerToProperties` 차단 및 ERP `properties` 자동 생성 0건을 재확인했다.
   - 2026-06-11 완료: 권한/회사 범위 API QA와 `manual-promoted` 운영 화면 전환 워크플로를 완료했다. 교차 회사 승격/조회는 403, 회사 없는 requester 승격은 400으로 차단되고, 운영 화면은 수동 승격 물건지를 명시 `운영점 등록` 후 `franchise_locations.source_property_id`로 연결해 새로고침 후에도 유지한다.
   - 2026-06-11 완료: 오픈 준비 프로젝트 MVP 추가. `supabase_franchise_opening_projects_migration.sql`, `/api/franchise-opening-projects`, 운영 화면 `OpeningProjectPanel`을 추가해 `오픈준비` 운영점별 상태/목표 오픈일/메모/checklist를 전용 테이블에 저장하는 구조로 분리했다. 전역 모바일 사이드바는 390px 첫 진입 기본 접힘, 1440px 기본 열림으로 route sweep 통과.
-  - 2026-06-11 QA runner 추가: 엑셀 유입, role matrix, 오픈 준비 API, 외부 상가 scale/raw runner를 만들었다. 현재 로컬 세션에는 QA requester/실운영 role/env와 새 opening-project SQL 적용 DB가 없어 각각 `BLOCKED_QA_ENV`, `BLOCKED_REAL_ROLE_MATRIX`, `BLOCKED_OPENING_API_ENV`로 기록했다. Meta는 계속 HOLD/`BLOCKED_META_ENV`.
+  - 2026-06-11 SQL 적용 후 오픈 준비 API runner 통과: 생성, location scoped 조회, checklist 수정, 삭제, 삭제 후 404 확인. 브라우저 UI 저장/새로고침 persistence는 후속 회귀로 남긴다.
+  - 2026-06-11 QA runner 상태: 엑셀 유입 runner는 `admin` requester와 실제 `.xlsx` fixture로 raw intake 저장 -> candidate 승격 -> cleanup 통과. 외부 상가 scale/raw runner도 통과. 실운영 role matrix는 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`, Meta는 계속 HOLD/`BLOCKED_META_ENV`.
     - 4.5차 진행: 출점 후보지/가맹 운영 경쟁환경 패널 고도화
       - `/api/franchise-locations/competitors`가 Kakao Local 경쟁사 스캔 결과에 리뷰/광고 확장 필드를 함께 저장하도록 변경.
       - 경쟁사별 Kakao 장소 링크는 항상 저장하되, Kakao Local 공식 API는 리뷰 수/본문을 제공하지 않아 UI에 `리뷰수 공식 미제공`으로 표시한다.
@@ -257,7 +259,7 @@ npm run build
   - 물건지 목록의 `외부수집` 필터/배지는 과거 자동 등록 데이터 구분용으로만 유지.
   - 문서: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 `ERP/web/docs/franchise-dev-qa-log.md`에서 관리한다.
   - 로컬 검증: `npm run lint -- --quiet`, `npx tsc --noEmit`, `npm run build` 통과.
-  - 다음 QA: 실제 2000/3000 수집 리밋, 저장 목록 2000건 상한, 실운영 계정 role matrix, Daangn raw/data live 샘플 감사, opening-project SQL 적용 후 저장/새로고침 persistence 확인.
+  - 다음 QA: 실제 2000/3000에 근접한 대량 데이터셋, 실운영 계정 role matrix, 오픈 준비 프로젝트 브라우저 UI 저장/새로고침 persistence 확인.
   - 다음 개발순서: 중복 후보 묶기 -> 상위 N건 상세 보강 -> 가격/상태 변동 추적 -> 승격 후 점포목록 상세/운영 워크플로 연결. 필터/점수화와 지도화는 기초 구현 완료이며, 지도화는 서버 좌표 영구 저장과 기존 점포/출점 후보지/경쟁환경 지도 통합이 남아 있다.
 - 점포/고객/명함 목록 검색 개선
   - 쉼표/띄어쓰기 OR 검색 공용 파서 적용

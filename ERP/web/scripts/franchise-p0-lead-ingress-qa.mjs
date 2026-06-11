@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx';
 
 const EVIDENCE_PATH = path.join(process.cwd(), '.omo/evidence/task-2-lead-ingress.json');
 const FIXTURE_PATH = path.join(process.cwd(), '.omo/evidence/franchise-p0-lead-ingress-fixture.xlsx');

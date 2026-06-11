@@ -101,6 +101,10 @@
 - 2026-06-11 오픈 준비 프로젝트 MVP를 추가했다. `supabase_franchise_opening_projects_migration.sql`, `/api/franchise-opening-projects`, `OpeningProjectPanel`을 추가해 `오픈준비` 운영점별 상태/목표 오픈일/메모/checklist를 전용 테이블에 저장하도록 했다.
 - 2026-06-11 모바일 전역 레이아웃을 보정했다. `MainLayout`의 첫 진입 사이드바 상태를 viewport 기준 hook으로 분리해 390px에서는 기본 접힘, 1440px에서는 기본 열림으로 시작한다.
 - 2026-06-11 QA runner를 추가했다. 엑셀 유입(`franchise-p0-lead-ingress-qa.mjs`), role matrix(`franchise-role-matrix-qa.mjs`), 오픈 준비 API(`franchise-opening-projects-api-qa.mjs`), 외부 상가 scale/raw(`franchise-realty-scale-raw-qa.mjs`)는 실제 QA requester/env가 준비되면 live 검증을 수행한다.
+- 2026-06-11 신규 계획으로 본사별 정보공개서 문서함과 후보자별 발송 이력, 발송 후 14일 계약 잠금 요구사항을 추가했다. 후보자에게 정보공개서를 발송한 일시/채널/문서 버전/수신자/증빙 상태를 남기고, 계약 생성과 가맹금 수령 단계는 계약 가능일 이후로 제한한다. 법령 기준은 국가법령정보센터 가맹사업법 제7조 제3항의 정보공개서 제공 후 14일 제한을 기준으로 한다.
+- 2026-06-11 `franchise-p0-lead-ingress-qa.mjs`가 `xlsx` ESM namespace import에서 `readFile`을 찾지 못해 실패했다. 실제 import shape 확인 결과 `readFile`은 default export에 있어 runner import를 default로 보정했고, 동일 명령 재실행으로 엑셀 fixture 기반 원천 DB 저장/후보자 승격/cleanup을 통과했다.
+- 2026-06-11 `supabase_franchise_opening_projects_migration.sql` 적용 후 오픈 준비 프로젝트 API live QA를 통과했다. `admin` requester와 `오픈준비` location id로 생성, location scoped 조회, checklist 수정, 삭제, 삭제 후 404를 확인했다.
+- 2026-06-11 외부 상가 scale/raw runner를 live로 실행했다. `서울 광진구 화양동`, collect limit 3000, saved limit 2000에서 Daangn 원본 238건을 수집해 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, `registerToProperties=false` 기준 ERP `properties` 생성 0건을 확인했다.
 
 ## QA 결과
 
@@ -143,6 +147,9 @@
 - 2026-06-11 오픈 준비 프로젝트/모바일 레이아웃 검증 통과: `npx tsx --test ...` targeted 36건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과
 - 2026-06-11 Browser MCP route sweep 통과: `/dashboard/franchise-leads`, `/dashboard/franchise-leads/market-insights?tab=realty-import`, `/dashboard/franchise-operations`에서 390x844 모바일은 sidebar 0px/main 390px/가로 overflow 없음, 1440x900 데스크톱은 sidebar 240px/main 1200px/가로 overflow 없음
 - 2026-06-11 운영 화면 오픈 준비 프로젝트 패널 렌더링 확인: local DB migration 미적용 상태에서도 blocking alert 대신 inline 안내를 표시하고 기존 `manual-promoted` 운영 전환 패널은 유지됨
+- 2026-06-11 오픈 준비 프로젝트 API live QA 통과: `FRANCHISE_QA_REQUESTER_ID=admin FRANCHISE_QA_OPENING_LOCATION_ID=<오픈준비 location>`로 `scripts/franchise-opening-projects-api-qa.mjs` 실행, requester 없는 GET 401, POST 200, filtered GET 200, PUT 200, DELETE 200, 삭제 후 GET 404 확인
+- 2026-06-11 엑셀 유입 runner live QA 통과: `FRANCHISE_QA_REQUESTER_ID=admin node --env-file=.env.local scripts/franchise-p0-lead-ingress-qa.mjs --base-url http://localhost:3000 --cleanup` 실행, 실제 `.xlsx` fixture 1건 생성, `raw_intake` 저장, `candidate` 승격, cleanup 확인. Meta는 `BLOCKED_META_ENV` 유지
+- 2026-06-11 외부 상가 scale/raw runner live QA 통과: `FRANCHISE_QA_REQUESTER_ID=admin node --env-file=.env.local scripts/franchise-realty-scale-raw-qa.mjs --base-url http://localhost:3000 --region '서울 광진구 화양동' --saved-limit 2000 --collect-limit 3000 --live-collect` 실행, 원본 238건, 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, ERP `properties` 생성 0건 확인
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
 - `http://localhost:3000/dashboard/franchise-leads/market-insights` 보호 라우트 로그인 이동 확인
@@ -163,11 +170,11 @@
 - SearchAPI 현재 키는 `monthly_allowance=0`, `remaining_credits=-3` 상태라 Naver 신규 수집이 429로 차단된다.
 - SearchAPI 한도 초과 상태에서 기존 Naver 성공 값이 덮어쓰기되는 문제는 P0로 남아 있다.
 - Playwright MCP 스크린샷 확인은 Chrome 프로필 잠금 이슈로 완료하지 못한 이력이 있다.
-- 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. `연락 완료` 저장 흐름도 API/DB 기준으로 재검증했다. 남은 것은 실제 Meta 유입과 실제 엑셀 파일/실운영 계정 권한 조합별 live 회귀 QA다. 엑셀 QA runner는 추가했지만 현재 QA requester env 부재로 `BLOCKED_QA_ENV`다.
+- 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. `연락 완료` 저장 흐름도 API/DB 기준으로 재검증했다. 엑셀 유입 runner는 `admin` requester와 실제 `.xlsx` fixture로 통과했다. 남은 것은 실제 Meta 유입과 실운영 계정 권한 조합별 live 회귀 QA다.
 - 모바일 전역 사이드바 기본 접힘은 2026-06-11 route sweep으로 통과했다. 다만 각 화면의 내부 대형 표/지도는 데이터가 많을 때 별도 모바일 정보 구조 개선 대상이다.
-- 오픈 준비 프로젝트의 full story persistence QA는 local DB에 `supabase_franchise_opening_projects_migration.sql`이 미적용되어 blocked다. SQL 적용 후 실제 `오픈준비` location id로 `franchise-opening-projects-api-qa.mjs`와 브라우저 저장/새로고침 QA를 수행한다.
+- 오픈 준비 프로젝트 API persistence QA는 SQL 적용 후 통과했다. 브라우저 UI에서 저장 후 새로고침 persistence는 추가 회귀로 남긴다.
 - 이번 Docs Steward 감사에서는 새 브라우저/빌드 QA를 실행하지 않았고, 문서와 코드 검색 기준으로 최신성만 확인했다.
-- 외부 상가 수집은 2026-06-11에 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 QA와 회사 없는 requester API 범위 QA를 완료했다. 실제 2000/3000 상한 근접 수집과 Daangn raw/data live 샘플 감사는 runner를 추가했지만 QA requester env 부재로 `BLOCKED_QA_ENV`다.
+- 외부 상가 수집은 2026-06-11에 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 QA와 회사 없는 requester API 범위 QA를 완료했다. `서울 광진구 화양동` collect limit 3000/saved limit 2000 runner도 통과했지만, 실제 응답은 238건이라 2000/3000에 근접한 대량 데이터셋 자체는 아직 별도 지역에서 확인이 필요하다.
 - 네이버부동산 POC는 지역 코드 조회는 가능해도 목록 응답이 빈 값일 수 있어 운영 데이터 소스로 확정하지 않았다.
 - 네이버부동산 보조 POC의 `clusterList -> articleList` 흐름은 빈 응답/429 가능성이 있어 현재 MVP QA에서 분리하고, 향후 과제 트랙에서 반복 QA한다.
 - 네이버부동산은 향후 과제로 이관했으므로 현재 외부 상가 수집 MVP의 차단 이슈로 보지 않는다.
@@ -211,10 +218,11 @@
 
 ### P0
 
-- Meta 실제 유입, 엑셀 업로드 파일 기준으로 `1차 유입 DB` 저장과 후보자 승격 회귀 QA
+- Meta 실제 유입은 계정/env 준비 전까지 HOLD. 엑셀 업로드 runner 기준 `1차 유입 DB` 저장과 후보자 승격은 2026-06-11 통과했으며, 실제 운영 엑셀 샘플 파일이 생기면 같은 runner로 추가 회귀한다.
 - 실운영 계정 role matrix 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
-- `supabase_franchise_opening_projects_migration.sql` 적용 후 오픈 준비 프로젝트 API/UI 저장과 새로고침 persistence 확인
+- 본사별 정보공개서 문서함, 후보자 발송 이력, 발송 후 14일 계약 잠금 정책을 설계/구현/QA
+- 오픈 준비 프로젝트 브라우저 UI 저장과 새로고침 persistence 확인
 
 ### P1
 
@@ -223,8 +231,8 @@
 - SearchAPI 유료 결제 후 경쟁스캔 재실행 시 외부 provider 호출 남발을 막는지 확인
 - 기존 스캔 캐시가 있을 때 상세 모달이 정상 렌더링되는지 확인
 - `supabase_realty_import_migration.sql` 적용 후 `/dashboard/franchise-leads/market-insights?tab=realty-import`의 `외부 상가 수집` 탭에서 당근 상가 수집을 확인
-- 실제 2000/3000 상한에 가까운 수집 요청에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 확인
-- `franchise-realty-scale-raw-qa.mjs --live-collect`로 Daangn raw/data 샘플과 `registerToProperties=false` 자동 등록 0건을 live 데이터에서 재확인
+- 실제 2000/3000 상한에 가까운 대량 데이터셋에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 적용되는지 추가 확인
+- `franchise-realty-scale-raw-qa.mjs --live-collect`는 2026-06-11 통과했다. 향후 import API 변경 시 Daangn raw/data 샘플과 `registerToProperties=false` 자동 등록 0건을 다시 확인
 - 회사 범위가 없는 계정의 `requester_id` 기준 저장 목록 조회와 승격 차단은 2026-06-11 API QA를 통과했다. 향후 실운영 계정으로 UI 회귀만 확인
 - 하단 `저장된 상가` 목록, 저장 지역 칩, 동 카드, 동 내부 페이지네이션, 최신화 버튼이 동작하고, 최신화 시 기존 매물이 중복 표시되지 않는지 확인
 - 저장일 컬럼과 별표 토글이 동작하고, 재수집 후에도 별표가 유지되는지 확인

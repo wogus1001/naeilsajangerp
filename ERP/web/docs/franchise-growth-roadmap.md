@@ -19,10 +19,11 @@
 
 1. 모객 DB 업무 큐 강화
 2. 점포·상권 매칭
-3. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 묶음 개발
-4. 본사 운영관리
-5. 가맹 운영 외부 상가 매물 수집 MVP 유지보수
-6. Meta Lead Ads는 계정/앱 설정 문제가 풀릴 때까지 HOLD
+3. 정보공개서 발송/계약 컴플라이언스
+4. SearchAPI 유료 결제 후 provider 보호/상권 추천/외부 상가 고도화 묶음 개발
+5. 본사 운영관리
+6. 가맹 운영 외부 상가 매물 수집 MVP 유지보수
+7. Meta Lead Ads는 계정/앱 설정 문제가 풀릴 때까지 HOLD
 
 ## 현재 완료/진행 상태
 
@@ -55,7 +56,7 @@
 - 2026-06-11 `franchise_opening_projects` 전용 테이블/API/UI MVP를 추가했다. 프로젝트는 `오픈준비` 상태의 `franchise_locations`에만 연결하고, 상태/목표 오픈일/메모/계약-인테리어-교육-초도물류-홍보-오픈일 checklist를 별도 저장한다.
 - 오픈 준비 프로젝트는 회사 범위가 확인된 requester만 생성/수정/삭제할 수 있다. 회사 없는 requester나 교차 회사 requester는 mutation을 차단한다.
 - 로컬 브라우저 QA에서 `/dashboard/franchise-leads`, `/dashboard/franchise-leads/market-insights?tab=realty-import`, `/dashboard/franchise-operations` 390px 모바일 진입 시 전역 사이드바가 기본 접힘 상태로 시작하고, 1440px 데스크톱에서는 기본 열림 상태를 유지함을 확인했다.
-- 로컬 DB에는 `supabase_franchise_opening_projects_migration.sql`이 아직 적용되지 않아 오픈 준비 프로젝트 CRUD/새로고침 persistence의 실제 DB QA는 blocked로 남긴다. SQL 적용 후 `scripts/franchise-opening-projects-api-qa.mjs`로 재검증한다.
+- 2026-06-11 로컬 DB에 `supabase_franchise_opening_projects_migration.sql` 적용 후 `scripts/franchise-opening-projects-api-qa.mjs`로 생성/조회/수정/삭제와 삭제 후 404를 확인했다.
 
 ### Naver 공식 API MVP
 
@@ -84,6 +85,15 @@
 - 브랜드 검색은 점포 신규등록과 같은 모달 방식으로 맞췄다.
 - 공공데이터포털 `공정거래위원회_가맹정보_브랜드 목록 정보 제공 서비스`를 실시간 조회 우선으로 사용한다.
 - 공식 API는 브랜드명 검색 파라미터가 없어 기준년도 데이터를 페이지 단위로 받아 서버에서 필터링한다.
+
+### 정보공개서 발송/계약 컴플라이언스
+
+- 각 본사별로 실제 발송 가능한 정보공개서 파일과 버전을 저장하는 문서함이 필요하다.
+- 후보자 상세에서 담당자가 본사별 정보공개서를 후보자에게 발송하고, 발송일시, 발송 채널, 문서 버전, 수신자, 증빙 상태를 남긴다.
+- 계약 단계 진입과 가맹금 수령은 정보공개서 발송일로부터 14일이 지난 뒤에만 가능하도록 시스템 잠금을 둔다.
+- 법령상 변호사 또는 가맹거래사 자문 예외로 기간이 단축되는 케이스는 별도 증빙 필드와 정책 확인 후 2차 범위로 둔다.
+- 구현 순서는 `franchise_disclosure_documents` 문서함, `franchise_lead_disclosure_deliveries` 발송 이력, 후보자 상세 발송 UI, 계약 가능일 계산/상태 배지, 계약 생성 차단 순서로 잡는다.
+- 법령 기준은 국가법령정보센터 가맹사업법 제7조 제3항의 정보공개서 제공 후 14일 제한을 기준으로 관리한다.
 
 ### 출점 후보지/경쟁환경 패널
 
@@ -160,8 +170,9 @@
 - 모객 DB 핵심 플로우는 2026-06-11 로그인 세션 QA를 통과했다.
   - `1차 유입 DB -> 후보자` 승격, 업무 큐 `전체 업무/연락 지연/오늘 연락/무응답`, 후보자 상세 업무 필드 저장, 출점 후보지/외부 상가 DB 연결/메모/삭제/중복 방지를 확인했다.
 - 2026-06-11 안정화 QA에서 기존 단계값 없는 리드 유지, `연락 완료` 처리, 후보지 연결 상태/메모 reload 유지를 추가 확인했다.
-- 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)를 추가했다. 현재 세션에는 `FRANCHISE_QA_REQUESTER_ID`/`QA_REQUESTER_ID`가 없어 live QA는 `BLOCKED_QA_ENV`로 기록했다.
-- 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.
+- 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)는 2026-06-11 `admin` requester와 실제 `.xlsx` fixture로 통과했다. runner 생성 리드는 `raw_intake` 저장 후 `candidate` 승격과 cleanup까지 확인했다.
+- 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.
+- 다음 P0 신규 개발 후보는 본사별 정보공개서 저장/후보자 발송/발송 후 14일 계약 잠금이다.
 
 ### P1
 
@@ -173,7 +184,7 @@
 - 외부 상가 수집 MVP를 실제 Supabase migration 적용 후 검증한다.
   - 2026-06-11 `서울 광진구 화양동`, `서울 마포구 합정동`, `서울 광진구` 구 단위 확장 수집은 통과했다. 합정동 재수집과 광진구 구 단위 수집은 기존 행 업데이트로 처리됐다.
   - 시도/시군구 선택, 저장 지역 칩, 저장된 상가 동 카드, 최신화 버튼이 의도대로 동작하는지 확인한다.
-  - 실제 2000/3000 상한에 가까운 수집 요청에서 화면 요청 상한, import API 안전 상한, 저장 목록 API 2000건 상한이 의도대로 동작하는지 확인한다. `scripts/franchise-realty-scale-raw-qa.mjs` runner는 추가했지만 live QA requester env가 없어 `BLOCKED_QA_ENV`로 남았다.
+  - 2026-06-11 `scripts/franchise-realty-scale-raw-qa.mjs --live-collect`로 `서울 광진구 화양동`, collect limit 3000, saved limit 2000을 실행했다. Daangn 원본 238건 중 신규 1건/업데이트 237건, 저장 목록 350건, raw/data 샘플 10/10, `registerToProperties=false` 기준 ERP `properties` 생성 0건을 확인했다. 실제 2000/3000에 근접한 대량 데이터셋은 별도 지역에서 추가 확인한다.
   - 외부 수집 결과가 ERP `properties`에 자동 등록되지 않는지는 2026-06-11에 재확인했다. import API 변경 때마다 회귀 확인한다.
   - 선택 외부 상가 수동 승격은 2026-06-11 1차 구현/QA, 점포목록 상세/검색/외부수집 필터 회귀, 운영 화면 전환 워크플로 확인을 통과했다.
 - 외부 상가 수집 고도화는 아래 순서로 진행한다.

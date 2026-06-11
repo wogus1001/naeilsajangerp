@@ -1,8 +1,19 @@
 {
-  "status": "BLOCKED_QA_ENV",
-  "startedAt": "2026-06-11T02:16:04.275Z",
-  "reason": "FRANCHISE_QA_REQUESTER_ID or QA_REQUESTER_ID is required for live Excel ingress QA.",
+  "status": "PASS",
+  "startedAt": "2026-06-11T02:51:30.217Z",
+  "completedAt": "2026-06-11T02:51:31.249Z",
+  "baseUrl": "http://localhost:3000",
+  "fixturePath": "/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/.omo/evidence/franchise-p0-lead-ingress-fixture.xlsx",
+  "createdOrUpdated": {
+    "created": 1,
+    "updated": 0,
+    "skipped": 0,
+    "errors": []
+  },
+  "leadId": "c3bf2983-2311-4d67-86aa-14ec59086cac",
+  "rawStage": "raw_intake",
+  "promotedStage": "candidate",
+  "cleanup": true,
   "metaStatus": "BLOCKED_META_ENV",
-  "metaReason": "Meta account/app/env is still HOLD and is not exercised by this Excel runner.",
-  "command": "node scripts/franchise-p0-lead-ingress-qa.mjs --base-url <url>"
+  "metaReason": "Meta account/app/env is still HOLD and is not exercised by this Excel runner."
 }
