@@ -1,7 +1,7 @@
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 
 export const DISCLOSURE_CONTRACT_WAIT_DAYS = 14;
-export const DISCLOSURE_CHANNELS = ['manual', 'email', 'sms', 'kakao', 'postal', 'in_person'] as const;
+export const DISCLOSURE_CHANNELS = ['manual', 'email', 'sms', 'kakao'] as const;
 export const CONTRACT_LOCKED_LEAD_STATUSES = ['계약예정', '계약완료'] as const satisfies readonly FranchiseLeadStatus[];
 
 export type DisclosureChannel = typeof DISCLOSURE_CHANNELS[number];

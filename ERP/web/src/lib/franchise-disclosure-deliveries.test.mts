@@ -56,6 +56,8 @@ test('latest delivery controls eligibility when a newer disclosure was sent', ()
 
 test('normalizeDisclosureChannel and contract status guards fall back safely', () => {
     assert.equal(normalizeDisclosureChannel('email'), 'email');
+    assert.equal(normalizeDisclosureChannel('postal'), 'manual');
+    assert.equal(normalizeDisclosureChannel('in_person'), 'manual');
     assert.equal(normalizeDisclosureChannel('unknown'), 'manual');
     assert.equal(isContractLockedLeadStatus('계약예정'), true);
     assert.equal(isContractLockedLeadStatus('상담중'), false);

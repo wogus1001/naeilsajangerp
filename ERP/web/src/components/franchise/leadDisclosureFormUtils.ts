@@ -23,9 +23,7 @@ export const CHANNEL_LABELS: Record<DisclosureChannel, string> = {
     manual: '수동 기록',
     email: '이메일',
     sms: '문자',
-    kakao: '카카오 알림',
-    postal: '우편',
-    in_person: '대면 전달'
+    kakao: '카카오 알림'
 };
 
 export const DISCLOSURE_UPLOAD_ACCEPT = '.pdf,.doc,.docx,.hwp,.hwpx,.png,.jpg,.jpeg' as const;
@@ -75,9 +73,7 @@ export function isDisclosureChannel(value: string): value is DisclosureChannel {
     return value === 'manual'
         || value === 'email'
         || value === 'sms'
-        || value === 'kakao'
-        || value === 'postal'
-        || value === 'in_person';
+        || value === 'kakao';
 }
 
 export function toDateTimeLocalValue(date: Date): string {
