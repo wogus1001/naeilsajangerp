@@ -9,6 +9,7 @@ export type LeadTableColumnKey =
     | 'budget'
     | 'interestedBrand'
     | 'nextContactAt'
+    | 'contractChecklist'
     | 'memo'
     | 'links'
     | 'actions';

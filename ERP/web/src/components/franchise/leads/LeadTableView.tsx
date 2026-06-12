@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
+import type { LeadContractChecklistSummaryView } from '@/lib/franchise-lead-contract-checklist';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { LEAD_TABLE_COLUMNS } from './leadTableConfig';
 import type { LeadTableColumnKey } from './leadTableTypes';
@@ -24,6 +25,7 @@ type LeadTableViewProps = {
     readonly safeCurrentPage: number;
     readonly totalPages: number;
     readonly visibleColumns: readonly LeadTableColumnKey[];
+    readonly contractChecklistSummaries: Record<string, LeadContractChecklistSummaryView>;
     readonly renderManagerOptions: (selectedManagerId?: string) => ReactNode;
     readonly getManagerName: (managerId?: string) => string;
     readonly onBulkNextContactAtChange: (value: string) => void;
@@ -58,6 +60,7 @@ export function LeadTableView({
     safeCurrentPage,
     totalPages,
     visibleColumns,
+    contractChecklistSummaries,
     renderManagerOptions,
     getManagerName,
     onBulkNextContactAtChange,
@@ -89,6 +92,7 @@ export function LeadTableView({
         budget: styles.colBudget,
         interestedBrand: styles.colBrand,
         nextContactAt: styles.colNextContact,
+        contractChecklist: styles.colContractChecklist,
         memo: styles.colMemo,
         links: styles.colLink,
         actions: styles.colActions
@@ -104,6 +108,7 @@ export function LeadTableView({
         budget: 184,
         interestedBrand: 132,
         nextContactAt: 142,
+        contractChecklist: 160,
         memo: 250,
         links: 92,
         actions: 168
@@ -170,6 +175,7 @@ export function LeadTableView({
                                 convertingLeadId={convertingLeadId}
                                 statusOptions={statusOptions}
                                 visibleColumns={visibleColumns}
+                                contractChecklistSummary={contractChecklistSummaries[lead.id]}
                                 renderManagerOptions={renderManagerOptions}
                                 getManagerName={getManagerName}
                                 onToggleSelectLead={onToggleSelectLead}

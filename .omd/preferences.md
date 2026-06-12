@@ -274,3 +274,63 @@ source_context: "ERP/web/src/components/franchise/leads/LeadTableRow.tsx"
 ```
 
 Lead management tables should support a visible star marker for important leads, labeled as `중요` in Korean UI copy.
+
+## 2026-06-11T08:18:36.162Z — pipeline-board-cards-should-stay-compact
+
+```omd-meta
+id: pref_mq9874si_ad431efc
+timestamp: 2026-06-11T08:18:36.162Z
+scope: components.card
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/app/(main)/dashboard/franchise-leads/page.module.css"
+```
+
+Pipeline board cards should stay compact, with narrower columns and status badges such as converted kept visually consistent.
+
+## 2026-06-11T08:24:54.055Z — lead-follow-up-views-should-use-business
+
+```omd-meta
+id: pref_mq98f8dk_a4242bdb
+timestamp: 2026-06-11T08:24:54.055Z
+scope: layout
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadTaskBoard.tsx"
+```
+
+Lead follow-up views should use business-language labels such as contact management instead of queue terminology, and individual task cards should stay compact rather than full-width.
+
+## 2026-06-12T00:00:00.000Z — contract-owner-workflows-live-in-tabs
+
+```omd-meta
+id: pref_mqa8cm8s_f8d51e9b
+timestamp: 2026-06-12T00:00:00.000Z
+scope: components.tabs
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadWorkspaceTabs.tsx"
+```
+
+Contract owner workflows should live inside the contract-owner tab and retain inline editing actions instead of opening a separate standalone page.
+
+## 2026-06-12T00:00:00.000Z — contract-tabs-focus-on-checklists
+
+```omd-meta
+id: pref_mqa90kgi_e7b96877
+timestamp: 2026-06-12T00:00:00.000Z
+scope: components.tabs
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadContractChecklistWorkspace.tsx"
+```
+
+Contract-owner tabs should focus on contract-related checklist progress instead of showing the full generic lead database table.

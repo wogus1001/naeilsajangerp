@@ -49,12 +49,13 @@ supabase_franchise_locations_migration.sql
 supabase_franchise_opening_projects_migration.sql
 supabase_franchise_brands_migration.sql
 supabase_franchise_disclosures_migration.sql
+supabase_franchise_contract_checklist_migration.sql
 supabase_franchise_market_monitoring_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, 또는 `franchise_market_monitoring` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `franchise_lead_contract_checklist_steps`, 또는 `franchise_market_monitoring` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Meta Lead Ads Setup
 
@@ -156,6 +157,16 @@ Run `supabase_franchise_disclosures_migration.sql` before enabling HQ disclosure
 The candidate detail panel uploads disclosure files through `/api/upload` to the existing Supabase Storage `property-documents` bucket under `franchise-disclosures/<company>/...`, then stores company-scoped document metadata in `franchise_disclosure_documents`. Company employees reuse the same company disclosure document list, while per-lead delivery records keep sent time, channel, recipient contact, memo, and the document version snapshot.
 
 Lead status changes to `계약예정` or `계약완료` are blocked until 14 days after the latest disclosure delivery. Future delivery automation should integrate either email or Kakao AlimTalk and write provider send status back into the disclosure delivery workflow.
+
+## Franchise Contract Checklist Setup
+
+Run `supabase_franchise_contract_checklist_migration.sql` before enabling the per-lead pre-contract checklist.
+
+The candidate detail panel reads and saves the common seven-step checklist through `/api/franchise-lead-contract-checklist`. The checklist is an operational confirmation layer for headquarters staff; it does not replace the disclosure delivery record, and the 14-day contract lock continues to use `franchise_lead_disclosure_deliveries.sent_at`.
+
+The lead DB table can show checklist progress through `/api/franchise-lead-contract-checklist/summaries`. In the 모객 DB workspace, the `계약 점주` tab fixes the list to `계약완료` leads and switches to a checklist-only review surface for pre-opening follow-up.
+
+Checklist rows are scoped by both `lead_id` and `company_id`. The migration adds a composite lead/company foreign key and RLS checks so a checklist row cannot be attached to a lead from another company. The `계약 점주` tab opens a checklist-only panel; the full generic lead detail panel remains in the standard DB workflow.
 
 ## Franchise Brand Monitoring Setup
 

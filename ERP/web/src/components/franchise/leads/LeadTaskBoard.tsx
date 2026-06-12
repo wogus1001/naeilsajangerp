@@ -1,5 +1,3 @@
-"use client";
-
 import { CheckCircle2 } from 'lucide-react';
 import type { LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
@@ -18,11 +16,11 @@ type LeadTaskBoardProps = {
     readonly taskQueueFilter: LeadWorkQueueKey;
     readonly taskLeads: readonly FranchiseLead[];
     readonly convertingLeadId: string;
-    readonly getManagerName: (managerId?: string) => string;
-    readonly onTaskQueueFilterChange: (filter: LeadWorkQueueKey) => void;
-    readonly onSelectLead: (leadId: string) => void;
-    readonly onCompleteTodayTask: (lead: FranchiseLead) => void;
-    readonly onConvertLead: (lead: FranchiseLead) => void;
+    readonly getManagerNameAction: (managerId?: string) => string;
+    readonly onTaskQueueFilterChangeAction: (filter: LeadWorkQueueKey) => void;
+    readonly onSelectLeadAction: (leadId: string) => void;
+    readonly onCompleteTodayTaskAction: (lead: FranchiseLead) => void;
+    readonly onConvertLeadAction: (lead: FranchiseLead) => void;
 };
 
 export function LeadTaskBoard({
@@ -31,11 +29,11 @@ export function LeadTaskBoard({
     taskQueueFilter,
     taskLeads,
     convertingLeadId,
-    getManagerName,
-    onTaskQueueFilterChange,
-    onSelectLead,
-    onCompleteTodayTask,
-    onConvertLead
+    getManagerNameAction,
+    onTaskQueueFilterChangeAction,
+    onSelectLeadAction,
+    onCompleteTodayTaskAction,
+    onConvertLeadAction
 }: LeadTaskBoardProps) {
     const currentQueue = taskQueueOptions.find(option => option.key === taskQueueFilter);
 
@@ -47,7 +45,7 @@ export function LeadTaskBoard({
                         key={option.key}
                         type="button"
                         className={taskQueueFilter === option.key ? styles.taskQueueFilterActive : styles.taskQueueFilter}
-                        onClick={() => onTaskQueueFilterChange(option.key)}
+                        onClick={() => onTaskQueueFilterChangeAction(option.key)}
                     >
                         <span>{option.label}</span>
                         <strong>{option.count.toLocaleString()}</strong>
@@ -57,17 +55,17 @@ export function LeadTaskBoard({
             <div className={styles.taskBoard}>
                 <div className={styles.taskBoardHeader}>
                     <div>
-                        <strong>{currentQueue?.label || '업무 큐'}</strong>
-                        <span>연락, 무응답, 전환 대상을 한 화면에서 처리합니다.</span>
+                        <strong>{currentQueue?.label || '연락 관리'}</strong>
+                        <span>내 담당 지연 연락과 오늘 연락 대상을 한 화면에서 정리합니다.</span>
                     </div>
                     <b>{isLoading ? '-' : `${taskLeads.length.toLocaleString()}건`}</b>
                 </div>
                 {isLoading ? (
-                    <div className={styles.boardEmpty}>업무 큐를 불러오고 있습니다.</div>
+                    <div className={styles.boardEmpty}>연락 대상을 불러오고 있습니다.</div>
                 ) : taskLeads.length === 0 ? (
                     <div className={styles.boardEmpty}>
                         <CheckCircle2 size={28} />
-                        현재 필터에 처리할 리드가 없습니다.
+                        현재 필터에 처리할 내 담당 가맹 희망자가 없습니다.
                     </div>
                 ) : taskLeads.map(lead => (
                     <article key={lead.id} className={styles.taskCard}>
@@ -75,9 +73,9 @@ export function LeadTaskBoard({
                             <span className={getLeadTaskRank(lead) === 0 ? styles.taskLabelDanger : styles.taskLabel}>
                                 {getLeadTaskLabel(lead)}
                             </span>
-                            <button type="button" onClick={() => onSelectLead(lead.id)}>
+                            <button type="button" onClick={() => onSelectLeadAction(lead.id)}>
                                 <strong>{lead.name}</strong>
-                                <span>{lead.mobile || '연락처 미입력'} · 담당자 {getManagerName(lead.managerId)}</span>
+                                <span>{lead.mobile || '연락처 미입력'} · 담당자 {getManagerNameAction(lead.managerId)}</span>
                             </button>
                         </div>
                         <div className={styles.taskInfoGrid}>
@@ -113,17 +111,17 @@ export function LeadTaskBoard({
                         </div>
                         <p>{lead.churnReason || lead.memo || '등록된 메모가 없습니다.'}</p>
                         <div className={styles.taskActions}>
-                            <button type="button" className={styles.secondaryButton} onClick={() => onSelectLead(lead.id)}>
+                            <button type="button" className={styles.secondaryButton} onClick={() => onSelectLeadAction(lead.id)}>
                                 상세
                             </button>
-                            <button type="button" className={styles.secondaryButton} onClick={() => onCompleteTodayTask(lead)}>
+                            <button type="button" className={styles.secondaryButton} onClick={() => onCompleteTodayTaskAction(lead)}>
                                 연락 완료
                             </button>
                             <button
                                 type="button"
                                 className={styles.primaryButton}
                                 disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                onClick={() => onConvertLead(lead)}
+                                onClick={() => onConvertLeadAction(lead)}
                             >
                                 고객 전환
                             </button>

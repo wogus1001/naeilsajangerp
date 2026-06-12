@@ -8,6 +8,7 @@ import {
 import { WORK_QUEUE_OPTIONS } from './constants';
 import { hasActiveLeadTableFilters } from './leadTableConfig';
 import { filterLeadTableLeads, sortLeadTableLeads } from './leadTableFilters';
+import { filterLeadsByManagerScope } from './leadTaskScope';
 import type {
     FranchiseLead,
     LeadDbLayer,
@@ -34,6 +35,7 @@ type UseLeadDerivedDataArgs = {
     readonly pageSize: number;
     readonly currentPage: number;
     readonly selectedLeadIds: readonly string[];
+    readonly taskManagerScopeIds: readonly string[];
 };
 
 export function useLeadDerivedData({
@@ -48,7 +50,8 @@ export function useLeadDerivedData({
     searchTerm,
     pageSize,
     currentPage,
-    selectedLeadIds
+    selectedLeadIds,
+    taskManagerScopeIds
 }: UseLeadDerivedDataArgs) {
     const rawIntakeLeads = leads.filter(isRawIntakeLead);
     const candidateLeads = leads.filter(lead => !isRawIntakeLead(lead));
@@ -76,13 +79,15 @@ export function useLeadDerivedData({
     const conversionRate = candidateLeads.length > 0 ? Math.round((contractReadyCount / candidateLeads.length) * 1000) / 10 : 0;
     const activeFollowupLeads = candidateLeads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
     const workQueueSummary = getLeadWorkQueueSummary(activeFollowupLeads);
+    const scopedTaskLeads = filterLeadsByManagerScope(activeFollowupLeads, taskManagerScopeIds);
+    const scopedWorkQueueSummary = getLeadWorkQueueSummary(scopedTaskLeads);
     const dueContactCount = workQueueSummary.today;
     const overdueContactCount = workQueueSummary.overdue;
     const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({
         status,
         leads: candidateLeads.filter(lead => lead.status === status)
     }));
-    const taskLeads = [...activeFollowupLeads]
+    const taskLeads = [...scopedTaskLeads]
         .filter(lead => matchesLeadWorkQueue(lead, taskQueueFilter))
         .sort((a, b) => {
             const rankDiff = getLeadTaskRank(a) - getLeadTaskRank(b);
@@ -93,10 +98,10 @@ export function useLeadDerivedData({
         });
     const taskQueueOptions = WORK_QUEUE_OPTIONS.map(option => {
         const count = option.key === 'all'
-            ? workQueueSummary.actionable
+            ? scopedWorkQueueSummary.actionable
             : option.key === 'no_response'
-                ? workQueueSummary.noResponse
-                : workQueueSummary[option.key];
+                ? scopedWorkQueueSummary.noResponse
+                : scopedWorkQueueSummary[option.key];
         return { ...option, count };
     });
     const listPolicyText = tableSort === 'priority_only'

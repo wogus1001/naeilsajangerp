@@ -53,11 +53,11 @@ export const META_FIELD_LABELS: ReadonlyArray<{ readonly key: keyof MetaFieldMap
 export const VIEW_OPTIONS: ReadonlyArray<{ readonly mode: LeadViewMode; readonly label: string; readonly description: string }> = [
     { mode: 'table', label: '테이블', description: '전체 필드 중심으로 확인' },
     { mode: 'pipeline', label: '파이프라인', description: '상태별 상담 흐름 관리' },
-    { mode: 'tasks', label: '업무 큐', description: '우선 처리할 리드 분류' }
+    { mode: 'tasks', label: '연락 관리', description: '우선 연락할 가맹 희망자 분류' }
 ];
 
 export const WORK_QUEUE_OPTIONS: ReadonlyArray<{ readonly key: LeadWorkQueueKey; readonly label: string }> = [
-    { key: 'all', label: '전체 업무' },
+    { key: 'all', label: '전체 연락' },
     { key: 'overdue', label: '연락 지연' },
     { key: 'today', label: '오늘 연락' },
     { key: 'no_response', label: '무응답' }

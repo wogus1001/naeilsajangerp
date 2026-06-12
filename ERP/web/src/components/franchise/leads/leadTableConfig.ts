@@ -33,6 +33,7 @@ export const LEAD_TABLE_COLUMNS: ReadonlyArray<{
     { key: 'budget', label: '예산', defaultVisible: true },
     { key: 'interestedBrand', label: '브랜드', defaultVisible: false },
     { key: 'nextContactAt', label: '다음 연락', defaultVisible: true },
+    { key: 'contractChecklist', label: '계약 전 체크', defaultVisible: true },
     { key: 'memo', label: '메모', defaultVisible: false },
     { key: 'links', label: '연결', defaultVisible: false },
     { key: 'actions', label: '관리', defaultVisible: true }

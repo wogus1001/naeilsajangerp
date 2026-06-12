@@ -2,7 +2,7 @@
 
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
-export type LeadWorkspaceTab = 'dashboard' | 'db';
+export type LeadWorkspaceTab = 'dashboard' | 'db' | 'contractOwners';
 
 type LeadWorkspaceTabsProps = {
     readonly activeTab: LeadWorkspaceTab;
@@ -25,6 +25,13 @@ export function LeadWorkspaceTabs({ activeTab, onTabChange }: LeadWorkspaceTabsP
                 onClick={() => onTabChange('db')}
             >
                 DB 관리
+            </button>
+            <button
+                type="button"
+                className={activeTab === 'contractOwners' ? styles.workspaceTabActive : styles.workspaceTab}
+                onClick={() => onTabChange('contractOwners')}
+            >
+                계약 점주
             </button>
         </nav>
     );

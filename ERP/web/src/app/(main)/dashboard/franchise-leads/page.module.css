@@ -2774,6 +2774,42 @@
     border-bottom: 1px solid #eef2f7;
 }
 
+.contractOwnerInlineSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 16px 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius);
+    background: var(--fr-blue-soft);
+}
+
+.contractOwnerInlineSummary div {
+    display: grid;
+    gap: 4px;
+}
+
+.contractOwnerInlineSummary strong {
+    color: var(--fr-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.contractOwnerInlineSummary span {
+    color: var(--fr-muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.contractOwnerInlineSummary b {
+    color: var(--fr-blue);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .panelHeader h2,
 .tableHeader h2 {
     margin: 0 0 5px;
@@ -3224,6 +3260,10 @@
 
 .colNextContact {
     width: 142px;
+}
+
+.colContractChecklist {
+    width: 160px;
 }
 
 .colMemo {
@@ -3743,18 +3783,18 @@
 
 .pipelineBoard {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     min-height: 280px;
-    padding: 18px;
+    padding: 14px;
     overflow-x: auto;
     background: linear-gradient(180deg, #fbfdff, #ffffff);
 }
 
 .pipelineColumn {
-    flex: 0 0 284px;
+    flex: 0 0 260px;
     display: flex;
     flex-direction: column;
-    min-height: 260px;
+    min-height: 252px;
     border: 1px solid #e5e7eb;
     border-radius: 18px;
     background: #f8fafc;
@@ -3765,39 +3805,39 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 14px;
+    padding: 12px;
     border-bottom: 1px solid #e5e7eb;
 }
 
 .pipelineColumnHeader strong {
     color: #0f172a;
-    font-size: 14px;
-    font-weight: 900;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .pipelineColumnHeader span {
-    min-width: 28px;
-    height: 24px;
+    min-width: 26px;
+    height: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
     background: #ffffff;
     color: #64748b;
-    font-size: 12px;
-    font-weight: 900;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .pipelineCardList {
     display: grid;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px;
 }
 
 .pipelineCard {
-    padding: 12px;
+    padding: 10px;
     border: 1px solid #e5e7eb;
-    border-radius: 15px;
+    border-radius: 10px;
     background: #ffffff;
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.04);
 }
@@ -3805,7 +3845,7 @@
 .pipelineCardMain {
     width: 100%;
     display: grid;
-    gap: 5px;
+    gap: 4px;
     border: none;
     background: transparent;
     padding: 0;
@@ -3815,34 +3855,35 @@
 
 .pipelineName {
     color: #0f172a;
-    font-size: 14px;
-    font-weight: 900;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .pipelinePhone,
 .pipelineMeta {
     color: #64748b;
     font-size: 12px;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .pipelineCardFooter {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 5px;
+    margin-top: 10px;
 }
 
 .pipelineBadge,
-.hotBadge {
+.hotBadge,
+.convertedBadge {
     display: inline-flex;
     align-items: center;
-    height: 24px;
-    padding: 0 8px;
+    height: 22px;
+    padding: 0 7px;
     border-radius: 999px;
     font-size: 11px;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .pipelineBadge {
@@ -3859,7 +3900,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
-    margin-top: 12px;
+    margin-top: 10px;
 }
 
 .miniButton,
@@ -3869,9 +3910,9 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    border-radius: 9px;
+    border-radius: 8px;
     font-size: 11px;
-    font-weight: 900;
+    font-weight: 700;
     cursor: pointer;
 }
 
@@ -4341,29 +4382,38 @@
     inset: 0;
     z-index: 4900;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
     background: rgba(15, 23, 42, 0.18);
     backdrop-filter: blur(2px);
 }
 
 .detailPanel {
-    width: min(620px, 100%);
-    height: 100%;
+    width: min(1120px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
     overflow-y: auto;
-    padding: 24px;
-    background:
-        radial-gradient(circle at top right, rgba(109, 93, 252, 0.1), transparent 32%),
-        #ffffff;
-    border-left: 1px solid #e5e7eb;
-    box-shadow: -24px 0 70px rgba(15, 23, 42, 0.16);
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+}
+
+.contractChecklistOnlyPanel {
+    width: min(760px, calc(100vw - 32px));
+}
+
+.contractChecklistOnlyContent .contractChecklistSection {
+    margin-top: 0;
 }
 
 .detailHeader {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 18px;
+    gap: 16px;
+    margin-bottom: 14px;
 }
 
 .convertedNotice {
@@ -4396,11 +4446,11 @@
 }
 
 .detailHeader h2 {
-    margin: 8px 0 6px;
-    color: #0f172a;
+    margin: 8px 0 4px;
+    color: #191f28;
     font-size: 28px;
-    font-weight: 900;
-    letter-spacing: -0.04em;
+    font-weight: 700;
+    letter-spacing: 0;
 }
 
 .detailHeader p {
@@ -4414,82 +4464,106 @@
     align-items: center;
     padding: 5px 9px;
     border-radius: 999px;
-    background: #f8f7ff;
-    border: 1px solid #e4e1ff;
-    color: #6d5dfc;
-    font-size: 11px;
-    font-weight: 850;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    background: #e8f3ff;
+    border: 1px solid #d1e9ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
 }
 
 .detailQuickActions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .detailQuickActions select {
-    flex: 1;
-    height: 38px;
+    flex: 1 1 220px;
+    height: 40px;
     border: 1px solid #d8dee8;
-    border-radius: 10px;
+    border-radius: 8px;
     background: white;
-    color: #334155;
+    color: #333d4b;
     padding: 0 10px;
     font-size: 13px;
-    font-weight: 750;
+    font-weight: 600;
+}
+
+.detailContentGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.detailContentGrid > .detailSection {
+    min-width: 0;
+    margin-top: 0;
+}
+
+.detailContentGrid > .detailSection:first-child,
+.detailContentGrid > .detailSection:nth-child(4),
+.detailContentGrid > .detailSection:nth-child(8),
+.contractChecklistSection {
+    grid-column: 1 / -1;
+}
+
+.detailContentGrid .disclosureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .detailSection {
-    margin-top: 14px;
-    padding: 18px;
-    border: 1px solid #e5e7eb;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: none;
 }
 
 .detailSection h3 {
     display: flex;
     align-items: center;
     gap: 7px;
-    margin: 0 0 14px;
-    color: #0f172a;
+    margin: 0 0 12px;
+    color: #191f28;
     font-size: 15px;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .detailInfoGrid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .detailInfoGrid div,
 .detailMemo {
-    padding: 12px;
-    border-radius: 13px;
-    background: #f8fafc;
-    border: 1px solid #eef2f7;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e8eb;
 }
 
 .detailInfoGrid span,
 .detailMemo span {
     display: block;
-    margin-bottom: 6px;
-    color: #94a3b8;
-    font-size: 11px;
-    font-weight: 850;
+    margin-bottom: 4px;
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .detailInfoGrid strong {
-    color: #0f172a;
+    color: #191f28;
     font-size: 13px;
+    line-height: 1.45;
 }
 
 .detailMemo {
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .detailMemo p,
@@ -4497,7 +4571,7 @@
     margin: 0;
     color: #64748b;
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.45;
 }
 
 .disclosureHeader,
@@ -4635,8 +4709,8 @@
 .disclosureFormGrid input:focus,
 .disclosureFormGrid select:focus,
 .disclosureMemoLabel textarea:focus {
-    border-color: #6d5dfc;
-    box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.12);
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
 }
 
 .disclosureUploadLabel {
@@ -4742,11 +4816,11 @@
 
 .nextContactBox input {
     flex: 1;
-    height: 38px;
+    height: 40px;
     border: 1px solid #d8dee8;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 0 10px;
-    color: #0f172a;
+    color: #191f28;
 }
 
 .detailHint {
@@ -4756,49 +4830,49 @@
 .workflowGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .workflowGrid label,
 .workflowMemoLabel {
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    color: #334155;
+    gap: 6px;
+    color: #4e5968;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 600;
 }
 
 .workflowGrid select,
 .workflowMemoLabel textarea {
     width: 100%;
     border: 1px solid #d8dee8;
-    border-radius: 11px;
+    border-radius: 8px;
     background: #ffffff;
-    color: #0f172a;
+    color: #191f28;
     font-size: 13px;
     outline: none;
 }
 
 .workflowGrid select {
-    height: 38px;
+    height: 40px;
     padding: 0 10px;
 }
 
 .workflowMemoLabel {
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .workflowMemoLabel textarea {
-    min-height: 72px;
+    min-height: 58px;
     resize: vertical;
     padding: 10px;
 }
 
 .workflowGrid select:focus,
 .workflowMemoLabel textarea:focus {
-    border-color: #6d5dfc;
-    box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.12);
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
 }
 
 .workflowActions {
@@ -4811,6 +4885,149 @@
 
 .workflowActions .detailHint {
     margin-top: 0;
+}
+
+.contractChecklistHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.contractChecklistHeader h3 {
+    margin-bottom: 6px;
+}
+
+.contractChecklistHeader > span {
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.contractChecklistProgress {
+    height: 6px;
+    margin-top: 12px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e8eb;
+}
+
+.contractChecklistProgress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #3182f6;
+    transition: width 180ms ease;
+}
+
+.contractChecklistGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.contractChecklistItem,
+.contractChecklistItemDone {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.contractChecklistItemDone {
+    border-color: #bfdbfe;
+    background: #f8fbff;
+}
+
+.contractChecklistItemTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.contractChecklistItemTop small {
+    flex: 0 0 auto;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.contractChecklistToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 32px;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.contractChecklistToggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.contractChecklistToggle svg {
+    flex: 0 0 auto;
+    color: #8b95a1;
+}
+
+.contractChecklistItemDone .contractChecklistToggle svg {
+    color: #3182f6;
+}
+
+.contractChecklistToggle span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.contractChecklistMemoRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.contractChecklistMemoRow input {
+    width: 100%;
+    height: 36px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 0 10px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 13px;
+    outline: none;
+}
+
+.contractChecklistMemoRow input:focus {
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
+}
+
+.contractChecklistEmpty {
+    grid-column: 1 / -1;
+    padding: 14px;
+    border: 1px dashed #d1d6db;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #6b7684;
+    font-size: 13px;
 }
 
 .locationMatchEmpty {
@@ -5144,9 +5361,9 @@
 .activityComposer textarea {
     width: 100%;
     border: 1px solid #d8dee8;
-    border-radius: 11px;
+    border-radius: 8px;
     background: white;
-    color: #0f172a;
+    color: #191f28;
     font-size: 13px;
 }
 
@@ -5156,7 +5373,7 @@
 }
 
 .activityComposer textarea {
-    min-height: 90px;
+    min-height: 64px;
     resize: vertical;
     padding: 11px;
 }
@@ -5168,10 +5385,10 @@
 }
 
 .timelineItem {
-    padding: 13px;
-    border: 1px solid #eef2f7;
-    border-radius: 14px;
-    background: #fbfdff;
+    padding: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
 }
 
 .timelineItem div {
@@ -5183,12 +5400,12 @@
 }
 
 .timelineItem span {
-    color: #6d5dfc;
-    background: #f8f7ff;
+    color: #1d4ed8;
+    background: #e8f3ff;
     border-radius: 999px;
     padding: 4px 8px;
     font-size: 11px;
-    font-weight: 850;
+    font-weight: 700;
 }
 
 .timelineItem time,
@@ -5238,9 +5455,9 @@
     gap: 12px;
     padding: 13px;
     margin-bottom: 12px;
-    border: 1px solid #e4e1ff;
-    border-radius: 14px;
-    background: #f8f7ff;
+    border: 1px solid #d1e9ff;
+    border-radius: 8px;
+    background: #e8f3ff;
 }
 
 .conversionBoxDone {
@@ -5270,9 +5487,9 @@
 
 .relatedColumn {
     padding: 12px;
-    border: 1px solid #eef2f7;
-    border-radius: 14px;
-    background: #fbfdff;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
 }
 
 .relatedColumn h4 {
@@ -6043,6 +6260,14 @@
         align-items: stretch;
     }
 
+    .contractOwnerInlineSummary {
+        display: grid;
+    }
+
+    .contractOwnerInlineSummary b {
+        white-space: normal;
+    }
+
     .pageSizeControl,
     .tableMeta {
         flex: 1 1 auto;
@@ -6265,7 +6490,8 @@
     .taskInfoGrid,
     .workflowGrid,
     .disclosureGrid,
-    .disclosureFormGrid {
+    .disclosureFormGrid,
+    .contractChecklistGrid {
         grid-template-columns: 1fr;
     }
 
@@ -6276,11 +6502,11 @@
     }
 
     .pipelineBoard {
-        padding: 12px;
+        padding: 10px;
     }
 
     .pipelineColumn {
-        flex-basis: 86vw;
+        flex-basis: 260px;
     }
 
     .taskBoard {
@@ -6297,6 +6523,7 @@
 
     .leadLinkSectionHeader,
     .disclosureHeader,
+    .contractChecklistHeader,
     .disclosureHistoryItem,
     .leadLinkPickerHead,
     .leadLinkCardHead,
@@ -6312,6 +6539,10 @@
     }
 
     .leadLinkMemoRow {
+        grid-template-columns: 1fr;
+    }
+
+    .contractChecklistMemoRow {
         grid-template-columns: 1fr;
     }
 
@@ -6993,6 +7224,14 @@
     box-shadow: var(--fr-shadow-float);
 }
 
+.detailPanel {
+    width: min(1120px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    border: 1px solid var(--fr-line);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+}
+
 .detailSection,
 .leadLinkCard,
 .leadLinkPicker,
@@ -7386,13 +7625,16 @@
 
 .taskBoard {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 520px));
+    align-items: start;
+    gap: 12px;
+    padding: 14px;
+    justify-content: start;
     background: var(--fr-surface);
 }
 
 .taskBoardHeader {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -7424,10 +7666,12 @@
 
 .taskCard {
     display: grid;
-    grid-template-columns: minmax(180px, 0.82fr) minmax(360px, 1.35fr) minmax(120px, 0.42fr);
-    gap: 10px 12px;
+    grid-template-columns: 1fr;
+    gap: 10px;
     align-items: start;
-    padding: 12px;
+    width: 100%;
+    max-width: 520px;
+    padding: 14px;
     border-radius: var(--fr-radius);
     box-shadow: none;
 }
@@ -7459,8 +7703,8 @@
 }
 
 .taskInfoGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
     margin-top: 0;
 }
 
@@ -7484,7 +7728,6 @@
 }
 
 .fitPillRow {
-    grid-column: 1 / 3;
     margin-top: 0;
 }
 
@@ -7496,7 +7739,6 @@
 }
 
 .taskCard p {
-    grid-column: 1 / 3;
     min-height: 0;
     margin: 0;
     color: var(--fr-muted);
@@ -7505,11 +7747,10 @@
 }
 
 .taskActions {
-    grid-column: 3;
-    grid-row: 1 / span 4;
     display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    align-self: stretch;
+    align-self: auto;
 }
 
 .taskActions button {
@@ -7620,5 +7861,29 @@
     .taskInfoGrid,
     .taskActions {
         grid-template-columns: 1fr;
+    }
+
+    .detailBackdrop {
+        align-items: stretch;
+        padding: 0;
+    }
+
+    .detailPanel {
+        width: 100%;
+        max-height: 100dvh;
+        border-width: 0;
+        border-radius: 0;
+    }
+
+    .detailContentGrid,
+    .detailContentGrid .disclosureGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .detailContentGrid > .detailSection:first-child,
+    .detailContentGrid > .detailSection:nth-child(4),
+    .detailContentGrid > .detailSection:nth-child(8),
+    .contractChecklistSection {
+        grid-column: auto;
     }
 }

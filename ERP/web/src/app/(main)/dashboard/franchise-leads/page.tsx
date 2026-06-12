@@ -21,6 +21,7 @@ import {
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
+import { LeadContractChecklistSection } from '@/components/franchise/LeadContractChecklistSection';
 import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import { LeadDashboard } from '@/components/franchise/leads/LeadDashboard';
 import { LeadDbWorkspace } from '@/components/franchise/leads/LeadDbWorkspace';
@@ -125,6 +126,8 @@ import {
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from './page.module.css';
 
+type LeadDetailMode = 'default' | 'contractChecklist';
+
 export default function FranchiseLeadsPage() {
     const router = useRouter();
     const [user, setUser] = React.useState<AuthUser | null>(null);
@@ -154,7 +157,9 @@ export default function FranchiseLeadsPage() {
     const [tableSort, setTableSort] = React.useState<LeadTableSortKey>('created_desc');
     const [visibleTableColumns, setVisibleTableColumns] = React.useState<readonly LeadTableColumnKey[]>(DEFAULT_LEAD_TABLE_COLUMN_KEYS);
     const [selectedLeadId, setSelectedLeadId] = React.useState('');
+    const [selectedLeadDetailMode, setSelectedLeadDetailMode] = React.useState<LeadDetailMode>('default');
     const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
+    const [contractChecklistRefreshKey, setContractChecklistRefreshKey] = React.useState(0);
     const [activityType, setActivityType] = React.useState<LeadActivityType>('전화');
     const [activityContent, setActivityContent] = React.useState('');
     const [quickActivityLeadId, setQuickActivityLeadId] = React.useState('');
@@ -506,7 +511,11 @@ export default function FranchiseLeadsPage() {
     }, [selectedLead]);
 
     React.useEffect(() => {
-        if (!selectedLead || !userId) return;
+        if (!selectedLead || !userId || selectedLeadDetailMode === 'contractChecklist') {
+            setRelatedCustomers([]);
+            setRelatedCards([]);
+            return;
+        }
 
         const normalizedPhone = normalizeLeadPhone(selectedLead.mobile);
         if (normalizedPhone.length < 4) {
@@ -553,9 +562,20 @@ export default function FranchiseLeadsPage() {
             });
 
         return () => controller.abort();
-    }, [companyName, selectedLead, userId]);
+    }, [companyName, selectedLead, selectedLeadDetailMode, userId]);
 
     const canManageMeta = user?.role === 'admin' || user?.role === 'manager';
+    const taskManagerScopeIds = React.useMemo(() => {
+        const currentUserIds = [user?.uid, user?.id, userId].filter((id): id is string => Boolean(id));
+        const matchedManager = managerOptions.find(manager => currentUserIds.some(id => manager.id === id || manager.uuid === id));
+        return [
+            ...currentUserIds,
+            matchedManager?.id || '',
+            matchedManager?.uuid || ''
+        ];
+    }, [managerOptions, user, userId]);
+    const isContractOwnersTab = workspaceTab === 'contractOwners';
+
     const {
         rawIntakeLeads,
         candidateLeads,
@@ -585,12 +605,13 @@ export default function FranchiseLeadsPage() {
         metaState,
         leadDbLayer,
         taskQueueFilter,
-        tableFilters,
-        tableSort,
+        tableFilters: isContractOwnersTab ? EMPTY_LEAD_TABLE_FILTERS : tableFilters,
+        tableSort: isContractOwnersTab ? 'created_desc' : tableSort,
         searchTerm,
         pageSize,
         currentPage,
-        selectedLeadIds
+        selectedLeadIds,
+        taskManagerScopeIds
     });
 
     React.useEffect(() => {
@@ -660,6 +681,25 @@ export default function FranchiseLeadsPage() {
             if (checked) return prev.includes(leadId) ? prev : [...prev, leadId];
             return prev.filter(id => id !== leadId);
         });
+    };
+
+    const openLeadDetail = (leadId: string) => {
+        setSelectedLeadDetailMode('default');
+        setSelectedLeadId(leadId);
+    };
+
+    const openLeadContractChecklist = (leadId: string) => {
+        setSelectedLeadDetailMode('contractChecklist');
+        setSelectedLeadId(leadId);
+    };
+
+    const closeLeadDetail = () => {
+        setSelectedLeadId('');
+        setSelectedLeadDetailMode('default');
+    };
+
+    const markContractChecklistSaved = () => {
+        setContractChecklistRefreshKey(prev => prev + 1);
     };
 
     const openCustomerDetail = (customerId: string) => {
@@ -1145,10 +1185,10 @@ export default function FranchiseLeadsPage() {
                 churnReason: detailWorkflow.churnReason.trim(),
                 activityLog: [nextActivity, ...(selectedLead.activityLog || [])]
             });
-            showAlert('업무 큐 정보를 저장했습니다.', 'success', '저장 완료');
+            showAlert('연락 관리 정보를 저장했습니다.', 'success', '저장 완료');
         } catch (error) {
             console.error(error);
-            showAlert(error instanceof Error ? error.message : '업무 큐 정보 저장에 실패했습니다.', 'error', '저장 실패');
+            showAlert(error instanceof Error ? error.message : '연락 관리 정보 저장에 실패했습니다.', 'error', '저장 실패');
         } finally {
             setIsWorkflowSaving(false);
         }
@@ -1436,7 +1476,7 @@ export default function FranchiseLeadsPage() {
         const nextActivity: LeadActivity = {
             id: createActivityId(),
             type: '메모',
-            content: '업무 큐에서 연락 완료 처리',
+            content: '연락 관리에서 연락 완료 처리',
             createdAt: now,
             createdBy: user?.name || userId
         };
@@ -1452,7 +1492,7 @@ export default function FranchiseLeadsPage() {
             showAlert('연락 완료로 처리했습니다. 다음 연락일이 필요하면 상세 패널에서 다시 지정하세요.', 'success', '처리 완료');
         } catch (error) {
             console.error(error);
-            showAlert(error instanceof Error ? error.message : '업무 큐 처리에 실패했습니다.', 'error', '처리 실패');
+            showAlert(error instanceof Error ? error.message : '연락 관리 처리에 실패했습니다.', 'error', '처리 실패');
         }
     };
 
@@ -1638,7 +1678,16 @@ export default function FranchiseLeadsPage() {
                 createdTo={createdTo}
                 onRangeClickAction={(nextRange) => handleRangeClick(toRangeOption(nextRange))}
                 onSearchTermChangeAction={setSearchTerm}
-                onStatusFilterChangeAction={setStatusFilter}
+                onStatusFilterChangeAction={(status) => {
+                    setStatusFilter(status);
+                    if (status === '계약완료') {
+                        setWorkspaceTab('contractOwners');
+                        setLeadDbLayer('candidate');
+                        setViewMode('table');
+                    } else if (workspaceTab === 'contractOwners') {
+                        setWorkspaceTab('db');
+                    }
+                }}
                 onSourceFilterChangeAction={(source) => setSourceFilter(toSourceFilterOption(source))}
                 onManagerFilterChangeAction={setManagerFilter}
                 onCreatedFromChangeAction={(date) => {
@@ -1651,7 +1700,17 @@ export default function FranchiseLeadsPage() {
                 }}
             />
 
-            <LeadWorkspaceTabs activeTab={workspaceTab} onTabChange={setWorkspaceTab} />
+            <LeadWorkspaceTabs
+                activeTab={workspaceTab}
+                onTabChange={(tab) => {
+                    setWorkspaceTab(tab);
+                    if (tab === 'contractOwners') {
+                        setStatusFilter('계약완료');
+                        setLeadDbLayer('candidate');
+                        setViewMode('table');
+                    }
+                }}
+            />
 
             {isMetaPanelOpen && (
                 <section className={styles.metaPanel}>
@@ -1835,18 +1894,27 @@ export default function FranchiseLeadsPage() {
                     sourceChartData={sourceChartData}
                     managerChartData={managerChartData}
                     trendSeriesData={trendSeriesData}
-                    onStatusFilterChangeAction={setStatusFilter}
+                    onStatusFilterChangeAction={(status) => {
+                        setStatusFilter(status);
+                        if (status === '계약완료') {
+                            setWorkspaceTab('contractOwners');
+                            setLeadDbLayer('candidate');
+                            setViewMode('table');
+                        }
+                    }}
                 />
             )}
 
-            {workspaceTab === 'db' && (
+            {(workspaceTab === 'db' || workspaceTab === 'contractOwners') && (
                 <LeadDbWorkspace
                     isLoading={isLoading}
+                    workspaceVariant={workspaceTab === 'contractOwners' ? 'contractOwners' : 'default'}
                     leadDbLayer={leadDbLayer}
                     viewMode={viewMode}
                     rawIntakeCount={rawIntakeLeads.length}
                     candidateCount={candidateLeads.length}
                     listPolicyText={listPolicyText}
+                    contractChecklistRefreshKey={contractChecklistRefreshKey}
                     pageSize={pageSize}
                     visibleLayerLeadCount={visibleLayerLeads.length}
                     paginatedLeads={paginatedLeads}
@@ -1877,7 +1945,7 @@ export default function FranchiseLeadsPage() {
                     onClearSelectedAction={() => setSelectedLeadIds([])}
                     onToggleSelectAllVisibleAction={toggleSelectAllVisible}
                     onToggleSelectLeadAction={toggleSelectLead}
-                    onSelectLeadAction={setSelectedLeadId}
+                    onSelectLeadAction={isContractOwnersTab ? openLeadContractChecklist : openLeadDetail}
                     onStatusChangeAction={(lead, status) => void updateLeadStatus(lead, status)}
                     onManagerChangeAction={(lead, managerId) => void updateLeadManager(lead, managerId)}
                     onTogglePriorityAction={(lead) => void toggleLeadPriority(lead)}
@@ -1895,13 +1963,13 @@ export default function FranchiseLeadsPage() {
 
             {isModalOpen && (
                 <div className={styles.modalBackdrop}>
-                    <form className={styles.modalCard} onSubmit={submitLead}>
+                    <form className={styles.modalCard} onSubmit={submitLead} role="dialog" aria-modal="true" aria-labelledby="franchise-lead-modal-title">
                         <div className={styles.modalHeader}>
                             <div>
-                                <h2>{form.id ? '가맹 희망자 수정' : '가맹 희망자 등록'}</h2>
+                                <h2 id="franchise-lead-modal-title">{form.id ? '가맹 희망자 수정' : '가맹 희망자 등록'}</h2>
                                 <p>본사 모객 DB에 필요한 중요 정보만 빠르게 기록합니다.</p>
                             </div>
-                            <button type="button" onClick={closeModal} className={styles.closeButton} aria-label="가맹 희망자 등록 닫기">
+                            <button type="button" onClick={closeModal} className={styles.closeButton} aria-label={`${form.id ? '가맹 희망자 수정' : '가맹 희망자 등록'} 닫기`}>
                                 <X size={20} strokeWidth={2.2} />
                             </button>
                         </div>
@@ -2035,19 +2103,39 @@ export default function FranchiseLeadsPage() {
             )}
 
             {selectedLead && (
-                <div className={styles.detailBackdrop} onClick={() => setSelectedLeadId('')}>
-                    <aside className={styles.detailPanel} onClick={(event) => event.stopPropagation()}>
+                <div className={styles.detailBackdrop} onClick={closeLeadDetail}>
+                    <aside
+                        className={`${styles.detailPanel} ${selectedLeadDetailMode === 'contractChecklist' ? styles.contractChecklistOnlyPanel : ''}`}
+                        onClick={(event) => event.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="franchise-lead-detail-title"
+                    >
                         <div className={styles.detailHeader}>
                             <div>
-                                <span className={styles.detailEyebrow}>가맹 희망자 상세</span>
-                                <h2>{selectedLead.name}</h2>
+                                <span className={styles.detailEyebrow}>{selectedLeadDetailMode === 'contractChecklist' ? '계약 전 체크' : '가맹 희망자 상세'}</span>
+                                <h2 id="franchise-lead-detail-title">{selectedLead.name}</h2>
                                 <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'} · 담당자 {getManagerName(selectedLead.managerId)}</p>
                             </div>
-                            <button className={styles.closeButton} onClick={() => setSelectedLeadId('')} aria-label="상세 패널 닫기">
+                            <button
+                                className={styles.closeButton}
+                                onClick={closeLeadDetail}
+                                aria-label={selectedLeadDetailMode === 'contractChecklist' ? '계약 전 체크 패널 닫기' : '상세 패널 닫기'}
+                            >
                                 <X size={20} strokeWidth={2.2} />
                             </button>
                         </div>
 
+                        {selectedLeadDetailMode === 'contractChecklist' ? (
+                            <div className={styles.contractChecklistOnlyContent}>
+                                <LeadContractChecklistSection
+                                    leadId={selectedLead.id}
+                                    userId={userId}
+                                    onSaved={markContractChecklistSaved}
+                                />
+                            </div>
+                        ) : (
+                            <>
                         {selectedLead.convertedCustomerId && (
                             <div className={styles.convertedNotice}>
                                 <CheckCircle2 size={16} />
@@ -2086,189 +2174,199 @@ export default function FranchiseLeadsPage() {
                             </button>
                         </div>
 
-                        <section className={styles.detailSection}>
-                            <h3><UserRound size={16} /> 기본정보</h3>
-                            <div className={styles.detailInfoGrid}>
-                                <div>
-                                    <span>단계</span>
-                                    <strong>{getFranchiseLeadStageLabel(selectedLead.leadStage)}</strong>
+                        <div className={styles.detailContentGrid}>
+                            <section className={styles.detailSection}>
+                                <h3><UserRound size={16} /> 기본정보</h3>
+                                <div className={styles.detailInfoGrid}>
+                                    <div>
+                                        <span>단계</span>
+                                        <strong>{getFranchiseLeadStageLabel(selectedLead.leadStage)}</strong>
+                                    </div>
+                                    <div>
+                                        <span>우선순위</span>
+                                        <strong>{getFranchiseLeadGradeLabel(selectedLead.grade)}</strong>
+                                    </div>
+                                    <div>
+                                        <span>희망지역</span>
+                                        <strong>{selectedLead.desiredRegion || '-'}</strong>
+                                    </div>
+                                    <div>
+                                        <span>담당자</span>
+                                        <strong>{getManagerName(selectedLead.managerId)}</strong>
+                                    </div>
+                                    <div>
+                                        <span>예산</span>
+                                        <strong>{formatBudget(selectedLead.budgetMin, selectedLead.budgetMax)}</strong>
+                                    </div>
+                                    <div>
+                                        <span>관심브랜드</span>
+                                        <strong>{selectedLead.interestedBrand || '-'}</strong>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span>우선순위</span>
-                                    <strong>{getFranchiseLeadGradeLabel(selectedLead.grade)}</strong>
+                                <div className={styles.detailMemo}>
+                                    <span>메모</span>
+                                    <p>{selectedLead.memo || '등록된 메모가 없습니다.'}</p>
                                 </div>
-                                <div>
-                                    <span>희망지역</span>
-                                    <strong>{selectedLead.desiredRegion || '-'}</strong>
-                                </div>
-                                <div>
-                                    <span>담당자</span>
-                                    <strong>{getManagerName(selectedLead.managerId)}</strong>
-                                </div>
-                                <div>
-                                    <span>예산</span>
-                                    <strong>{formatBudget(selectedLead.budgetMin, selectedLead.budgetMax)}</strong>
-                                </div>
-                                <div>
-                                    <span>관심브랜드</span>
-                                    <strong>{selectedLead.interestedBrand || '-'}</strong>
-                                </div>
-                            </div>
-                            <div className={styles.detailMemo}>
-                                <span>메모</span>
-                                <p>{selectedLead.memo || '등록된 메모가 없습니다.'}</p>
-                            </div>
-                        </section>
+                            </section>
 
-                        <section className={styles.detailSection}>
-                            <h3><CalendarClock size={16} /> 다음 연락</h3>
-                            <div className={styles.nextContactBox}>
-                                <input
-                                    type="datetime-local"
-                                    value={detailNextContactAt}
-                                    onChange={(event) => setDetailNextContactAt(event.target.value)}
-                                />
-                                <button className={styles.primaryButton} onClick={() => void saveDetailNextContact()}>
-                                    저장
-                                </button>
-                            </div>
-                            <p className={styles.detailHint}>
-                                현재: {formatFullDateTime(selectedLead.nextContactAt)}
-                                {isPastDue(selectedLead.nextContactAt) ? ' · 연락 지연' : isDueToday(selectedLead.nextContactAt) ? ' · 오늘 연락' : ''}
-                            </p>
-                        </section>
-
-                        <LeadWorkflowSection
-                            value={detailWorkflow}
-                            isSaving={isWorkflowSaving}
-                            onChange={setDetailWorkflow}
-                            onSave={() => void saveDetailWorkflow()}
-                        />
-
-                        <LeadDisclosureSection
-                            leadId={selectedLead.id}
-                            userId={userId}
-                            companyId={selectedLead.companyId}
-                            companyName={selectedLead.companyName || companyName}
-                            leadName={selectedLead.name}
-                            leadContact={selectedLead.mobile}
-                            interestedBrand={selectedLead.interestedBrand}
-                            onEligibilityChange={setSelectedDisclosureEligibility}
-                        />
-
-                        <LeadLocationLinkSection
-                            links={selectedLeadLocationLinks}
-                            locations={franchiseLocations}
-                            externalListings={externalListings}
-                            isLoading={isLocationMatchLoading}
-                            isSaving={isLocationLinkSaving}
-                            onAddLinkAction={(targetType, targetId) => void addLocationLink(targetType, targetId)}
-                            onUpdateLinkAction={(linkId, patch) => void updateLocationLink(linkId, patch)}
-                            onRemoveLinkAction={(linkId) => void removeLocationLink(linkId)}
-                        />
-
-                        <section className={styles.detailSection}>
-                            <h3><MessageSquare size={16} /> 상담 이력</h3>
-                            <div className={styles.activityComposer}>
-                                <select value={activityType} onChange={(event) => setActivityType(event.target.value as LeadActivityType)}>
-                                    {ACTIVITY_TYPES.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                                <textarea
-                                    value={activityContent}
-                                    onChange={(event) => setActivityContent(event.target.value)}
-                                    placeholder="상담 내용, 고객 반응, 다음 액션을 기록하세요."
-                                />
-                                <button className={styles.primaryButton} onClick={() => void addLeadActivity()}>
-                                    이력 추가
-                                </button>
-                            </div>
-                            <div className={styles.timeline}>
-                                {(selectedLead.activityLog || []).length === 0 ? (
-                                    <div className={styles.emptyTimeline}>아직 상담 이력이 없습니다.</div>
-                                ) : (
-                                    (selectedLead.activityLog || []).map(activity => (
-                                        <article key={activity.id} className={styles.timelineItem}>
-                                            <div>
-                                                <span>{activity.type}</span>
-                                                <time>{formatFullDateTime(activity.createdAt)}</time>
-                                            </div>
-                                            <p>{activity.content}</p>
-                                            <small>{activity.createdBy || '담당자 미상'}</small>
-                                        </article>
-                                    ))
-                                )}
-                            </div>
-                        </section>
-
-                        <section className={styles.detailSection}>
-                            <h3><Link2 size={16} /> 기존 DB 연결</h3>
-                            <div className={styles.linkSummary}>
-                                <span>{selectedLead.convertedCustomerId ? `전환: ${selectedLead.convertedCustomerName || selectedLead.convertedCustomerId}` : '고객 전환 전'}</span>
-                                <span>{selectedLead.linkedCustomerId ? `고객: ${selectedLead.linkedCustomerName || selectedLead.linkedCustomerId}` : '고객 미연결'}</span>
-                                <span>{selectedLead.linkedBusinessCardId ? `명함: ${selectedLead.linkedBusinessCardName || selectedLead.linkedBusinessCardId}` : '명함 미연결'}</span>
-                            </div>
-                            <div className={`${styles.conversionBox} ${selectedLead.convertedCustomerId ? styles.conversionBoxDone : ''}`}>
-                                <div>
-                                    <strong>{selectedLead.convertedCustomerId ? '고객 DB 전환 완료' : '이 리드를 고객 DB로 전환'}</strong>
-                                    <p>
-                                        {selectedLead.convertedCustomerId
-                                            ? `${formatFullDateTime(selectedLead.convertedAt)} 전환되었습니다.`
-                                            : selectedLead.linkedCustomerId
-                                                ? '이미 연결된 고객을 전환 완료로 표시합니다.'
-                                                : '같은 연락처 고객이 있으면 연결하고, 없으면 새 고객을 생성합니다.'}
-                                    </p>
+                            <section className={styles.detailSection}>
+                                <h3><CalendarClock size={16} /> 다음 연락</h3>
+                                <div className={styles.nextContactBox}>
+                                    <input
+                                        type="datetime-local"
+                                        value={detailNextContactAt}
+                                        onChange={(event) => setDetailNextContactAt(event.target.value)}
+                                    />
+                                    <button className={styles.primaryButton} onClick={() => void saveDetailNextContact()}>
+                                        저장
+                                    </button>
                                 </div>
-                                <button
-                                    className={selectedLead.convertedCustomerId ? styles.secondaryButtonSuccess : styles.primaryButton}
-                                    onClick={() => void convertLeadToCustomer(selectedLead)}
-                                    disabled={Boolean(selectedLead.convertedCustomerId) || convertingLeadId === selectedLead.id}
-                                >
-                                    <UserCheck size={14} />
-                                    {selectedLead.convertedCustomerId ? '완료됨' : '전환 실행'}
-                                </button>
-                            </div>
+                                <p className={styles.detailHint}>
+                                    현재: {formatFullDateTime(selectedLead.nextContactAt)}
+                                    {isPastDue(selectedLead.nextContactAt) ? ' · 연락 지연' : isDueToday(selectedLead.nextContactAt) ? ' · 오늘 연락' : ''}
+                                </p>
+                            </section>
 
-                            <div className={styles.relatedGrid}>
-                                <div className={styles.relatedColumn}>
-                                    <h4><UserRound size={14} /> 고객 후보</h4>
-                                    {isRelatedLoading ? (
-                                        <p>검색 중...</p>
-                                    ) : relatedCustomers.length === 0 ? (
-                                        <p>같은 연락처의 고객이 없습니다.</p>
-                                    ) : relatedCustomers.map(customer => (
-                                        <article key={customer.id} className={styles.relatedItem}>
-                                            <div>
-                                                <strong>{customer.name}</strong>
-                                                <span>{customer.mobile || customer.companyPhone || '-'}</span>
-                                            </div>
-                                            <button onClick={() => void linkRelatedCustomer(customer)}>
-                                                연결
-                                            </button>
-                                        </article>
-                                    ))}
+                            <LeadWorkflowSection
+                                value={detailWorkflow}
+                                isSaving={isWorkflowSaving}
+                                onChange={setDetailWorkflow}
+                                onSave={() => void saveDetailWorkflow()}
+                            />
+
+                            <LeadDisclosureSection
+                                leadId={selectedLead.id}
+                                userId={userId}
+                                companyId={selectedLead.companyId}
+                                companyName={selectedLead.companyName || companyName}
+                                leadName={selectedLead.name}
+                                leadContact={selectedLead.mobile}
+                                interestedBrand={selectedLead.interestedBrand}
+                                onEligibilityChange={setSelectedDisclosureEligibility}
+                            />
+
+                            <LeadContractChecklistSection
+                                leadId={selectedLead.id}
+                                userId={userId}
+                                onSaved={markContractChecklistSaved}
+                            />
+
+                            <LeadLocationLinkSection
+                                links={selectedLeadLocationLinks}
+                                locations={franchiseLocations}
+                                externalListings={externalListings}
+                                isLoading={isLocationMatchLoading}
+                                isSaving={isLocationLinkSaving}
+                                onAddLinkAction={(targetType, targetId) => void addLocationLink(targetType, targetId)}
+                                onUpdateLinkAction={(linkId, patch) => void updateLocationLink(linkId, patch)}
+                                onRemoveLinkAction={(linkId) => void removeLocationLink(linkId)}
+                            />
+
+                            <section className={styles.detailSection}>
+                                <h3><MessageSquare size={16} /> 상담 이력</h3>
+                                <div className={styles.activityComposer}>
+                                    <select value={activityType} onChange={(event) => setActivityType(event.target.value as LeadActivityType)}>
+                                        {ACTIVITY_TYPES.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
+                                    </select>
+                                    <textarea
+                                        value={activityContent}
+                                        onChange={(event) => setActivityContent(event.target.value)}
+                                        placeholder="상담 내용, 고객 반응, 다음 액션을 기록하세요."
+                                    />
+                                    <button className={styles.primaryButton} onClick={() => void addLeadActivity()}>
+                                        이력 추가
+                                    </button>
                                 </div>
-                                <div className={styles.relatedColumn}>
-                                    <h4><BriefcaseBusiness size={14} /> 명함 후보</h4>
-                                    {isRelatedLoading ? (
-                                        <p>검색 중...</p>
-                                    ) : relatedCards.length === 0 ? (
-                                        <p>같은 연락처의 명함이 없습니다.</p>
-                                    ) : relatedCards.map(card => (
-                                        <article key={card.id} className={styles.relatedItem}>
-                                            <div>
-                                                <strong>{card.name}</strong>
-                                                <span>{card.companyName || card.mobile || '-'}</span>
-                                            </div>
-                                            <button onClick={() => void linkRelatedCard(card)}>
-                                                연결
-                                            </button>
-                                        </article>
-                                    ))}
+                                <div className={styles.timeline}>
+                                    {(selectedLead.activityLog || []).length === 0 ? (
+                                        <div className={styles.emptyTimeline}>아직 상담 이력이 없습니다.</div>
+                                    ) : (
+                                        (selectedLead.activityLog || []).map(activity => (
+                                            <article key={activity.id} className={styles.timelineItem}>
+                                                <div>
+                                                    <span>{activity.type}</span>
+                                                    <time>{formatFullDateTime(activity.createdAt)}</time>
+                                                </div>
+                                                <p>{activity.content}</p>
+                                                <small>{activity.createdBy || '담당자 미상'}</small>
+                                            </article>
+                                        ))
+                                    )}
                                 </div>
-                            </div>
-                        </section>
+                            </section>
+
+                            <section className={styles.detailSection}>
+                                <h3><Link2 size={16} /> 기존 DB 연결</h3>
+                                <div className={styles.linkSummary}>
+                                    <span>{selectedLead.convertedCustomerId ? `전환: ${selectedLead.convertedCustomerName || selectedLead.convertedCustomerId}` : '고객 전환 전'}</span>
+                                    <span>{selectedLead.linkedCustomerId ? `고객: ${selectedLead.linkedCustomerName || selectedLead.linkedCustomerId}` : '고객 미연결'}</span>
+                                    <span>{selectedLead.linkedBusinessCardId ? `명함: ${selectedLead.linkedBusinessCardName || selectedLead.linkedBusinessCardId}` : '명함 미연결'}</span>
+                                </div>
+                                <div className={`${styles.conversionBox} ${selectedLead.convertedCustomerId ? styles.conversionBoxDone : ''}`}>
+                                    <div>
+                                        <strong>{selectedLead.convertedCustomerId ? '고객 DB 전환 완료' : '이 리드를 고객 DB로 전환'}</strong>
+                                        <p>
+                                            {selectedLead.convertedCustomerId
+                                                ? `${formatFullDateTime(selectedLead.convertedAt)} 전환되었습니다.`
+                                                : selectedLead.linkedCustomerId
+                                                    ? '이미 연결된 고객을 전환 완료로 표시합니다.'
+                                                    : '같은 연락처 고객이 있으면 연결하고, 없으면 새 고객을 생성합니다.'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        className={selectedLead.convertedCustomerId ? styles.secondaryButtonSuccess : styles.primaryButton}
+                                        onClick={() => void convertLeadToCustomer(selectedLead)}
+                                        disabled={Boolean(selectedLead.convertedCustomerId) || convertingLeadId === selectedLead.id}
+                                    >
+                                        <UserCheck size={14} />
+                                        {selectedLead.convertedCustomerId ? '완료됨' : '전환 실행'}
+                                    </button>
+                                </div>
+
+                                <div className={styles.relatedGrid}>
+                                    <div className={styles.relatedColumn}>
+                                        <h4><UserRound size={14} /> 고객 후보</h4>
+                                        {isRelatedLoading ? (
+                                            <p>검색 중...</p>
+                                        ) : relatedCustomers.length === 0 ? (
+                                            <p>같은 연락처의 고객이 없습니다.</p>
+                                        ) : relatedCustomers.map(customer => (
+                                            <article key={customer.id} className={styles.relatedItem}>
+                                                <div>
+                                                    <strong>{customer.name}</strong>
+                                                    <span>{customer.mobile || customer.companyPhone || '-'}</span>
+                                                </div>
+                                                <button onClick={() => void linkRelatedCustomer(customer)}>
+                                                    연결
+                                                </button>
+                                            </article>
+                                        ))}
+                                    </div>
+                                    <div className={styles.relatedColumn}>
+                                        <h4><BriefcaseBusiness size={14} /> 명함 후보</h4>
+                                        {isRelatedLoading ? (
+                                            <p>검색 중...</p>
+                                        ) : relatedCards.length === 0 ? (
+                                            <p>같은 연락처의 명함이 없습니다.</p>
+                                        ) : relatedCards.map(card => (
+                                            <article key={card.id} className={styles.relatedItem}>
+                                                <div>
+                                                    <strong>{card.name}</strong>
+                                                    <span>{card.companyName || card.mobile || '-'}</span>
+                                                </div>
+                                                <button onClick={() => void linkRelatedCard(card)}>
+                                                    연결
+                                                </button>
+                                            </article>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                            </>
+                        )}
                     </aside>
                 </div>
             )}

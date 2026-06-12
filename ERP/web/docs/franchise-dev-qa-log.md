@@ -106,6 +106,12 @@
 - 2026-06-11 정보공개서 14일 계산/업로드 경로 유닛 테스트 통과: `npx tsx --test src/components/franchise/leadDisclosureFormUtils.test.mts src/lib/franchise-disclosure-deliveries.test.mts src/lib/franchise-leads.test.mts` 결과 10건 통과. `npx tsc --noEmit`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`도 통과했다.
 - 2026-06-11 `supabase_franchise_disclosures_migration.sql` 적용 후 Playwright 로그인 세션에서 후보자 상세 정보공개서 live QA를 완료했다. `property-documents/franchise-disclosures/<company>/...` 업로드, 회사 문서함 저장, 후보자 발송 기록, 새로고침 후 문서/발송 이력 유지, 발송 직후 `계약예정` PUT 400 차단과 기존 상태 유지까지 확인했다. 발송 기록 UI에는 `증빙 URL` 입력/링크가 노출되지 않는다. 1440px/390px 시각 QA에서 정보공개서 섹션 내부 overflow 0건을 확인했다.
 - 2026-06-11 정보공개서 2차 고도화 계획으로 이메일 자동발송 또는 카카오 알림톡 자동발송을 추가했다. provider 연동 시 발송 요청/성공/실패/수신자/템플릿/재시도 상태를 별도 로그로 남기고, 계약 가능일 계산은 동일한 발송 이력 기준을 유지한다.
+- 2026-06-11 다음 P1 계획으로 개별 가맹 희망자 DB의 `계약 전 준비 체크리스트`를 추가했다. 후보자 상세에서 정보공개서 수령 확인, 브랜드/본사 사이트 확인, 예상 투자금 재확인, 희망지역/상권자료 확인, 인근가맹점 현황 확인, 계약 가능일 도래, 계약서/가맹금 안내 같은 스텝을 완료 여부/완료일/처리자/메모로 관리한다. 이 체크리스트는 운영 확인용이며, 14일 계약 잠금의 기준일은 기존 정보공개서 발송 이력 `sent_at`을 유지한다.
+- 2026-06-12 계약 전 준비 체크리스트 MVP를 구현했다. `supabase_franchise_contract_checklist_migration.sql`, `/api/franchise-lead-contract-checklist`, 후보자 상세 `계약 전 체크` 섹션을 추가했고, 후보자별 7개 기본 스텝의 완료 여부/완료일/처리자/메모를 별도 테이블에 저장한다. 14일 계약 잠금 기준은 계속 정보공개서 발송 이력 `sent_at`을 사용한다.
+- 2026-06-12 계약 전 체크리스트 순수 로직 테스트 통과: `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts` 결과 7건 통과. `npx tsc --noEmit --pretty false`도 통과했다. SQL 적용 후 상세 저장/새로고침 persistence와 교차 회사 차단 live QA가 남아 있다.
+- 2026-06-12 계약 전 체크리스트 로컬 API/브라우저 경계 QA를 진행했다. dev 서버는 `/api/franchise-lead-contract-checklist`를 정상 라우팅하며, 초기 SQL 미적용 상태에서는 424와 `supabase_franchise_contract_checklist_migration.sql` 적용 안내를 반환했다. 앱 내 브라우저 1440x900/390x844에서는 `/dashboard/franchise-leads` 접근 시 인증 세션이 없어 `/login`으로 이동했으며, 저장/새로고침 유지 UI QA는 로그인 세션으로 재개한다.
+- 2026-06-12 계약 전 체크리스트 목록 가시화와 `계약 점주` 탭을 구현했다. `/api/franchise-lead-contract-checklist/summaries`는 현재 페이지 리드 id 묶음의 7단계 진행률/미완료 라벨을 반환하고, 모객 DB 테이블에는 기본 표시 컬럼 `계약 전 체크`를 추가했다. 상단 `계약 점주` 탭은 `계약완료` 상태를 자동 적용하고, 일반 DB 테이블 대신 계약 전 체크 진행률과 미완료 항목만 보이는 전용 화면으로 정리했다.
+- 2026-06-12 코드 리뷰 후 계약 전 체크리스트 보안을 보강했다. `franchise_lead_contract_checklist_steps`는 `lead_id + company_id` composite FK/RLS로 실제 리드 회사와 일치해야 하며, API도 상세/summary 조회에서 `lead_id` 단독 조회를 제거했다. `계약 점주` 탭의 `체크리스트 열기`는 일반 상세 패널이 아니라 체크리스트 전용 패널만 열고, 저장 후 목록 요약 refresh key를 갱신한다.
 - 2026-06-11 `franchise-p0-lead-ingress-qa.mjs`가 `xlsx` ESM namespace import에서 `readFile`을 찾지 못해 실패했다. 실제 import shape 확인 결과 `readFile`은 default export에 있어 runner import를 default로 보정했고, 동일 명령 재실행으로 엑셀 fixture 기반 원천 DB 저장/후보자 승격/cleanup을 통과했다.
 - 2026-06-11 `franchise-p0-lead-ingress-qa.mjs` 리뷰 개선을 반영했다. runId를 ms+UUID로 바꾸고, fixture를 OS 임시 폴더에 만들며, fetch 15초 timeout과 실패 경로 cleanup을 추가해 assertion 실패 시에도 생성 리드/fixture 정리를 시도한다.
 - 2026-06-11 `supabase_franchise_opening_projects_migration.sql` 적용 후 오픈 준비 프로젝트 API live QA를 통과했다. `admin` requester와 `오픈준비` location id로 생성, location scoped 조회, checklist 수정, 삭제, 삭제 후 404를 확인했다.
@@ -167,6 +173,8 @@
 - 2026-06-11 Playwright 데스크톱 QA 통과: 1440px에서 `Meta 연동`, `Meta 계정 연결`, `샘플 양식`, `엑셀 업로드`, `후보자 등록` 버튼이 모두 표시되고 파이프라인 단계 카드 7개가 유지되며 가로 overflow 0을 확인했다.
 - 2026-06-11 모객 DB 테이블 유닛 테스트 통과: `leadTableConfig.test.mts`, `leadTableFilters.test.mts`, `franchise-leads.test.mts`를 컴파일 후 Node test로 실행해 총 11건 통과. 지역 필터는 `송파, 제주` 같은 쉼표 입력을 OR 조건으로 처리하고, 예산 필터는 희망 최소/최대 예산의 겹침 기준으로 동작한다.
 - 2026-06-11 모객 DB 테이블 최종 검증 통과: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
+- 2026-06-12 계약 전 체크리스트/계약 점주 화면 검증 통과: `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/components/franchise/leads/leadTableConfig.test.mts`, `git diff --check`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다. dev 서버 `/api/franchise-leads?status=계약완료&limit=all`은 1건, `/api/franchise-lead-contract-checklist/summaries`는 해당 계약완료 리드의 0/7 기본 요약을 HTTP 200으로 반환했다. 보호 라우트는 인증 세션 없이 `/login`으로 이동함을 브라우저에서 확인했다.
+- 2026-06-12 리뷰 수정 검증 통과: `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/components/franchise/leads/leadTaskScope.test.mts src/components/franchise/leads/leadTableConfig.test.mts` 14건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 앱 내 브라우저는 인증 세션이 없어 `/login` 이동까지만 확인했으며, 체크리스트 저장/새로고침 persistence live UI QA는 로그인 세션에서 재개한다.
 - 2026-06-11 Playwright 데스크톱 DB 관리 QA 통과: `중요 희망자만 보기` 선택 시 7건만 표시되고 모든 행이 `중요 표시 해제` 상태였으며, 화면에서 `핵심` 문구가 보이지 않음을 확인했다. `송파, 제주` 지역 검색은 3건을 반환했고, 예산 높은순 정렬과 별표 off/on persistence도 확인했다.
 - `npm run start -- -p 3000`
 - `http://localhost:3000/login` HTTP 200 확인
@@ -265,6 +273,8 @@
 - 실제 로그인 계정에서 출점 후보지 등록 -> 브랜드 선택 -> 주소 선택 -> 경쟁스캔 -> 상세 모달 확인
 - 가맹 운영 화면에서도 같은 `LocationCompetitionPanel`이 깨지지 않는지 확인
 - 정보공개서 브랜드 검색이 공식 API 지연/실패 시 로컬 캐시로 fallback 되는지 확인
+- 계약 전 준비 체크리스트 MVP와 목록 진행률, `계약 점주` 탭은 2026-06-12 구현했다. 남은 live QA는 로그인 세션에서 후보자별 체크 저장/새로고침 유지, 완료일/처리자/메모 저장, 다른 담당자/회사 범위 접근 차단, 14일 계약 잠금 기준이 수령 체크가 아니라 발송 이력 기준으로 유지되는지 확인하는 것이다.
+- 계약 전 준비 체크리스트의 미완료 필수 스텝 필터, 계약 준비 완료 필터, 계약 점주 상세 오픈 준비 체크리스트 통합은 후속 UI 범위로 남김
 - 브랜드 모니터링에서 Naver 공식 API 키 설정 후 스냅샷 저장/조회 확인
 
 ### P2
