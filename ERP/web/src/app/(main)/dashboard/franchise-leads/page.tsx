@@ -19,7 +19,11 @@ import { LeadMetaIntegrationPanel } from '@/components/franchise/leads/LeadMetaI
 import { LeadQuickActivityModal } from '@/components/franchise/leads/LeadQuickActivityModal';
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
 import { LeadWorkspaceTabs, type LeadWorkspaceTab } from '@/components/franchise/leads/LeadWorkspaceTabs';
+import { useLeadCustomerConversion } from '@/components/franchise/leads/useLeadCustomerConversion';
 import { useLeadDerivedData } from '@/components/franchise/leads/useLeadDerivedData';
+import { useLeadExcelImport } from '@/components/franchise/leads/useLeadExcelImport';
+import { useLeadLocationLinks } from '@/components/franchise/leads/useLeadLocationLinks';
+import { useLeadMetaIntegration } from '@/components/franchise/leads/useLeadMetaIntegration';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     FRANCHISE_LEAD_STATUSES,
@@ -27,15 +31,7 @@ import {
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import {
-    addUniqueLeadLocationLink,
-    createLeadLocationLink,
-    normalizeLeadLocationLinks,
-    updateLeadLocationLink
-} from '@/lib/franchise-lead-location-links';
-import type { LeadLocationLinkStatus, LeadLocationTargetType } from '@/lib/franchise-lead-location-links';
-import {
     EMPTY_FORM,
-    EMPTY_META_STATE,
     PAGE_SIZE_OPTIONS,
     RANGE_OPTIONS,
     SOURCE_FILTER_OPTIONS
@@ -49,25 +45,17 @@ import {
 import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
 import type {
     AuthUser,
-    ExternalPropertyListing,
     FranchiseLead,
-    FranchiseLocation,
     LeadActivity,
     LeadActivityType,
     LeadDbLayer,
     LeadFormState,
     LeadListResponse,
-    LeadLocationLink,
     LeadSummary,
     LeadViewMode,
     ManagerOption,
-    MetaConnection,
-    MetaFieldMapping,
-    MetaIntegrationState,
-    MetaLeadForm,
     RelatedBusinessCard,
-    RelatedCustomer,
-    UploadErrorRow
+    RelatedCustomer
 } from '@/components/franchise/leads/types';
 import {
     buildDateFromRange,
@@ -78,11 +66,7 @@ import {
     formatFullDateTime,
     formatDate,
     isContactActionDue,
-    mapLeadGradeToCustomerClass,
-    mapLeadGradeToCustomerGrade,
-    mapLeadStatusToCustomerStatus,
     parseBudgetInputToWon,
-    toCustomerBudgetValue,
     toDatetimeLocalValue,
     toRangeOption,
     toSourceFilterOption
@@ -116,7 +100,6 @@ export default function FranchiseLeadsPage() {
     const [total, setTotal] = React.useState(0);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
-    const [isUploading, setIsUploading] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<'전체' | FranchiseLeadStatus>('전체');
     const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
@@ -146,25 +129,15 @@ export default function FranchiseLeadsPage() {
     const [detailNextContactAt, setDetailNextContactAt] = React.useState('');
     const [bulkNextContactAt, setBulkNextContactAt] = React.useState('');
     const [isBulkUpdating, setIsBulkUpdating] = React.useState(false);
-    const [convertingLeadId, setConvertingLeadId] = React.useState('');
     const [relatedCustomers, setRelatedCustomers] = React.useState<RelatedCustomer[]>([]);
     const [relatedCards, setRelatedCards] = React.useState<RelatedBusinessCard[]>([]);
-    const [franchiseLocations, setFranchiseLocations] = React.useState<FranchiseLocation[]>([]);
-    const [externalListings, setExternalListings] = React.useState<ExternalPropertyListing[]>([]);
-    const [isLocationMatchLoading, setIsLocationMatchLoading] = React.useState(false);
-    const [isLocationLinkSaving, setIsLocationLinkSaving] = React.useState(false);
     const [managerOptions, setManagerOptions] = React.useState<ManagerOption[]>([]);
     const [managerMap, setManagerMap] = React.useState<Record<string, string>>({});
-    const [uploadErrors, setUploadErrors] = React.useState<UploadErrorRow[]>([]);
     const [isRelatedLoading, setIsRelatedLoading] = React.useState(false);
     const [detailWorkflow, setDetailWorkflow] = React.useState<LeadWorkflowDraft>(EMPTY_LEAD_WORKFLOW_DRAFT);
     const [isWorkflowSaving, setIsWorkflowSaving] = React.useState(false);
     const [selectedDisclosureEligibility, setSelectedDisclosureEligibility] = React.useState<DisclosureEligibility | null>(null);
-    const [metaState, setMetaState] = React.useState<MetaIntegrationState>(EMPTY_META_STATE);
-    const [isMetaLoading, setIsMetaLoading] = React.useState(false);
     const [isMetaPanelOpen, setIsMetaPanelOpen] = React.useState(false);
-    const [isMetaSyncing, setIsMetaSyncing] = React.useState(false);
-    const [savingMetaFormId, setSavingMetaFormId] = React.useState('');
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [form, setForm] = React.useState<LeadFormState>(EMPTY_FORM);
     const [alertConfig, setAlertConfig] = React.useState({
@@ -178,7 +151,6 @@ export default function FranchiseLeadsPage() {
         leadId: '',
         leadName: ''
     });
-    const uploadInputRef = React.useRef<HTMLInputElement>(null);
     const selectedLead = React.useMemo(
         () => leads.find(lead => lead.id === selectedLeadId) || null,
         [leads, selectedLeadId]
@@ -186,10 +158,6 @@ export default function FranchiseLeadsPage() {
     const quickActivityLead = React.useMemo(
         () => leads.find(lead => lead.id === quickActivityLeadId) || null,
         [leads, quickActivityLeadId]
-    );
-    const selectedLeadLocationLinks = React.useMemo(
-        () => normalizeLeadLocationLinks(selectedLead?.locationLinks),
-        [selectedLead?.locationLinks]
     );
 
     React.useEffect(() => {
@@ -297,35 +265,6 @@ export default function FranchiseLeadsPage() {
         }
     }, [companyName, createdFrom, createdTo, managerFilter, searchTerm, sourceFilter, statusFilter, userId]);
 
-    const fetchMetaIntegration = React.useCallback(async () => {
-        if (!userId) return;
-
-        setIsMetaLoading(true);
-        try {
-            const params = new URLSearchParams({ requesterId: userId });
-            if (companyName) params.set('company', companyName);
-
-            const response = await fetch(`/api/integrations/meta?${params.toString()}`, { cache: 'no-store' });
-            const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(readApiError(payload));
-            }
-
-            const data = unwrapApiData<MetaIntegrationState>(payload);
-            setMetaState({
-                connections: data.connections || [],
-                forms: data.forms || [],
-                imports: data.imports || [],
-                configReady: Boolean(data.configReady)
-            });
-        } catch (error) {
-            console.error('Failed to fetch Meta integration:', error);
-            setMetaState(EMPTY_META_STATE);
-        } finally {
-            setIsMetaLoading(false);
-        }
-    }, [companyName, userId]);
-
     React.useEffect(() => {
         if (!userId) return;
         const timer = window.setTimeout(() => {
@@ -334,64 +273,6 @@ export default function FranchiseLeadsPage() {
 
         return () => window.clearTimeout(timer);
     }, [fetchLeads, userId]);
-
-    React.useEffect(() => {
-        if (!userId) return;
-        void fetchMetaIntegration();
-    }, [fetchMetaIntegration, userId]);
-
-    React.useEffect(() => {
-        if (!userId) return;
-
-        const controller = new AbortController();
-        const params = new URLSearchParams({ requesterId: userId });
-        if (companyName) params.set('company', companyName);
-
-        const listingParams = new URLSearchParams(params);
-        listingParams.set('limit', '500');
-
-        setIsLocationMatchLoading(true);
-        Promise.allSettled([
-            fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
-                .then(async response => {
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(readApiError(payload));
-                    return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
-                }),
-            fetch(`/api/realty/listings?${listingParams.toString()}`, { cache: 'no-store', signal: controller.signal })
-                .then(async response => {
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(readApiError(payload));
-                    return unwrapApiData<{ listings?: ExternalPropertyListing[] }>(payload);
-                })
-        ])
-            .then(([locationResult, listingResult]) => {
-                if (locationResult.status === 'fulfilled') {
-                    setFranchiseLocations(locationResult.value.locations || []);
-                } else {
-                    console.error('Failed to fetch franchise locations for lead links:', locationResult.reason);
-                    setFranchiseLocations([]);
-                }
-
-                if (listingResult.status === 'fulfilled') {
-                    setExternalListings(listingResult.value.listings || []);
-                } else {
-                    console.error('Failed to fetch external listings for lead links:', listingResult.reason);
-                    setExternalListings([]);
-                }
-            })
-            .catch(error => {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
-                console.error('Failed to fetch lead location link targets:', error);
-                setFranchiseLocations([]);
-                setExternalListings([]);
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setIsLocationMatchLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [companyName, userId]);
 
     React.useEffect(() => {
         setCurrentPage(1);
@@ -541,7 +422,45 @@ export default function FranchiseLeadsPage() {
         return () => controller.abort();
     }, [companyName, selectedLead, selectedLeadDetailMode, userId]);
 
-    const canManageMeta = user?.role === 'admin' || user?.role === 'manager';
+    const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
+        setAlertConfig({ isOpen: true, title, message, type });
+    };
+
+    const {
+        canManageMeta,
+        disconnectMetaConnection,
+        fetchMetaIntegration,
+        isMetaLoading,
+        isMetaSyncing,
+        metaState,
+        savingMetaFormId,
+        startMetaConnect,
+        syncMetaLeads,
+        updateMetaFieldMapping,
+        updateMetaForm
+    } = useLeadMetaIntegration({
+        userId,
+        companyName,
+        userRole: user?.role,
+        onLeadsRefreshAction: fetchLeads,
+        showAlertAction: showAlert
+    });
+
+    const {
+        downloadTemplate,
+        downloadUploadErrorRows,
+        handleUploadFile,
+        isUploading,
+        uploadErrors,
+        uploadInputRef
+    } = useLeadExcelImport({
+        userId,
+        userName: user?.name,
+        companyName,
+        onLeadsRefreshAction: fetchLeads,
+        showAlertAction: showAlert
+    });
+
     const taskManagerScopeIds = React.useMemo(() => {
         const currentUserIds = [user?.uid, user?.id, userId].filter((id): id is string => Boolean(id));
         const matchedManager = managerOptions.find(manager => currentUserIds.some(id => manager.id === id || manager.uuid === id));
@@ -682,133 +601,6 @@ export default function FranchiseLeadsPage() {
     const openCustomerDetail = (customerId: string) => {
         if (!customerId) return;
         router.push(`/customers?openCustomerId=${encodeURIComponent(customerId)}`);
-    };
-
-    const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
-        setAlertConfig({ isOpen: true, title, message, type });
-    };
-
-    const startMetaConnect = () => {
-        if (!userId) return;
-        if (!metaState.configReady) {
-            showAlert('Meta 환경변수가 아직 설정되지 않았습니다. META_APP_ID, META_APP_SECRET, META_VERIFY_TOKEN을 먼저 설정해주세요.', 'error', 'Meta 연동 설정 필요');
-            return;
-        }
-
-        const params = new URLSearchParams({
-            requesterId: userId,
-            redirect: '/dashboard/franchise-leads'
-        });
-        if (companyName) params.set('company', companyName);
-        window.location.href = `/api/integrations/meta/connect?${params.toString()}`;
-    };
-
-    const updateMetaFormState = (formId: string, updater: (form: MetaLeadForm) => MetaLeadForm) => {
-        setMetaState(prev => ({
-            ...prev,
-            forms: prev.forms.map(form => form.id === formId ? updater(form) : form)
-        }));
-    };
-
-    const updateMetaForm = async (form: MetaLeadForm, updates: Partial<MetaLeadForm>) => {
-        if (!userId) return;
-
-        setSavingMetaFormId(form.id);
-        try {
-            const response = await fetch('/api/integrations/meta/forms', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requesterId: userId,
-                    id: form.id,
-                    enabled: updates.enabled,
-                    defaultManagerId: updates.defaultManagerId,
-                    fieldMapping: updates.fieldMapping
-                })
-            });
-            const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(readApiError(payload));
-            }
-
-            const data = unwrapApiData<{ form: MetaLeadForm }>(payload);
-            updateMetaFormState(form.id, () => data.form);
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : 'Meta Form 설정 저장에 실패했습니다.', 'error', 'Meta 설정 실패');
-            await fetchMetaIntegration();
-        } finally {
-            setSavingMetaFormId('');
-        }
-    };
-
-    const updateMetaFieldMapping = (formId: string, key: keyof MetaFieldMapping, value: string) => {
-        const nextValues = value.split(',').map(item => item.trim()).filter(Boolean);
-        updateMetaFormState(formId, form => ({
-            ...form,
-            fieldMapping: {
-                ...form.fieldMapping,
-                [key]: nextValues
-            }
-        }));
-    };
-
-    const syncMetaLeads = async (formId?: string) => {
-        if (!userId) return;
-
-        setIsMetaSyncing(true);
-        try {
-            const response = await fetch('/api/integrations/meta/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requesterId: userId,
-                    formId
-                })
-            });
-            const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(readApiError(payload));
-            }
-
-            const result = unwrapApiData<{ stats: Record<string, number>; formCount: number; errors?: Array<{ reason: string }> }>(payload);
-            await Promise.all([fetchMetaIntegration(), fetchLeads()]);
-            const stats = result.stats || {};
-            showAlert(
-                `Meta 동기화 완료\n- 신규: ${stats.created || 0}건\n- 기존 업데이트: ${stats.updated || 0}건\n- 중복: ${stats.duplicate || 0}건\n- 제외/오류: ${(stats.skipped || 0) + (stats.error || 0)}건${result.errors?.length ? `\n첫 오류: ${result.errors[0].reason}` : ''}`,
-                result.errors?.length ? 'info' : 'success',
-                'Meta 동기화'
-            );
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : 'Meta 리드 동기화에 실패했습니다.', 'error', 'Meta 동기화 실패');
-        } finally {
-            setIsMetaSyncing(false);
-        }
-    };
-
-    const disconnectMetaConnection = async (connection: MetaConnection) => {
-        if (!userId) return;
-        const confirmed = window.confirm(`${connection.metaPageName || connection.metaPageId} Meta 연결을 해제할까요? 기존 모객DB 리드는 삭제되지 않습니다.`);
-        if (!confirmed) return;
-
-        try {
-            const response = await fetch(`/api/integrations/meta?id=${encodeURIComponent(connection.id)}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterId: userId })
-            });
-            const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(readApiError(payload));
-            }
-
-            await fetchMetaIntegration();
-            showAlert('Meta 연결을 해제했습니다. 기존 가맹 희망자 데이터는 유지됩니다.', 'success', '연결 해제');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : 'Meta 연결 해제에 실패했습니다.', 'error', '연결 해제 실패');
-        }
     };
 
     const openCreateModal = () => {
@@ -960,6 +752,36 @@ export default function FranchiseLeadsPage() {
         await fetchLeads();
         return updatedLead;
     };
+
+    const {
+        convertingLeadId,
+        convertLeadToCustomer
+    } = useLeadCustomerConversion({
+        userId,
+        userName: user?.name,
+        companyName,
+        onLeadPatchAction: updateLeadWithPatch,
+        onCustomerOpenAction: openCustomerDetail,
+        showAlertAction: showAlert
+    });
+
+    const {
+        addLocationLink,
+        externalListings,
+        franchiseLocations,
+        isLocationLinkSaving,
+        isLocationMatchLoading,
+        removeLocationLink,
+        selectedLeadLocationLinks,
+        updateLocationLink
+    } = useLeadLocationLinks({
+        userId,
+        userName: user?.name,
+        companyName,
+        selectedLead,
+        onLeadPatchAction: updateLeadWithPatch,
+        showAlertAction: showAlert
+    });
 
     const toggleLeadPriority = async (lead: FranchiseLead) => {
         const nextGrade = lead.grade === 'HOT' ? 'WARM' : 'HOT';
@@ -1171,108 +993,6 @@ export default function FranchiseLeadsPage() {
         }
     };
 
-    const getLinkTargetName = (targetType: LeadLocationTargetType, targetId: string) => {
-        if (targetType === 'franchise_location') {
-            return franchiseLocations.find(location => location.id === targetId)?.name || '출점 후보지';
-        }
-        const listing = externalListings.find(item => item.id === targetId);
-        return listing?.title || listing?.address || '외부 상가';
-    };
-
-    const saveLocationLinks = async (links: readonly LeadLocationLink[], activityContent: string) => {
-        if (!selectedLead) return;
-
-        const nextActivity: LeadActivity = {
-            id: createActivityId(),
-            type: '메모',
-            content: activityContent,
-            createdAt: new Date().toISOString(),
-            createdBy: user?.name || userId
-        };
-
-        setIsLocationLinkSaving(true);
-        try {
-            await updateLeadWithPatch(selectedLead, {
-                locationLinks: links,
-                activityLog: [nextActivity, ...(selectedLead.activityLog || [])]
-            });
-        } finally {
-            setIsLocationLinkSaving(false);
-        }
-    };
-
-    const addLocationLink = async (targetType: LeadLocationTargetType, targetId: string) => {
-        if (!selectedLead) return;
-        const currentLinks = normalizeLeadLocationLinks(selectedLead.locationLinks);
-        const targetName = getLinkTargetName(targetType, targetId);
-        const nextLink = createLeadLocationLink({
-            id: createActivityId(),
-            targetType,
-            targetId,
-            createdAt: new Date().toISOString(),
-            createdBy: user?.name || userId
-        });
-
-        try {
-            const nextLinks = addUniqueLeadLocationLink(currentLinks, nextLink);
-            if (nextLinks.length === currentLinks.length) {
-                showAlert('이미 연결된 후보지입니다.', 'info', '중복 연결');
-                return;
-            }
-
-            await saveLocationLinks(nextLinks, `후보지 연결: ${targetName}`);
-            showAlert('가맹 희망자에 후보지를 연결했습니다.', 'success', '연결 완료');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '후보지 연결에 실패했습니다.', 'error', '연결 실패');
-        }
-    };
-
-    const updateLocationLink = async (
-        linkId: string,
-        patch: { readonly status?: LeadLocationLinkStatus; readonly memo?: string }
-    ) => {
-        if (!selectedLead) return;
-        const currentLinks = normalizeLeadLocationLinks(selectedLead.locationLinks);
-        const targetLink = currentLinks.find(link => link.id === linkId);
-        if (!targetLink) return;
-
-        const nextLinks = updateLeadLocationLink(currentLinks, linkId, {
-            ...patch,
-            updatedAt: new Date().toISOString()
-        });
-        const targetName = getLinkTargetName(targetLink.targetType, targetLink.targetId);
-        const activityContent = patch.status
-            ? `후보지 상태 변경: ${targetName} · ${patch.status}`
-            : `후보지 메모 업데이트: ${targetName}`;
-
-        try {
-            await saveLocationLinks(nextLinks, activityContent);
-            showAlert('후보지 연결 정보를 저장했습니다.', 'success', '저장 완료');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '후보지 연결 정보 저장에 실패했습니다.', 'error', '저장 실패');
-        }
-    };
-
-    const removeLocationLink = async (linkId: string) => {
-        if (!selectedLead) return;
-        const currentLinks = normalizeLeadLocationLinks(selectedLead.locationLinks);
-        const targetLink = currentLinks.find(link => link.id === linkId);
-        if (!targetLink) return;
-
-        const targetName = getLinkTargetName(targetLink.targetType, targetLink.targetId);
-        const nextLinks = currentLinks.filter(link => link.id !== linkId);
-
-        try {
-            await saveLocationLinks(nextLinks, `후보지 연결 삭제: ${targetName}`);
-            showAlert('후보지 연결을 삭제했습니다.', 'success', '삭제 완료');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '후보지 연결 삭제에 실패했습니다.', 'error', '삭제 실패');
-        }
-    };
-
     const linkRelatedCustomer = async (customer: RelatedCustomer) => {
         if (!selectedLead) return;
 
@@ -1304,147 +1024,6 @@ export default function FranchiseLeadsPage() {
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '명함 연결에 실패했습니다.', 'error', '연결 실패');
-        }
-    };
-
-    const findExistingCustomerForLead = async (lead: FranchiseLead) => {
-        const normalizedPhone = normalizeLeadPhone(lead.mobile);
-        if (!normalizedPhone || normalizedPhone.length < 4) return null;
-
-        const params = new URLSearchParams({
-            requesterId: userId,
-            search: normalizedPhone,
-            limit: 'all'
-        });
-        const targetCompanyName = lead.companyName || companyName;
-        if (targetCompanyName) params.set('company', targetCompanyName);
-
-        const response = await fetch(`/api/customers?${params.toString()}`, { cache: 'no-store' });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(readApiError(payload));
-
-        const customers = unwrapApiData<RelatedCustomer[]>(payload) || [];
-        return customers.find(customer => {
-            return normalizeLeadPhone(customer.mobile) === normalizedPhone ||
-                normalizeLeadPhone(customer.companyPhone) === normalizedPhone;
-        }) || null;
-    };
-
-    const markLeadConverted = async (lead: FranchiseLead, customer: { id: string; name?: string }, message: string) => {
-        const now = new Date().toISOString();
-        const nextActivity: LeadActivity = {
-            id: createActivityId(),
-            type: '고객전환',
-            content: message,
-            createdAt: now,
-            createdBy: user?.name || userId
-        };
-
-        await updateLeadWithPatch(lead, {
-            convertedCustomerId: customer.id,
-            convertedCustomerName: customer.name || lead.name,
-            convertedAt: now,
-            lastContactedAt: now,
-            nextContactAt: null,
-            linkedCustomerId: lead.linkedCustomerId || customer.id,
-            linkedCustomerName: lead.linkedCustomerName || customer.name || lead.name,
-            activityLog: [nextActivity, ...(lead.activityLog || [])]
-        });
-    };
-
-    const convertLeadToCustomer = async (lead: FranchiseLead) => {
-        if (!userId) return;
-        if (lead.convertedCustomerId) {
-            showAlert('이미 고객 DB로 전환된 리드입니다.', 'info', '전환 완료');
-            openCustomerDetail(lead.convertedCustomerId);
-            return;
-        }
-
-        setConvertingLeadId(lead.id);
-        try {
-            if (lead.linkedCustomerId) {
-                await markLeadConverted(
-                    lead,
-                    { id: lead.linkedCustomerId, name: lead.linkedCustomerName || lead.name },
-                    `기존 연결 고객(${lead.linkedCustomerName || lead.name})을 전환 완료로 표시`
-                );
-                showAlert('기존 연결 고객을 전환 완료로 표시했습니다.', 'success', '고객 전환 완료');
-                openCustomerDetail(lead.linkedCustomerId);
-                return;
-            }
-
-            const existingCustomer = await findExistingCustomerForLead(lead);
-            if (existingCustomer) {
-                await markLeadConverted(
-                    lead,
-                    { id: existingCustomer.id, name: existingCustomer.name },
-                    `동일 연락처 기존 고객(${existingCustomer.name})과 연결 후 전환 완료`
-                );
-                showAlert('같은 연락처의 기존 고객과 연결하고 전환 완료 처리했습니다.', 'success', '고객 전환 완료');
-                openCustomerDetail(existingCustomer.id);
-                return;
-            }
-
-            const memoLines = [
-                '[모객DB 전환]',
-                `전환일시: ${formatFullDateTime(new Date().toISOString())}`,
-                `모객상태: ${lead.status}`,
-                `유입경로: ${lead.source || '-'}`,
-                `관심브랜드: ${lead.interestedBrand || '-'}`,
-                `희망지역: ${lead.desiredRegion || '-'}`,
-                `예산: ${formatBudget(lead.budgetMin, lead.budgetMax)}`,
-                lead.memo ? `메모: ${lead.memo}` : ''
-            ].filter(Boolean);
-
-            const customerResponse = await fetch('/api/customers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requesterId: userId,
-                    managerId: lead.managerId || userId,
-                    companyName: lead.companyName || companyName,
-                    companyId: lead.companyId,
-                    name: lead.name,
-                    gender: 'M',
-                    grade: mapLeadGradeToCustomerGrade(lead.grade),
-                    class: mapLeadGradeToCustomerClass(lead.grade),
-                    status: mapLeadStatusToCustomerStatus(lead.status),
-                    feature: lead.interestedBrand ? `프랜차이즈 관심: ${lead.interestedBrand}` : '모객DB 전환 고객',
-                    address: lead.desiredRegion || '',
-                    mobile: lead.mobile || '',
-                    companyPhone: '',
-                    memoInterest: memoLines.join('\n'),
-                    memoHistory: memoLines.join('\n'),
-                    progressSteps: lead.status === '계약예정' || lead.status === '계약완료' ? ['계약상황'] : ['상담중'],
-                    wantedArea: lead.desiredRegion || '',
-                    wantedFeature: lead.memo || '',
-                    wantedItem: lead.interestedBrand || '',
-                    wantedIndustry: '프랜차이즈',
-                    wantedDepositMin: toCustomerBudgetValue(lead.budgetMin),
-                    wantedDepositMax: toCustomerBudgetValue(lead.budgetMax),
-                    sourceType: 'franchise-lead',
-                    sourceId: lead.id,
-                    franchiseLeadId: lead.id
-                })
-            });
-            const customerPayload = await customerResponse.json();
-            if (!customerResponse.ok) throw new Error(readApiError(customerPayload));
-
-            const customer = unwrapApiData<RelatedCustomer>(customerPayload);
-            if (!customer?.id) throw new Error('고객 생성 결과를 확인하지 못했습니다.');
-
-            await markLeadConverted(
-                lead,
-                { id: customer.id, name: customer.name || lead.name },
-                `신규 고객(${customer.name || lead.name})으로 전환`
-            );
-            showAlert('고객 DB로 전환했습니다.', 'success', '고객 전환 완료');
-            openCustomerDetail(customer.id);
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '고객 전환에 실패했습니다.', 'error', '고객 전환 실패');
-        } finally {
-            setConvertingLeadId('');
         }
     };
 
@@ -1494,102 +1073,6 @@ export default function FranchiseLeadsPage() {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.', 'error', '삭제 실패');
         }
-    };
-
-    const handleUploadFile = async (file: File) => {
-        if (!userId) return;
-
-        setIsUploading(true);
-        setUploadErrors([]);
-        try {
-            const XLSX = await import('xlsx');
-            const buffer = await file.arrayBuffer();
-            const workbook = XLSX.read(buffer, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
-
-            if (rows.length === 0) {
-                showAlert('업로드할 행이 없습니다.', 'error', '엑셀 업로드 실패');
-                return;
-            }
-
-            const response = await fetch('/api/franchise-leads/batch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    rows,
-                    meta: {
-                        requesterId: userId,
-                        managerId: userId,
-                        companyName
-                    }
-                })
-            });
-            const payload = await response.json();
-
-            if (!response.ok) {
-                throw new Error(readApiError(payload));
-            }
-
-            const result = unwrapApiData<{ created: number; updated: number; skipped: number; errors?: UploadErrorRow[] }>(payload);
-            const nextUploadErrors = result.errors || [];
-            setUploadErrors(nextUploadErrors);
-            await fetchLeads();
-            showAlert(
-                `신규 ${result.created}건, 업데이트 ${result.updated}건, 제외 ${result.skipped}건 처리했습니다.${nextUploadErrors.length > 0 ? `\n실패 행은 상단의 다운로드 버튼으로 확인할 수 있습니다.\n첫 오류: ${nextUploadErrors[0].row}행 - ${nextUploadErrors[0].reason}` : ''}`,
-                result.skipped > 0 ? 'info' : 'success',
-                '엑셀 업로드 완료'
-            );
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '엑셀 업로드 중 오류가 발생했습니다.', 'error', '엑셀 업로드 실패');
-        } finally {
-            setIsUploading(false);
-            if (uploadInputRef.current) uploadInputRef.current.value = '';
-        }
-    };
-
-    const downloadUploadErrorRows = async () => {
-        if (uploadErrors.length === 0) {
-            showAlert('다운로드할 실패 행이 없습니다.', 'info');
-            return;
-        }
-
-        const XLSX = await import('xlsx');
-        const originalKeys = Array.from(new Set(
-            uploadErrors.flatMap(error => Object.keys(error.data || {}))
-        )).filter(key => key !== '행번호' && key !== '오류사유');
-        const exportRows = uploadErrors.map(error => ({
-            ...(error.data || {}),
-            행번호: error.row,
-            오류사유: error.reason
-        }));
-        const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: ['행번호', '오류사유', ...originalKeys] });
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, '실패행');
-        XLSX.writeFile(workbook, 'franchise-leads-upload-errors.xlsx');
-    };
-
-    const downloadTemplate = async () => {
-        const XLSX = await import('xlsx');
-        const worksheet = XLSX.utils.json_to_sheet([
-            {
-                이름: '홍길동',
-                연락처: '010-1234-5678',
-                유입경로: '랜딩페이지',
-                상태: '문의접수',
-                등급: '중요',
-                희망지역: '서울 강남구',
-                '창업예산(만원)': '10000~20000',
-                관심브랜드: '미카도',
-                담당자: user?.name || '',
-                다음연락일: '2026-06-10',
-                메모: '첫 상담 요청'
-            }
-        ]);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, '모객DB');
-        XLSX.writeFile(workbook, 'franchise-leads-template.xlsx');
     };
 
     return (
