@@ -3,44 +3,29 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    BriefcaseBusiness,
-    CalendarClock,
-    CheckCircle2,
     Download,
     Link2,
-    MessageSquare,
-    Pencil,
     Plus,
-    RefreshCw,
-    Trash2,
-    Upload,
-    UserCheck,
-    UserRound,
-    X
+    Upload
 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
-import { LeadContractChecklistSection } from '@/components/franchise/LeadContractChecklistSection';
-import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import { LeadDashboard } from '@/components/franchise/leads/LeadDashboard';
 import { LeadDbWorkspace } from '@/components/franchise/leads/LeadDbWorkspace';
-import { LeadRegionMultiSelect } from '@/components/franchise/leads/LeadRegionMultiSelect';
+import { LeadDetailPanel, type LeadDetailMode } from '@/components/franchise/leads/LeadDetailPanel';
+import { LeadFormModal } from '@/components/franchise/leads/LeadFormModal';
+import { LeadMetaIntegrationPanel } from '@/components/franchise/leads/LeadMetaIntegrationPanel';
+import { LeadQuickActivityModal } from '@/components/franchise/leads/LeadQuickActivityModal';
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
 import { LeadWorkspaceTabs, type LeadWorkspaceTab } from '@/components/franchise/leads/LeadWorkspaceTabs';
 import { useLeadDerivedData } from '@/components/franchise/leads/useLeadDerivedData';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
-    FRANCHISE_LEAD_GRADES,
-    FRANCHISE_LEAD_SOURCES,
     FRANCHISE_LEAD_STATUSES,
-    getFranchiseLeadGradeLabel,
-    getFranchiseLeadStageLabel,
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
-import { LeadLocationLinkSection } from '@/components/franchise/LeadLocationLinkSection';
-import { LeadWorkflowSection } from '@/components/franchise/LeadWorkflowSection';
 import {
     addUniqueLeadLocationLink,
     createLeadLocationLink,
@@ -49,10 +34,8 @@ import {
 } from '@/lib/franchise-lead-location-links';
 import type { LeadLocationLinkStatus, LeadLocationTargetType } from '@/lib/franchise-lead-location-links';
 import {
-    ACTIVITY_TYPES,
     EMPTY_FORM,
     EMPTY_META_STATE,
-    META_FIELD_LABELS,
     PAGE_SIZE_OPTIONS,
     RANGE_OPTIONS,
     SOURCE_FILTER_OPTIONS
@@ -94,11 +77,7 @@ import {
     formatBudget,
     formatFullDateTime,
     formatDate,
-    formatDateTime,
     isContactActionDue,
-    isDueToday,
-    isPastDue,
-    isRawIntakeLead,
     mapLeadGradeToCustomerClass,
     mapLeadGradeToCustomerGrade,
     mapLeadStatusToCustomerStatus,
@@ -125,8 +104,6 @@ import {
 } from '@/lib/franchise-disclosure-deliveries';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from './page.module.css';
-
-type LeadDetailMode = 'default' | 'contractChecklist';
 
 export default function FranchiseLeadsPage() {
     const router = useRouter();
@@ -1713,172 +1690,23 @@ export default function FranchiseLeadsPage() {
             />
 
             {isMetaPanelOpen && (
-                <section className={styles.metaPanel}>
-                    <div className={styles.metaPanelHeader}>
-                        <div>
-                            <span className={styles.metaEyebrow}>Meta Lead Ads</span>
-                            <h2>Meta 연동 설정</h2>
-                            <p>각 회사의 Meta Page/Form에서 들어온 즉시양식 리드를 모객DB로 자동 등록합니다.</p>
-                        </div>
-                        <div className={styles.metaPanelActions}>
-                            <button className={styles.secondaryButton} onClick={() => void fetchMetaIntegration()} disabled={isMetaLoading}>
-                                <RefreshCw size={15} />
-                                {isMetaLoading ? '확인 중' : '상태 새로고침'}
-                            </button>
-                            {canManageMeta && (
-                                <button className={styles.primaryButton} onClick={() => void syncMetaLeads()} disabled={isMetaSyncing || metaEnabledForms.length === 0}>
-                                    <RefreshCw size={15} />
-                                    {isMetaSyncing ? '동기화 중' : '활성 Form 동기화'}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className={styles.metaSummaryGrid}>
-                        <article>
-                            <span>연결 Page</span>
-                            <strong>{metaState.connections.length.toLocaleString()}</strong>
-                            <small>{metaState.configReady ? 'Meta 환경변수 확인됨' : '환경변수 설정 필요'}</small>
-                        </article>
-                        <article>
-                            <span>활성 Form</span>
-                            <strong>{metaEnabledForms.length.toLocaleString()}</strong>
-                            <small>Webhook/백필 수집 대상</small>
-                        </article>
-                        <article>
-                            <span>마지막 동기화</span>
-                            <strong>{formatDateTime(metaLastSyncAt)}</strong>
-                            <small>Webhook 또는 백필 기준</small>
-                        </article>
-                        <article className={metaErrorCount > 0 ? styles.metaSummaryError : undefined}>
-                            <span>오류/주의</span>
-                            <strong>{metaErrorCount.toLocaleString()}</strong>
-                            <small>연결, Form, 최근 import 기준</small>
-                        </article>
-                    </div>
-
-                    {metaState.connections.length === 0 ? (
-                        <div className={styles.metaEmptyBox}>
-                            <strong>연결된 Meta Page가 없습니다.</strong>
-                            <p>회사 Meta 관리자 계정으로 로그인하면 접근 가능한 Page와 Lead Form을 가져옵니다.</p>
-                            {canManageMeta && (
-                                <button className={styles.primaryButton} onClick={startMetaConnect}>
-                                    <Link2 size={15} />
-                                    Meta 계정 연결
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        <div className={styles.metaConnectionGrid}>
-                            {metaState.connections.map(connection => (
-                                <article key={connection.id} className={styles.metaConnectionCard}>
-                                    <div>
-                                        <span className={connection.status === 'connected' ? styles.metaStatusOk : styles.metaStatusWarn}>
-                                            {connection.status === 'connected' ? '연결됨' : connection.status}
-                                        </span>
-                                        <h3>{connection.metaPageName || connection.metaPageId}</h3>
-                                        <p>Page ID {connection.metaPageId}</p>
-                                        {(connection.lastError || connection.subscribeError) && (
-                                            <small className={styles.metaErrorText}>{connection.lastError || connection.subscribeError}</small>
-                                        )}
-                                    </div>
-                                    {canManageMeta && (
-                                        <button className={styles.textDangerButton} onClick={() => void disconnectMetaConnection(connection)}>
-                                            연결 해제
-                                        </button>
-                                    )}
-                                </article>
-                            ))}
-                        </div>
-                    )}
-
-                    {metaState.forms.length > 0 && (
-                        <div className={styles.metaFormsList}>
-                            {metaState.forms.map(form => {
-                                const connection = metaState.connections.find(item => item.id === form.connectionId);
-                                return (
-                                    <article key={form.id} className={styles.metaFormCard}>
-                                        <div className={styles.metaFormTop}>
-                                            <div>
-                                                <h3>{form.metaFormName || form.metaFormId}</h3>
-                                                <p>{connection?.metaPageName || 'Meta Page'} · Form ID {form.metaFormId}</p>
-                                                {form.lastError && <small className={styles.metaErrorText}>{form.lastError}</small>}
-                                            </div>
-                                            <label className={styles.switchLabel}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.enabled}
-                                                    disabled={!canManageMeta || savingMetaFormId === form.id}
-                                                    onChange={(event) => void updateMetaForm(form, { enabled: event.target.checked })}
-                                                />
-                                                수집 활성화
-                                            </label>
-                                        </div>
-                                        <div className={styles.metaFormControls}>
-                                            <label>
-                                                기본 담당자
-                                                <select
-                                                    value={form.defaultManagerId || ''}
-                                                    disabled={!canManageMeta || savingMetaFormId === form.id}
-                                                    onChange={(event) => void updateMetaForm(form, { defaultManagerId: event.target.value })}
-                                                >
-                                                    <option value="">담당자 선택</option>
-                                                    {renderManagerOptions(form.defaultManagerId || undefined)}
-                                                </select>
-                                            </label>
-                                            <button
-                                                className={styles.secondaryButton}
-                                                onClick={() => void syncMetaLeads(form.id)}
-                                                disabled={!form.enabled || !canManageMeta || isMetaSyncing}
-                                            >
-                                                <RefreshCw size={14} />
-                                                이 Form 동기화
-                                            </button>
-                                        </div>
-                                        <div className={styles.metaMappingGrid}>
-                                            {META_FIELD_LABELS.map(field => (
-                                                <label key={field.key}>
-                                                    {field.label}
-                                                    <input
-                                                        value={(form.fieldMapping?.[field.key] || []).join(', ')}
-                                                        disabled={!canManageMeta || savingMetaFormId === form.id}
-                                                        placeholder={field.hint}
-                                                        onChange={(event) => updateMetaFieldMapping(form.id, field.key, event.target.value)}
-                                                    />
-                                                </label>
-                                            ))}
-                                        </div>
-                                        <div className={styles.metaFormFooter}>
-                                            <span>마지막 동기화: {formatDateTime(form.lastSyncedAt)}</span>
-                                            {canManageMeta && (
-                                                <button
-                                                    className={styles.primaryButton}
-                                                    onClick={() => void updateMetaForm(form, { fieldMapping: form.fieldMapping })}
-                                                    disabled={savingMetaFormId === form.id}
-                                                >
-                                                    {savingMetaFormId === form.id ? '저장 중' : '매핑 저장'}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {metaState.imports.length > 0 && (
-                        <div className={styles.metaImportLog}>
-                            <h3>최근 수집 로그</h3>
-                            {metaState.imports.slice(0, 6).map(item => (
-                                <div key={item.id}>
-                                    <span>{item.status}</span>
-                                    <strong>{item.metaLeadId}</strong>
-                                    <small>{item.errorMessage || formatDateTime(item.importedAt || item.receivedAt)}</small>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </section>
+                <LeadMetaIntegrationPanel
+                    metaState={metaState}
+                    enabledFormCount={metaEnabledForms.length}
+                    lastSyncAt={metaLastSyncAt}
+                    errorCount={metaErrorCount}
+                    canManageMeta={canManageMeta}
+                    isMetaLoading={isMetaLoading}
+                    isMetaSyncing={isMetaSyncing}
+                    savingMetaFormId={savingMetaFormId}
+                    renderManagerOptionsAction={renderManagerOptions}
+                    onRefreshAction={fetchMetaIntegration}
+                    onStartConnectAction={startMetaConnect}
+                    onSyncAction={syncMetaLeads}
+                    onDisconnectConnectionAction={disconnectMetaConnection}
+                    onUpdateFormAction={updateMetaForm}
+                    onUpdateFieldMappingAction={updateMetaFieldMapping}
+                />
             )}
 
             {workspaceTab === 'dashboard' && (
@@ -1962,413 +1790,71 @@ export default function FranchiseLeadsPage() {
             )}
 
             {isModalOpen && (
-                <div className={styles.modalBackdrop}>
-                    <form className={styles.modalCard} onSubmit={submitLead} role="dialog" aria-modal="true" aria-labelledby="franchise-lead-modal-title">
-                        <div className={styles.modalHeader}>
-                            <div>
-                                <h2 id="franchise-lead-modal-title">{form.id ? '가맹 희망자 수정' : '가맹 희망자 등록'}</h2>
-                                <p>본사 모객 DB에 필요한 중요 정보만 빠르게 기록합니다.</p>
-                            </div>
-                            <button type="button" onClick={closeModal} className={styles.closeButton} aria-label={`${form.id ? '가맹 희망자 수정' : '가맹 희망자 등록'} 닫기`}>
-                                <X size={20} strokeWidth={2.2} />
-                            </button>
-                        </div>
-
-                        <div className={styles.formGrid}>
-                            <label>
-                                가맹 희망자명 *
-                                <input value={form.name} onChange={(event) => setForm(prev => ({ ...prev, name: event.target.value }))} placeholder="홍길동" />
-                            </label>
-                            <label>
-                                연락처
-                                <input
-                                    value={form.mobile}
-                                    onChange={(event) => setForm(prev => ({ ...prev, mobile: formatLeadPhoneInput(event.target.value) }))}
-                                    placeholder="010-0000-0000"
-                                    inputMode="numeric"
-                                    autoComplete="tel"
-                                />
-                            </label>
-                            <label>
-                                상태
-                                <select value={form.status} onChange={(event) => setForm(prev => ({ ...prev, status: event.target.value as FranchiseLeadStatus }))}>
-                                    {FRANCHISE_LEAD_STATUSES.map(status => (
-                                        <option key={status} value={status}>{status}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                등급
-                                <select value={form.grade} onChange={(event) => setForm(prev => ({ ...prev, grade: event.target.value }))}>
-                                    <option value="">미지정</option>
-                                    {FRANCHISE_LEAD_GRADES.map(grade => (
-                                        <option key={grade} value={grade}>{getFranchiseLeadGradeLabel(grade)}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                유입경로
-                                <select value={form.source} onChange={(event) => setForm(prev => ({ ...prev, source: event.target.value }))}>
-                                    <option value="">미지정</option>
-                                    {FRANCHISE_LEAD_SOURCES.map(source => (
-                                        <option key={source} value={source}>{source}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <div className={styles.formField}>
-                                <span>희망지역</span>
-                                <LeadRegionMultiSelect
-                                    value={form.desiredRegion}
-                                    onChangeAction={(desiredRegion) => setForm(prev => ({ ...prev, desiredRegion }))}
-                                />
-                            </div>
-                            <label>
-                                예산 최소(만원)
-                                <input value={form.budgetMin} onChange={(event) => setForm(prev => ({ ...prev, budgetMin: event.target.value }))} placeholder="10000" />
-                            </label>
-                            <label>
-                                예산 최대(만원)
-                                <input value={form.budgetMax} onChange={(event) => setForm(prev => ({ ...prev, budgetMax: event.target.value }))} placeholder="20000" />
-                            </label>
-                            <label>
-                                관심브랜드
-                                <input value={form.interestedBrand} onChange={(event) => setForm(prev => ({ ...prev, interestedBrand: event.target.value }))} placeholder="미카도" />
-                            </label>
-                            <label>
-                                담당자
-                                <select value={form.managerId} onChange={(event) => setForm(prev => ({ ...prev, managerId: event.target.value }))}>
-                                    {renderManagerOptions(form.managerId)}
-                                </select>
-                            </label>
-                            <label>
-                                다음 연락일
-                                <input type="datetime-local" value={form.nextContactAt} onChange={(event) => setForm(prev => ({ ...prev, nextContactAt: event.target.value }))} />
-                            </label>
-                        </div>
-
-                        <label className={styles.memoLabel}>
-                            메모
-                            <textarea value={form.memo} onChange={(event) => setForm(prev => ({ ...prev, memo: event.target.value }))} placeholder="상담 내용, 관심 조건, 후속 액션을 기록하세요." />
-                        </label>
-
-                        <div className={styles.modalActions}>
-                            <button type="button" className={styles.secondaryButton} onClick={closeModal}>취소</button>
-                            <button type="submit" className={styles.primaryButton} disabled={isSaving}>
-                                {isSaving ? '저장 중' : '저장'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <LeadFormModal
+                    form={form}
+                    isSaving={isSaving}
+                    onFormChangeAction={setForm}
+                    onCloseAction={closeModal}
+                    onSubmitAction={submitLead}
+                    renderManagerOptionsAction={renderManagerOptions}
+                />
             )}
 
             {quickActivityLead && (
-                <div className={styles.modalBackdrop}>
-                    <form className={`${styles.modalCard} ${styles.quickModalCard}`} onSubmit={submitQuickActivity}>
-                        <div className={styles.modalHeader}>
-                            <div>
-                                <h2>상담 이력 빠른 추가</h2>
-                                <p>{quickActivityLead.name} · {quickActivityLead.mobile || '연락처 미입력'} · 담당자 {getManagerName(quickActivityLead.managerId)}</p>
-                            </div>
-                            <button type="button" onClick={closeQuickActivityModal} className={styles.closeButton} aria-label="빠른 활동 기록 닫기">
-                                <X size={20} strokeWidth={2.2} />
-                            </button>
-                        </div>
-                        <div className={styles.quickActivityBody}>
-                            <label>
-                                이력 유형
-                                <select value={quickActivityType} onChange={(event) => setQuickActivityType(event.target.value as LeadActivityType)}>
-                                    {ACTIVITY_TYPES.filter(type => type !== '상태변경' && type !== '고객전환').map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                상담 내용
-                                <textarea
-                                    value={quickActivityContent}
-                                    onChange={(event) => setQuickActivityContent(event.target.value)}
-                                    placeholder="통화 결과, 고객 반응, 다음 액션을 짧게 기록하세요."
-                                    autoFocus
-                                />
-                            </label>
-                        </div>
-                        <div className={styles.modalActions}>
-                            <button type="button" className={styles.secondaryButton} onClick={closeQuickActivityModal} disabled={isQuickSaving}>취소</button>
-                            <button type="submit" className={styles.primaryButton} disabled={isQuickSaving}>
-                                {isQuickSaving ? '저장 중' : '이력 추가'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <LeadQuickActivityModal
+                    lead={quickActivityLead}
+                    activityType={quickActivityType}
+                    activityContent={quickActivityContent}
+                    isSaving={isQuickSaving}
+                    getManagerNameAction={getManagerName}
+                    onActivityTypeChangeAction={setQuickActivityType}
+                    onActivityContentChangeAction={setQuickActivityContent}
+                    onCloseAction={closeQuickActivityModal}
+                    onSubmitAction={submitQuickActivity}
+                />
             )}
 
             {selectedLead && (
-                <div className={styles.detailBackdrop} onClick={closeLeadDetail}>
-                    <aside
-                        className={`${styles.detailPanel} ${selectedLeadDetailMode === 'contractChecklist' ? styles.contractChecklistOnlyPanel : ''}`}
-                        onClick={(event) => event.stopPropagation()}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="franchise-lead-detail-title"
-                    >
-                        <div className={styles.detailHeader}>
-                            <div>
-                                <span className={styles.detailEyebrow}>{selectedLeadDetailMode === 'contractChecklist' ? '계약 전 체크' : '가맹 희망자 상세'}</span>
-                                <h2 id="franchise-lead-detail-title">{selectedLead.name}</h2>
-                                <p>{selectedLead.mobile || '연락처 미입력'} · {selectedLead.source || '유입 미지정'} · 담당자 {getManagerName(selectedLead.managerId)}</p>
-                            </div>
-                            <button
-                                className={styles.closeButton}
-                                onClick={closeLeadDetail}
-                                aria-label={selectedLeadDetailMode === 'contractChecklist' ? '계약 전 체크 패널 닫기' : '상세 패널 닫기'}
-                            >
-                                <X size={20} strokeWidth={2.2} />
-                            </button>
-                        </div>
-
-                        {selectedLeadDetailMode === 'contractChecklist' ? (
-                            <div className={styles.contractChecklistOnlyContent}>
-                                <LeadContractChecklistSection
-                                    leadId={selectedLead.id}
-                                    userId={userId}
-                                    onSaved={markContractChecklistSaved}
-                                />
-                            </div>
-                        ) : (
-                            <>
-                        {selectedLead.convertedCustomerId && (
-                            <div className={styles.convertedNotice}>
-                                <CheckCircle2 size={16} />
-                                <div>
-                                    <strong>고객 DB 전환 완료</strong>
-                                    <span>{selectedLead.convertedCustomerName || selectedLead.name} · {formatFullDateTime(selectedLead.convertedAt)}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className={styles.detailQuickActions}>
-                            {isRawIntakeLead(selectedLead) && (
-                                <button className={styles.promoteButtonLarge} onClick={() => void promoteLeadToCandidate(selectedLead)}>
-                                    가맹 희망자 승격
-                                </button>
-                            )}
-                            <select
-                                value={selectedLead.status}
-                                onChange={(event) => void updateLeadStatus(selectedLead, event.target.value as FranchiseLeadStatus)}
-                            >
-                                {FRANCHISE_LEAD_STATUSES.map(status => (
-                                    <option key={status} value={status}>{status}</option>
-                                ))}
-                            </select>
-                            <button className={styles.secondaryButton} onClick={() => openEditModal(selectedLead)}>
-                                <Pencil size={15} />
-                                기본정보 수정
-                            </button>
-                            <button
-                                className={selectedLead.convertedCustomerId ? styles.secondaryButtonSuccess : styles.primaryButton}
-                                onClick={() => void convertLeadToCustomer(selectedLead)}
-                                disabled={Boolean(selectedLead.convertedCustomerId) || convertingLeadId === selectedLead.id}
-                            >
-                                <UserCheck size={15} />
-                                {selectedLead.convertedCustomerId ? '전환완료' : '고객 전환'}
-                            </button>
-                        </div>
-
-                        <div className={styles.detailContentGrid}>
-                            <section className={styles.detailSection}>
-                                <h3><UserRound size={16} /> 기본정보</h3>
-                                <div className={styles.detailInfoGrid}>
-                                    <div>
-                                        <span>단계</span>
-                                        <strong>{getFranchiseLeadStageLabel(selectedLead.leadStage)}</strong>
-                                    </div>
-                                    <div>
-                                        <span>우선순위</span>
-                                        <strong>{getFranchiseLeadGradeLabel(selectedLead.grade)}</strong>
-                                    </div>
-                                    <div>
-                                        <span>희망지역</span>
-                                        <strong>{selectedLead.desiredRegion || '-'}</strong>
-                                    </div>
-                                    <div>
-                                        <span>담당자</span>
-                                        <strong>{getManagerName(selectedLead.managerId)}</strong>
-                                    </div>
-                                    <div>
-                                        <span>예산</span>
-                                        <strong>{formatBudget(selectedLead.budgetMin, selectedLead.budgetMax)}</strong>
-                                    </div>
-                                    <div>
-                                        <span>관심브랜드</span>
-                                        <strong>{selectedLead.interestedBrand || '-'}</strong>
-                                    </div>
-                                </div>
-                                <div className={styles.detailMemo}>
-                                    <span>메모</span>
-                                    <p>{selectedLead.memo || '등록된 메모가 없습니다.'}</p>
-                                </div>
-                            </section>
-
-                            <section className={styles.detailSection}>
-                                <h3><CalendarClock size={16} /> 다음 연락</h3>
-                                <div className={styles.nextContactBox}>
-                                    <input
-                                        type="datetime-local"
-                                        value={detailNextContactAt}
-                                        onChange={(event) => setDetailNextContactAt(event.target.value)}
-                                    />
-                                    <button className={styles.primaryButton} onClick={() => void saveDetailNextContact()}>
-                                        저장
-                                    </button>
-                                </div>
-                                <p className={styles.detailHint}>
-                                    현재: {formatFullDateTime(selectedLead.nextContactAt)}
-                                    {isPastDue(selectedLead.nextContactAt) ? ' · 연락 지연' : isDueToday(selectedLead.nextContactAt) ? ' · 오늘 연락' : ''}
-                                </p>
-                            </section>
-
-                            <LeadWorkflowSection
-                                value={detailWorkflow}
-                                isSaving={isWorkflowSaving}
-                                onChange={setDetailWorkflow}
-                                onSave={() => void saveDetailWorkflow()}
-                            />
-
-                            <LeadDisclosureSection
-                                leadId={selectedLead.id}
-                                userId={userId}
-                                companyId={selectedLead.companyId}
-                                companyName={selectedLead.companyName || companyName}
-                                leadName={selectedLead.name}
-                                leadContact={selectedLead.mobile}
-                                interestedBrand={selectedLead.interestedBrand}
-                                onEligibilityChange={setSelectedDisclosureEligibility}
-                            />
-
-                            <LeadContractChecklistSection
-                                leadId={selectedLead.id}
-                                userId={userId}
-                                onSaved={markContractChecklistSaved}
-                            />
-
-                            <LeadLocationLinkSection
-                                links={selectedLeadLocationLinks}
-                                locations={franchiseLocations}
-                                externalListings={externalListings}
-                                isLoading={isLocationMatchLoading}
-                                isSaving={isLocationLinkSaving}
-                                onAddLinkAction={(targetType, targetId) => void addLocationLink(targetType, targetId)}
-                                onUpdateLinkAction={(linkId, patch) => void updateLocationLink(linkId, patch)}
-                                onRemoveLinkAction={(linkId) => void removeLocationLink(linkId)}
-                            />
-
-                            <section className={styles.detailSection}>
-                                <h3><MessageSquare size={16} /> 상담 이력</h3>
-                                <div className={styles.activityComposer}>
-                                    <select value={activityType} onChange={(event) => setActivityType(event.target.value as LeadActivityType)}>
-                                        {ACTIVITY_TYPES.map(type => (
-                                            <option key={type} value={type}>{type}</option>
-                                        ))}
-                                    </select>
-                                    <textarea
-                                        value={activityContent}
-                                        onChange={(event) => setActivityContent(event.target.value)}
-                                        placeholder="상담 내용, 고객 반응, 다음 액션을 기록하세요."
-                                    />
-                                    <button className={styles.primaryButton} onClick={() => void addLeadActivity()}>
-                                        이력 추가
-                                    </button>
-                                </div>
-                                <div className={styles.timeline}>
-                                    {(selectedLead.activityLog || []).length === 0 ? (
-                                        <div className={styles.emptyTimeline}>아직 상담 이력이 없습니다.</div>
-                                    ) : (
-                                        (selectedLead.activityLog || []).map(activity => (
-                                            <article key={activity.id} className={styles.timelineItem}>
-                                                <div>
-                                                    <span>{activity.type}</span>
-                                                    <time>{formatFullDateTime(activity.createdAt)}</time>
-                                                </div>
-                                                <p>{activity.content}</p>
-                                                <small>{activity.createdBy || '담당자 미상'}</small>
-                                            </article>
-                                        ))
-                                    )}
-                                </div>
-                            </section>
-
-                            <section className={styles.detailSection}>
-                                <h3><Link2 size={16} /> 기존 DB 연결</h3>
-                                <div className={styles.linkSummary}>
-                                    <span>{selectedLead.convertedCustomerId ? `전환: ${selectedLead.convertedCustomerName || selectedLead.convertedCustomerId}` : '고객 전환 전'}</span>
-                                    <span>{selectedLead.linkedCustomerId ? `고객: ${selectedLead.linkedCustomerName || selectedLead.linkedCustomerId}` : '고객 미연결'}</span>
-                                    <span>{selectedLead.linkedBusinessCardId ? `명함: ${selectedLead.linkedBusinessCardName || selectedLead.linkedBusinessCardId}` : '명함 미연결'}</span>
-                                </div>
-                                <div className={`${styles.conversionBox} ${selectedLead.convertedCustomerId ? styles.conversionBoxDone : ''}`}>
-                                    <div>
-                                        <strong>{selectedLead.convertedCustomerId ? '고객 DB 전환 완료' : '이 리드를 고객 DB로 전환'}</strong>
-                                        <p>
-                                            {selectedLead.convertedCustomerId
-                                                ? `${formatFullDateTime(selectedLead.convertedAt)} 전환되었습니다.`
-                                                : selectedLead.linkedCustomerId
-                                                    ? '이미 연결된 고객을 전환 완료로 표시합니다.'
-                                                    : '같은 연락처 고객이 있으면 연결하고, 없으면 새 고객을 생성합니다.'}
-                                        </p>
-                                    </div>
-                                    <button
-                                        className={selectedLead.convertedCustomerId ? styles.secondaryButtonSuccess : styles.primaryButton}
-                                        onClick={() => void convertLeadToCustomer(selectedLead)}
-                                        disabled={Boolean(selectedLead.convertedCustomerId) || convertingLeadId === selectedLead.id}
-                                    >
-                                        <UserCheck size={14} />
-                                        {selectedLead.convertedCustomerId ? '완료됨' : '전환 실행'}
-                                    </button>
-                                </div>
-
-                                <div className={styles.relatedGrid}>
-                                    <div className={styles.relatedColumn}>
-                                        <h4><UserRound size={14} /> 고객 후보</h4>
-                                        {isRelatedLoading ? (
-                                            <p>검색 중...</p>
-                                        ) : relatedCustomers.length === 0 ? (
-                                            <p>같은 연락처의 고객이 없습니다.</p>
-                                        ) : relatedCustomers.map(customer => (
-                                            <article key={customer.id} className={styles.relatedItem}>
-                                                <div>
-                                                    <strong>{customer.name}</strong>
-                                                    <span>{customer.mobile || customer.companyPhone || '-'}</span>
-                                                </div>
-                                                <button onClick={() => void linkRelatedCustomer(customer)}>
-                                                    연결
-                                                </button>
-                                            </article>
-                                        ))}
-                                    </div>
-                                    <div className={styles.relatedColumn}>
-                                        <h4><BriefcaseBusiness size={14} /> 명함 후보</h4>
-                                        {isRelatedLoading ? (
-                                            <p>검색 중...</p>
-                                        ) : relatedCards.length === 0 ? (
-                                            <p>같은 연락처의 명함이 없습니다.</p>
-                                        ) : relatedCards.map(card => (
-                                            <article key={card.id} className={styles.relatedItem}>
-                                                <div>
-                                                    <strong>{card.name}</strong>
-                                                    <span>{card.companyName || card.mobile || '-'}</span>
-                                                </div>
-                                                <button onClick={() => void linkRelatedCard(card)}>
-                                                    연결
-                                                </button>
-                                            </article>
-                                        ))}
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                            </>
-                        )}
-                    </aside>
-                </div>
+                <LeadDetailPanel
+                    lead={selectedLead}
+                    mode={selectedLeadDetailMode}
+                    userId={userId}
+                    companyName={companyName}
+                    convertingLeadId={convertingLeadId}
+                    detailNextContactAt={detailNextContactAt}
+                    detailWorkflow={detailWorkflow}
+                    isWorkflowSaving={isWorkflowSaving}
+                    selectedLocationLinks={selectedLeadLocationLinks}
+                    franchiseLocations={franchiseLocations}
+                    externalListings={externalListings}
+                    isLocationMatchLoading={isLocationMatchLoading}
+                    isLocationLinkSaving={isLocationLinkSaving}
+                    activityType={activityType}
+                    activityContent={activityContent}
+                    relatedCustomers={relatedCustomers}
+                    relatedCards={relatedCards}
+                    isRelatedLoading={isRelatedLoading}
+                    getManagerNameAction={getManagerName}
+                    onCloseAction={closeLeadDetail}
+                    onPromoteLeadToCandidateAction={promoteLeadToCandidate}
+                    onStatusChangeAction={updateLeadStatus}
+                    onEditAction={openEditModal}
+                    onConvertLeadAction={convertLeadToCustomer}
+                    onDetailNextContactAtChangeAction={setDetailNextContactAt}
+                    onSaveDetailNextContactAction={saveDetailNextContact}
+                    onDetailWorkflowChangeAction={setDetailWorkflow}
+                    onSaveDetailWorkflowAction={saveDetailWorkflow}
+                    onDisclosureEligibilityChangeAction={setSelectedDisclosureEligibility}
+                    onContractChecklistSavedAction={markContractChecklistSaved}
+                    onAddLocationLinkAction={addLocationLink}
+                    onUpdateLocationLinkAction={updateLocationLink}
+                    onRemoveLocationLinkAction={removeLocationLink}
+                    onActivityTypeChangeAction={setActivityType}
+                    onActivityContentChangeAction={setActivityContent}
+                    onAddLeadActivityAction={addLeadActivity}
+                    onLinkRelatedCustomerAction={linkRelatedCustomer}
+                    onLinkRelatedCardAction={linkRelatedCard}
+                />
             )}
 
             <AlertModal
