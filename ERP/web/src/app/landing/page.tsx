@@ -30,10 +30,11 @@ export default function LandingPage() {
                 <div className={`${styles.inner} ${styles.heroGrid}`}>
                     <div className={styles.heroCopy}>
                         <span className={styles.eyebrow}>프랜차이즈 본사 통합 운영 솔루션</span>
-                        <h1>모객부터 오픈 이후 운영까지, 프랜차이즈 본사 업무를 한 흐름으로</h1>
+                        <h1>상태별 파이프라인으로 모객부터 오픈 이후 운영까지 한눈에</h1>
                         <p>
-                            구글시트에 흩어진 모객 DB를 가맹 희망자, 출점 후보지, 정보공개서,
-                            계약 점주, 오픈 준비, 가맹 운영까지 이어지는 본사 업무 흐름으로 연결합니다.
+                            구글시트에 흩어진 모객 DB를 문의접수, 상담중, 입지검토, 계약예정처럼
+                            상태별로 추적하고 가맹 희망자, 출점 후보지, 정보공개서, 계약 점주,
+                            오픈 준비, 가맹 운영까지 이어지는 본사 업무 흐름으로 연결합니다.
                         </p>
                     </div>
                     <ProductPreview />

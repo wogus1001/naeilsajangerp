@@ -4,23 +4,23 @@ export function ProductPreview() {
     return (
         <section className={styles.preview} aria-label="제품 화면 미리보기">
             <div className={styles.previewTopbar}>
-                <strong>본사 업무 대시보드</strong>
-                <span>오늘 기준</span>
+                <strong>상태별 모객 파이프라인</strong>
+                <span>오늘 처리 기준</span>
             </div>
             <div className={styles.previewStats}>
-                <PreviewStat label="1차 유입 DB" value="128" />
-                <PreviewStat label="가맹 희망자" value="42" />
-                <PreviewStat label="계약 점주" value="9" />
+                <PreviewStat label="문의접수" value="128" />
+                <PreviewStat label="상담중" value="42" />
+                <PreviewStat label="계약예정" value="9" />
             </div>
             <div className={styles.previewBody}>
                 <div className={styles.previewPanel}>
                     <div className={styles.panelTitle}>
-                        <strong>모객 DB</strong>
-                        <span>상담 진행</span>
+                        <strong>모객 상태 추적</strong>
+                        <span>병목 확인</span>
                     </div>
-                    <PreviewRow name="김민준" meta="광고 · 서울 송파구" progress="72%" />
-                    <PreviewRow name="박서연" meta="박람회 · 대전 유성구" progress="48%" />
-                    <PreviewRow name="이도윤" meta="소개 · 부산 해운대구" progress="64%" />
+                    <PreviewRow name="문의접수" meta="광고·박람회 유입 DB" progress="100%" />
+                    <PreviewRow name="상담중" meta="담당자 후속 연락 관리" progress="72%" />
+                    <PreviewRow name="입지검토" meta="희망지역·후보지 연결" progress="48%" />
                 </div>
                 <div className={styles.previewPanel}>
                     <div className={styles.panelTitle}>
