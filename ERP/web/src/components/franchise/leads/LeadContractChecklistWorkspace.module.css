@@ -1,0 +1,225 @@
+.workspace {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+}
+
+.notice,
+.emptyState {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 14px;
+    line-height: 1.57;
+    padding: 18px;
+}
+
+.notice {
+    border-color: #fecdd3;
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.list {
+    display: grid;
+    gap: 10px;
+}
+
+.card {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(360px, 2fr) auto;
+    align-items: center;
+    gap: 18px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px 18px;
+}
+
+.person {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.person button {
+    appearance: none;
+    width: fit-content;
+    border: 0;
+    background: transparent;
+    color: #191f28;
+    cursor: pointer;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.45;
+    padding: 0;
+    text-align: left;
+}
+
+.person button:hover {
+    color: #3182f6;
+}
+
+.person span {
+    color: #6b7684;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.checkSummary {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.checkHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.checkHeader span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.checkHeader svg {
+    color: #3182f6;
+}
+
+.checkHeader strong {
+    color: #3182f6;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.progress {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e8eb;
+}
+
+.progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #3182f6;
+}
+
+.remainingList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.remainingList span,
+.completeChip {
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
+    padding: 5px 9px;
+}
+
+.remainingList .completeChip {
+    background: #ecfdf3;
+    color: #047857;
+}
+
+.openButton,
+.pagination button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+    padding: 0 14px;
+    white-space: nowrap;
+}
+
+.openButton:hover,
+.pagination button:not(:disabled):hover {
+    border-color: #3182f6;
+    color: #3182f6;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding-top: 2px;
+}
+
+.pagination div {
+    display: grid;
+    min-width: 88px;
+    text-align: center;
+}
+
+.pagination span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.pagination strong {
+    color: #191f28;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.45;
+}
+
+.pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+@media (max-width: 900px) {
+    .card {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .openButton {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .workspace {
+        padding: 12px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    .pagination {
+        gap: 8px;
+    }
+}

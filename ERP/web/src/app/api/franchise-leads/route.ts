@@ -14,11 +14,49 @@ import {
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadGrade,
     normalizeLeadPhone,
+    normalizeLeadStage,
     normalizeLeadStatus
 } from '@/lib/franchise-leads';
+import {
+    canEnterContractStatus,
+    getContractLockMessage,
+    getDisclosureEligibility,
+    isContractLockedLeadStatus
+} from '@/lib/franchise-disclosure-deliveries';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
 export const dynamic = 'force-dynamic';
+
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type RequesterProfile = NonNullable<Awaited<ReturnType<typeof getRequesterProfile>>>;
+type LeadData = Record<string, unknown>;
+type FranchiseLeadRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly manager_id: string | null;
+    readonly name: string | null;
+    readonly mobile: string | null;
+    readonly mobile_normalized: string | null;
+    readonly source: string | null;
+    readonly status: string | null;
+    readonly grade: string | null;
+    readonly desired_region: string | null;
+    readonly budget_min: number | null;
+    readonly budget_max: number | null;
+    readonly interested_brand: string | null;
+    readonly memo: string | null;
+    readonly next_contact_at: string | null;
+    readonly last_contacted_at: string | null;
+    readonly created_at: string | null;
+    readonly updated_at: string | null;
+    readonly data: LeadData | null;
+};
+type LeadAccessTarget = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly manager_id: string | null;
+};
+type TransformedLead = NonNullable<ReturnType<typeof transformLead>>;
 
 const LEAD_DB_SEARCH_COLUMNS = [
     'name',
@@ -69,7 +107,16 @@ const CONTROL_FIELDS = new Set([
     'last_contacted_at'
 ]);
 
-function getFirst(body: Record<string, any>, keys: string[]) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function parseRequestBody(request: Request): Promise<Record<string, unknown>> {
+    const body: unknown = await request.json();
+    return isRecord(body) ? body : {};
+}
+
+function getFirst(body: Record<string, unknown>, keys: string[]) {
     for (const key of keys) {
         if (Object.prototype.hasOwnProperty.call(body, key)) {
             return body[key];
@@ -78,7 +125,7 @@ function getFirst(body: Record<string, any>, keys: string[]) {
     return undefined;
 }
 
-function hasAny(body: Record<string, any>, keys: string[]) {
+function hasAny(body: Record<string, unknown>, keys: string[]) {
     return keys.some(key => Object.prototype.hasOwnProperty.call(body, key));
 }
 
@@ -116,7 +163,7 @@ function parseNullableDate(value: unknown): string | null {
     return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
 }
 
-function transformLead(row: any) {
+function transformLead(row: FranchiseLeadRow | null | undefined) {
     if (!row) return null;
     const data = row.data || {};
 
@@ -131,6 +178,7 @@ function transformLead(row: any) {
         source: row.source || '',
         status: row.status || DEFAULT_FRANCHISE_LEAD_STATUS,
         grade: row.grade || '',
+        leadStage: normalizeLeadStage(data.leadStage),
         desiredRegion: row.desired_region || '',
         budgetMin: row.budget_min,
         budgetMax: row.budget_max,
@@ -139,7 +187,8 @@ function transformLead(row: any) {
         nextContactAt: row.next_contact_at,
         lastContactedAt: row.last_contacted_at,
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        data
     };
 }
 
@@ -166,7 +215,11 @@ function buildLeadDbSearchFilter(terms: string[]) {
     return filters.length > 0 ? filters.join(',') : null;
 }
 
-function matchesLeadSearch(lead: any, terms: string[]) {
+function isTransformedLead(lead: TransformedLead | null): lead is TransformedLead {
+    return lead !== null;
+}
+
+function matchesLeadSearch(lead: TransformedLead, terms: string[]) {
     if (terms.length === 0) return true;
 
     const phone = normalizeLeadPhone(lead.mobile);
@@ -188,7 +241,7 @@ function matchesLeadSearch(lead: any, terms: string[]) {
     });
 }
 
-function buildSummary(leads: any[]) {
+function buildSummary(leads: readonly TransformedLead[]) {
     const byStatus = FRANCHISE_LEAD_STATUSES.reduce<Record<string, number>>((acc, status) => {
         acc[status] = 0;
         return acc;
@@ -231,7 +284,7 @@ function buildSummary(leads: any[]) {
     };
 }
 
-async function resolveCompanyScope(supabaseAdmin: any, requesterProfile: any, companyName: string | null) {
+async function resolveCompanyScope(supabaseAdmin: SupabaseAdminClient, requesterProfile: RequesterProfile, companyName: string | null) {
     const requestedCompanyId = companyName ? await resolveCompanyIdByName(supabaseAdmin, companyName) : null;
     if (companyName && !requestedCompanyId) {
         return { error: ok({ leads: [], summary: buildSummary([]), total: 0 }) };
@@ -251,11 +304,12 @@ async function resolveCompanyScope(supabaseAdmin: any, requesterProfile: any, co
     return { scopeMode: 'owner' as const, companyId: null };
 }
 
-async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, body: Record<string, any>) {
+async function resolveMutationScope(supabaseAdmin: SupabaseAdminClient, requesterProfile: RequesterProfile, body: Record<string, unknown>) {
     const companyName = cleanString(body.companyName);
     const resolvedCompanyId = companyName ? await resolveCompanyIdByName(supabaseAdmin, companyName) : null;
     const companyId = resolvedCompanyId || requesterProfile.company_id;
-    const managerUuid = await resolveUserUuid(supabaseAdmin, getFirst(body, ['managerId', 'manager_id']) || requesterProfile.id);
+    const requestedManagerId = cleanString(getFirst(body, ['managerId', 'manager_id'])) || requesterProfile.id;
+    const managerUuid = await resolveUserUuid(supabaseAdmin, requestedManagerId);
 
     if (!companyId || !managerUuid) {
         return { error: fail(400, 'VALIDATION_ERROR', 'Valid managerId and company scope are required') };
@@ -278,8 +332,8 @@ async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, b
     return { companyId, managerUuid };
 }
 
-function buildDataPayload(body: Record<string, any>, existingData: Record<string, any> = {}) {
-    const extras: Record<string, any> = {};
+function buildDataPayload(body: Record<string, unknown>, existingData: Record<string, unknown> = {}) {
+    const extras: Record<string, unknown> = {};
     Object.entries(body).forEach(([key, value]) => {
         if (!CONTROL_FIELDS.has(key)) {
             extras[key] = value;
@@ -294,7 +348,7 @@ function buildDataPayload(body: Record<string, any>, existingData: Record<string
     };
 }
 
-function buildInsertPayload(body: Record<string, any>, companyId: string, managerUuid: string) {
+function buildInsertPayload(body: Record<string, unknown>, companyId: string, managerUuid: string) {
     const name = cleanString(getFirst(body, ['name', '이름', '성명']));
     const mobile = cleanString(getFirst(body, ['mobile', '연락처', '휴대폰', '전화번호'])) || '';
 
@@ -327,8 +381,8 @@ function buildInsertPayload(body: Record<string, any>, companyId: string, manage
     };
 }
 
-function buildUpdatePayload(body: Record<string, any>, existingData: Record<string, any> = {}) {
-    const updates: Record<string, any> = {
+function buildUpdatePayload(body: Record<string, unknown>, existingData: Record<string, unknown> = {}) {
+    const updates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
         data: buildDataPayload(body, existingData)
     };
@@ -351,6 +405,62 @@ function buildUpdatePayload(body: Record<string, any>, existingData: Record<stri
     if (hasAny(body, ['lastContactedAt', 'last_contacted_at', '최근연락일'])) updates.last_contacted_at = parseNullableDate(getFirst(body, ['lastContactedAt', 'last_contacted_at', '최근연락일']));
 
     return updates;
+}
+
+function getErrorCode(error: unknown) {
+    if (!error || typeof error !== 'object' || !('code' in error)) return '';
+    return typeof error.code === 'string' ? error.code : '';
+}
+
+function getErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    if (!error || typeof error !== 'object' || !('message' in error)) return '';
+    return typeof error.message === 'string' ? error.message : '';
+}
+
+function isMissingLeadDisclosureSchemaError(error: unknown) {
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error);
+    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code)
+        && /franchise_lead_disclosure_deliveries/i.test(message);
+}
+
+function logRouteError(label: string, error: unknown) {
+    if (error instanceof Error) {
+        console.error(label, error);
+        return;
+    }
+    console.error(label, String(error));
+}
+
+async function validateDisclosureBeforeContractStatus(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    leadId: string,
+    nextStatus: ReturnType<typeof normalizeLeadStatus>
+) {
+    if (!isContractLockedLeadStatus(nextStatus)) return null;
+
+    const { data, error } = await supabaseAdmin
+        .from('franchise_lead_disclosure_deliveries')
+        .select('id, sent_at, document_title, document_version')
+        .eq('lead_id', leadId);
+
+    if (error) {
+        if (isMissingLeadDisclosureSchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '정보공개서 발송 이력 테이블이 아직 적용되지 않았습니다. supabase_franchise_disclosures_migration.sql 적용 후 다시 확인해주세요.'
+            );
+        }
+        throw error;
+    }
+
+    const eligibility = getDisclosureEligibility(data || []);
+    if (!canEnterContractStatus(nextStatus, eligibility)) {
+        return fail(400, 'VALIDATION_ERROR', getContractLockMessage(eligibility));
+    }
+    return null;
 }
 
 export async function GET(request: Request) {
@@ -457,7 +567,7 @@ export async function GET(request: Request) {
             }
         }
 
-        let leads = rows.map(transformLead).filter(Boolean);
+        let leads = rows.map(transformLead).filter(isTransformedLead);
         if (searchTerms.length > 0) {
             leads = leads.filter(lead => matchesLeadSearch(lead, searchTerms));
         }
@@ -470,7 +580,11 @@ export async function GET(request: Request) {
 
         return ok({ leads, summary, total });
     } catch (error) {
-        console.error('Franchise leads GET error:', error);
+        if (!(error instanceof Error)) {
+            logRouteError('Franchise leads GET error:', error);
+            return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise leads');
+        }
+        logRouteError('Franchise leads GET error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise leads');
     }
 }
@@ -478,12 +592,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const body = await request.json();
+        const body = await parseRequestBody(request);
 
         const requesterProfile = await getRequesterProfile(
             supabaseAdmin,
             request,
-            body.requesterId || body.userId || body.managerId || null
+            cleanString(getFirst(body, ['requesterId', 'userId', 'managerId']))
         );
         if (!requesterProfile) {
             return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
@@ -530,7 +644,11 @@ export async function POST(request: Request) {
         if (error) throw error;
         return ok({ lead: transformLead(inserted), deduplicated: false }, 201);
     } catch (error) {
-        console.error('Franchise leads POST error:', error);
+        if (!(error instanceof Error)) {
+            logRouteError('Franchise leads POST error:', error);
+            return fail(500, 'INTERNAL_ERROR', 'Failed to create franchise lead');
+        }
+        logRouteError('Franchise leads POST error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to create franchise lead');
     }
 }
@@ -538,25 +656,26 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const body = await request.json();
+        const body = await parseRequestBody(request);
 
         const requesterProfile = await getRequesterProfile(
             supabaseAdmin,
             request,
-            body.requesterId || body.userId || body.managerId || null
+            cleanString(getFirst(body, ['requesterId', 'userId', 'managerId']))
         );
         if (!requesterProfile) {
             return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
         }
 
-        if (!body.id) {
+        const leadId = cleanString(body.id);
+        if (!leadId) {
             return fail(400, 'VALIDATION_ERROR', 'ID required');
         }
 
         const { data: existing, error: fetchError } = await supabaseAdmin
             .from('franchise_leads')
             .select('*')
-            .eq('id', body.id)
+            .eq('id', leadId)
             .single();
 
         if (fetchError || !existing) {
@@ -570,16 +689,18 @@ export async function PUT(request: Request) {
         const updates = buildUpdatePayload(body, existing.data || {});
         let targetCompanyId = existing.company_id;
 
-        if (body.companyName) {
-            const companyId = await resolveCompanyIdByName(supabaseAdmin, body.companyName);
+        const companyName = cleanString(body.companyName);
+        if (companyName) {
+            const companyId = await resolveCompanyIdByName(supabaseAdmin, companyName);
             if (companyId) {
                 updates.company_id = companyId;
                 targetCompanyId = companyId;
             }
         }
 
-        if (body.managerId) {
-            const managerUuid = await resolveUserUuid(supabaseAdmin, body.managerId);
+        const requestedManagerId = cleanString(body.managerId);
+        if (requestedManagerId) {
+            const managerUuid = await resolveUserUuid(supabaseAdmin, requestedManagerId);
             if (!managerUuid) {
                 return fail(400, 'VALIDATION_ERROR', 'Invalid managerId');
             }
@@ -601,13 +722,21 @@ export async function PUT(request: Request) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
         }
 
+        if (hasAny(body, ['status', '상태'])) {
+            const nextStatus = normalizeLeadStatus(getFirst(body, ['status', '상태']));
+            if (nextStatus !== existing.status && isContractLockedLeadStatus(nextStatus)) {
+                const disclosureGuard = await validateDisclosureBeforeContractStatus(supabaseAdmin, existing.id, nextStatus);
+                if (disclosureGuard) return disclosureGuard;
+            }
+        }
+
         if (updates.mobile_normalized) {
             const { data: duplicate } = await supabaseAdmin
                 .from('franchise_leads')
                 .select('id')
                 .eq('company_id', targetCompanyId)
                 .eq('mobile_normalized', updates.mobile_normalized)
-                .neq('id', body.id)
+                .neq('id', leadId)
                 .maybeSingle();
 
             if (duplicate) {
@@ -618,14 +747,18 @@ export async function PUT(request: Request) {
         const { data: updated, error } = await supabaseAdmin
             .from('franchise_leads')
             .update(updates)
-            .eq('id', body.id)
+            .eq('id', leadId)
             .select()
             .single();
 
         if (error) throw error;
         return ok({ lead: transformLead(updated) });
     } catch (error) {
-        console.error('Franchise leads PUT error:', error);
+        if (!(error instanceof Error)) {
+            logRouteError('Franchise leads PUT error:', error);
+            return fail(500, 'INTERNAL_ERROR', 'Failed to update franchise lead');
+        }
+        logRouteError('Franchise leads PUT error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to update franchise lead');
     }
 }
@@ -636,23 +769,26 @@ export async function DELETE(request: Request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
-        let body: any = null;
+        let body: Record<string, unknown> | null = null;
         try {
-            body = await request.json();
-        } catch {
+            body = await parseRequestBody(request);
+        } catch (error) {
+            if (!(error instanceof SyntaxError)) throw error;
             body = null;
         }
 
         const requesterProfile = await getRequesterProfile(
             supabaseAdmin,
             request,
-            body?.requesterId || body?.userId || body?.managerId || null
+            body ? cleanString(getFirst(body, ['requesterId', 'userId', 'managerId'])) : null
         );
         if (!requesterProfile) {
             return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
         }
 
-        const ids: string[] = body && Array.isArray(body.ids) ? body.ids : id ? [id] : [];
+        const ids = body && Array.isArray(body.ids)
+            ? body.ids.filter((item): item is string => typeof item === 'string' && item.length > 0)
+            : id ? [id] : [];
         if (ids.length === 0) {
             return fail(400, 'VALIDATION_ERROR', 'ID or IDs required');
         }
@@ -664,7 +800,7 @@ export async function DELETE(request: Request) {
 
         if (targetError) throw targetError;
 
-        const forbidden = (targets || []).some((target: any) => !canAccessCompanyResource(requesterProfile, target));
+        const forbidden = (targets || []).some((target: LeadAccessTarget) => !canAccessCompanyResource(requesterProfile, target));
         if (forbidden) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
         }
@@ -677,7 +813,11 @@ export async function DELETE(request: Request) {
         if (error) throw error;
         return ok({ success: true, count: count || 0 });
     } catch (error) {
-        console.error('Franchise leads DELETE error:', error);
+        if (!(error instanceof Error)) {
+            logRouteError('Franchise leads DELETE error:', error);
+            return fail(500, 'INTERNAL_ERROR', 'Failed to delete franchise lead');
+        }
+        logRouteError('Franchise leads DELETE error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to delete franchise lead');
     }
 }

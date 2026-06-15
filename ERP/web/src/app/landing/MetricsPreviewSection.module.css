@@ -1,0 +1,208 @@
+.metricsSection {
+    border-top: 1px solid #e5e8eb;
+    background: #f9fafb;
+}
+
+.metricsGrid {
+    display: grid;
+    align-items: start;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.metricPanel,
+.sidePanel {
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 20px;
+}
+
+.metricPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.sidePanels {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.panelHeader h3 {
+    margin: 0;
+    color: #191f28;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+}
+
+.panelHeader p {
+    margin: 6px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+    word-break: keep-all;
+}
+
+.panelHeader span {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.metricSummary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.metricSummary div {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 14px;
+}
+
+.metricSummary span,
+.barRow span,
+.trendBar span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.metricSummary strong {
+    display: block;
+    margin-top: 8px;
+    color: #191f28;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.metricSummary p {
+    margin: 6px 0 0;
+    color: #8b95a1;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.barList {
+    display: grid;
+    gap: 14px;
+}
+
+.barRow {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) 38px;
+    align-items: center;
+    gap: 12px;
+}
+
+.barRow strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.barTrack {
+    overflow: hidden;
+    height: 12px;
+    border-radius: 999px;
+    background: #f2f4f6;
+}
+
+.barFill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #3182f6;
+}
+
+.sidePanel {
+    display: grid;
+    gap: 16px;
+}
+
+.sidePanel .panelHeader {
+    align-items: center;
+}
+
+.sidePanel .panelHeader h3 {
+    font-size: 17px;
+}
+
+.trendChart {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: end;
+    gap: 10px;
+    min-height: 146px;
+}
+
+.trendBar {
+    display: grid;
+    align-items: end;
+    gap: 8px;
+    height: 100%;
+    text-align: center;
+}
+
+.trendBar strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.trendBar i {
+    display: block;
+    min-height: 18px;
+    border-radius: 8px 8px 2px 2px;
+    background: #3182f6;
+}
+
+@media (max-width: 1040px) {
+    .sidePanels {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .metricPanel,
+    .sidePanel {
+        padding: 16px;
+    }
+
+    .panelHeader {
+        flex-direction: column;
+    }
+
+    .metricSummary,
+    .sidePanels {
+        grid-template-columns: 1fr;
+    }
+
+    .barRow {
+        grid-template-columns: 72px minmax(0, 1fr) 32px;
+        gap: 10px;
+    }
+
+    .trendChart {
+        min-height: 132px;
+    }
+}

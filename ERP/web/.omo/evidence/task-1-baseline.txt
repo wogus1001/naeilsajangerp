@@ -1,0 +1,21 @@
+Task: T1 lock the pre-work guardrails and dirty-worktree baseline
+Timestamp: 2026-06-11T11:04:17+0900
+Branch: codex/franchise-leads-20260608
+Upstream status: ahead 4 from origin/codex/franchise-leads-20260608
+
+Commands:
+- git status --short --branch
+- git diff -- ERP/web/handoff.md
+- git diff --stat
+- git log -8 --oneline --decorate
+
+Observed:
+- Existing committed HEAD: 03dafac feat: connect manual promoted realty to operations
+- The only current task-local dirty path before implementation is untracked ERP/web/.omo/
+- ERP/web/handoff.md diff is empty.
+- No unrelated tracked ERP/web source/doc diffs are present.
+
+Guardrails:
+- Do not edit ERP/web/handoff.md.
+- Do not stage unrelated workspace paths outside the intended ERP/web plan/work changes.
+- Preserve SearchAPI 429 provider protection as deferred P1 unless the user changes scope.

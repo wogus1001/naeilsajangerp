@@ -1,0 +1,9 @@
+{
+  "synced_at": "2026-06-11T15:02:33+09:00",
+  "design_hash": "e3c93738b4b0",
+  "shims": {
+    "CLAUDE.md": "672475c77b07",
+    "AGENTS.md": "be71c8d154c9",
+    ".cursor/rules/omd-design.mdc": "f188a3882e27"
+  }
+}

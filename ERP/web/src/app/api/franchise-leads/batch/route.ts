@@ -17,7 +17,20 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-type BatchRow = Record<string, any>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type RequesterProfile = NonNullable<Awaited<ReturnType<typeof getRequesterProfile>>>;
+type BatchRow = Record<string, unknown>;
+type ProfileSummary = {
+    readonly id: string;
+    readonly name?: string | null;
+    readonly email?: string | null;
+    readonly company_id?: string | null;
+};
+type FranchiseLeadRow = {
+    readonly id: string;
+    readonly mobile_normalized: string | null;
+    readonly data: Record<string, unknown> | null;
+};
 
 const NAME_KEYS = ['이름', '성명', '고객명', '후보자명', 'name'];
 const MOBILE_KEYS = ['연락처', '휴대폰', '전화번호', '핸드폰', 'mobile', 'phone'];
@@ -90,15 +103,17 @@ function parseNullableDate(value: unknown): string | null {
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-function getDisplayId(profile: any) {
-    return profile.email?.endsWith('@example.com') ? profile.email.split('@')[0] : profile.email;
+function getDisplayId(profile: ProfileSummary) {
+    if (!profile.email) return profile.id;
+    return profile.email.endsWith('@example.com') ? profile.email.split('@')[0] : profile.email;
 }
 
-async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, meta: BatchRow) {
+async function resolveMutationScope(supabaseAdmin: SupabaseAdminClient, requesterProfile: RequesterProfile, meta: BatchRow) {
     const companyName = cleanString(meta.companyName || meta.userCompanyName);
     const resolvedCompanyId = companyName ? await resolveCompanyIdByName(supabaseAdmin, companyName) : null;
     const companyId = resolvedCompanyId || requesterProfile.company_id;
-    const managerUuid = await resolveUserUuid(supabaseAdmin, meta.managerId || meta.requesterId || meta.userId || requesterProfile.id);
+    const requestedManagerId = cleanString(meta.managerId || meta.requesterId || meta.userId) || requesterProfile.id;
+    const managerUuid = await resolveUserUuid(supabaseAdmin, requestedManagerId);
 
     if (!companyId || !managerUuid) {
         return { error: fail(400, 'VALIDATION_ERROR', 'Valid managerId and company scope are required') };
@@ -121,7 +136,7 @@ async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, m
     return { companyId, managerUuid };
 }
 
-async function buildManagerMap(supabaseAdmin: any, rows: BatchRow[], companyId: string) {
+async function buildManagerMap(supabaseAdmin: SupabaseAdminClient, rows: BatchRow[], companyId: string) {
     const emails = new Set<string>();
     const names = new Set<string>();
 
@@ -141,7 +156,7 @@ async function buildManagerMap(supabaseAdmin: any, rows: BatchRow[], companyId: 
             .eq('company_id', companyId)
             .in('email', Array.from(emails));
 
-        profiles?.forEach((profile: any) => {
+        profiles?.forEach((profile: ProfileSummary) => {
             if (profile.email) {
                 managerMap.set(profile.email, { uuid: profile.id, displayId: getDisplayId(profile) });
             }
@@ -155,7 +170,7 @@ async function buildManagerMap(supabaseAdmin: any, rows: BatchRow[], companyId: 
             .eq('company_id', companyId)
             .in('name', Array.from(names));
 
-        profiles?.forEach((profile: any) => {
+        profiles?.forEach((profile: ProfileSummary) => {
             if (profile.name) {
                 managerMap.set(profile.name.normalize('NFC'), { uuid: profile.id, displayId: getDisplayId(profile) });
             }
@@ -200,7 +215,8 @@ function buildPayload(row: BatchRow, companyId: string, managerUuid: string) {
             next_contact_at: parseNullableDate(getCell(row, NEXT_CONTACT_KEYS)),
             data: {
                 originalRow: row,
-                budgetRaw: cleanString(getCell(row, BUDGET_KEYS))
+                budgetRaw: cleanString(getCell(row, BUDGET_KEYS)),
+                leadStage: 'raw_intake'
             }
         }
     };
@@ -234,7 +250,7 @@ export async function POST(request: Request) {
             rows.map(row => normalizeLeadPhone(getCell(row, MOBILE_KEYS))).filter(Boolean)
         ));
 
-        const existingByPhone = new Map<string, any>();
+        const existingByPhone = new Map<string, FranchiseLeadRow>();
         for (let i = 0; i < normalizedPhones.length; i += 200) {
             const chunk = normalizedPhones.slice(i, i + 200);
             const { data: existing, error } = await supabaseAdmin
@@ -244,7 +260,11 @@ export async function POST(request: Request) {
                 .in('mobile_normalized', chunk);
 
             if (error) throw error;
-            existing?.forEach((lead: any) => existingByPhone.set(lead.mobile_normalized, lead));
+            existing?.forEach((lead: FranchiseLeadRow) => {
+                if (lead.mobile_normalized) {
+                    existingByPhone.set(lead.mobile_normalized, lead);
+                }
+            });
         }
 
         let created = 0;
@@ -278,7 +298,11 @@ export async function POST(request: Request) {
                     .from('franchise_leads')
                     .update({
                         ...rowPayload,
-                        data: { ...(existing.data || {}), ...rowPayload.data },
+                        data: {
+                            ...(existing.data || {}),
+                            ...rowPayload.data,
+                            leadStage: (existing.data || {}).leadStage || 'candidate'
+                        },
                         updated_at: now
                     })
                     .eq('id', existing.id);
@@ -315,7 +339,11 @@ export async function POST(request: Request) {
 
         return ok({ created, updated, skipped, errors });
     } catch (error) {
-        console.error('Franchise leads batch POST error:', error);
+        if (error instanceof Error) {
+            console.error('Franchise leads batch POST error:', error);
+        } else {
+            console.error('Franchise leads batch POST error:', String(error));
+        }
         return fail(500, 'INTERNAL_ERROR', 'Failed to import franchise leads');
     }
 }

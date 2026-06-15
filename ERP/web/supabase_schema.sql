@@ -1,5 +1,6 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
+create extension if not exists pg_trgm;
 
 -- 1. COMPANIES Table (Tenants)
 create table if not exists public.companies (
@@ -340,3 +341,671 @@ create index if not exists idx_franchise_leads_company_manager
 create unique index if not exists idx_franchise_leads_company_mobile_unique
   on public.franchise_leads (company_id, mobile_normalized)
   where mobile_normalized is not null and mobile_normalized <> '';
+
+create unique index if not exists idx_franchise_leads_id_company_unique
+  on public.franchise_leads (id, company_id);
+
+-- 19. FRANCHISE LOCATION MASTER Tables
+create table if not exists public.franchise_locations (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  manager_id uuid references public.profiles(id),
+  name text not null,
+  location_type text default '예정점' not null,
+  brand text,
+  status text default '검토중' not null,
+  region text,
+  address text,
+  latitude numeric,
+  longitude numeric,
+  opened_at date,
+  source_property_id text references public.properties(id) on delete set null,
+  memo text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.franchise_locations enable row level security;
+
+create policy "Company members can view franchise_locations" on public.franchise_locations
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_locations" on public.franchise_locations
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_locations" on public.franchise_locations
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_locations" on public.franchise_locations
+  for delete using (company_id = get_my_company_id());
+
+create index if not exists idx_franchise_locations_company_updated
+  on public.franchise_locations (company_id, updated_at desc);
+
+create index if not exists idx_franchise_locations_company_type_status
+  on public.franchise_locations (company_id, location_type, status);
+
+create index if not exists idx_franchise_locations_company_region
+  on public.franchise_locations (company_id, region);
+
+-- 20. FRANCHISE OPENING PROJECTS Tables
+create table if not exists public.franchise_opening_projects (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  location_id uuid references public.franchise_locations(id) on delete cascade not null,
+  manager_id uuid references public.profiles(id),
+  status text default '준비중' not null,
+  target_open_date date,
+  memo text,
+  tasks jsonb default '[]'::jsonb not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.franchise_opening_projects enable row level security;
+
+create policy "Company members can view franchise_opening_projects" on public.franchise_opening_projects
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_opening_projects" on public.franchise_opening_projects
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_opening_projects" on public.franchise_opening_projects
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_opening_projects" on public.franchise_opening_projects
+  for delete using (company_id = get_my_company_id());
+
+create unique index if not exists idx_franchise_opening_projects_company_location
+  on public.franchise_opening_projects (company_id, location_id);
+
+create index if not exists idx_franchise_opening_projects_company_status_date
+  on public.franchise_opening_projects (company_id, status, target_open_date);
+
+create index if not exists idx_franchise_opening_projects_location
+  on public.franchise_opening_projects (location_id);
+
+-- 21. FRANCHISE DISCLOSURE DOCUMENTS Tables
+create table if not exists public.franchise_disclosure_documents (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  created_by uuid references public.profiles(id) on delete set null,
+  title text not null,
+  brand_name text,
+  franchisor_name text,
+  version text default 'v1' not null,
+  file_url text,
+  file_name text,
+  issued_at date,
+  memo text,
+  status text default 'active' not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+create table if not exists public.franchise_lead_disclosure_deliveries (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  lead_id uuid references public.franchise_leads(id) on delete cascade not null,
+  document_id uuid references public.franchise_disclosure_documents(id) on delete set null,
+  sent_by uuid references public.profiles(id) on delete set null,
+  sent_at timestamp with time zone not null,
+  channel text default 'manual' not null,
+  recipient_name text,
+  recipient_contact text,
+  document_title text not null,
+  document_version text default 'v1' not null,
+  evidence_url text,
+  memo text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.franchise_disclosure_documents enable row level security;
+alter table public.franchise_lead_disclosure_deliveries enable row level security;
+
+create policy "Company members can view franchise_disclosure_documents" on public.franchise_disclosure_documents
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_disclosure_documents" on public.franchise_disclosure_documents
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_disclosure_documents" on public.franchise_disclosure_documents
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_disclosure_documents" on public.franchise_disclosure_documents
+  for delete using (company_id = get_my_company_id());
+
+create policy "Company members can view franchise_lead_disclosure_deliveries" on public.franchise_lead_disclosure_deliveries
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_lead_disclosure_deliveries" on public.franchise_lead_disclosure_deliveries
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_lead_disclosure_deliveries" on public.franchise_lead_disclosure_deliveries
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_lead_disclosure_deliveries" on public.franchise_lead_disclosure_deliveries
+  for delete using (company_id = get_my_company_id());
+
+create index if not exists idx_franchise_disclosure_documents_company_status
+  on public.franchise_disclosure_documents (company_id, status, updated_at desc);
+
+create index if not exists idx_franchise_disclosure_documents_company_brand
+  on public.franchise_disclosure_documents (company_id, brand_name);
+
+create index if not exists idx_franchise_lead_disclosure_deliveries_lead_sent
+  on public.franchise_lead_disclosure_deliveries (lead_id, sent_at desc);
+
+create index if not exists idx_franchise_lead_disclosure_deliveries_company_sent
+  on public.franchise_lead_disclosure_deliveries (company_id, sent_at desc);
+
+create index if not exists idx_franchise_lead_disclosure_deliveries_document
+  on public.franchise_lead_disclosure_deliveries (document_id);
+
+create table if not exists public.franchise_lead_contract_checklist_steps (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  lead_id uuid references public.franchise_leads(id) on delete cascade not null,
+  step_key text not null,
+  label text not null,
+  required boolean default true not null,
+  completed boolean default false not null,
+  completed_at timestamp with time zone,
+  completed_by uuid references public.profiles(id) on delete set null,
+  memo text,
+  sort_order integer default 0 not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb,
+  unique (lead_id, step_key)
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'franchise_lead_contract_checklist_steps_lead_company_fkey'
+  ) then
+    alter table public.franchise_lead_contract_checklist_steps
+      add constraint franchise_lead_contract_checklist_steps_lead_company_fkey
+      foreign key (lead_id, company_id)
+      references public.franchise_leads(id, company_id)
+      on delete cascade;
+  end if;
+end $$;
+
+alter table public.franchise_lead_contract_checklist_steps enable row level security;
+
+create policy "Company members can view franchise_lead_contract_checklist_steps" on public.franchise_lead_contract_checklist_steps
+  for select using (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.franchise_leads lead
+      where lead.id = franchise_lead_contract_checklist_steps.lead_id
+        and lead.company_id = franchise_lead_contract_checklist_steps.company_id
+    )
+  );
+
+create policy "Company members can insert franchise_lead_contract_checklist_steps" on public.franchise_lead_contract_checklist_steps
+  for insert with check (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.franchise_leads lead
+      where lead.id = franchise_lead_contract_checklist_steps.lead_id
+        and lead.company_id = franchise_lead_contract_checklist_steps.company_id
+    )
+  );
+
+create policy "Company members can update franchise_lead_contract_checklist_steps" on public.franchise_lead_contract_checklist_steps
+  for update using (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.franchise_leads lead
+      where lead.id = franchise_lead_contract_checklist_steps.lead_id
+        and lead.company_id = franchise_lead_contract_checklist_steps.company_id
+    )
+  )
+  with check (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.franchise_leads lead
+      where lead.id = franchise_lead_contract_checklist_steps.lead_id
+        and lead.company_id = franchise_lead_contract_checklist_steps.company_id
+    )
+  );
+
+create policy "Company members can delete franchise_lead_contract_checklist_steps" on public.franchise_lead_contract_checklist_steps
+  for delete using (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.franchise_leads lead
+      where lead.id = franchise_lead_contract_checklist_steps.lead_id
+        and lead.company_id = franchise_lead_contract_checklist_steps.company_id
+    )
+  );
+
+create index if not exists idx_franchise_lead_contract_checklist_company_updated
+  on public.franchise_lead_contract_checklist_steps (company_id, updated_at desc);
+
+create index if not exists idx_franchise_lead_contract_checklist_lead_sort
+  on public.franchise_lead_contract_checklist_steps (lead_id, sort_order);
+
+create index if not exists idx_franchise_lead_contract_checklist_completed
+  on public.franchise_lead_contract_checklist_steps (company_id, completed, updated_at desc);
+
+-- 22. FRANCHISE BRAND MASTER Tables
+create table if not exists public.franchise_brands (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade,
+  brand_name text not null,
+  franchisor_name text,
+  disclosure_brand_id text,
+  industry text,
+  business_type text,
+  category_major text,
+  category_middle text,
+  category_small text,
+  recommended_keywords text[] default '{}'::text[],
+  source text default 'manual',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.franchise_brands enable row level security;
+
+create policy "Company members can view franchise_brands" on public.franchise_brands
+  for select using (company_id is null or company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_brands" on public.franchise_brands
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_brands" on public.franchise_brands
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_brands" on public.franchise_brands
+  for delete using (company_id = get_my_company_id());
+
+create unique index if not exists idx_franchise_brands_company_name
+  on public.franchise_brands (coalesce(company_id, '00000000-0000-0000-0000-000000000000'::uuid), lower(brand_name));
+
+create index if not exists idx_franchise_brands_name
+  on public.franchise_brands using gin (brand_name gin_trgm_ops);
+
+create index if not exists idx_franchise_brands_company_updated
+  on public.franchise_brands (company_id, updated_at desc);
+
+-- 23. FRANCHISE MARKET MONITORING Tables
+create table if not exists public.franchise_market_watchlist (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  brand_id uuid references public.franchise_brands(id) on delete set null,
+  brand_name text not null,
+  region text not null,
+  keyword text not null,
+  own_store_name text,
+  risk_keywords text[] default array['폐점', '위생', '불친절', '환불', '컴플레인', '사기', '논란']::text[],
+  is_active boolean default true not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.franchise_market_watchlist enable row level security;
+
+create policy "Company members can view franchise_market_watchlist" on public.franchise_market_watchlist
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_market_watchlist" on public.franchise_market_watchlist
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_market_watchlist" on public.franchise_market_watchlist
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_market_watchlist" on public.franchise_market_watchlist
+  for delete using (company_id = get_my_company_id());
+
+create unique index if not exists idx_franchise_market_watchlist_unique
+  on public.franchise_market_watchlist (
+    company_id,
+    lower(brand_name),
+    lower(region),
+    lower(keyword),
+    coalesce(own_store_name, '')
+  );
+
+create index if not exists idx_franchise_market_watchlist_company_active
+  on public.franchise_market_watchlist (company_id, is_active, updated_at desc);
+
+create table if not exists public.franchise_market_snapshots (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  watchlist_id uuid references public.franchise_market_watchlist(id) on delete set null,
+  brand_id uuid references public.franchise_brands(id) on delete set null,
+  brand_name text not null,
+  region text not null,
+  keyword text not null,
+  snapshot_date date default current_date not null,
+  provider text default 'naver-official' not null,
+  naver_query text,
+  naver_blog_total integer default 0 not null,
+  naver_news_total integer default 0 not null,
+  naver_trend_latest numeric,
+  naver_trend_delta numeric,
+  naver_local_top5 jsonb default '[]'::jsonb,
+  serp_provider text,
+  serp_query text,
+  serp_results jsonb default '[]'::jsonb,
+  own_store_name text,
+  own_store_rank integer,
+  own_store_visible boolean default false not null,
+  risk_mentions jsonb default '[]'::jsonb,
+  summary jsonb default '{}'::jsonb,
+  raw jsonb default '{}'::jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.franchise_market_snapshots enable row level security;
+
+create policy "Company members can view franchise_market_snapshots" on public.franchise_market_snapshots
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_market_snapshots" on public.franchise_market_snapshots
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_market_snapshots" on public.franchise_market_snapshots
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_market_snapshots" on public.franchise_market_snapshots
+  for delete using (company_id = get_my_company_id());
+
+create index if not exists idx_franchise_market_snapshots_company_date
+  on public.franchise_market_snapshots (company_id, snapshot_date desc, created_at desc);
+
+create index if not exists idx_franchise_market_snapshots_watchlist_date
+  on public.franchise_market_snapshots (watchlist_id, snapshot_date desc);
+
+create index if not exists idx_franchise_market_snapshots_brand_region
+  on public.franchise_market_snapshots (company_id, lower(brand_name), lower(region), snapshot_date desc);
+
+-- 24. META LEAD ADS INTEGRATION Tables
+create table if not exists public.meta_lead_connections (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  connected_by uuid references public.profiles(id),
+  meta_user_id text,
+  meta_page_id text not null,
+  meta_page_name text,
+  access_token_encrypted text not null,
+  token_expires_at timestamp with time zone,
+  status text default 'connected' not null,
+  last_sync_at timestamp with time zone,
+  last_webhook_at timestamp with time zone,
+  last_error text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+create table if not exists public.meta_lead_forms (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  connection_id uuid references public.meta_lead_connections(id) on delete cascade not null,
+  meta_form_id text not null,
+  meta_form_name text,
+  enabled boolean default false not null,
+  default_manager_id uuid references public.profiles(id),
+  field_mapping jsonb default '{}'::jsonb,
+  last_synced_at timestamp with time zone,
+  last_error text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+create table if not exists public.meta_lead_imports (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  connection_id uuid references public.meta_lead_connections(id) on delete cascade,
+  form_id uuid references public.meta_lead_forms(id) on delete set null,
+  meta_lead_id text not null,
+  franchise_lead_id uuid references public.franchise_leads(id) on delete set null,
+  status text default 'received' not null,
+  error_message text,
+  payload jsonb default '{}'::jsonb,
+  received_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  imported_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.meta_lead_connections enable row level security;
+alter table public.meta_lead_forms enable row level security;
+alter table public.meta_lead_imports enable row level security;
+
+create policy "Company members can view meta_lead_connections" on public.meta_lead_connections
+  for select using (company_id = get_my_company_id());
+
+create policy "Company managers can manage meta_lead_connections" on public.meta_lead_connections
+  for all using (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.company_id = meta_lead_connections.company_id
+        and p.role in ('manager', 'admin')
+    )
+  )
+  with check (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.company_id = meta_lead_connections.company_id
+        and p.role in ('manager', 'admin')
+    )
+  );
+
+create policy "Company members can view meta_lead_forms" on public.meta_lead_forms
+  for select using (company_id = get_my_company_id());
+
+create policy "Company managers can manage meta_lead_forms" on public.meta_lead_forms
+  for all using (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.company_id = meta_lead_forms.company_id
+        and p.role in ('manager', 'admin')
+    )
+  )
+  with check (
+    company_id = get_my_company_id()
+    and exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.company_id = meta_lead_forms.company_id
+        and p.role in ('manager', 'admin')
+    )
+  );
+
+create policy "Company members can view meta_lead_imports" on public.meta_lead_imports
+  for select using (company_id = get_my_company_id());
+
+create unique index if not exists idx_meta_lead_connections_company_page_unique
+  on public.meta_lead_connections (company_id, meta_page_id);
+
+create index if not exists idx_meta_lead_connections_company_status
+  on public.meta_lead_connections (company_id, status);
+
+create unique index if not exists idx_meta_lead_forms_company_form_unique
+  on public.meta_lead_forms (company_id, meta_form_id);
+
+create index if not exists idx_meta_lead_forms_connection_enabled
+  on public.meta_lead_forms (connection_id, enabled);
+
+create unique index if not exists idx_meta_lead_imports_company_lead_unique
+  on public.meta_lead_imports (company_id, meta_lead_id);
+
+create index if not exists idx_meta_lead_imports_company_created
+  on public.meta_lead_imports (company_id, created_at desc);
+
+-- 25. REALTY EXTERNAL LISTING IMPORT Tables
+create table if not exists public.realty_import_jobs (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade,
+  requester_id uuid references public.profiles(id),
+  reference_property_id text references public.properties(id) on delete set null,
+  source text default 'all' not null,
+  region text,
+  query text,
+  listing_types text[] default array['store']::text[],
+  status text default 'pending' not null,
+  total_count integer default 0 not null,
+  created_count integer default 0 not null,
+  updated_count integer default 0 not null,
+  duplicate_count integer default 0 not null,
+  failed_count integer default 0 not null,
+  warnings text[] default '{}'::text[],
+  errors jsonb default '[]'::jsonb,
+  started_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+create table if not exists public.external_property_listings (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade,
+  requester_id uuid references public.profiles(id),
+  import_job_id uuid references public.realty_import_jobs(id) on delete set null,
+  property_id text references public.properties(id) on delete set null,
+  duplicate_of_property_id text references public.properties(id) on delete set null,
+  source text not null,
+  source_listing_id text not null,
+  source_url text,
+  title text,
+  address text,
+  region text,
+  latitude numeric(12, 8),
+  longitude numeric(12, 8),
+  trade_type text,
+  property_type text,
+  deposit_amount numeric,
+  monthly_rent numeric,
+  sale_price numeric,
+  maintenance_fee numeric,
+  area_sqm numeric,
+  area_pyeong text,
+  floor_info text,
+  image_urls text[] default '{}'::text[],
+  status text default 'imported' not null,
+  collected_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  raw jsonb default '{}'::jsonb,
+  data jsonb default '{}'::jsonb
+);
+
+alter table public.realty_import_jobs enable row level security;
+alter table public.external_property_listings enable row level security;
+
+create policy "Company members can view realty_import_jobs" on public.realty_import_jobs
+  for select using (company_id = get_my_company_id());
+
+create policy "Requesters can view own realty_import_jobs" on public.realty_import_jobs
+  for select using (requester_id = auth.uid());
+
+create policy "Company members can insert realty_import_jobs" on public.realty_import_jobs
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Requesters can insert own realty_import_jobs" on public.realty_import_jobs
+  for insert with check (requester_id = auth.uid());
+
+create policy "Company members can update realty_import_jobs" on public.realty_import_jobs
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Requesters can update own realty_import_jobs" on public.realty_import_jobs
+  for update using (requester_id = auth.uid())
+  with check (requester_id = auth.uid());
+
+create policy "Company members can delete realty_import_jobs" on public.realty_import_jobs
+  for delete using (company_id = get_my_company_id());
+
+create policy "Requesters can delete own realty_import_jobs" on public.realty_import_jobs
+  for delete using (requester_id = auth.uid());
+
+create policy "Company members can view external_property_listings" on public.external_property_listings
+  for select using (company_id = get_my_company_id());
+
+create policy "Requesters can view own external_property_listings" on public.external_property_listings
+  for select using (requester_id = auth.uid());
+
+create policy "Company members can insert external_property_listings" on public.external_property_listings
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Requesters can insert own external_property_listings" on public.external_property_listings
+  for insert with check (requester_id = auth.uid());
+
+create policy "Company members can update external_property_listings" on public.external_property_listings
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Requesters can update own external_property_listings" on public.external_property_listings
+  for update using (requester_id = auth.uid())
+  with check (requester_id = auth.uid());
+
+create policy "Company members can delete external_property_listings" on public.external_property_listings
+  for delete using (company_id = get_my_company_id());
+
+create policy "Requesters can delete own external_property_listings" on public.external_property_listings
+  for delete using (requester_id = auth.uid());
+
+create index if not exists idx_realty_import_jobs_company_created
+  on public.realty_import_jobs (company_id, created_at desc);
+
+create index if not exists idx_realty_import_jobs_reference_property
+  on public.realty_import_jobs (reference_property_id, created_at desc);
+
+create unique index if not exists idx_external_property_listings_source_unique
+  on public.external_property_listings (company_id, source, source_listing_id);
+
+create unique index if not exists idx_external_property_listings_scope_source_unique
+  on public.external_property_listings (
+    coalesce(company_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    coalesce(case when company_id is null then requester_id else null end, '00000000-0000-0000-0000-000000000000'::uuid),
+    source,
+    source_listing_id
+  );
+
+create index if not exists idx_external_property_listings_company_collected
+  on public.external_property_listings (company_id, collected_at desc);
+
+create index if not exists idx_external_property_listings_requester_collected
+  on public.external_property_listings (requester_id, collected_at desc);
+
+create index if not exists idx_external_property_listings_property
+  on public.external_property_listings (property_id);

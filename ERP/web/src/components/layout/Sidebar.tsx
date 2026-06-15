@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, ChevronDown, ChevronRight, ChevronLeft, Users, Contact, FileText, Target } from 'lucide-react';
+import { LayoutDashboard, Briefcase, ChevronDown, ChevronRight, ChevronLeft, Users, Contact, FileText, Target, MapPin, Store } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -14,6 +14,8 @@ interface SidebarProps {
 const MENU_ITEMS = [
     { title: '요약', url: '/dashboard', category: '대시보드' },
     { title: '모객 DB', url: '/dashboard/franchise-leads', category: '대시보드' },
+    { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '대시보드' },
+    { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '대시보드' },
     { title: '점포 목록', url: '/properties', category: '컨설팅 업무' },
     { title: '점포 신규등록', url: '/properties/register', category: '컨설팅 업무' },
     { title: '물건지도', url: '/properties/map', category: '컨설팅 업무' },
@@ -172,6 +174,24 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                                     <span className={styles.navSubLinkContent}>
                                         <Target size={14} />
                                         모객 DB
+                                    </span>
+                                </Link>
+                                <Link
+                                    href="/dashboard/franchise-leads/market-insights"
+                                    className={`${styles.navSubLink} ${pathname === '/dashboard/franchise-leads/market-insights' ? styles.active : ''}`}
+                                >
+                                    <span className={styles.navSubLinkContent}>
+                                        <MapPin size={14} />
+                                        출점 후보지
+                                    </span>
+                                </Link>
+                                <Link
+                                    href="/dashboard/franchise-operations"
+                                    className={`${styles.navSubLink} ${pathname === '/dashboard/franchise-operations' ? styles.active : ''}`}
+                                >
+                                    <span className={styles.navSubLinkContent}>
+                                        <Store size={14} />
+                                        가맹 운영
                                     </span>
                                 </Link>
                             </div>

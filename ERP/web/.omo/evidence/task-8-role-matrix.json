@@ -1,0 +1,17 @@
+{
+  "status": "BLOCKED_REAL_ROLE_MATRIX",
+  "startedAt": "2026-06-11T02:51:41.110Z",
+  "missing": [
+    "adminId",
+    "companyAUserId",
+    "companyBUserId",
+    "noCompanyUserId",
+    "companyAName",
+    "companyBName"
+  ],
+  "reason": "Real admin/company A/company B/no-company QA account env is required.",
+  "optional": [
+    "FRANCHISE_QA_COMPANY_A_OPENING_LOCATION_ID"
+  ],
+  "command": "node scripts/franchise-role-matrix-qa.mjs --base-url <url>"
+}

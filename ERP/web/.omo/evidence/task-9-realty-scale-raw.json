@@ -1,0 +1,254 @@
+{
+  "status": "PASS",
+  "startedAt": "2026-06-11T02:50:20.560Z",
+  "completedAt": "2026-06-11T02:50:42.978Z",
+  "baseUrl": "http://localhost:3000",
+  "region": "서울 광진구 화양동",
+  "liveCollect": true,
+  "collectLimit": 3000,
+  "savedLimit": 2000,
+  "collectJob": {
+    "id": "5918f90f-bf8b-4db0-9e0e-13523c92ac36",
+    "companyId": "92924bd6-b2a1-49bb-844b-05eabcc51bbf",
+    "requesterId": "7006b59c-031e-40f8-9041-e4255af22b1b",
+    "referencePropertyId": null,
+    "source": "daangn",
+    "region": "광진구 화양동",
+    "query": "광진구 화양동",
+    "listingTypes": [
+      "store"
+    ],
+    "status": "completed",
+    "totalCount": 238,
+    "createdCount": 1,
+    "updatedCount": 237,
+    "duplicateCount": 0,
+    "failedCount": 0,
+    "warnings": [
+      "당근 서울특별시 광진구 화양동 원본 응답 238건 중 상가 238건을 확인했습니다."
+    ],
+    "errors": [],
+    "startedAt": "2026-06-11T02:50:20.994556+00:00",
+    "completedAt": "2026-06-11T02:50:42.25+00:00",
+    "createdAt": "2026-06-11T02:50:20.994556+00:00",
+    "updatedAt": "2026-06-11T02:50:42.25+00:00",
+    "data": {
+      "sourceUrls": {
+        "daangn": "https://www.daangn.com/kr/realty/?in=%ED%99%94%EC%96%91%EB%8F%99-72&salesType=store&_data=routes%2Fkr.realty._index"
+      },
+      "requestedAt": "2026-06-11T02:50:20.886Z",
+      "requestedSources": [
+        "daangn"
+      ],
+      "requesterOnlyScope": false,
+      "referencePropertyName": ""
+    }
+  },
+  "returnedCollectListings": 238,
+  "propertyCreateActions": 0,
+  "savedListings": 350,
+  "rawSampleCount": 10,
+  "dataSampleCount": 10,
+  "samples": [
+    {
+      "id": "d5e3a2b1-4bdc-4e03-b576-3753b8e4568c",
+      "sourceListingId": "3599892",
+      "title": "상가 3,000만원/100만원 - 건대입구 도보 5분 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "4efcde88-7cbc-4438-893e-1486270781c6",
+      "sourceListingId": "3570403",
+      "title": "상가 5,000만원/230만원 - 군자역 초역세권, 먹자 골목내 2층 상가 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "ba49b607-610b-41f3-ae27-30eee995aac2",
+      "sourceListingId": "3530196",
+      "title": "상가 1,000만원/150만원 - 어린이대공원역 4분 거리 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "b1e99c6b-99b9-4513-814c-7cbf36a8965d",
+      "sourceListingId": "3321721",
+      "title": "상가 3,000만원/230만원 - 버스정류장 바로 앞, 7호선 어린이대공원역  | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "63d10882-3cbd-4020-b7bc-536a1109af61",
+      "sourceListingId": "3423119",
+      "title": "상가 4,000만원/280만원 - 건대 화양동 2층 술집! 노출 뛰어난 핵심 매물 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "7f875682-6499-4a2c-beb3-6b7c647c305d",
+      "sourceListingId": "3630295",
+      "title": "상가 2,000만원/240만원 - 건대양꼬치거리 1층 상가, 전용 18평 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "718cfdfb-8797-4be3-b8fe-6a90cbe6b820",
+      "sourceListingId": "3630265",
+      "title": "상가 5,000만원/250만원 - 서울특별시 광진구 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "00848c0c-1a07-4d29-a108-19f534133304",
+      "sourceListingId": "3626424",
+      "title": "상가 1,000만원/45만원 - 구의역 9분 거리 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "601a0472-4ec3-4520-9207-34a3e60daf98",
+      "sourceListingId": "3612227",
+      "title": "상가 1,500만원/150만원 - 구의역 10분거리 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    },
+    {
+      "id": "f9f3dfa2-d5bc-4c79-9651-bc36c6bb5e02",
+      "sourceListingId": "3619677",
+      "title": "상가 500만원/55만원 - 서울특별시 광진구 | 당근부동산",
+      "hasRaw": true,
+      "hasData": true,
+      "rawKeys": [
+        "id",
+        "area",
+        "user",
+        "floor",
+        "title",
+        "images",
+        "region",
+        "status"
+      ],
+      "dataKeys": [
+        "autoCreatedProperty"
+      ]
+    }
+  ]
+}

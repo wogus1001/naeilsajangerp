@@ -1,0 +1,28 @@
+{
+  "reference_id": "toss",
+  "description": "Toss-style clean and concise UI for a franchise headquarters ERP covering lead management, candidate locations, franchise operations, disclosure delivery, opening projects, and post-opening operations.",
+  "mode": "inspired",
+  "delta_set": {
+    "axes": {
+      "density.shift": 1,
+      "radius.delta_px": -8
+    },
+    "voiceHints": [
+      "Korean business operations tone",
+      "concise headquarters workflow labels",
+      "avoid AI-generated marketing copy"
+    ],
+    "matchedKeywords": [
+      "toss",
+      "minimal",
+      "b2b",
+      "dashboard",
+      "operational",
+      "dense"
+    ],
+    "warnings": [
+      "Toss consumer fintech reference adapted for B2B franchise headquarters workflows."
+    ]
+  },
+  "bootstrapped_at": "2026-06-11T15:02:33+09:00"
+}

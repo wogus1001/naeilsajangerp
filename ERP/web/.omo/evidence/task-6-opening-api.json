@@ -1,0 +1,70 @@
+{
+  "status": "PASS",
+  "startedAt": "2026-06-11T02:51:51.402Z",
+  "completedAt": "2026-06-11T02:51:51.975Z",
+  "baseUrl": "http://localhost:3000",
+  "projectId": "bd80b8b3-0515-44fe-b86b-4e47b07693c4",
+  "checks": [
+    {
+      "name": "GET without requester is rejected",
+      "expected": [
+        401
+      ],
+      "actual": {
+        "status": 401,
+        "message": "requesterId is required"
+      }
+    },
+    {
+      "name": "POST scoped opening project succeeds",
+      "expected": [
+        200,
+        201
+      ],
+      "actual": {
+        "status": 200,
+        "message": ""
+      }
+    },
+    {
+      "name": "GET location scoped project succeeds",
+      "expected": [
+        200
+      ],
+      "actual": {
+        "status": 200,
+        "message": ""
+      }
+    },
+    {
+      "name": "PUT updates checklist state",
+      "expected": [
+        200
+      ],
+      "actual": {
+        "status": 200,
+        "message": ""
+      }
+    },
+    {
+      "name": "DELETE scoped project succeeds",
+      "expected": [
+        200
+      ],
+      "actual": {
+        "status": 200,
+        "message": ""
+      }
+    },
+    {
+      "name": "GET deleted project returns 404",
+      "expected": [
+        404
+      ],
+      "actual": {
+        "status": 404,
+        "message": "Opening project not found"
+      }
+    }
+  ]
+}
