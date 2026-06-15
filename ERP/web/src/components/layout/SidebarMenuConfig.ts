@@ -32,13 +32,13 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
     },
     {
         key: 'consulting',
-        title: '컨설팅 업무',
-        collapsedTitle: '컨설팅 업무',
+        title: '점포개발 업무',
+        collapsedTitle: '점포개발 업무',
         items: [
-            { title: '점포 목록', url: '/properties', category: '컨설팅 업무', featureKey: 'properties' },
-            { title: '점포 신규등록', url: '/properties/register', category: '컨설팅 업무', featureKey: 'propertyRegister' },
-            { title: '물건지도', url: '/properties/map', category: '컨설팅 업무', featureKey: 'propertyMap' },
-            { title: '일정관리', url: '/schedule', category: '컨설팅 업무', featureKey: 'schedule' }
+            { title: '점포 목록', url: '/properties', category: '점포개발 업무', featureKey: 'properties' },
+            { title: '점포 신규등록', url: '/properties/register', category: '점포개발 업무', featureKey: 'propertyRegister' },
+            { title: '물건지도', url: '/properties/map', category: '점포개발 업무', featureKey: 'propertyMap' },
+            { title: '일정관리', url: '/schedule', category: '점포개발 업무', featureKey: 'schedule' }
         ]
     },
     {
