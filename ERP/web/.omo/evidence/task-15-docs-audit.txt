@@ -1,0 +1,17 @@
+Task: T15 Update docs with completed, blocked, and deferred status
+Date: 2026-06-11
+
+Commands:
+- rg -n "오픈 준비 프로젝트|모바일 전역|2000/3000|Meta.*HOLD|BLOCKED_META_ENV|SearchAPI.*유료|BLOCKED_QA_ENV|BLOCKED_REAL_ROLE_MATRIX|BLOCKED_OPENING_API_ENV|다음 QA" docs/franchise-growth-roadmap.md docs/franchise-dev-qa-log.md ../../MAC_CONTEXT.md
+- git diff -- ERP/web/handoff.md
+- git diff --check
+
+Result:
+- Roadmap, QA log, and MAC_CONTEXT all mention opening project MVP, mobile sidebar route sweep, live QA blockers, Meta HOLD, and SearchAPI paid-provider deferral.
+- `ERP/web/handoff.md` diff is empty.
+- `git diff --check` passed.
+
+Doc Update Brief:
+- Updated roadmap current status and next QA with opening project MVP, mobile global sidebar completion, QA runners, and blocked live env statuses.
+- Updated QA log with implementation notes, verification commands, browser route sweep, and remaining blocked live QA.
+- Updated MAC_CONTEXT with concise resume notes and removed stale mobile auto-collapse "next QA" wording.

@@ -1,0 +1,145 @@
+.workflowSection {
+    border-top: 1px solid #e5e8eb;
+    border-bottom: 1px solid #e5e8eb;
+    background: #f9fafb;
+    padding: 92px 0;
+}
+
+.workflowList {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.workflowList li {
+    position: relative;
+    display: flex;
+    min-height: 188px;
+    flex-direction: column;
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 16px;
+}
+
+.workflowList li:not(:last-child)::after {
+    position: absolute;
+    top: 32px;
+    right: -14px;
+    z-index: 1;
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: #d1d6db;
+    content: "";
+}
+
+.workflowStepTop {
+    display: grid;
+    gap: 14px;
+}
+
+.workflowStepTop span {
+    color: #3182f6;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.workflowStepTop strong {
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+    word-break: keep-all;
+}
+
+.workflowList p {
+    margin: 12px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.58;
+    word-break: keep-all;
+}
+
+.workflowMeta {
+    display: grid;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 16px;
+}
+
+.workflowMeta span {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.workflowMeta b {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 26px;
+    align-items: center;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.handoffGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.handoffItem {
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 18px;
+}
+
+.handoffItem strong {
+    color: #191f28;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.handoffItem p {
+    margin: 10px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.58;
+    word-break: keep-all;
+}
+
+@media (max-width: 1040px) {
+    .workflowList {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workflowList li:not(:last-child)::after {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .workflowSection {
+        padding: 64px 0;
+    }
+
+    .workflowList,
+    .handoffGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .workflowList li {
+        min-height: auto;
+    }
+}

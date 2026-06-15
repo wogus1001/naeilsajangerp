@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import styles from './PropertyCard.module.css';
-import { User, Phone, MapPin, Building, DollarSign, FileText, Save, Trash2, Printer, Copy, Plus, Star, ChevronDown, ChevronUp, Search, X, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { User, Phone, MapPin, Building, DollarSign, FileText, Save, Trash2, Printer, Copy, Plus, Star, ChevronDown, ChevronUp, Search, X, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink } from 'lucide-react';
 import PersonSelectorModal from './PersonSelectorModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -21,7 +21,7 @@ import BusinessCard from '../business/BusinessCard';
 import Customer from '../customers/CustomerCard';
 import { PropertyShareButton } from './PropertyShareButton';
 import { getRequesterId as resolveRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
-
+
 import { readApiJson } from '@/utils/apiResponse';
 interface RevenueItem {
     id: string;
@@ -31,6 +31,58 @@ interface RevenueItem {
     total: number;
     details?: string;
 }
+
+type CustomFieldType = 'operation' | 'lease';
+
+interface CustomFieldItem {
+    label: string;
+    value: string;
+}
+
+type RealtyImportSource = 'daangn';
+
+type RealtyImportedListing = {
+    listing?: {
+        id: string;
+        source: string;
+        sourceListingId: string;
+        sourceUrl: string;
+        title: string;
+        address: string;
+        region: string;
+        tradeType: string;
+        propertyType: string;
+        depositAmount: number | null;
+        monthlyRent: number | null;
+        salePrice: number | null;
+        maintenanceFee: number | null;
+        areaSqm: number | null;
+        areaPyeong: string;
+        floorInfo: string;
+        status: string;
+        collectedAt: string;
+    };
+    propertyId: string;
+    action: 'created' | 'updated';
+    duplicateOfPropertyId?: string | null;
+};
+
+type RealtyImportResult = {
+    job?: {
+        id: string;
+        status: string;
+        region: string;
+        totalCount: number;
+        createdCount: number;
+        updatedCount: number;
+        duplicateCount: number;
+        failedCount: number;
+        warnings: string[];
+        errors: Array<{ source?: string; listingId?: string; message: string }>;
+        completedAt?: string;
+    };
+    listings?: RealtyImportedListing[];
+};
 
 // ... (existing interfaces)
 const INDUSTRY_DATA: Record<string, Record<string, string[]>> = {
@@ -153,6 +205,18 @@ export const EditableLabel = ({ name, defaultVal, value, onChange }: { name: str
         />
     );
 };
+
+function deriveRealtyRegion(value: unknown) {
+    const text = String(value || '').replace(/[(),]/g, ' ').trim();
+    const tokens = text.split(/\s+/).filter(Boolean);
+    const district = tokens.find(token => /[구군시]$/.test(token));
+    const dong = tokens.find(token => /[동가읍면리]$/.test(token));
+    if (district && dong) return `${district} ${dong}`;
+    if (district) return district;
+    if (dong) return dong;
+    return tokens.slice(0, 2).join(' ') || text;
+}
+
 export default function PropertyCard({ property, onClose, onRefresh, onNavigate, canNavigate }: PropertyCardProps) {
     useKakaoLoader({
         appkey: "26c1197bae99e17f8c1f3e688e22914d",
@@ -249,6 +313,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
     const [directReportPreview, setDirectReportPreview] = useState<number>(0);
     const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
     const [userCompanyName, setUserCompanyName] = useState<string>('');
+    const [realtyRegion, setRealtyRegion] = useState(() => deriveRealtyRegion(property.address || property.region || property.name));
+    const [isRealtyImporting, setIsRealtyImporting] = useState(false);
+    const [realtyImportResult, setRealtyImportResult] = useState<RealtyImportResult | null>(null);
 
     const getRequesterId = () => {
         if (formData?.managerId) return formData.managerId;
@@ -291,6 +358,11 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             }
         }
     }, []);
+
+    useEffect(() => {
+        setRealtyRegion(deriveRealtyRegion(formData.address || formData.region || formData.name));
+        setRealtyImportResult(null);
+    }, [formData.id, formData.address, formData.region, formData.name]);
 
 
     // Init Map Constants safely
@@ -1239,7 +1311,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
         if (!val && val !== 0) return '';
 
         if (areaUnit === 'pyeong') {
-            // If stored as Pyeong, ensure we limit decimals for display if needed, 
+            // If stored as Pyeong, ensure we limit decimals for display if needed,
             // but usually raw input is fine unless it's result of calculation
             // Let's allow up to 2 decimal places for cleanliness if it's a long float
             return Math.round(val * 100) / 100;
@@ -2054,17 +2126,17 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
     };
 
     // Custom Field Handlers
-    const addCustomField = (type: 'operation' | 'lease') => {
+    const addCustomField = (type: CustomFieldType) => {
         if (type === 'operation') {
             if (newOperationCategory.trim()) {
-                const newFields = [...(formData.operationCustomFields || []), { label: newOperationCategory, value: '' }];
+                const newFields: CustomFieldItem[] = [...(formData.operationCustomFields || []), { label: newOperationCategory, value: '' }];
                 setFormData({ ...formData, operationCustomFields: newFields });
                 setNewOperationCategory('');
                 setIsAddingOperationCategory(false);
             }
         } else {
             if (newLeaseCategory.trim()) {
-                const newFields = [...(formData.leaseCustomFields || []), { label: newLeaseCategory, value: '' }];
+                const newFields: CustomFieldItem[] = [...(formData.leaseCustomFields || []), { label: newLeaseCategory, value: '' }];
                 setFormData({ ...formData, leaseCustomFields: newFields });
                 setNewLeaseCategory('');
                 setIsAddingLeaseCategory(false);
@@ -2072,21 +2144,80 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
         }
     };
 
-    const handleCustomFieldChange = (type: 'operation' | 'lease', index: number, value: string) => {
+    const handleCustomFieldChange = (type: CustomFieldType, index: number, value: string) => {
         if (type === 'operation') {
-            const newFields = [...formData.operationCustomFields];
+            const newFields: CustomFieldItem[] = [...(formData.operationCustomFields || [])];
             newFields[index].value = value;
             setFormData({ ...formData, operationCustomFields: newFields });
         } else {
-            const newFields = [...formData.leaseCustomFields];
+            const newFields: CustomFieldItem[] = [...(formData.leaseCustomFields || [])];
             newFields[index].value = value;
             setFormData({ ...formData, leaseCustomFields: newFields });
         }
     };
 
+    const removeCustomField = (type: CustomFieldType, index: number) => {
+        if (type === 'operation') {
+            const newFields = (formData.operationCustomFields || []).filter((_: CustomFieldItem, fieldIndex: number) => fieldIndex !== index);
+            setFormData({ ...formData, operationCustomFields: newFields });
+            return;
+        }
+
+        const newFields = (formData.leaseCustomFields || []).filter((_: CustomFieldItem, fieldIndex: number) => fieldIndex !== index);
+        setFormData({ ...formData, leaseCustomFields: newFields });
+    };
+
     const formatCurrency = (value: number | string) => {
         if (!value) return '0';
         return Number(value).toLocaleString();
+    };
+
+    const formatRealtyMoney = (value: number | null | undefined) => {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return '-';
+        return `${Number(value).toLocaleString()}만`;
+    };
+
+    const getRealtySourceLabel = (source: RealtyImportSource | string) => {
+        if (source === 'daangn') return '당근';
+        return source || '-';
+    };
+
+    const handleRealtyImport = async () => {
+        if (!realtyRegion || realtyRegion.length < 2) {
+            showAlert('수집 지역을 확인해주세요.', 'info');
+            return;
+        }
+
+        setIsRealtyImporting(true);
+        try {
+            const response = await fetch(withRequesterId('/api/realty/import-jobs'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(withRequesterPayload({
+                    referencePropertyId: formData.id,
+                    region: realtyRegion,
+                    sources: ['daangn'],
+                    managerId: formData.managerId,
+                    limit: 40,
+                    registerToProperties: false
+                }))
+            });
+
+            const result = await readApiJson<RealtyImportResult>(response);
+            if (!response.ok) {
+                throw new Error((result as any)?.message || (result as any)?.error || '외부 매물 수집 실패');
+            }
+
+            setRealtyImportResult(result);
+            onRefresh?.();
+            const job = result.job;
+            showAlert(`외부 매물 수집 완료: 생성 ${job?.createdCount || 0}건, 업데이트 ${job?.updatedCount || 0}건`, 'success');
+        } catch (error) {
+            console.error('Realty import failed:', error);
+            showAlert(error instanceof Error ? error.message : '외부 매물 수집 중 오류가 발생했습니다.', 'error');
+        } finally {
+            setIsRealtyImporting(false);
+        }
     };
 
     const formatInput = (value: number | undefined | null) => {
@@ -2345,7 +2476,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
     // IMPORTANT: Ideally I should update the interface definition at the top of the file too.
     // However, since I am replacing a block in the middle, I cannot easily reach the top interface definition in the same tool call without reading it all specifically.
     // TypeScript might complain if I use 'path' property without updating interface.
-    // I will try to use 'any' casting or rely on the previous ViewFile showing I can maybe reach it? 
+    // I will try to use 'any' casting or rely on the previous ViewFile showing I can maybe reach it?
     // Wait, the interface is at line 105. I should probably update that in a separate call or hope TS is lenient/inferred.
     // Re-reading: The replacement target is lines 1892-1956.
     // The Interface update is necessary. I will handle Interface update in a separate MultiReplace or just cast to any for now to ensure runtime works, then cleanup.
@@ -3302,9 +3433,21 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                         </div>
                                     </div>
                                     {/* Custom Operation Fields */}
-                                    {formData.operationCustomFields?.map((field: any, idx: number) => (
+                                    {formData.operationCustomFields?.map((field: CustomFieldItem, idx: number) => (
                                         <div className={styles.fieldRow} key={`op-${idx}`}>
-                                            <div className={styles.fieldLabel}>{field.label}</div>
+                                            <div className={styles.fieldLabel} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                                                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{field.label}</span>
+                                                <button
+                                                    type="button"
+                                                    className={styles.smallBtn}
+                                                    onClick={() => removeCustomField('operation', idx)}
+                                                    aria-label={`${field.label} 삭제`}
+                                                    title="추가한 항목 삭제"
+                                                    style={{ padding: '2px 6px', minWidth: 'auto', color: '#e03131' }}
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
                                             <div className={styles.fieldValue} style={{ gridColumn: 'span 3' }}>
                                                 <input
                                                     value={field.value ?? ''}
@@ -3395,9 +3538,21 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                         </div>
                                     </div>
                                     {/* Custom Lease Fields */}
-                                    {formData.leaseCustomFields?.map((field: any, idx: number) => (
+                                    {formData.leaseCustomFields?.map((field: CustomFieldItem, idx: number) => (
                                         <div className={styles.fieldRow} key={`ls-${idx}`}>
-                                            <div className={styles.fieldLabel}>{field.label}</div>
+                                            <div className={styles.fieldLabel} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                                                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{field.label}</span>
+                                                <button
+                                                    type="button"
+                                                    className={styles.smallBtn}
+                                                    onClick={() => removeCustomField('lease', idx)}
+                                                    aria-label={`${field.label} 삭제`}
+                                                    title="추가한 항목 삭제"
+                                                    style={{ padding: '2px 6px', minWidth: 'auto', color: '#e03131' }}
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
                                             <div className={styles.fieldValue} style={{ gridColumn: 'span 3' }}>
                                                 <input
                                                     value={field.value ?? ''}
@@ -3480,6 +3635,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                 {tab === 'priceWork' && '금액작업'}
                                 {tab === 'revenue' && '매출'}
                                 {tab === 'photos' && '사진지도'}
+                                {tab === 'realty' && '외부수집'}
                                 {tab === 'contracts' && '고객계약'}
                                 {tab === 'reports' && '리포트'}
                                 {tab === 'transfer' && '물건전송'}
@@ -3653,7 +3809,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: 20 }}>등록된 매출 데이터가 없습니다.</td></tr>
                                             ) : (
                                                 formData.revenueHistory.map((item: any) => {
-                                                    // Robustness check: Ensure item is an object and has required fields. 
+                                                    // Robustness check: Ensure item is an object and has required fields.
                                                     // If it's a raw array (from old bug), skip it or render placeholder.
                                                     if (!item || typeof item !== 'object' || Array.isArray(item) || !item.date) return null;
 
@@ -3821,6 +3977,141 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                             좌표 정보가 없습니다. 주소를 검색해주세요.
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'realty' && (
+                            <div className={styles.tabPane}>
+                                <div className={styles.paneHeader}>
+                                    <h3>외부 상가 수집</h3>
+                                    <button
+                                        className={styles.smallBtn}
+                                        onClick={handleRealtyImport}
+                                        disabled={isRealtyImporting}
+                                    >
+                                        <Search size={14} /> {isRealtyImporting ? '수집중' : '수집실행'}
+                                    </button>
+                                </div>
+
+                                <div className={styles.realtyControls}>
+                                    <label className={styles.realtyField}>
+                                        <span>지역</span>
+                                        <input
+                                            className={styles.input}
+                                            value={realtyRegion}
+                                            onChange={(event) => setRealtyRegion(event.target.value)}
+                                            placeholder="예: 광진구, 합정동"
+                                        />
+                                    </label>
+                                    <div className={styles.realtySourceGroup}>
+                                        <span className={`${styles.realtySourceChip} ${styles.realtySourceChipActive}`}>당근 상가</span>
+                                    </div>
+                                </div>
+
+                                {realtyImportResult?.job && (
+                                    <div className={styles.realtySummary}>
+                                        <div>
+                                            <span>상태</span>
+                                            <strong>{realtyImportResult.job.status}</strong>
+                                        </div>
+                                        <div>
+                                            <span>수집</span>
+                                            <strong>{realtyImportResult.job.totalCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>생성</span>
+                                            <strong>{realtyImportResult.job.createdCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>업데이트</span>
+                                            <strong>{realtyImportResult.job.updatedCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>중복후보</span>
+                                            <strong>{realtyImportResult.job.duplicateCount}건</strong>
+                                        </div>
+                                        <div>
+                                            <span>실패</span>
+                                            <strong>{realtyImportResult.job.failedCount}건</strong>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {realtyImportResult?.job?.warnings?.length ? (
+                                    <div className={styles.realtyNotice}>
+                                        {realtyImportResult.job.warnings.map((warning, index) => (
+                                            <div key={`${warning}-${index}`}>{warning}</div>
+                                        ))}
+                                    </div>
+                                ) : null}
+
+                                {realtyImportResult?.job?.errors?.length ? (
+                                    <div className={`${styles.realtyNotice} ${styles.realtyErrorNotice}`}>
+                                        {realtyImportResult.job.errors.map((error, index) => (
+                                            <div key={`${error.message}-${index}`}>{error.source ? `[${getRealtySourceLabel(error.source)}] ` : ''}{error.message}</div>
+                                        ))}
+                                    </div>
+                                ) : null}
+
+                                <div className={styles.realtyTableWrap}>
+                                    <table className={styles.listTable}>
+                                        <thead>
+                                            <tr>
+                                                <th>결과</th>
+                                                <th>소스</th>
+                                                <th>매물명</th>
+                                                <th>가격</th>
+                                                <th>면적</th>
+                                                <th>상태</th>
+                                                <th>링크</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {!realtyImportResult?.listings?.length ? (
+                                                <tr>
+                                                    <td colSpan={7} style={{ textAlign: 'center', padding: 30, color: '#868e96' }}>
+                                                        수집 결과가 없습니다.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                realtyImportResult.listings.map((item, index) => {
+                                                    const listing = item.listing;
+                                                    return (
+                                                        <tr key={`${listing?.id || item.propertyId}-${index}`}>
+                                                            <td>
+                                                                <span className={`${styles.realtyStatus} ${item.action === 'updated' ? styles.realtyStatusUpdated : styles.realtyStatusCreated}`}>
+                                                                    {item.action === 'updated' ? '업데이트' : '생성'}
+                                                                </span>
+                                                            </td>
+                                                            <td>{getRealtySourceLabel(listing?.source || '')}</td>
+                                                            <td>
+                                                                <div className={styles.realtyTitleCell}>
+                                                                    <strong>{listing?.title || '-'}</strong>
+                                                                    <span>{listing?.address || listing?.region || '-'}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                {listing?.salePrice ? (
+                                                                    <span>매매 {formatRealtyMoney(listing.salePrice)}</span>
+                                                                ) : (
+                                                                    <span>보증 {formatRealtyMoney(listing?.depositAmount)} / 월 {formatRealtyMoney(listing?.monthlyRent)}</span>
+                                                                )}
+                                                            </td>
+                                                            <td>{listing?.areaPyeong || (listing?.areaSqm ? `${listing.areaSqm}㎡` : '-')}</td>
+                                                            <td>{item.duplicateOfPropertyId ? '중복후보' : listing?.status || '-'}</td>
+                                                            <td>
+                                                                {listing?.sourceUrl ? (
+                                                                    <a className={styles.realtyLinkBtn} href={listing.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                                                        <ExternalLink size={12} /> 원문
+                                                                    </a>
+                                                                ) : '-'}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
@@ -4121,7 +4412,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                             </div>
                         )}
 
-                        {activeTab !== 'priceWork' && activeTab !== 'revenue' && activeTab !== 'photos' && activeTab !== 'contracts' && activeTab !== 'docs' && activeTab !== 'transfer' && activeTab !== 'reports' && (
+                        {activeTab !== 'priceWork' && activeTab !== 'revenue' && activeTab !== 'photos' && activeTab !== 'realty' && activeTab !== 'contracts' && activeTab !== 'docs' && activeTab !== 'transfer' && activeTab !== 'reports' && (
                             <div style={{ padding: 20, textAlign: 'center', color: '#868e96' }}>
                                 준비 중인 기능입니다.
                             </div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useResponsiveSidebar } from './useResponsiveSidebar';
 import styles from './MainLayout.module.css';
 
 interface MainLayoutProps {
@@ -35,7 +36,7 @@ type MaintenanceConfig = {
 } | null;
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-    const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useResponsiveSidebar();
     const [announcement, setAnnouncement] = React.useState<AnnouncementConfig>(null);
     const [maintenance, setMaintenance] = React.useState<MaintenanceConfig>(null);
     const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);

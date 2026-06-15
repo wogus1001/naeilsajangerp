@@ -1,0 +1,71 @@
+{
+  "task": "T10/T17 mobile first-entry sidebar behavior",
+  "date": "2026-06-11",
+  "baseUrl": "http://localhost:3000",
+  "browserTool": "mcp__playwright",
+  "routes": [
+    {
+      "viewport": "mobile",
+      "route": "/dashboard/franchise-leads",
+      "sidebarWidth": 0,
+      "mainWidth": 390,
+      "contentWidth": 390,
+      "scrollWidth": 390,
+      "hasHorizontalOverflow": false
+    },
+    {
+      "viewport": "mobile",
+      "route": "/dashboard/franchise-leads/market-insights?tab=realty-import",
+      "sidebarWidth": 0,
+      "mainWidth": 390,
+      "contentWidth": 390,
+      "scrollWidth": 390,
+      "hasHorizontalOverflow": false
+    },
+    {
+      "viewport": "mobile",
+      "route": "/dashboard/franchise-operations",
+      "sidebarWidth": 0,
+      "mainWidth": 390,
+      "contentWidth": 390,
+      "scrollWidth": 390,
+      "hasHorizontalOverflow": false
+    },
+    {
+      "viewport": "desktop",
+      "route": "/dashboard/franchise-leads",
+      "sidebarWidth": 240,
+      "mainWidth": 1200,
+      "contentWidth": 1200,
+      "scrollWidth": 1440,
+      "hasHorizontalOverflow": false
+    },
+    {
+      "viewport": "desktop",
+      "route": "/dashboard/franchise-leads/market-insights?tab=realty-import",
+      "sidebarWidth": 240,
+      "mainWidth": 1200,
+      "contentWidth": 1200,
+      "scrollWidth": 1440,
+      "hasHorizontalOverflow": false
+    },
+    {
+      "viewport": "desktop",
+      "route": "/dashboard/franchise-operations",
+      "sidebarWidth": 240,
+      "mainWidth": 1200,
+      "contentWidth": 1200,
+      "scrollWidth": 1440,
+      "hasHorizontalOverflow": false
+    }
+  ],
+  "screenshots": [
+    "task-17-franchise-operations-mobile-after-fix.png",
+    "task-17-franchise-operations-desktop-after-fix.png"
+  ],
+  "notes": [
+    "Alert dialogs were suppressed during route sweep because existing data-fetch failures use window.alert on some pages.",
+    "Opening project initial fetch failure now renders inline instead of blocking the route with alert.",
+    "Local database has not applied supabase_franchise_opening_projects_migration.sql, so /api/franchise-opening-projects returned fetch errors during browser QA."
+  ]
+}

@@ -1,0 +1,16 @@
+Task: T14 Verification gates
+Date: 2026-06-11
+
+Commands and results:
+- npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/layout/useResponsiveSidebar.test.mts src/lib/manual-promoted-operations.test.mts src/lib/property-external-status.test.mts src/lib/realty-listing-promotion.test.mts src/lib/realty-import-schema.test.mts src/components/franchise/realty-import/scoring.test.mts src/components/franchise/realty-import/utils.test.mts src/components/franchise/realty-import/map-utils.test.mts src/lib/franchise-lead-workflow.test.mts
+  - PASS: 36 tests
+- npx tsc --noEmit --pretty false
+  - PASS
+- npm run lint -- --quiet
+  - PASS
+- npm run build
+  - PASS
+
+Warnings:
+- Next.js reported multiple lockfiles and inferred `/Users/kimjaehyun/package-lock.json` as workspace root.
+- baseline-browser-mapping and Browserslist data are stale. These were existing dependency-data warnings, not build failures.

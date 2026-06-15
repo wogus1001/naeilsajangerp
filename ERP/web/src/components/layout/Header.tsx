@@ -47,6 +47,8 @@ const Header = ({ user, onLogout }: HeaderProps) => {
         // Dashboard
         if (path === '/dashboard') return { category: '대시보드', title: '요약' };
         if (path === '/dashboard/franchise-leads') return { category: '대시보드', title: '모객 DB' };
+        if (path === '/dashboard/franchise-leads/market-insights') return { category: '대시보드', title: '출점 후보지' };
+        if (path === '/dashboard/franchise-operations') return { category: '대시보드', title: '가맹 운영' };
 
         // Consulting
         if (path === '/properties') return { category: '컨설팅 업무', title: '점포 목록' };
