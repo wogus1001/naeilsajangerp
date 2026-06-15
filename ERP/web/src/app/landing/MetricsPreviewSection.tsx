@@ -20,16 +20,16 @@ type TrendChartItem = {
 };
 
 const DASHBOARD_METRICS = [
-    { label: '원천 DB', value: '128건', helper: '최근 30일 기준' },
-    { label: '상담 진행', value: '42건', helper: '담당자별 관리 중' },
-    { label: '계약 예정', value: '9건', helper: '계약 전 단계' }
+    { label: '문의접수', value: '128건', helper: '최근 30일 유입' },
+    { label: '상담중', value: '42건', helper: '담당자 후속 관리' },
+    { label: '계약예정', value: '9건', helper: '계약 전 확인 단계' }
 ] as const satisfies readonly DashboardMetric[];
 
 const PIPELINE_CHART = [
-    { label: '1차 유입', value: '128', percent: '100%' },
-    { label: '상담 진행', value: '42', percent: '64%' },
-    { label: '출점 검토', value: '18', percent: '42%' },
-    { label: '계약 예정', value: '9', percent: '28%' }
+    { label: '문의접수', value: '128', percent: '100%' },
+    { label: '상담중', value: '42', percent: '64%' },
+    { label: '입지검토', value: '18', percent: '42%' },
+    { label: '계약예정', value: '9', percent: '28%' }
 ] as const satisfies readonly HorizontalChartItem[];
 
 const SOURCE_CHART = [
@@ -63,7 +63,7 @@ export function MetricsPreviewSection() {
                 </div>
                 <div className={localStyles.metricsGrid}>
                     <article className={localStyles.metricPanel}>
-                        <PanelHeader title="모객 파이프라인" description="유입부터 계약 예정까지 병목 구간을 숫자로 확인합니다." label="대시보드" />
+                        <PanelHeader title="상태별 모객 파이프라인" description="문의접수부터 계약예정까지 병목과 다음 액션을 한눈에 확인합니다." label="대시보드" />
                         <div className={localStyles.metricSummary}>
                             {DASHBOARD_METRICS.map(metric => (
                                 <div key={metric.label}>
