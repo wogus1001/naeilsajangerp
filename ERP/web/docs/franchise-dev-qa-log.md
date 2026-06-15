@@ -134,6 +134,7 @@
 - 2026-06-15 출점 후보지 화면의 상단 요약 카드 4개와 `출점 계획 · 경쟁스캔` 보조 칩을 제거해, 후보지 인사이트 본문과 지도/표 업무에 바로 진입하도록 간소화했다.
 - 2026-06-15 전역 좌측 사이드바 상단 로고 텍스트는 고정 `내일사장` 대신 계정 회사명으로 표시한다. 일반 계정은 로그인 회사명, 관리자/슈퍼어드민은 `조회 회사` 선택 스코프를 우선하며, 긴 회사명은 한 줄 말줄임으로 처리한다.
 - 2026-06-15 로그인/가입/관리자/공통 fallback의 하드코딩 브랜드 문구를 `부동산 ERP`로 맞추고, 공개 로그인 화면에서 `내일사장` 타이틀이 노출되지 않도록 정리했다.
+- 2026-06-15 랜딩 기능 상세에서 `정보공개서/계약`, `가맹 운영` 카드에 `개발 진행중` 배지를 추가해 현재 개발 상태를 명확히 표시했다.
 
 ## QA 결과
 
@@ -147,6 +148,8 @@
 - 2026-06-15 모객 DB/랜딩 정리 검증 통과: `npx tsx --test src/lib/franchise-lead-workflow.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/components/franchise/leads/leadActivityLog.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts` 결과 22건 통과.
 - 2026-06-15 최종 정적 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 변경 TypeScript 20개 파일 no-excuse 규칙 검사, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
 - 2026-06-15 브라우저 QA 통과: 로컬 `http://localhost:3000/landing`은 로그인 없이 열리고, 1440px에서 `scrollWidth=clientWidth=1425`, 390px에서 `scrollWidth=clientWidth=375`, overflow element 0건을 확인했다. 랜딩에서 `Franchise OS`, 구글시트 비교 메시지, `Meta Lead Ads 유입 연동`, `Meta 광고` 문구는 보이고 `데모 문의`, `로그인`, `내일사장` 문구는 노출되지 않았다.
+- 2026-06-15 랜딩 개발 진행중 배지 정적 검증 통과: `git diff --check`, `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
+- 2026-06-15 랜딩 개발 진행중 배지 QA 통과: 로컬 `http://localhost:3000/landing` 1440px/390px에서 `개발 진행중` 배지 2개가 노출되고, 각각 `정보공개서/계약`, `가맹 운영` 카드에 연결됨을 확인했다. 390px 기준 page overflow 0, overflow element 0건을 확인했다.
 - 2026-06-15 기존 루트 동선 확인: `http://localhost:3000/` 접근 시 `http://localhost:3000/login`으로 이동하고 로그인 화면 문구가 표시됐다.
 - 2026-06-15 로그인 브랜드 QA 통과: 로컬 `http://localhost:3000/login` 1080x1350/390x844에서 `부동산 ERP`가 표시되고 `내일사장` 타이틀은 노출되지 않았다. `/signup`도 `부동산 ERP 서비스 이용을 위한 가입` 문구와 page overflow 0을 확인했다.
 - 2026-06-15 dev 배포 통합 완료: `codex/franchise-leads-20260608` 변경을 `dev`에 병합해 `9281017` `merge: deploy franchise lead workspace to dev`로 push했고, Vercel dev deployment가 READY 상태임을 확인했다. Preview URL은 Vercel Authentication 보호가 적용되어 본문 fetch는 401로 제한된다.

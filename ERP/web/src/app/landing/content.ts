@@ -23,6 +23,7 @@ export type FeatureMock =
 
 export type FeatureDetail = {
     readonly title: string;
+    readonly statusLabel?: string;
     readonly situation: string;
     readonly capabilities: readonly string[];
     readonly outcome: string;
@@ -102,6 +103,7 @@ export const FEATURE_DETAILS = [
     },
     {
         title: '정보공개서/계약',
+        statusLabel: '개발 진행중',
         situation: '계약 전 정보공개서 발송 기록과 14일 대기 기준을 놓치지 않게 관리합니다.',
         capabilities: ['정보공개서 발송 기록', '계약 가능일 자동 확인', '계약 전 체크리스트 점검'],
         outcome: '계약 담당자가 법정 대기 기간과 준비 항목을 한 번에 확인합니다.',
@@ -126,6 +128,7 @@ export const FEATURE_DETAILS = [
     },
     {
         title: '가맹 운영',
+        statusLabel: '개발 진행중',
         situation: '오픈 이후 매장 상태와 본사 후속 업무를 같은 운영 흐름으로 이어갑니다.',
         capabilities: ['매장 운영 상태 확인', '본사 후속 조치 기록', '점주별 커뮤니케이션 이력'],
         outcome: '운영팀이 오픈 이후의 이슈와 후속 업무를 놓치지 않습니다.',
