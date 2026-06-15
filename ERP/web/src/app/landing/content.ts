@@ -77,16 +77,16 @@ export const ERP_BENEFITS = [
 export const FEATURE_DETAILS = [
     {
         title: '모객 DB',
-        situation: '광고, 박람회, 소개, 전화 문의와 Meta Lead Ads 유입을 같은 기준으로 정리합니다.',
-        capabilities: ['Meta Lead Ads 유입 연동', '유입 경로와 담당자 기준 분류', '상담 상태와 다음 연락일 관리'],
-        outcome: '가맹개발팀이 오늘 처리할 DB와 다음 액션을 한 화면에서 확인합니다.',
+        situation: '광고, 박람회, 소개, 전화 문의와 Meta Lead Ads 유입을 상태별 파이프라인으로 정리합니다.',
+        capabilities: ['Meta Lead Ads 유입 연동', '문의접수·상담중·입지검토·계약예정 상태 추적', '상담 상태와 다음 연락일 관리'],
+        outcome: '가맹개발팀이 모객 병목과 오늘 처리할 다음 액션을 한 화면에서 확인합니다.',
         mock: {
             kind: 'table',
             headers: ['이름', '유입', '상태'],
             rows: [
                 ['김민준', 'Meta 광고', '상담중'],
-                ['박서연', '박람회', '계약예정'],
-                ['이도윤', '소개', '입지검토']
+                ['박서연', '박람회', '입지검토'],
+                ['이도윤', '소개', '계약예정']
             ]
         }
     },
@@ -139,8 +139,8 @@ export const FEATURE_DETAILS = [
 export const TEAM_SCENES = [
     {
         team: '가맹개발팀',
-        title: '유입 DB를 상담 대상으로 정리',
-        description: '광고와 박람회 유입을 같은 기준으로 보고 담당자별 다음 연락을 잡습니다.'
+        title: '상태별 파이프라인으로 모객 추적',
+        description: '문의접수, 상담중, 입지검토, 계약예정 상태를 보고 담당자별 다음 연락을 잡습니다.'
     },
     {
         team: '출점개발팀',
