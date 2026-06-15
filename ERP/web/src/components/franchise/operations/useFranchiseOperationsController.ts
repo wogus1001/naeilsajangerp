@@ -53,7 +53,7 @@ export function useFranchiseOperationsController() {
         const currentUserId = parsedUser.uid || parsedUser.id || localStorage.getItem('userId') || '';
         const storedCompanyName = parsedUser.companyName || parsedUser.company_name || '';
         setUserId(currentUserId);
-        setCompanyName(parsedUser.role === 'admin' ? '' : storedCompanyName || '');
+        setCompanyName(storedCompanyName || '');
     }, []);
 
     const fetchLocations = React.useCallback(async () => {

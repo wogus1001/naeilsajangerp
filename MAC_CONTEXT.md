@@ -130,6 +130,7 @@ npm run build
     - 2026-06-15 모객 DB 초기 출시 UI 정리 완료: 일반 가맹 희망자 목록에서 계약 전 체크 컬럼과 신규 고객 DB 연결 UI를 숨겼고, 계약 관련 확인은 `계약 점주` 워크스페이스에 집중시켰다. 대시보드 연락 KPI는 제거하고 연락 실무 처리는 `연락 관리` 탭으로 분리했다.
     - 2026-06-15 후보자 상세 정리 완료: 상담 이력은 기본 축약 상태에서 수정/삭제/펼치기를 지원하고, 다음 연락은 업무관리 내부의 작은 후속 관리 영역과 빠른 프리셋으로 처리한다. 정보공개서는 당장 자동 발송 없이 발송 기록 중심으로 유지한다.
     - 2026-06-15 `/landing` 공개 랜딩 추가: 구글시트 대비 ERP 전환 메시지, 기능 상세, 모객 파이프라인/유입 경로/DB 유입/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 포함한다. CTA와 하단 도입 문의 카드는 제거했고 브랜드 표기는 `Franchise OS`로 정리했다. `/` -> `/login`은 유지한다.
+    - 2026-06-15 관리자 회사별 메뉴/조회 범위 추가: `/admin`에서 회사별 메뉴 on/off를 관리하고, 슈퍼어드민은 헤더 `조회 회사` 선택으로 대시보드/모객 DB/출점 후보지/브랜드 모니터링/가맹 운영/고객/명함/점포/직원 화면을 선택 회사 데이터로 조회한다. 적용 SQL은 `ERP/web/supabase_company_menu_features_migration.sql`이며, 미적용 환경에서는 메뉴가 기본 ON으로 보이고 저장 API가 migration 필요 상태를 반환한다.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외
@@ -292,6 +293,41 @@ npm run build
 - 리포트 형식 1~4 레이아웃 다수 조정
 
 ## 2026-06-15 커밋/배포 대상 변경 범위
+- 관리자 회사별 메뉴/조회 범위:
+  - `ERP/web/supabase_company_menu_features_migration.sql`
+  - `ERP/web/src/app/admin/page.tsx`
+  - `ERP/web/src/app/api/admin/company-access/*`
+  - `ERP/web/src/app/api/company-menu-features/*`
+  - `ERP/web/src/lib/company-menu-features.ts`
+  - `ERP/web/src/lib/company-menu-feature-store.ts`
+  - `ERP/web/src/components/admin/*`
+  - `ERP/web/src/components/layout/AdminCompanySelector.tsx`
+  - `ERP/web/src/components/layout/CompanyMenuDisabledNotice.tsx`
+  - `ERP/web/src/components/layout/MaintenanceScreen.tsx`
+  - `ERP/web/src/components/layout/SidebarMenuConfig.ts`
+  - `ERP/web/src/components/layout/SidebarNavSection.tsx`
+  - `ERP/web/src/components/layout/useCompanyMenuFeatures.ts`
+  - `ERP/web/src/utils/userUtils.ts`
+- 선택 회사 스코프 반영 화면/API:
+  - `ERP/web/src/app/api/dashboard/route.ts`
+  - `ERP/web/src/app/(main)/dashboard/page.tsx`
+  - `ERP/web/src/app/(main)/dashboard/franchise-leads/page.tsx`
+  - `ERP/web/src/app/(main)/dashboard/franchise-leads/market-insights/page.tsx`
+  - `ERP/web/src/app/(main)/dashboard/franchise-leads/brand-monitoring/page.tsx`
+  - `ERP/web/src/app/(main)/dashboard/franchise-operations/*`
+  - `ERP/web/src/app/(main)/customers/page.tsx`
+  - `ERP/web/src/app/(main)/business-cards/page.tsx`
+  - `ERP/web/src/app/(main)/properties/page.tsx`
+  - `ERP/web/src/app/(main)/properties/map/page.tsx`
+  - `ERP/web/src/app/(main)/company/staff/page.tsx`
+- 이번 배포 전 검증 기준:
+  - `git diff --check`
+  - `npx tsc --noEmit --pretty false`
+  - `npm run lint -- --quiet`
+  - `npm run build`
+  - 로그인 세션에서 `조회 회사` selector와 관리자 dashboard scope API 확인
+
+### 이전 2026-06-15 모객/랜딩 배포 묶음
 - 모객 DB 화면과 후보자 상세 UI:
   - `ERP/web/src/app/(main)/dashboard/franchise-leads/page.tsx`
   - `ERP/web/src/app/(main)/dashboard/franchise-leads/page.module.css`

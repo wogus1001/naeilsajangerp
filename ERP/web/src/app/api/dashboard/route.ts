@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canAccessCompanyScope, getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -7,6 +8,7 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
+        const requestedCompanyId = searchParams.get('companyId');
 
         if (!userId) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -15,31 +17,31 @@ export async function GET(request: Request) {
         const supabaseAdmin = getSupabaseAdmin();
 
         let companyId: string | null = null;
-        let isAdmin = false;
 
         // Check if userId is a valid UUID
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
         if (!isUuid || userId === 'admin') {
-            // Fallback for Legacy/Dev 'admin' user or invalid ID
-            // Treat as Super Admin (No Company Filter)
-            console.warn(`[Dashboard] Invalid UUID '${userId}'. Treating as Super Admin (All Data).`);
-            companyId = null;
-            isAdmin = true;
+            console.warn(`[Dashboard] Invalid UUID '${userId}'. Treating as Super Admin.`);
+            companyId = requestedCompanyId || null;
         } else {
-            // 1. Get User's Company ID (Normal Flow)
-            const { data: userProfile, error: profileError } = await supabaseAdmin
-                .from('profiles')
-                .select('company_id, role, name')
-                .eq('id', userId)
-                .single();
+            const requesterProfile = await getRequesterProfile(supabaseAdmin, request, userId);
 
-            if (profileError || !userProfile?.company_id) {
-                console.error('Dashboard: User profile or company not found', profileError);
+            if (!requesterProfile) {
+                console.error('Dashboard: User profile not found');
                 return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
             }
-            companyId = userProfile.company_id;
-            isAdmin = userProfile.role === 'admin';
+
+            if (!requesterProfile?.company_id && !isAdmin(requesterProfile)) {
+                console.error('Dashboard: User profile or company not found');
+                return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+            }
+
+            if (requestedCompanyId && !canAccessCompanyScope(requesterProfile, requestedCompanyId)) {
+                return NextResponse.json({ error: 'Forbidden company scope' }, { status: 403 });
+            }
+
+            companyId = requestedCompanyId || requesterProfile.company_id;
         }
 
         // 2. Parallel Data Fetching

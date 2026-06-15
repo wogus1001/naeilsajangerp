@@ -19,6 +19,12 @@ import {
     LocationInsightProperty,
     normalizeRegion
 } from '@/lib/franchise-market-insights';
+import {
+    getRequesterId,
+    getStoredCompanyId,
+    getStoredCompanyName,
+    getStoredUser
+} from '@/utils/userUtils';
 import styles from '../page.module.css';
 
 type FranchiseLocationType = '직영점' | '가맹점' | '예정점';
@@ -154,20 +160,19 @@ export default function FranchiseMarketInsightsPage() {
     const [scanningLocationId, setScanningLocationId] = React.useState('');
 
     React.useEffect(() => {
-        const stored = localStorage.getItem('user');
-        let parsedUser: AuthUser = {};
+        const storedUser = getStoredUser();
+        const parsedUser: AuthUser = {
+            id: storedUser?.id,
+            uid: storedUser?.uid,
+            name: storedUser?.name,
+            role: storedUser?.role,
+            companyName: getStoredCompanyName(storedUser),
+            companyId: getStoredCompanyId(storedUser) || null
+        };
 
-        if (stored) {
-            try {
-                parsedUser = JSON.parse(stored);
-            } catch (error) {
-                console.error('Failed to parse stored user:', error);
-            }
-        }
-
-        const currentUserId = parsedUser.uid || parsedUser.id || localStorage.getItem('userId') || '';
+        const currentUserId = getRequesterId(storedUser) || localStorage.getItem('userId') || '';
         setUserId(currentUserId);
-        setCompanyName(parsedUser.role === 'admin' ? '' : parsedUser.companyName || '');
+        setCompanyName(parsedUser.companyName || '');
     }, []);
 
     React.useEffect(() => {

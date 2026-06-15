@@ -94,6 +94,12 @@ import {
     type DisclosureEligibility
 } from '@/lib/franchise-disclosure-deliveries';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import {
+    getRequesterId,
+    getStoredCompanyId,
+    getStoredCompanyName,
+    getStoredUser
+} from '@/utils/userUtils';
 import styles from './page.module.css';
 
 export default function FranchiseLeadsPage() {
@@ -168,22 +174,20 @@ export default function FranchiseLeadsPage() {
     ), [selectedLeadId]);
 
     React.useEffect(() => {
-        const stored = localStorage.getItem('user');
-        let parsedUser: AuthUser = {};
+        const storedUser = getStoredUser();
+        const parsedUser: AuthUser = {
+            id: storedUser?.id,
+            uid: storedUser?.uid,
+            name: storedUser?.name,
+            role: storedUser?.role,
+            companyName: getStoredCompanyName(storedUser),
+            companyId: getStoredCompanyId(storedUser) || null
+        };
 
-        if (stored) {
-            try {
-                parsedUser = JSON.parse(stored);
-            } catch (error) {
-                if (error instanceof SyntaxError) console.error('Failed to parse stored user:', error);
-                else throw error;
-            }
-        }
-
-        const currentUserId = parsedUser.uid || parsedUser.id || localStorage.getItem('userId') || '';
+        const currentUserId = getRequesterId(storedUser) || localStorage.getItem('userId') || '';
         setUser(parsedUser);
         setUserId(currentUserId);
-        setCompanyName(parsedUser.role === 'admin' ? '' : parsedUser.companyName || '');
+        setCompanyName(parsedUser.companyName || '');
     }, []);
 
     React.useEffect(() => {

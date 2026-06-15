@@ -11,6 +11,7 @@ import ViewModeSwitcher, { ViewMode } from '@/components/properties/ViewModeSwit
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { parseSearchTerms } from '@/utils/search';
+import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 interface Customer {
     id: string;
@@ -246,14 +247,12 @@ function CustomerListPageContent() {
                 const historyData = uploadFiles.history ? await parseExcel(uploadFiles.history) : [];
 
                 // 사용자 메타 정보
-                const userStr = localStorage.getItem('user');
+                const user = getStoredUser();
                 let userCompanyName = 'Unknown';
                 let managerIdVal = '';
-                if (userStr) {
-                    const parsed = JSON.parse(userStr);
-                    const user = parsed.user || parsed;
-                    userCompanyName = user.companyName || 'Unknown';
-                    managerIdVal = user.uid || user.id || '';
+                if (user) {
+                    userCompanyName = getStoredCompanyName(user) || 'Unknown';
+                    managerIdVal = getRequesterId(user);
                 }
 
                 // Vercel 타임아웃(10s) 및 요청 크기 제한(4.5MB) 방지를 위해 청크 단위 업로드
@@ -309,14 +308,12 @@ function CustomerListPageContent() {
         showConfirm('고객 작업내역 및 추진물건을 시스템(일정/부동산)과 동기화하시겠습니까?', async () => {
             setLoading(true);
             try {
-                const userStr = localStorage.getItem('user');
-                const parsed = userStr ? JSON.parse(userStr) : {};
-                const user = parsed.user || parsed; // Handle wrapped 'user'
+                const user = getStoredUser();
 
                 const res = await fetch('/api/customers/sync', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ companyId: user.companyId || user.company_id })
+                    body: JSON.stringify({ companyId: getStoredCompanyId(user) })
                 });
                 const result = await readApiJson(res);
                 if (res.ok) {
@@ -335,7 +332,7 @@ function CustomerListPageContent() {
     };
 
     const buildCustomerQueryString = React.useCallback((requestedLimit: number | 'all', search?: string) => {
-        const userStr = localStorage.getItem('user');
+        const user = getStoredUser();
         const queryParams = new URLSearchParams();
 
         if (requestedLimit !== 'all') {
@@ -344,13 +341,12 @@ function CustomerListPageContent() {
             queryParams.append('limit', 'all');
         }
 
-        if (userStr) {
-            const parsed = JSON.parse(userStr);
-            const user = parsed.user || parsed;
-            if (user.companyName) {
-                queryParams.append('company', user.companyName);
+        if (user) {
+            const companyName = getStoredCompanyName(user);
+            if (companyName) {
+                queryParams.append('company', companyName);
             }
-            const requesterId = user.uid || user.uuid || user.id || user.userId || user.user_id;
+            const requesterId = getRequesterId(user);
             if (requesterId) {
                 queryParams.append('requesterId', requesterId);
             }
@@ -438,19 +434,18 @@ function CustomerListPageContent() {
 
     const fetchManagers = async () => {
         try {
-            const userStr = localStorage.getItem('user');
-            const parsed = userStr ? JSON.parse(userStr) : {};
-            const user = parsed.user || parsed;
-            if (!user?.companyName) {
-                const ownId = user?.uid || user?.id;
+            const user = getStoredUser();
+            const companyName = getStoredCompanyName(user);
+            if (!companyName) {
+                const ownId = getRequesterId(user);
                 if (ownId) {
                     setManagers({ [ownId]: user?.name || ownId });
                 }
                 return;
             }
-            const requesterId = user?.uid || user?.id || '';
+            const requesterId = getRequesterId(user);
             const params = new URLSearchParams();
-            params.set('company', user.companyName);
+            params.set('company', companyName);
             if (requesterId) params.set('requesterId', requesterId);
             const companyQuery = params.toString() ? `?${params.toString()}` : '';
 
@@ -626,10 +621,7 @@ function CustomerListPageContent() {
         setSearchCustomers(prev => prev?.map(c => c.id === customer.id ? updatedCustomer : c) ?? null);
 
         try {
-            const userStr = localStorage.getItem('user');
-            const parsed = userStr ? JSON.parse(userStr) : {};
-            const user = parsed.user || parsed;
-            const requesterId = user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id || '';
+            const requesterId = getRequesterId(getStoredUser());
             await fetch('/api/customers', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -763,10 +755,7 @@ function CustomerListPageContent() {
         showConfirm(`${selectedIds.length}명의 고객을 삭제하시겠습니까?`, async () => {
             setLoading(true);
             try {
-                const userStr = localStorage.getItem('user');
-                const parsed = userStr ? JSON.parse(userStr) : {};
-                const user = parsed.user || parsed;
-                const requesterId = user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id || '';
+                const requesterId = getRequesterId(getStoredUser());
                 const query = requesterId ? `?requesterId=${encodeURIComponent(requesterId)}` : '';
 
                 // Bulk Delete API Call
@@ -821,13 +810,11 @@ function CustomerListPageContent() {
     };
 
     const getStoredUserContext = () => {
-        const userStr = localStorage.getItem('user');
-        const parsed = userStr ? JSON.parse(userStr) : {};
-        const user = parsed.user || parsed;
+        const user = getStoredUser();
 
         return {
-            requesterId: user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id || '',
-            companyName: user?.companyName || ''
+            requesterId: getRequesterId(user),
+            companyName: getStoredCompanyName(user)
         };
     };
 

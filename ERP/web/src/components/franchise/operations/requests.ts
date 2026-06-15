@@ -1,5 +1,6 @@
 import type { ManualPromotedLocationDraft, ManualPromotedOperationProperty } from '@/lib/manual-promoted-operations';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import { getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 import type { OpeningProjectTask } from '@/lib/franchise-opening-projects';
 import type {
     AuthUser,
@@ -54,15 +55,6 @@ type DeleteOpeningProjectParams = RequestScope & {
     readonly projectId: string;
 };
 
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function readStringField(record: Readonly<Record<string, unknown>>, key: string): string | undefined {
-    const value = record[key];
-    return typeof value === 'string' ? value : undefined;
-}
-
 async function readJsonSafely(response: Response): Promise<unknown> {
     try {
         return await response.json();
@@ -79,25 +71,17 @@ async function readResponsePayload(response: Response): Promise<unknown> {
 }
 
 export function readStoredUser(): AuthUser {
-    const stored = localStorage.getItem('user');
-    if (!stored) return {};
-    try {
-        const parsed: unknown = JSON.parse(stored);
-        if (!isRecord(parsed)) return {};
-        return {
-            id: readStringField(parsed, 'id'),
-            uid: readStringField(parsed, 'uid'),
-            role: readStringField(parsed, 'role'),
-            companyName: readStringField(parsed, 'companyName'),
-            company_name: readStringField(parsed, 'company_name')
-        };
-    } catch (error) {
-        if (error instanceof SyntaxError) {
-            console.error('Failed to parse stored user:', error);
-            return {};
-        }
-        throw error;
-    }
+    const storedUser = getStoredUser();
+    if (!storedUser) return {};
+    const companyName = getStoredCompanyName(storedUser);
+
+    return {
+        id: storedUser.id,
+        uid: storedUser.uid,
+        role: storedUser.role,
+        companyName,
+        company_name: companyName
+    };
 }
 
 export async function fetchFranchiseLocations(scope: RequestScope): Promise<FranchiseLocation[]> {

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { UserCheck, Shield, Users as UsersIcon, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 export default function StaffManagementPage() {
     const router = useRouter();
@@ -44,14 +44,14 @@ export default function StaffManagementPage() {
             router.push('/login');
             return;
         }
-        if (parsedUser.role !== 'manager') {
+        if (parsedUser.role !== 'manager' && parsedUser.role !== 'admin') {
             showAlert('접근 권한이 없습니다.', 'error', () => router.push('/dashboard'));
             return;
         }
         setUser(parsedUser);
         fetchStaff(
             getStoredCompanyName(parsedUser),
-            (parsedUser.companyId as string) || (parsedUser.company_id as string)
+            getStoredCompanyId(parsedUser)
         );
     }, [router]);
 
@@ -102,7 +102,7 @@ export default function StaffManagementPage() {
                             localStorage.setItem('user', JSON.stringify(updatedUser));
                             window.location.href = '/dashboard'; // Redirect out as I lost access to this page
                         } else {
-                            fetchStaff(user.companyName);
+                            fetchStaff(getStoredCompanyName(user), getStoredCompanyId(user));
                         }
                     });
                 } else {

@@ -612,12 +612,11 @@ function PropertiesPageContent() {
         if (user) {
             const requesterId = getRequesterId(user);
             const companyName = getStoredCompanyName(user);
-            const isAdmin = user.role === 'admin' || user.id === 'admin';
 
             if (requesterId) {
                 params.append('requesterId', requesterId);
             }
-            if (companyName && !isAdmin) {
+            if (companyName) {
                 params.append('company', companyName);
             }
         }
@@ -744,11 +743,9 @@ function PropertiesPageContent() {
         showConfirm(`선택한 ${selectedIds.size}개 항목을 삭제하시겠습니까?`, async () => {
             setIsLoading(true);
             try {
-                const userStr = localStorage.getItem('user');
-                const parsed = userStr ? JSON.parse(userStr) : {};
-                const user = parsed.user || parsed;
-                const userCompanyName = user?.companyName || '';
-                const requesterId = user?.uid || user?.id || '';
+                const user = getStoredUser();
+                const userCompanyName = getStoredCompanyName(user);
+                const requesterId = getRequesterId(user);
 
                 // Sequential delete as API likely doesn't support bulk yet
                 // Ideally: await fetch('/api/properties/bulk-delete', { ... })

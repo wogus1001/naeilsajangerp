@@ -3,33 +3,19 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, ChevronDown, ChevronRight, ChevronLeft, Users, Contact, FileText, Target, MapPin, Store } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Users } from 'lucide-react';
+import { getDefaultCompanyMenuFlags, isCompanyMenuEnabled, type CompanyMenuFeatureKey, type CompanyMenuFlagMap } from '@/lib/company-menu-features';
+import { SIDEBAR_MENU_ITEMS, SIDEBAR_SECTIONS, type SidebarSectionKey } from './SidebarMenuConfig';
+import { SidebarNavSection } from './SidebarNavSection';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
     isOpen: boolean;
     onToggle: () => void;
+    menuFlags?: CompanyMenuFlagMap;
 }
 
-const MENU_ITEMS = [
-    { title: '요약', url: '/dashboard', category: '대시보드' },
-    { title: '모객 DB', url: '/dashboard/franchise-leads', category: '대시보드' },
-    { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '대시보드' },
-    { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '대시보드' },
-    { title: '점포 목록', url: '/properties', category: '컨설팅 업무' },
-    { title: '점포 신규등록', url: '/properties/register', category: '컨설팅 업무' },
-    { title: '물건지도', url: '/properties/map', category: '컨설팅 업무' },
-    { title: '일정관리', url: '/schedule', category: '컨설팅 업무' },
-    { title: '고객목록', url: '/customers', category: '고객관리' },
-    { title: '신규입력', url: '/customers/register', category: '고객관리' },
-    { title: '명함목록', url: '/business-cards', category: '명함관리' },
-    { title: '신규입력', url: '/business-cards/register', category: '명함관리' },
-    { title: '계약관리', url: '/contracts', category: '계약' },
-    { title: '간편 서명 시작(전자)', url: '/contracts/create', category: '계약' },
-    { title: '새 계약 양식 만들기', url: '/contracts/builder', category: '계약' },
-];
-
-const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags() }: SidebarProps) => {
     const pathname = usePathname();
     const [isDashboardOpen, setIsDashboardOpen] = useState(true);
     const [isConsultingOpen, setIsConsultingOpen] = useState(true);
@@ -68,7 +54,44 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     }, []);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState<typeof MENU_ITEMS>([]);
+    const [searchResults, setSearchResults] = useState<typeof SIDEBAR_MENU_ITEMS>([]);
+    const isEnabled = (key: CompanyMenuFeatureKey) => isCompanyMenuEnabled(menuFlags, key);
+    const visibleMenuItems = SIDEBAR_MENU_ITEMS.filter(item => isEnabled(item.featureKey));
+
+    const isSectionExpanded = (key: SidebarSectionKey) => {
+        switch (key) {
+            case 'dashboard':
+                return isDashboardOpen;
+            case 'consulting':
+                return isConsultingOpen;
+            case 'customers':
+                return isCustomersOpen;
+            case 'businessCards':
+                return isBusinessCardsOpen;
+            case 'contracts':
+                return isContractsOpen;
+        }
+    };
+
+    const toggleSection = (key: SidebarSectionKey) => {
+        switch (key) {
+            case 'dashboard':
+                setIsDashboardOpen(prev => !prev);
+                return;
+            case 'consulting':
+                setIsConsultingOpen(prev => !prev);
+                return;
+            case 'customers':
+                setIsCustomersOpen(prev => !prev);
+                return;
+            case 'businessCards':
+                setIsBusinessCardsOpen(prev => !prev);
+                return;
+            case 'contracts':
+                setIsContractsOpen(prev => !prev);
+                return;
+        }
+    };
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const term = e.target.value;
@@ -76,7 +99,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         if (term.trim() === '') {
             setSearchResults([]);
         } else {
-            const results = MENU_ITEMS.filter(item =>
+            const results = visibleMenuItems.filter(item =>
                 item.title.toLowerCase().includes(term.toLowerCase()) ||
                 item.category.toLowerCase().includes(term.toLowerCase())
             );
@@ -146,203 +169,22 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 )}
 
                 <nav className={styles.nav}>
-                    <div className={styles.navGroup}>
-                        <button
-                            className={styles.navGroupTitle}
-                            onClick={() => setIsDashboardOpen(!isDashboardOpen)}
-                            title={!isOpen ? "대시보드" : undefined}
-                        >
-                            <div className={styles.navGroupLabel}>
-                                <LayoutDashboard size={18} />
-                                {isOpen && <span>대시보드</span>}
-                            </div>
-                            {isOpen && (isDashboardOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
-                        </button>
-
-                        {isDashboardOpen && (
-                            <div className={styles.navSubMenu}>
-                                <Link
-                                    href="/dashboard"
-                                    className={`${styles.navSubLink} ${pathname === '/dashboard' ? styles.active : ''}`}
-                                >
-                                    요약
-                                </Link>
-                                <Link
-                                    href="/dashboard/franchise-leads"
-                                    className={`${styles.navSubLink} ${pathname === '/dashboard/franchise-leads' ? styles.active : ''}`}
-                                >
-                                    <span className={styles.navSubLinkContent}>
-                                        <Target size={14} />
-                                        모객 DB
-                                    </span>
-                                </Link>
-                                <Link
-                                    href="/dashboard/franchise-leads/market-insights"
-                                    className={`${styles.navSubLink} ${pathname === '/dashboard/franchise-leads/market-insights' ? styles.active : ''}`}
-                                >
-                                    <span className={styles.navSubLinkContent}>
-                                        <MapPin size={14} />
-                                        출점 후보지
-                                    </span>
-                                </Link>
-                                <Link
-                                    href="/dashboard/franchise-operations"
-                                    className={`${styles.navSubLink} ${pathname === '/dashboard/franchise-operations' ? styles.active : ''}`}
-                                >
-                                    <span className={styles.navSubLinkContent}>
-                                        <Store size={14} />
-                                        가맹 운영
-                                    </span>
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className={styles.navGroup}>
-                        <button
-                            className={styles.navGroupTitle}
-                            onClick={() => setIsConsultingOpen(!isConsultingOpen)}
-                        >
-                            <div className={styles.navGroupLabel}>
-                                <Briefcase size={18} />
-                                {isOpen && <span>컨설팅 업무</span>}
-                            </div>
-                            {isOpen && (isConsultingOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
-                        </button>
-
-                        {isConsultingOpen && (
-                            <div className={styles.navSubMenu}>
-                                <Link
-                                    href="/properties"
-                                    className={`${styles.navSubLink} ${pathname === '/properties' ? styles.active : ''}`}
-                                >
-                                    점포 목록
-                                </Link>
-                                <Link
-                                    href="/properties/register"
-                                    className={`${styles.navSubLink} ${pathname === '/properties/register' ? styles.active : ''}`}
-                                >
-                                    점포 신규등록
-                                </Link>
-                                {features.mapService && (
-                                    <Link
-                                        href="/properties/map"
-                                        className={`${styles.navSubLink} ${pathname === '/properties/map' ? styles.active : ''}`}
-                                    >
-                                        물건지도
-                                    </Link>
-                                )}
-                                <Link
-                                    href="/schedule"
-                                    className={`${styles.navSubLink} ${pathname === '/schedule' ? styles.active : ''}`}
-                                >
-                                    일정관리
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className={styles.navGroup}>
-                        <button
-                            className={styles.navGroupTitle}
-                            onClick={() => setIsCustomersOpen(!isCustomersOpen)}
-                        >
-                            <div className={styles.navGroupLabel}>
-                                <Users size={18} />
-                                {isOpen && <span>고객관리</span>}
-                            </div>
-                            {isOpen && (isCustomersOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
-                        </button>
-
-                        {isCustomersOpen && (
-                            <div className={styles.navSubMenu}>
-                                <Link
-                                    href="/customers"
-                                    className={`${styles.navSubLink} ${pathname === '/customers' ? styles.active : ''}`}
-                                >
-                                    고객목록
-                                </Link>
-                                <Link
-                                    href="/customers/register"
-                                    className={`${styles.navSubLink} ${pathname === '/customers/register' ? styles.active : ''}`}
-                                >
-                                    신규입력
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className={styles.navGroup}>
-                        <button
-                            className={styles.navGroupTitle}
-                            onClick={() => setIsBusinessCardsOpen(!isBusinessCardsOpen)}
-                        >
-                            <div className={styles.navGroupLabel}>
-                                <Contact size={18} />
-                                {isOpen && <span>명함관리</span>}
-                            </div>
-                            {isOpen && (isBusinessCardsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
-                        </button>
-
-                        {isBusinessCardsOpen && (
-                            <div className={styles.navSubMenu}>
-                                <Link
-                                    href="/business-cards"
-                                    className={`${styles.navSubLink} ${pathname === '/business-cards' ? styles.active : ''}`}
-                                >
-                                    명함목록
-                                </Link>
-                                <Link
-                                    href="/business-cards/register"
-                                    className={`${styles.navSubLink} ${pathname === '/business-cards/register' ? styles.active : ''}`}
-                                >
-                                    신규입력
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-
-                    {features.electronicContracts && (
-                        <div className={styles.navGroup}>
-                            <button
-                                className={styles.navGroupTitle}
-                                onClick={() => setIsContractsOpen(!isContractsOpen)}
-                            >
-                                <div className={styles.navGroupLabel}>
-                                    <FileText size={18} />
-                                    {isOpen && <span>계약</span>}
-                                </div>
-                                {isOpen && (isContractsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
-                            </button>
-
-                            {isContractsOpen && (
-                                <div className={styles.navSubMenu}>
-                                    <Link
-                                        href="/contracts"
-                                        className={`${styles.navSubLink} ${pathname === '/contracts' ? styles.active : ''}`}
-                                    >
-                                        계약관리
-                                    </Link>
-                                    <Link
-                                        href="/contracts/create"
-                                        className={`${styles.navSubLink} ${pathname === '/contracts/create' ? styles.active : ''}`}
-                                    >
-                                        간편 서명 시작(전자)
-                                    </Link>
-                                    <Link
-                                        href="/contracts/builder"
-                                        className={`${styles.navSubLink} ${pathname === '/contracts/builder' ? styles.active : ''}`}
-                                    >
-                                        새 계약 양식 만들기
-                                    </Link>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {SIDEBAR_SECTIONS.map(section => (
+                        <SidebarNavSection
+                            key={section.key}
+                            section={section}
+                            pathname={pathname}
+                            isSidebarOpen={isOpen}
+                            isExpanded={isSectionExpanded(section.key)}
+                            isVisible={section.key !== 'contracts' || features.electronicContracts}
+                            isFeatureEnabled={isEnabled}
+                            onToggle={() => toggleSection(section.key)}
+                        />
+                    ))}
 
 
                     {/* Manager Menu - Only visible to manager */}
-                    {userRole === 'manager' && (
+                    {userRole === 'manager' && isEnabled('companyStaff') && (
                         <div className={styles.navGroup}>
                             <Link href="/company/staff" className={styles.navLink} title={!isOpen ? "직원 관리" : undefined}>
                                 <div className={styles.navGroupLabel}>

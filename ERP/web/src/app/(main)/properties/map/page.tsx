@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Map, MapMarker, CustomOverlayMap, useKakaoLoader } from 'react-kakao-maps-sdk';
 import { X, Star } from 'lucide-react';
+import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 import styles from './page.module.css';
 
 interface Property {
@@ -59,14 +60,13 @@ export default function PropertyMapPage() {
     useEffect(() => {
         const fetchProperties = async () => {
             try {
-                const userStr = localStorage.getItem('user');
-                let query = '';
-                if (userStr) {
-                    const user = JSON.parse(userStr);
-                    if (user.companyName) {
-                        query = `?company=${encodeURIComponent(user.companyName)}`;
-                    }
-                }
+                const user = getStoredUser();
+                const params = new URLSearchParams();
+                const companyName = getStoredCompanyName(user);
+                const requesterId = getRequesterId(user);
+                if (companyName) params.set('company', companyName);
+                if (requesterId) params.set('requesterId', requesterId);
+                const query = params.toString() ? `?${params.toString()}` : '';
 
                 const res = await fetch(`/api/properties${query}`);
                 if (res.ok) {
