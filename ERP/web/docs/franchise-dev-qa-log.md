@@ -129,6 +129,9 @@
 - 2026-06-15 `/landing` 공개 랜딩 페이지를 추가하고 기능 섹션을 고도화했다. 구글시트 대비 ERP 전환 메시지, 모객 파이프라인/유입 경로/DB 유입 추이/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 반영했다. 사용자의 피드백에 따라 CTA 버튼과 하단 도입 문의 카드는 제거하고, 랜딩 상단 브랜드는 `Franchise OS`로 정리했다.
 - 2026-06-15 관리자 회사별 메뉴 on/off와 슈퍼어드민 회사 조회 스코프를 추가했다. `/admin`은 회사별 메뉴 기능을 관리하고, 헤더 `조회 회사` 선택은 대시보드/모객 DB/출점 후보지/브랜드 모니터링/가맹 운영/고객/명함/점포/직원 화면의 회사 범위를 바꾼다.
 - 2026-06-15 회사 메뉴 설정 저장용 `supabase_company_menu_features_migration.sql`, `/api/admin/company-access`, `/api/company-menu-features`, 전역 사이드바 메뉴 설정/비활성 안내 컴포넌트를 추가했다. SQL 미적용 환경에서는 메뉴를 기본 ON으로 두고 관리자 저장 API가 migration 필요 상태를 반환한다.
+- 2026-06-15 가입 승인 프로세스를 신규 회사/기존 회사로 분리했다. 신규 회사는 최초 가입자가 무조건 팀장 권한 요청으로 접수되고, 플랫폼 관리자 승인 후 로그인할 수 있다. 기존 회사의 공개 가입은 직원 요청으로만 접수되며, 승인된 팀장이 `/company/staff`에서 직원 가입 요청을 승인한다. 기존 회사의 추가 팀장은 공개 가입이 아니라 직원 관리의 팀장 승격으로 처리한다.
+- 2026-06-15 출점 후보지 화면의 상단 요약 카드 4개와 `출점 계획 · 경쟁스캔` 보조 칩을 제거해, 후보지 인사이트 본문과 지도/표 업무에 바로 진입하도록 간소화했다.
+- 2026-06-15 전역 좌측 사이드바 상단 로고 텍스트는 고정 `내일사장` 대신 계정 회사명으로 표시한다. 일반 계정은 로그인 회사명, 관리자/슈퍼어드민은 `조회 회사` 선택 스코프를 우선하며, 긴 회사명은 한 줄 말줄임으로 처리한다.
 
 ## QA 결과
 
@@ -137,6 +140,8 @@
 - 2026-06-15 관리자 회사 스코프 QA 통과: 로그인 세션에서 `/dashboard/franchise-leads/market-insights`에 `조회 회사` selector가 노출되고 여러 회사 옵션을 선택할 수 있음을 확인했다. 프로필 표기는 기존 로그인 회사/역할을 유지하고, 선택 회사는 조회 스코프에만 사용한다.
 - 2026-06-15 관리자 API QA 통과: `/api/admin/company-access?requesterId=admin`은 회사 목록을 반환했고, `/api/dashboard?userId=admin`은 관리자 전체 요약, `/api/dashboard?userId=admin&companyId=<company>`는 선택 회사 기준 요약을 반환했다. 관리자 아닌 사용자의 교차 회사 조회는 403 정책을 유지한다.
 - 2026-06-15 관리자 회사 스코프 정적 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
+- 2026-06-15 가입 승인 정책 검증 통과: `npx tsx --test src/lib/signup-approval-policy.test.mts` 5건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. signup 화면은 1440px/390px 캡처에서 가입 승인 방식 카드가 잘리지 않고, 신규 회사 등록 선택 후 `관리자 승인 후 로그인` 안내가 표시됨을 확인했다.
+- 2026-06-15 좌측 사이드바 회사명 표시 QA 통과: Playwright에서 `/dashboard` 인증 응답과 관리자 `조회 회사` 스코프를 모킹했을 때 좌측 상단이 `민티아 (DEV)`로 표시되고 하드코딩된 `내일사장` 문구가 남지 않는 것을 확인했다.
 - 2026-06-15 모객 DB/랜딩 정리 검증 통과: `npx tsx --test src/lib/franchise-lead-workflow.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/components/franchise/leads/leadActivityLog.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts` 결과 22건 통과.
 - 2026-06-15 최종 정적 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 변경 TypeScript 20개 파일 no-excuse 규칙 검사, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
 - 2026-06-15 브라우저 QA 통과: 로컬 `http://localhost:3000/landing`은 로그인 없이 열리고, 1440px에서 `scrollWidth=clientWidth=1425`, 390px에서 `scrollWidth=clientWidth=375`, overflow element 0건을 확인했다. 랜딩에서 `Franchise OS`, 구글시트 비교 메시지, `Meta Lead Ads 유입 연동`, `Meta 광고` 문구는 보이고 `데모 문의`, `로그인`, `내일사장` 문구는 노출되지 않았다.

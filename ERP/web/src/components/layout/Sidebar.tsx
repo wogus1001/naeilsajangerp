@@ -13,9 +13,10 @@ interface SidebarProps {
     isOpen: boolean;
     onToggle: () => void;
     menuFlags?: CompanyMenuFlagMap;
+    companyName?: string;
 }
 
-const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags() }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), companyName }: SidebarProps) => {
     const pathname = usePathname();
     const [isDashboardOpen, setIsDashboardOpen] = useState(true);
     const [isConsultingOpen, setIsConsultingOpen] = useState(true);
@@ -57,6 +58,7 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags() }:
     const [searchResults, setSearchResults] = useState<typeof SIDEBAR_MENU_ITEMS>([]);
     const isEnabled = (key: CompanyMenuFeatureKey) => isCompanyMenuEnabled(menuFlags, key);
     const visibleMenuItems = SIDEBAR_MENU_ITEMS.filter(item => isEnabled(item.featureKey));
+    const displayCompanyName = companyName?.trim() || '내일사장';
 
     const isSectionExpanded = (key: SidebarSectionKey) => {
         switch (key) {
@@ -129,8 +131,8 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags() }:
                     <div className={styles.logoIcon}>
                         <div className={styles.gridIcon} />
                     </div>
-                    <span className={styles.logoText}>
-                        내일사장 {process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production' && '(DEV)'}
+                    <span className={styles.logoText} title={displayCompanyName}>
+                        {displayCompanyName} {process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production' && '(DEV)'}
                     </span>
                 </Link>
 
