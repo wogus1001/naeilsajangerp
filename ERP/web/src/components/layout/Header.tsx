@@ -53,11 +53,11 @@ const Header = ({ user, onLogout }: HeaderProps) => {
         if (path === '/dashboard/franchise-operations') return { category: '대시보드', title: '가맹 운영' };
 
         // Consulting
-        if (path === '/properties') return { category: '컨설팅 업무', title: '점포 목록' };
-        if (path === '/properties/register') return { category: '컨설팅 업무', title: '점포 신규등록' };
-        if (path === '/properties/map') return { category: '컨설팅 업무', title: '물건지도' };
-        if (path === '/schedule') return { category: '컨설팅 업무', title: '일정관리' };
-        if (path.startsWith('/properties/')) return { category: '컨설팅 업무', title: '점포 상세' };
+        if (path === '/properties') return { category: '점포개발 업무', title: '점포 목록' };
+        if (path === '/properties/register') return { category: '점포개발 업무', title: '점포 신규등록' };
+        if (path === '/properties/map') return { category: '점포개발 업무', title: '물건지도' };
+        if (path === '/schedule') return { category: '점포개발 업무', title: '일정관리' };
+        if (path.startsWith('/properties/')) return { category: '점포개발 업무', title: '점포 상세' };
 
         // Customers
         if (path === '/customers') return { category: '고객관리', title: '고객목록' };

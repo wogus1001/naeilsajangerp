@@ -62,28 +62,28 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     },
     {
         key: 'properties',
-        category: '컨설팅 업무',
+        category: '점포개발 업무',
         title: '점포 목록',
         description: '점포 물건지 목록과 상세 정보를 조회합니다.',
         routePrefixes: ['/properties']
     },
     {
         key: 'propertyRegister',
-        category: '컨설팅 업무',
+        category: '점포개발 업무',
         title: '점포 신규등록',
         description: '새 점포 물건지를 직접 등록합니다.',
         routePrefixes: ['/properties/register']
     },
     {
         key: 'propertyMap',
-        category: '컨설팅 업무',
+        category: '점포개발 업무',
         title: '물건지도',
         description: '점포 물건지를 지도에서 확인합니다.',
         routePrefixes: ['/properties/map']
     },
     {
         key: 'schedule',
-        category: '컨설팅 업무',
+        category: '점포개발 업무',
         title: '일정관리',
         description: '상담, 방문, 후속 연락 일정을 관리합니다.',
         routePrefixes: ['/schedule']
