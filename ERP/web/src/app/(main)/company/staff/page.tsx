@@ -5,12 +5,34 @@ import { useRouter } from 'next/navigation';
 import { UserCheck, Shield, Users as UsersIcon, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser, type StoredUser } from '@/utils/userUtils';
+
+type StaffRow = {
+    readonly id: string;
+    readonly name: string | null;
+    readonly email: string | null;
+    readonly role: string | null;
+    readonly status: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStaffRow(value: unknown): value is StaffRow {
+    if (!isRecord(value)) return false;
+    return typeof value.id === 'string';
+}
+
+function parseStaffRows(value: unknown): StaffRow[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter(isStaffRow);
+}
 
 export default function StaffManagementPage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
-    const [staffList, setStaffList] = useState<any[]>([]);
+    const [user, setUser] = useState<StoredUser>(null);
+    const [staffList, setStaffList] = useState<StaffRow[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' | 'info'; onClose?: () => void }>({
@@ -51,16 +73,22 @@ export default function StaffManagementPage() {
         setUser(parsedUser);
         fetchStaff(
             getStoredCompanyName(parsedUser),
-            getStoredCompanyId(parsedUser)
+            getStoredCompanyId(parsedUser),
+            getRequesterId(parsedUser)
         );
     }, [router]);
 
-    const fetchStaff = async (companyName: string, companyId?: string) => {
+    const fetchStaff = async (companyName: string, companyId?: string, requesterId?: string) => {
         try {
-            const res = await fetch(`/api/company/staff?companyName=${encodeURIComponent(companyName)}&companyId=${companyId || ''}`);
+            const params = new URLSearchParams({
+                companyName,
+                companyId: companyId || '',
+                requesterId: requesterId || ''
+            });
+            const res = await fetch(`/api/company/staff?${params.toString()}`);
             if (res.ok) {
                 const data = await res.json();
-                setStaffList(data);
+                setStaffList(parseStaffRows(data));
             }
         } catch (error) {
             console.error('Failed to fetch staff:', error);
@@ -70,6 +98,12 @@ export default function StaffManagementPage() {
     };
 
     const handleAction = async (targetUserId: string, action: 'approve' | 'promote' | 'demote') => {
+        const currentUser = user;
+        if (!currentUser) {
+            showAlert('로그인 정보가 없습니다. 다시 로그인 해주세요.', 'error');
+            return;
+        }
+
         let confirmMsg = '';
         if (action === 'approve') confirmMsg = '이 직원의 가입을 승인하시겠습니까?';
         else if (action === 'promote') confirmMsg = '이 직원에게 팀장 권한을 부여하시겠습니까?';
@@ -77,7 +111,7 @@ export default function StaffManagementPage() {
 
         showConfirm(confirmMsg, async () => {
             try {
-                const requesterId = getRequesterId(user);
+                const requesterId = getRequesterId(currentUser);
                 if (!requesterId) {
                     showAlert('로그인 정보가 없습니다. 다시 로그인 해주세요.', 'error');
                     return;
@@ -96,13 +130,13 @@ export default function StaffManagementPage() {
                 if (res.ok) {
                     showAlert('처리되었습니다.', 'success', () => {
                         // If I demoted myself, I am no longer a manager. Reload to trigger redirects or UI updates.
-                        if (action === 'demote' && (targetUserId === user.id || targetUserId === user.uid)) {
+                        if (action === 'demote' && (targetUserId === currentUser.id || targetUserId === currentUser.uid)) {
                             // Update local storage user
-                            const updatedUser = { ...user, role: 'staff' };
+                            const updatedUser = { ...currentUser, role: 'staff' };
                             localStorage.setItem('user', JSON.stringify(updatedUser));
                             window.location.href = '/dashboard'; // Redirect out as I lost access to this page
                         } else {
-                            fetchStaff(getStoredCompanyName(user), getStoredCompanyId(user));
+                            fetchStaff(getStoredCompanyName(currentUser), getStoredCompanyId(currentUser), getRequesterId(currentUser));
                         }
                     });
                 } else {
@@ -117,9 +151,10 @@ export default function StaffManagementPage() {
     };
 
     if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
+    if (!user) return <div style={{ padding: 40 }}>로그인 정보를 확인할 수 없습니다.</div>;
 
-    const pendingStaff = staffList.filter(u => u.status === 'pending_approval');
-    const managers = staffList.filter(u => u.role === 'manager');
+    const pendingStaff = staffList.filter(u => u.status === 'pending_approval' && u.role === 'staff');
+    const managers = staffList.filter(u => u.role === 'manager' && u.status === 'active');
     const activeStaff = staffList.filter(u => u.role === 'staff' && u.status === 'active');
 
     return (

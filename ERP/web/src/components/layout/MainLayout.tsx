@@ -4,7 +4,7 @@ import React from 'react';
 import { Megaphone, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
-import { setAdminCompanyScope } from '@/utils/userUtils';
+import { getStoredCompanyName, setAdminCompanyScope } from '@/utils/userUtils';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useResponsiveSidebar } from './useResponsiveSidebar';
@@ -50,6 +50,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const router = useRouter();
     const pathname = usePathname();
     const { flags: menuFlags, blockedFeature } = useCompanyMenuFeatures(authUser, pathname);
+    const sidebarCompanyName = getStoredCompanyName(authUser) || authUser?.companyName || '';
 
     React.useEffect(() => {
         let cancelled = false;
@@ -271,7 +272,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </div>
             )}
 
-            <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} menuFlags={menuFlags} />
+            <Sidebar
+                isOpen={isSidebarOpen}
+                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                menuFlags={menuFlags}
+                companyName={sidebarCompanyName}
+            />
 
             <div
                 className={`${styles.mainWrapper} ${!isSidebarOpen ? styles.collapsed : ''} global-main-wrapper`}

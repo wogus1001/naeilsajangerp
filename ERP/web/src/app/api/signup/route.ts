@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server';
+import {
+    resolveSignupApprovalPolicy,
+    type SignupApprovalRole,
+    type SignupApprovalStatus
+} from '@/lib/signup-approval-policy';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
@@ -29,9 +34,10 @@ export async function POST(request: Request) {
 
         // 2. Company Logic
         let companyId: string | null = null;
-        let finalRole = requestedRole || 'staff';
-        let finalStatus = 'active';
-        let message = '회원가입이 완료되었습니다.';
+        let isNewCompany = false;
+        let finalRole: SignupApprovalRole = 'staff';
+        let finalStatus: SignupApprovalStatus = 'pending_approval';
+        let message = '가입 요청이 완료되었습니다.';
 
         // Robust check: Search for company name using ilike to handle minor differences (spaces/normalization)
         const { data: companyResults, error: findError } = await supabaseAdmin
@@ -100,11 +106,7 @@ export async function POST(request: Request) {
             } else {
                 console.log(`[Signup] Company created: ${newCompany.id}`);
                 companyId = newCompany.id;
-                finalRole = 'manager';
-                finalStatus = 'active';
-                if (requestedRole === 'staff') {
-                    message = '처음 등록되는 회사의 경우 가입자가 팀장이 됩니다.';
-                }
+                isNewCompany = true;
             }
         } else {
             console.log(`[Signup] Found existing company: ${existingCompany.id}`);
@@ -113,28 +115,24 @@ export async function POST(request: Request) {
         // If we found an existing company (either first time or after retry)
         if (existingCompany && !companyId) {
             companyId = existingCompany.id;
-
-            // Check how many managers already exist
-            const { count: managerCount } = await supabaseAdmin
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('company_id', companyId)
-                .eq('role', 'manager');
-
-            const currentManagers = managerCount || 0;
-
-            if (requestedRole === 'manager') {
-                if (currentManagers >= 2) {
-                    return NextResponse.json({ error: '이미 팀장이 2명 존재합니다. 직원으로 가입해주세요.' }, { status: 400 });
-                }
-                finalRole = 'manager';
-                finalStatus = 'active';
-            } else {
-                finalRole = 'staff';
-                finalStatus = 'pending_approval';
-                message = '가입 요청이 완료되었습니다. 팀장의 승인 후 로그인이 가능합니다.';
-            }
         }
+
+        if (!companyId) {
+            return NextResponse.json({ error: '회사 정보를 확정하지 못했습니다.' }, { status: 500 });
+        }
+
+        const approvalPolicy = resolveSignupApprovalPolicy({
+            companyExists: !isNewCompany,
+            requestedRole
+        });
+
+        if (approvalPolicy.kind === 'reject') {
+            return NextResponse.json({ error: approvalPolicy.error }, { status: 400 });
+        }
+
+        finalRole = approvalPolicy.role;
+        finalStatus = approvalPolicy.status;
+        message = approvalPolicy.message;
 
         // 3. Create Auth User
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -180,17 +178,6 @@ export async function POST(request: Request) {
             // Cleanup auth user?
             await supabaseAdmin.auth.admin.deleteUser(userId);
             return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
-        }
-
-        // 5. If Manager, update Company manager_id (Only if currently null)
-        if (finalRole === 'manager' && companyId) {
-            const { data: comp } = await supabaseAdmin.from('companies').select('manager_id').eq('id', companyId).single();
-            if (comp && !comp.manager_id) {
-                await supabaseAdmin
-                    .from('companies')
-                    .update({ manager_id: userId })
-                    .eq('id', companyId);
-            }
         }
 
         return NextResponse.json({

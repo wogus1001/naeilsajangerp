@@ -1,10 +1,34 @@
 import { NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function resolveUserUuid(supabaseAdmin: any, rawId: string | null) {
+type RequesterProfileRow = {
+    readonly id: string;
+    readonly role: string | null;
+    readonly company_id: string | null;
+};
+
+type ProfileIdRow = {
+    readonly id: string;
+};
+
+type UserListProfileRow = {
+    readonly id: string;
+    readonly email: string | null;
+    readonly name: string | null;
+    readonly company_id: string | null;
+    readonly role: string | null;
+    readonly status: string | null;
+    readonly created_at: string | null;
+    readonly company: { readonly name: string | null } | null;
+};
+
+type RequesterLookupResult = { readonly profile: RequesterProfileRow } | { readonly error: NextResponse };
+
+async function resolveUserUuid(supabaseAdmin: SupabaseClient, rawId: string | null) {
     if (!rawId) return null;
     if (UUID_REGEX.test(rawId)) return rawId;
 
@@ -13,12 +37,16 @@ async function resolveUserUuid(supabaseAdmin: any, rawId: string | null) {
         .from('profiles')
         .select('id')
         .eq('email', emailToSearch)
-        .single();
+        .single<ProfileIdRow>();
 
     return profile?.id || null;
 }
 
-async function getRequesterProfile(supabaseAdmin: any, request: Request, searchParams: URLSearchParams) {
+async function getRequesterProfile(
+    supabaseAdmin: SupabaseClient,
+    request: Request,
+    searchParams: URLSearchParams
+): Promise<RequesterLookupResult> {
     const requesterRaw = searchParams.get('requesterId') || request.headers.get('x-user-id');
     const requesterUuid = await resolveUserUuid(supabaseAdmin, requesterRaw);
 
@@ -30,7 +58,7 @@ async function getRequesterProfile(supabaseAdmin: any, request: Request, searchP
         .from('profiles')
         .select('id, role, company_id')
         .eq('id', requesterUuid)
-        .single();
+        .single<RequesterProfileRow>();
 
     if (requesterError || !requesterProfile) {
         return { error: NextResponse.json({ error: 'Requester profile not found' }, { status: 401 }) };
@@ -39,7 +67,7 @@ async function getRequesterProfile(supabaseAdmin: any, request: Request, searchP
     return { profile: requesterProfile };
 }
 
-async function requireAdminRequester(supabaseAdmin: any, request: Request, searchParams: URLSearchParams) {
+async function requireAdminRequester(supabaseAdmin: SupabaseClient, request: Request, searchParams: URLSearchParams) {
     const requester = await getRequesterProfile(supabaseAdmin, request, searchParams);
     if ('error' in requester) return requester;
 
@@ -48,6 +76,41 @@ async function requireAdminRequester(supabaseAdmin: any, request: Request, searc
     }
 
     return requester;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getStringField(value: unknown, key: string): string | null {
+    if (!isRecord(value)) return null;
+    const rawValue = value[key];
+    if (typeof rawValue !== 'string') return null;
+    const trimmed = rawValue.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+function getErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (isRecord(error) && typeof error.message === 'string') return error.message;
+    return String(error);
+}
+
+function getErrorValue(error: unknown, key: string): unknown {
+    if (!isRecord(error)) return undefined;
+    return error[key];
+}
+
+function stringifyError(error: unknown): string {
+    try {
+        if (error instanceof Error) {
+            return JSON.stringify(error, Object.getOwnPropertyNames(error));
+        }
+
+        return JSON.stringify(error);
+    } catch {
+        return String(error);
+    }
 }
 
 export async function GET(request: Request) {
@@ -63,11 +126,16 @@ export async function GET(request: Request) {
             const adminCheck = await requireAdminRequester(supabaseAdmin, request, searchParams);
             if ('error' in adminCheck) return adminCheck.error;
 
-            const debugInfo = {
+            const debugInfo: {
+                envUrl: string | undefined;
+                count: number;
+                error: unknown;
+                data: unknown[];
+            } = {
                 envUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
                 count: 0,
-                error: null as any,
-                data: [] as any[]
+                error: null,
+                data: []
             };
 
             const { data, error, count } = await supabaseAdmin
@@ -81,7 +149,7 @@ export async function GET(request: Request) {
             return NextResponse.json(debugInfo);
         }
 
-        let companyScopedRequester: any = null;
+        let companyScopedRequester: RequesterProfileRow | null = null;
         if (companyFilter) {
             const requester = await getRequesterProfile(supabaseAdmin, request, searchParams);
             if ('error' in requester) return requester.error;
@@ -130,7 +198,7 @@ export async function GET(request: Request) {
 
         if (error) throw error;
 
-        const safeUsers = profiles.map(p => {
+        const safeUsers = (profiles as UserListProfileRow[]).map(p => {
             // Restore legacy ID format by stripping default domain
             const displayId = p.email?.endsWith('@example.com')
                 ? p.email.split('@')[0]
@@ -150,9 +218,9 @@ export async function GET(request: Request) {
 
         return NextResponse.json(safeUsers);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Get users error:', error);
-        return NextResponse.json({ error: `[DEBUG-GET] 서버 오류: ${error.message || error}` }, { status: 500 });
+        return NextResponse.json({ error: `[DEBUG-GET] 서버 오류: ${getErrorMessage(error)}` }, { status: 500 });
     }
 }
 
@@ -191,7 +259,7 @@ export async function DELETE(request: Request) {
                 .from('profiles')
                 .select('id, role, company_id')
                 .eq('email', emailToSearch)
-                .single();
+                .single<RequesterProfileRow>();
 
             if (!profile) {
                 // Try searching by exact match just in case
@@ -199,7 +267,7 @@ export async function DELETE(request: Request) {
                     .from('profiles')
                     .select('id, role, company_id')
                     .eq('email', idToDelete)
-                    .single();
+                    .single<RequesterProfileRow>();
 
                 if (!profileFallback) {
                     return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -243,7 +311,7 @@ export async function DELETE(request: Request) {
             .from('profiles')
             .select('id, role, company_id')
             .eq('id', targetUuid)
-            .single();
+            .single<RequesterProfileRow>();
 
         if (!targetProfile) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -276,9 +344,9 @@ export async function DELETE(request: Request) {
                     console.error(`[DEBUG-DELETE] Failed to unlink ${table}: ${error.message}`);
                     return NextResponse.json({ error: `[DEBUG-DELETE] Failed to unlink ${table}: ${error.message}` }, { status: 500 });
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error(`[DEBUG-DELETE] Exception unlinking ${table}:`, err);
-                return NextResponse.json({ error: `[DEBUG-DELETE] Exception unlinking ${table}: ${err.message}` }, { status: 500 });
+                return NextResponse.json({ error: `[DEBUG-DELETE] Exception unlinking ${table}: ${getErrorMessage(err)}` }, { status: 500 });
             }
         }
 
@@ -335,7 +403,7 @@ export async function DELETE(request: Request) {
                 console.error('[DEBUG-DELETE] Profile delete failed:', profileDeleteError);
                 throw profileDeleteError; // This will go to outer catch with full Postgres details
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('[DEBUG-DELETE] Captured profile delete error:', error);
             throw error;
         }
@@ -367,23 +435,23 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ success: true });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Delete user error:', error);
 
         // Capture specific Postgres error details that are often non-enumerable
         const errorDetails = {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            constraint: error.constraint,
-            tableName: error.table,
-            columnName: error.column,
-            fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+            message: getErrorMessage(error),
+            code: getErrorValue(error, 'code'),
+            details: getErrorValue(error, 'details'),
+            hint: getErrorValue(error, 'hint'),
+            constraint: getErrorValue(error, 'constraint'),
+            tableName: getErrorValue(error, 'table'),
+            columnName: getErrorValue(error, 'column'),
+            fullError: stringifyError(error)
         };
 
         return NextResponse.json({
-            error: `[DEBUG-DELETE] 서버 오류: ${error.message}`,
+            error: `[DEBUG-DELETE] 서버 오류: ${getErrorMessage(error)}`,
             debug: errorDetails
         }, { status: 500 });
     }
@@ -393,8 +461,9 @@ export async function PUT(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const body = await request.json();
-        const { id, status, role, companyName } = body;
-        // id is likely email from the frontend list
+        const id = getStringField(body, 'id');
+        const status = getStringField(body, 'status');
+        const role = getStringField(body, 'role');
 
         if (!id) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -414,10 +483,10 @@ export async function PUT(request: Request) {
                 emailToSearch = `${id}@example.com`;
             }
 
-            const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('email', emailToSearch).single();
+            const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('email', emailToSearch).single<ProfileIdRow>();
             if (!profile) {
                 // Try exact match
-                const { data: exactProfile } = await supabaseAdmin.from('profiles').select('id').eq('email', id).single();
+                const { data: exactProfile } = await supabaseAdmin.from('profiles').select('id').eq('email', id).single<ProfileIdRow>();
                 if (!exactProfile) return NextResponse.json({ error: 'User not found' }, { status: 404 });
                 targetUuid = exactProfile.id;
             } else {
@@ -425,18 +494,49 @@ export async function PUT(request: Request) {
             }
         }
 
-        const updates: any = {};
+        const { data: targetProfile, error: targetError } = await supabaseAdmin
+            .from('profiles')
+            .select('id, role, status, company_id')
+            .eq('id', targetUuid)
+            .single<RequesterProfileRow & { readonly status: string | null }>();
+
+        if (targetError || !targetProfile) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        const updates: Record<string, string> = {};
         if (status) updates.status = status;
         if (role) updates.role = role;
-        // companyName update is complex (needs company ID resolution), skipping for now as usually admin updates status/role.
+
+        if (Object.keys(updates).length === 0) {
+            return NextResponse.json({ error: 'No update fields provided' }, { status: 400 });
+        }
 
         const { error } = await supabaseAdmin.from('profiles').update(updates).eq('id', targetUuid);
         if (error) throw error;
 
+        const nextStatus = status || targetProfile.status;
+        const nextRole = role || targetProfile.role;
+
+        if (nextStatus === 'active' && nextRole === 'manager' && targetProfile.company_id) {
+            const { data: company } = await supabaseAdmin
+                .from('companies')
+                .select('manager_id')
+                .eq('id', targetProfile.company_id)
+                .single();
+
+            if (company && !company.manager_id) {
+                await supabaseAdmin
+                    .from('companies')
+                    .update({ manager_id: targetUuid })
+                    .eq('id', targetProfile.company_id);
+            }
+        }
+
         return NextResponse.json({ success: true });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Update user error:', error);
-        return NextResponse.json({ error: `[DEBUG-UPDATE] 서버 오류: ${error.message || error}` }, { status: 500 });
+        return NextResponse.json({ error: `[DEBUG-UPDATE] 서버 오류: ${getErrorMessage(error)}` }, { status: 500 });
     }
 }

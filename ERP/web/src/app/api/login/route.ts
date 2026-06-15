@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getPendingApprovalLoginMessage } from '@/lib/signup-approval-policy';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
         // 3. Check Status
         if (profile.status === 'pending_approval') {
-            return NextResponse.json({ error: '팀장의 승인 대기 중입니다. 승인 후 로그인이 가능합니다.' }, { status: 403 });
+            return NextResponse.json({ error: getPendingApprovalLoginMessage(profile.role) }, { status: 403 });
         }
         if (profile.status !== 'active') {
             return NextResponse.json({ error: '로그인이 제한된 계정입니다.' }, { status: 403 });
