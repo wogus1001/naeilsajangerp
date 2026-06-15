@@ -24,6 +24,7 @@ import { useLeadDerivedData } from '@/components/franchise/leads/useLeadDerivedD
 import { useLeadExcelImport } from '@/components/franchise/leads/useLeadExcelImport';
 import { useLeadLocationLinks } from '@/components/franchise/leads/useLeadLocationLinks';
 import { useLeadMetaIntegration } from '@/components/franchise/leads/useLeadMetaIntegration';
+import { useLeadActivityLog } from '@/components/franchise/leads/useLeadActivityLog';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     FRANCHISE_LEAD_STATUSES,
@@ -31,7 +32,7 @@ import {
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import {
-    EMPTY_FORM,
+    EMPTY_FORM, ENABLE_LEAD_CUSTOMER_DB_LINKING,
     PAGE_SIZE_OPTIONS,
     RANGE_OPTIONS,
     SOURCE_FILTER_OPTIONS
@@ -43,11 +44,14 @@ import {
     normalizeLeadTableColumnKeys
 } from '@/components/franchise/leads/leadTableConfig';
 import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
+import {
+    resolveLeadWorkspaceTransition,
+    type LeadToolbarStatusFilter
+} from '@/components/franchise/leads/leadWorkspaceState';
 import type {
     AuthUser,
     FranchiseLead,
     LeadActivity,
-    LeadActivityType,
     LeadDbLayer,
     LeadFormState,
     LeadListResponse,
@@ -76,8 +80,11 @@ import {
     normalizeLeadDesiredRegionValue
 } from '@/components/franchise/leads/leadFormFormatters';
 import {
+    LEAD_NEXT_CONTACT_PRESETS,
     EMPTY_LEAD_WORKFLOW_DRAFT,
-    buildLeadWorkflowDraft
+    buildLeadNextContactAt,
+    buildLeadWorkflowDraft,
+    suggestLeadNextContactAt
 } from '@/lib/franchise-lead-workflow';
 import type { LeadWorkflowDraft, LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
 import {
@@ -101,7 +108,7 @@ export default function FranchiseLeadsPage() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState('');
-    const [statusFilter, setStatusFilter] = React.useState<'전체' | FranchiseLeadStatus>('전체');
+    const [statusFilter, setStatusFilter] = React.useState<LeadToolbarStatusFilter>('전체');
     const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
     const [managerFilter, setManagerFilter] = React.useState('전체');
     const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('최근 30일');
@@ -120,12 +127,6 @@ export default function FranchiseLeadsPage() {
     const [selectedLeadDetailMode, setSelectedLeadDetailMode] = React.useState<LeadDetailMode>('default');
     const [selectedLeadIds, setSelectedLeadIds] = React.useState<string[]>([]);
     const [contractChecklistRefreshKey, setContractChecklistRefreshKey] = React.useState(0);
-    const [activityType, setActivityType] = React.useState<LeadActivityType>('전화');
-    const [activityContent, setActivityContent] = React.useState('');
-    const [quickActivityLeadId, setQuickActivityLeadId] = React.useState('');
-    const [quickActivityType, setQuickActivityType] = React.useState<LeadActivityType>('전화');
-    const [quickActivityContent, setQuickActivityContent] = React.useState('');
-    const [isQuickSaving, setIsQuickSaving] = React.useState(false);
     const [detailNextContactAt, setDetailNextContactAt] = React.useState('');
     const [bulkNextContactAt, setBulkNextContactAt] = React.useState('');
     const [isBulkUpdating, setIsBulkUpdating] = React.useState(false);
@@ -155,10 +156,16 @@ export default function FranchiseLeadsPage() {
         () => leads.find(lead => lead.id === selectedLeadId) || null,
         [leads, selectedLeadId]
     );
-    const quickActivityLead = React.useMemo(
-        () => leads.find(lead => lead.id === quickActivityLeadId) || null,
-        [leads, quickActivityLeadId]
-    );
+    const suggestedNextContactAt = React.useMemo(() => {
+        const nextContactAt = suggestLeadNextContactAt(detailWorkflow);
+        return nextContactAt ? toDatetimeLocalValue(nextContactAt) : '';
+    }, [detailWorkflow]);
+    const nextContactPresets = React.useMemo(() => (
+        LEAD_NEXT_CONTACT_PRESETS.map(preset => ({
+            ...preset,
+            value: toDatetimeLocalValue(buildLeadNextContactAt(preset.key))
+        }))
+    ), [selectedLeadId]);
 
     React.useEffect(() => {
         const stored = localStorage.getItem('user');
@@ -168,7 +175,8 @@ export default function FranchiseLeadsPage() {
             try {
                 parsedUser = JSON.parse(stored);
             } catch (error) {
-                console.error('Failed to parse stored user:', error);
+                if (error instanceof SyntaxError) console.error('Failed to parse stored user:', error);
+                else throw error;
             }
         }
 
@@ -198,7 +206,14 @@ export default function FranchiseLeadsPage() {
     }, []);
 
     React.useEffect(() => {
-        localStorage.setItem(LEAD_TABLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleTableColumns));
+        const normalizedColumns = normalizeLeadTableColumnKeys(visibleTableColumns);
+        localStorage.setItem(LEAD_TABLE_COLUMNS_STORAGE_KEY, JSON.stringify(normalizedColumns));
+        if (
+            normalizedColumns.length !== visibleTableColumns.length ||
+            normalizedColumns.some((column, index) => column !== visibleTableColumns[index])
+        ) {
+            setVisibleTableColumns(normalizedColumns);
+        }
     }, [visibleTableColumns]);
 
     const fetchLeads = React.useCallback(async () => {
@@ -369,7 +384,7 @@ export default function FranchiseLeadsPage() {
     }, [selectedLead]);
 
     React.useEffect(() => {
-        if (!selectedLead || !userId || selectedLeadDetailMode === 'contractChecklist') {
+        if (!ENABLE_LEAD_CUSTOMER_DB_LINKING || !selectedLead || !userId || selectedLeadDetailMode === 'contractChecklist') {
             setRelatedCustomers([]);
             setRelatedCards([]);
             return;
@@ -483,8 +498,6 @@ export default function FranchiseLeadsPage() {
         metaLastSyncAt,
         trendSeriesData,
         conversionRate,
-        dueContactCount,
-        overdueContactCount,
         pipelineColumns,
         taskLeads,
         taskQueueOptions,
@@ -754,6 +767,33 @@ export default function FranchiseLeadsPage() {
     };
 
     const {
+        activityType,
+        activityContent,
+        quickActivityLead,
+        quickActivityType,
+        quickActivityContent,
+        isActivitySaving,
+        isQuickSaving,
+        setActivityType,
+        setActivityContent,
+        setQuickActivityType,
+        setQuickActivityContent,
+        addLeadActivity,
+        updateLeadActivity,
+        removeLeadActivity,
+        openQuickActivityModal,
+        closeQuickActivityModal,
+        submitQuickActivity
+    } = useLeadActivityLog({
+        leads,
+        selectedLead,
+        userId,
+        userName: user?.name,
+        onLeadPatchAction: updateLeadWithPatch,
+        showAlertAction: showAlert
+    });
+
+    const {
         convertingLeadId,
         convertLeadToCustomer
     } = useLeadCustomerConversion({
@@ -822,80 +862,6 @@ export default function FranchiseLeadsPage() {
         }
     };
 
-    const addLeadActivity = async () => {
-        if (!selectedLead || !activityContent.trim()) {
-            showAlert('상담 내용을 입력해주세요.', 'error', '상담 이력 추가 실패');
-            return;
-        }
-
-        const nextActivity: LeadActivity = {
-            id: createActivityId(),
-            type: activityType,
-            content: activityContent.trim(),
-            createdAt: new Date().toISOString(),
-            createdBy: user?.name || userId
-        };
-
-        try {
-            await updateLeadWithPatch(selectedLead, {
-                activityLog: [nextActivity, ...(selectedLead.activityLog || [])],
-                lastContactedAt: new Date().toISOString()
-            });
-            setActivityContent('');
-            showAlert('상담 이력을 추가했습니다.', 'success', '저장 완료');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '상담 이력 저장에 실패했습니다.', 'error', '저장 실패');
-        }
-    };
-
-    const openQuickActivityModal = (lead: FranchiseLead) => {
-        setQuickActivityLeadId(lead.id);
-        setQuickActivityType('전화');
-        setQuickActivityContent('');
-    };
-
-    const closeQuickActivityModal = () => {
-        if (isQuickSaving) return;
-        setQuickActivityLeadId('');
-        setQuickActivityContent('');
-        setQuickActivityType('전화');
-    };
-
-    const submitQuickActivity = async (event: React.FormEvent) => {
-        event.preventDefault();
-        if (!quickActivityLead || !quickActivityContent.trim()) {
-            showAlert('상담 내용을 입력해주세요.', 'error', '빠른 이력 추가 실패');
-            return;
-        }
-
-        const now = new Date().toISOString();
-        const nextActivity: LeadActivity = {
-            id: createActivityId(),
-            type: quickActivityType,
-            content: quickActivityContent.trim(),
-            createdAt: now,
-            createdBy: user?.name || userId
-        };
-
-        setIsQuickSaving(true);
-        try {
-            await updateLeadWithPatch(quickActivityLead, {
-                activityLog: [nextActivity, ...(quickActivityLead.activityLog || [])],
-                lastContactedAt: now
-            });
-            setQuickActivityLeadId('');
-            setQuickActivityContent('');
-            setQuickActivityType('전화');
-            showAlert('상담 이력을 빠르게 추가했습니다.', 'success', '저장 완료');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '상담 이력 저장에 실패했습니다.', 'error', '저장 실패');
-        } finally {
-            setIsQuickSaving(false);
-        }
-    };
-
     const applyBulkNextContact = async () => {
         if (selectedLeads.length === 0) {
             showAlert('변경할 가맹 희망자를 선택해주세요.', 'error', '일괄 변경 실패');
@@ -952,27 +918,24 @@ export default function FranchiseLeadsPage() {
         }
     };
 
-    const saveDetailNextContact = async () => {
-        if (!selectedLead) return;
+    const updateDetailWorkflowDraft = (nextWorkflow: LeadWorkflowDraft) => {
+        setDetailWorkflow(nextWorkflow);
+        if (detailNextContactAt) return;
 
-        try {
-            await updateLeadWithPatch(selectedLead, {
-                nextContactAt: detailNextContactAt ? new Date(detailNextContactAt).toISOString() : null
-            });
-            showAlert('다음 연락일을 저장했습니다.', 'success', '저장 완료');
-        } catch (error) {
-            console.error(error);
-            showAlert(error instanceof Error ? error.message : '다음 연락일 저장에 실패했습니다.', 'error', '저장 실패');
+        const suggestedAt = suggestLeadNextContactAt(nextWorkflow);
+        if (suggestedAt) {
+            setDetailNextContactAt(toDatetimeLocalValue(suggestedAt));
         }
     };
 
     const saveDetailWorkflow = async () => {
         if (!selectedLead) return;
 
+        const nextContactAt = detailNextContactAt ? new Date(detailNextContactAt).toISOString() : null;
         const nextActivity: LeadActivity = {
             id: createActivityId(),
             type: '메모',
-            content: `업무 정보 업데이트: ${detailWorkflow.nextAction} · ${detailWorkflow.consultationResult}`,
+            content: `업무 정보 업데이트: ${detailWorkflow.nextAction} · ${detailWorkflow.consultationResult}${nextContactAt ? ` · 다음 연락 ${formatFullDateTime(nextContactAt)}` : ''}`,
             createdAt: new Date().toISOString(),
             createdBy: user?.name || userId
         };
@@ -982,6 +945,7 @@ export default function FranchiseLeadsPage() {
             await updateLeadWithPatch(selectedLead, {
                 ...detailWorkflow,
                 churnReason: detailWorkflow.churnReason.trim(),
+                nextContactAt,
                 activityLog: [nextActivity, ...(selectedLead.activityLog || [])]
             });
             showAlert('연락 관리 정보를 저장했습니다.', 'success', '저장 완료');
@@ -1029,10 +993,11 @@ export default function FranchiseLeadsPage() {
 
     const completeTodayTask = async (lead: FranchiseLead) => {
         const now = new Date().toISOString();
+        const followUpAt = buildLeadNextContactAt('tomorrow_morning', new Date(now));
         const nextActivity: LeadActivity = {
             id: createActivityId(),
             type: '메모',
-            content: '연락 관리에서 연락 완료 처리',
+            content: `연락 완료 처리 · 다음 연락 ${formatFullDateTime(followUpAt)}`,
             createdAt: now,
             createdBy: user?.name || userId
         };
@@ -1040,12 +1005,12 @@ export default function FranchiseLeadsPage() {
         try {
             await updateLeadWithPatch(lead, {
                 lastContactedAt: now,
-                nextContactAt: null,
+                nextContactAt: followUpAt,
                 consultationResult: '연락 성공',
-                nextAction: '미정',
+                nextAction: '추가 상담',
                 activityLog: [nextActivity, ...(lead.activityLog || [])]
             });
-            showAlert('연락 완료로 처리했습니다. 다음 연락일이 필요하면 상세 패널에서 다시 지정하세요.', 'success', '처리 완료');
+            showAlert('연락 완료로 처리하고 내일 오전 후속 연락을 잡았습니다.', 'success', '처리 완료');
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '연락 관리 처리에 실패했습니다.', 'error', '처리 실패');
@@ -1072,6 +1037,32 @@ export default function FranchiseLeadsPage() {
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.', 'error', '삭제 실패');
+        }
+    };
+
+    const handleWorkspaceTabChange = (tab: LeadWorkspaceTab) => {
+        const nextState = resolveLeadWorkspaceTransition({
+            currentTab: workspaceTab,
+            nextTab: tab,
+            currentStatusFilter: statusFilter,
+            currentLeadDbLayer: leadDbLayer,
+            currentViewMode: viewMode
+        });
+
+        setWorkspaceTab(nextState.workspaceTab);
+        setStatusFilter(nextState.statusFilter);
+        setLeadDbLayer(nextState.leadDbLayer);
+        setViewMode(nextState.viewMode);
+    };
+
+    const handleStatusFilterChange = (status: LeadToolbarStatusFilter) => {
+        setStatusFilter(status);
+        if (status === '계약완료') {
+            setWorkspaceTab('contractOwners');
+            setLeadDbLayer('candidate');
+            setViewMode('table');
+        } else if (workspaceTab === 'contractOwners') {
+            setWorkspaceTab('db');
         }
     };
 
@@ -1138,16 +1129,7 @@ export default function FranchiseLeadsPage() {
                 createdTo={createdTo}
                 onRangeClickAction={(nextRange) => handleRangeClick(toRangeOption(nextRange))}
                 onSearchTermChangeAction={setSearchTerm}
-                onStatusFilterChangeAction={(status) => {
-                    setStatusFilter(status);
-                    if (status === '계약완료') {
-                        setWorkspaceTab('contractOwners');
-                        setLeadDbLayer('candidate');
-                        setViewMode('table');
-                    } else if (workspaceTab === 'contractOwners') {
-                        setWorkspaceTab('db');
-                    }
-                }}
+                onStatusFilterChangeAction={handleStatusFilterChange}
                 onSourceFilterChangeAction={(source) => setSourceFilter(toSourceFilterOption(source))}
                 onManagerFilterChangeAction={setManagerFilter}
                 onCreatedFromChangeAction={(date) => {
@@ -1162,14 +1144,7 @@ export default function FranchiseLeadsPage() {
 
             <LeadWorkspaceTabs
                 activeTab={workspaceTab}
-                onTabChange={(tab) => {
-                    setWorkspaceTab(tab);
-                    if (tab === 'contractOwners') {
-                        setStatusFilter('계약완료');
-                        setLeadDbLayer('candidate');
-                        setViewMode('table');
-                    }
-                }}
+                onTabChange={handleWorkspaceTabChange}
             />
 
             {isMetaPanelOpen && (
@@ -1197,22 +1172,13 @@ export default function FranchiseLeadsPage() {
                     candidateCount={candidateLeads.length}
                     rawIntakeCount={rawIntakeLeads.length}
                     activeConsultingCount={candidateLeads.filter(lead => lead.status === '상담중' || lead.status === '가맹검토').length}
-                    dueContactCount={dueContactCount}
-                    overdueContactCount={overdueContactCount}
                     conversionRate={conversionRate}
                     statusFilter={statusFilter}
                     stageData={stageData}
                     sourceChartData={sourceChartData}
                     managerChartData={managerChartData}
                     trendSeriesData={trendSeriesData}
-                    onStatusFilterChangeAction={(status) => {
-                        setStatusFilter(status);
-                        if (status === '계약완료') {
-                            setWorkspaceTab('contractOwners');
-                            setLeadDbLayer('candidate');
-                            setViewMode('table');
-                        }
-                    }}
+                    onStatusFilterChangeAction={handleStatusFilterChange}
                 />
             )}
 
@@ -1305,6 +1271,8 @@ export default function FranchiseLeadsPage() {
                     companyName={companyName}
                     convertingLeadId={convertingLeadId}
                     detailNextContactAt={detailNextContactAt}
+                    suggestedNextContactAt={suggestedNextContactAt}
+                    nextContactPresets={nextContactPresets}
                     detailWorkflow={detailWorkflow}
                     isWorkflowSaving={isWorkflowSaving}
                     selectedLocationLinks={selectedLeadLocationLinks}
@@ -1314,6 +1282,7 @@ export default function FranchiseLeadsPage() {
                     isLocationLinkSaving={isLocationLinkSaving}
                     activityType={activityType}
                     activityContent={activityContent}
+                    isActivitySaving={isActivitySaving}
                     relatedCustomers={relatedCustomers}
                     relatedCards={relatedCards}
                     isRelatedLoading={isRelatedLoading}
@@ -1324,8 +1293,7 @@ export default function FranchiseLeadsPage() {
                     onEditAction={openEditModal}
                     onConvertLeadAction={convertLeadToCustomer}
                     onDetailNextContactAtChangeAction={setDetailNextContactAt}
-                    onSaveDetailNextContactAction={saveDetailNextContact}
-                    onDetailWorkflowChangeAction={setDetailWorkflow}
+                    onDetailWorkflowChangeAction={updateDetailWorkflowDraft}
                     onSaveDetailWorkflowAction={saveDetailWorkflow}
                     onDisclosureEligibilityChangeAction={setSelectedDisclosureEligibility}
                     onContractChecklistSavedAction={markContractChecklistSaved}
@@ -1335,6 +1303,8 @@ export default function FranchiseLeadsPage() {
                     onActivityTypeChangeAction={setActivityType}
                     onActivityContentChangeAction={setActivityContent}
                     onAddLeadActivityAction={addLeadActivity}
+                    onUpdateLeadActivityAction={updateLeadActivity}
+                    onDeleteLeadActivityAction={removeLeadActivity}
                     onLinkRelatedCustomerAction={linkRelatedCustomer}
                     onLinkRelatedCardAction={linkRelatedCard}
                 />

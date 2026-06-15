@@ -1,6 +1,7 @@
 import { CheckCircle2 } from 'lucide-react';
 import type { LeadWorkQueueKey } from '@/lib/franchise-lead-workflow';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 import type { FranchiseLead } from './types';
 import { formatDateTime, getLeadTaskLabel, getLeadTaskRank } from './utils';
 
@@ -56,7 +57,7 @@ export function LeadTaskBoard({
                 <div className={styles.taskBoardHeader}>
                     <div>
                         <strong>{currentQueue?.label || '연락 관리'}</strong>
-                        <span>내 담당 지연 연락과 오늘 연락 대상을 한 화면에서 정리합니다.</span>
+                        <span>내 담당 연락 지연, 오늘 연락, 무응답 확인 대상을 한 화면에서 정리합니다.</span>
                     </div>
                     <b>{isLoading ? '-' : `${taskLeads.length.toLocaleString()}건`}</b>
                 </div>
@@ -117,14 +118,16 @@ export function LeadTaskBoard({
                             <button type="button" className={styles.secondaryButton} onClick={() => onCompleteTodayTaskAction(lead)}>
                                 연락 완료
                             </button>
-                            <button
-                                type="button"
-                                className={styles.primaryButton}
-                                disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                onClick={() => onConvertLeadAction(lead)}
-                            >
-                                고객 전환
-                            </button>
+                            {ENABLE_LEAD_CUSTOMER_DB_LINKING && (
+                                <button
+                                    type="button"
+                                    className={styles.primaryButton}
+                                    disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
+                                    onClick={() => onConvertLeadAction(lead)}
+                                >
+                                    고객 전환
+                                </button>
+                            )}
                         </div>
                     </article>
                 ))}

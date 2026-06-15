@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    buildLeadNextContactAt,
     buildLeadWorkflowDraft,
     getLeadWorkQueueLabel,
     getLeadWorkQueueRank,
     getLeadWorkQueueSummary,
-    matchesLeadWorkQueue
+    matchesLeadWorkQueue,
+    suggestLeadNextContactAt
 } from './franchise-lead-workflow.js';
 import type { LeadWorkflowInput } from './franchise-lead-workflow.js';
 
@@ -119,4 +121,37 @@ test('buildLeadWorkflowDraft fills missing workflow fields with explicit default
         regionFit: '미확인',
         brandFit: '미확인'
     });
+});
+
+test('suggestLeadNextContactAt recommends tomorrow morning when a lead did not answer', () => {
+    const suggestedAt = suggestLeadNextContactAt({
+        nextAction: '미정',
+        consultationResult: '부재/무응답'
+    }, now);
+
+    assert.equal(suggestedAt, '2026-06-11T01:00:00.000Z');
+});
+
+test('suggestLeadNextContactAt recommends a three day follow-up for contract condition checks', () => {
+    const suggestedAt = suggestLeadNextContactAt({
+        nextAction: '계약 조건 확인',
+        consultationResult: '조건 조율'
+    }, now);
+
+    assert.equal(suggestedAt, '2026-06-13T01:00:00.000Z');
+});
+
+test('suggestLeadNextContactAt skips follow-up recommendations for churned leads', () => {
+    const suggestedAt = suggestLeadNextContactAt({
+        nextAction: '추가 상담',
+        consultationResult: '이탈'
+    }, now);
+
+    assert.equal(suggestedAt, null);
+});
+
+test('buildLeadNextContactAt builds a quick one week follow-up preset', () => {
+    const scheduledAt = buildLeadNextContactAt('week_later', now);
+
+    assert.equal(scheduledAt, '2026-06-17T01:00:00.000Z');
 });

@@ -44,8 +44,6 @@ type LeadDashboardProps = {
     readonly candidateCount: number;
     readonly rawIntakeCount: number;
     readonly activeConsultingCount: number;
-    readonly dueContactCount: number;
-    readonly overdueContactCount: number;
     readonly conversionRate: number;
     readonly statusFilter: '전체' | FranchiseLeadStatus;
     readonly stageData: readonly StageDatum[];
@@ -59,8 +57,6 @@ export function LeadDashboard({
     candidateCount,
     rawIntakeCount,
     activeConsultingCount,
-    dueContactCount,
-    overdueContactCount,
     conversionRate,
     statusFilter,
     stageData,
@@ -94,16 +90,6 @@ export function LeadDashboard({
                     <span>상담 진행</span>
                     <strong>{activeConsultingCount.toLocaleString()}</strong>
                     <small>상담중 + 가맹검토</small>
-                </article>
-                <article className={styles.kpiCardAccent}>
-                    <span>오늘 연락</span>
-                    <strong>{dueContactCount.toLocaleString()}</strong>
-                    <small>오늘 예정된 연락</small>
-                </article>
-                <article className={overdueContactCount > 0 ? styles.kpiCardDanger : styles.kpiCard}>
-                    <span>연락 지연</span>
-                    <strong>{overdueContactCount.toLocaleString()}</strong>
-                    <small>다음 연락일이 지난 후보</small>
                 </article>
                 <article className={styles.kpiCard}>
                     <span>계약 전환율</span>

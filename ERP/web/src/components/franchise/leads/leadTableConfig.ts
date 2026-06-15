@@ -1,7 +1,15 @@
 import type { LeadTableColumnKey, LeadTableFilters } from './leadTableTypes';
 import type { LeadTableSortKey } from './leadTableTypes';
+import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 
 export const LEAD_TABLE_COLUMNS_STORAGE_KEY = 'franchiseLeadTableColumns';
+
+type LeadTableColumnConfig = {
+    readonly key: LeadTableColumnKey;
+    readonly label: string;
+    readonly defaultVisible: boolean;
+    readonly required?: boolean;
+};
 
 export const EMPTY_LEAD_TABLE_FILTERS: LeadTableFilters = {
     regionQuery: '',
@@ -17,12 +25,11 @@ export const LEAD_TABLE_SORT_OPTIONS: ReadonlyArray<{ readonly key: LeadTableSor
     { key: 'priority_only', label: '중요 희망자만 보기' }
 ] as const;
 
-export const LEAD_TABLE_COLUMNS: ReadonlyArray<{
-    readonly key: LeadTableColumnKey;
-    readonly label: string;
-    readonly defaultVisible: boolean;
-    readonly required?: boolean;
-}> = [
+const CUSTOMER_DB_LINK_COLUMNS = [
+    { key: 'links', label: '연결', defaultVisible: false }
+] satisfies readonly LeadTableColumnConfig[];
+
+export const LEAD_TABLE_COLUMNS: readonly LeadTableColumnConfig[] = [
     { key: 'priority', label: '중요', defaultVisible: true },
     { key: 'name', label: '가맹 희망자', defaultVisible: true, required: true },
     { key: 'mobile', label: '연락처', defaultVisible: true },
@@ -33,11 +40,10 @@ export const LEAD_TABLE_COLUMNS: ReadonlyArray<{
     { key: 'budget', label: '예산', defaultVisible: true },
     { key: 'interestedBrand', label: '브랜드', defaultVisible: false },
     { key: 'nextContactAt', label: '다음 연락', defaultVisible: true },
-    { key: 'contractChecklist', label: '계약 전 체크', defaultVisible: true },
     { key: 'memo', label: '메모', defaultVisible: false },
-    { key: 'links', label: '연결', defaultVisible: false },
+    ...(ENABLE_LEAD_CUSTOMER_DB_LINKING ? CUSTOMER_DB_LINK_COLUMNS : []),
     { key: 'actions', label: '관리', defaultVisible: true }
-] as const;
+];
 
 export const DEFAULT_LEAD_TABLE_COLUMN_KEYS = LEAD_TABLE_COLUMNS
     .filter(column => column.defaultVisible)

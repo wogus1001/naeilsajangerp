@@ -51,6 +51,9 @@ export function LeadToolbar({
     onCreatedFromChangeAction,
     onCreatedToChangeAction
 }: LeadToolbarProps) {
+    const isSearchActive = searchTerm.trim().length > 0;
+    const isCustomDateRangeActive = range === '전체' && (createdFrom.length > 0 || createdTo.length > 0);
+
     return (
         <section className={styles.toolbar}>
             <div className={styles.rangeGroup} aria-label="기간 필터">
@@ -64,7 +67,7 @@ export function LeadToolbar({
                     </button>
                 ))}
             </div>
-            <div className={styles.searchBox}>
+            <div className={`${styles.searchBox} ${isSearchActive ? styles.toolbarControlActive : ''}`}>
                 <Search size={16} />
                 <input
                     value={searchTerm}
@@ -78,23 +81,36 @@ export function LeadToolbar({
                 )}
             </div>
             <div className={styles.filterGroup}>
-                <select value={statusFilter} onChange={(event) => onStatusFilterChangeAction(parseStatusFilter(event.target.value, statusOptions))}>
+                <select
+                    className={statusFilter !== '전체' ? styles.toolbarControlActive : undefined}
+                    value={statusFilter}
+                    onChange={(event) => onStatusFilterChangeAction(parseStatusFilter(event.target.value, statusOptions))}
+                >
                     <option value="전체">전체 상태</option>
                     {statusOptions.map(status => (
                         <option key={status} value={status}>{status}</option>
                     ))}
                 </select>
-                <select value={sourceFilter} onChange={(event) => onSourceFilterChangeAction(event.target.value)}>
+                <select
+                    className={sourceFilter !== '전체' ? styles.toolbarControlActive : undefined}
+                    value={sourceFilter}
+                    onChange={(event) => onSourceFilterChangeAction(event.target.value)}
+                >
                     {sourceOptions.map(source => (
                         <option key={source} value={source}>{source === '전체' ? '전체 유입' : source}</option>
                     ))}
                 </select>
-                <select value={managerFilter} onChange={(event) => onManagerFilterChangeAction(event.target.value)}>
+                <select
+                    className={managerFilter !== '전체' ? styles.toolbarControlActive : undefined}
+                    value={managerFilter}
+                    onChange={(event) => onManagerFilterChangeAction(event.target.value)}
+                >
                     <option value="전체">전체 담당자</option>
                     {managerOptions}
                 </select>
                 <div className={styles.dateRangeGroup} aria-label="등록일 기간">
                     <input
+                        className={isCustomDateRangeActive ? styles.toolbarControlActive : undefined}
                         type="date"
                         value={createdFrom}
                         onChange={(event) => onCreatedFromChangeAction(event.target.value)}
@@ -102,6 +118,7 @@ export function LeadToolbar({
                     />
                     <span aria-hidden="true">~</span>
                     <input
+                        className={isCustomDateRangeActive ? styles.toolbarControlActive : undefined}
                         type="date"
                         value={createdTo}
                         onChange={(event) => onCreatedToChangeAction(event.target.value)}

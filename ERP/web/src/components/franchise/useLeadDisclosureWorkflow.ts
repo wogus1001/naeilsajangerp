@@ -5,14 +5,17 @@ import {
     type FranchiseDisclosureDocument,
     type FranchiseLeadDisclosureDelivery
 } from '@/lib/franchise-disclosure-deliveries';
-import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import {
-    buildDisclosureStoragePath,
     buildInitialDraft,
-    DISCLOSURE_UPLOAD_BUCKET,
     type DocumentDraft,
     toDateTimeLocalValue
 } from './leadDisclosureFormUtils';
+import {
+    fetchLeadDisclosureWorkflowState,
+    recordDisclosureDeliveryRequest,
+    saveDisclosureDocumentRequest,
+    uploadDisclosureFileRequest
+} from './leadDisclosureWorkflowRequests';
 
 type UseLeadDisclosureWorkflowInput = {
     readonly leadId: string;
@@ -25,21 +28,13 @@ type UseLeadDisclosureWorkflowInput = {
     readonly onEligibilityChange: (eligibility: DisclosureEligibility | null) => void;
 };
 
-type DisclosureDocumentsResponse = {
-    readonly documents?: readonly FranchiseDisclosureDocument[];
-};
+function buildDefaultDeliveryDocumentTitle(leadName: string, interestedBrand: string): string {
+    const brand = interestedBrand.trim();
+    return brand ? `${brand} 정보공개서` : `${leadName} 정보공개서`;
+}
 
-type LeadDisclosuresResponse = {
-    readonly deliveries?: readonly FranchiseLeadDisclosureDelivery[];
-    readonly eligibility?: DisclosureEligibility;
-};
-
-type DisclosureUploadResponse = {
-    readonly publicUrl?: string;
-};
-
-function buildUploadSuffix(): string {
-    return Math.random().toString(36).slice(2, 10) || 'upload';
+function buildDefaultDeliveryDocumentVersion(): string {
+    return new Date().getFullYear().toString();
 }
 
 export function useLeadDisclosureWorkflow({
@@ -56,6 +51,8 @@ export function useLeadDisclosureWorkflow({
     const [deliveries, setDeliveries] = React.useState<readonly FranchiseLeadDisclosureDelivery[]>([]);
     const [eligibility, setEligibility] = React.useState<DisclosureEligibility | null>(null);
     const [selectedDocumentId, setSelectedDocumentId] = React.useState('');
+    const [deliveryDocumentTitle, setDeliveryDocumentTitle] = React.useState(() => buildDefaultDeliveryDocumentTitle(leadName, interestedBrand));
+    const [deliveryDocumentVersion, setDeliveryDocumentVersion] = React.useState(() => buildDefaultDeliveryDocumentVersion());
     const [sentAt, setSentAt] = React.useState(() => toDateTimeLocalValue(new Date()));
     const [channel, setChannel] = React.useState<DisclosureChannel>('manual');
     const [recipientContact, setRecipientContact] = React.useState(leadContact);
@@ -73,28 +70,21 @@ export function useLeadDisclosureWorkflow({
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const documentParams = new URLSearchParams({ requesterId: userId });
-            if (companyId) documentParams.set('companyId', companyId);
-            if (companyName) documentParams.set('company', companyName);
-            const deliveryParams = new URLSearchParams({ requesterId: userId, leadId });
-            const [documentResponse, deliveryResponse] = await Promise.all([
-                fetch(`/api/franchise-disclosure-documents?${documentParams.toString()}`, { cache: 'no-store' }),
-                fetch(`/api/franchise-lead-disclosures?${deliveryParams.toString()}`, { cache: 'no-store' })
-            ]);
-            const documentPayload = await documentResponse.json();
-            const deliveryPayload = await deliveryResponse.json();
-            if (!documentResponse.ok) throw new Error(readApiError(documentPayload));
-            if (!deliveryResponse.ok) throw new Error(readApiError(deliveryPayload));
-
-            const documentData = unwrapApiData<DisclosureDocumentsResponse>(documentPayload);
-            const deliveryData = unwrapApiData<LeadDisclosuresResponse>(deliveryPayload);
-            const nextDocuments = documentData.documents || [];
-            const nextEligibility = deliveryData.eligibility || null;
+            const disclosureState = await fetchLeadDisclosureWorkflowState({
+                userId,
+                leadId,
+                companyId,
+                companyName
+            });
+            const nextDocuments = disclosureState.documents;
+            const nextEligibility = disclosureState.eligibility;
             setDocuments(nextDocuments);
-            setDeliveries(deliveryData.deliveries || []);
+            setDeliveries(disclosureState.deliveries);
             setEligibility(nextEligibility);
             onEligibilityChange(nextEligibility);
             setSelectedDocumentId(current => current || nextDocuments[0]?.id || '');
+            setDeliveryDocumentTitle(current => current || nextDocuments[0]?.title || buildDefaultDeliveryDocumentTitle(leadName, interestedBrand));
+            setDeliveryDocumentVersion(current => current || nextDocuments[0]?.version || buildDefaultDeliveryDocumentVersion());
         } catch (error) {
             const messageText = error instanceof Error ? error.message : '정보공개서 상태를 불러오지 못했습니다.';
             setErrorMessage(messageText);
@@ -105,12 +95,14 @@ export function useLeadDisclosureWorkflow({
         } finally {
             setIsLoading(false);
         }
-    }, [companyId, companyName, leadId, onEligibilityChange, userId]);
+    }, [companyId, companyName, interestedBrand, leadId, leadName, onEligibilityChange, userId]);
 
     React.useEffect(() => {
         setRecipientContact(leadContact);
         setDraft(buildInitialDraft(leadName, interestedBrand));
         setSelectedDocumentId('');
+        setDeliveryDocumentTitle(buildDefaultDeliveryDocumentTitle(leadName, interestedBrand));
+        setDeliveryDocumentVersion(buildDefaultDeliveryDocumentVersion());
         setMessage('');
         setErrorMessage('');
         setSentAt(toDateTimeLocalValue(new Date()));
@@ -130,24 +122,12 @@ export function useLeadDisclosureWorkflow({
         setMessage('');
         setErrorMessage('');
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('bucket', DISCLOSURE_UPLOAD_BUCKET);
-            formData.append('path', buildDisclosureStoragePath({
+            const upload = await uploadDisclosureFileRequest({
                 companyId,
                 companyName,
-                fileName: file.name,
-                timestamp: Date.now(),
-                uniqueSuffix: buildUploadSuffix()
-            }));
-
-            const response = await fetch('/api/upload', { method: 'POST', body: formData });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<DisclosureUploadResponse>(payload);
-            const publicUrl = data.publicUrl;
-            if (!publicUrl) throw new Error('정보공개서 업로드 URL을 확인할 수 없습니다.');
-            setDraft(prev => ({ ...prev, fileUrl: publicUrl, fileName: file.name }));
+                file
+            });
+            setDraft(prev => ({ ...prev, fileUrl: upload.publicUrl, fileName: upload.fileName }));
             setMessage('정보공개서 파일을 업로드했습니다.');
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : '정보공개서 파일 업로드에 실패했습니다.');
@@ -169,16 +149,14 @@ export function useLeadDisclosureWorkflow({
         setMessage('');
         setErrorMessage('');
         try {
-            const response = await fetch('/api/franchise-disclosure-documents', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterId: userId, companyId, companyName, ...draft })
+            const document = await saveDisclosureDocumentRequest({
+                requesterId: userId,
+                companyId,
+                companyName,
+                draft
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<{ readonly document: FranchiseDisclosureDocument }>(payload);
-            setDocuments(prev => [data.document, ...prev]);
-            setSelectedDocumentId(data.document.id);
+            setDocuments(prev => [document, ...prev]);
+            setSelectedDocumentId(document.id);
             setDraft(buildInitialDraft(leadName, interestedBrand));
             setMessage('정보공개서를 저장했습니다.');
         } catch (error) {
@@ -189,8 +167,11 @@ export function useLeadDisclosureWorkflow({
     };
 
     const recordDelivery = async () => {
-        if (!selectedDocumentId) {
-            setErrorMessage('발송할 정보공개서를 선택해주세요.');
+        const selectedDocument = documents.find(document => document.id === selectedDocumentId) || null;
+        const documentTitle = (selectedDocument?.title || deliveryDocumentTitle).trim();
+        const documentVersion = (selectedDocument?.version || deliveryDocumentVersion || buildDefaultDeliveryDocumentVersion()).trim();
+        if (!documentTitle) {
+            setErrorMessage('정보공개서명을 입력해주세요.');
             return;
         }
         const parsedSentAt = new Date(sentAt);
@@ -203,23 +184,18 @@ export function useLeadDisclosureWorkflow({
         setMessage('');
         setErrorMessage('');
         try {
-            const response = await fetch('/api/franchise-lead-disclosures', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requesterId: userId,
-                    leadId,
-                    documentId: selectedDocumentId,
-                    sentAt: parsedSentAt.toISOString(),
-                    channel,
-                    recipientName: leadName,
-                    recipientContact,
-                    memo: deliveryMemo
-                })
+            const data = await recordDisclosureDeliveryRequest({
+                requesterId: userId,
+                leadId,
+                documentId: selectedDocumentId,
+                documentTitle,
+                documentVersion,
+                sentAt: parsedSentAt.toISOString(),
+                channel,
+                recipientName: leadName,
+                recipientContact,
+                memo: deliveryMemo
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LeadDisclosuresResponse>(payload);
             const nextEligibility = data.eligibility || null;
             setDeliveries(data.deliveries || []);
             setEligibility(nextEligibility);
@@ -235,6 +211,8 @@ export function useLeadDisclosureWorkflow({
 
     return {
         channel,
+        deliveryDocumentTitle,
+        deliveryDocumentVersion,
         deliveryMemo,
         deliveries,
         documents,
@@ -253,6 +231,8 @@ export function useLeadDisclosureWorkflow({
         selectedDocumentId,
         sentAt,
         setChannel,
+        setDeliveryDocumentTitle,
+        setDeliveryDocumentVersion,
         setDeliveryMemo,
         setRecipientContact,
         setSelectedDocumentId,

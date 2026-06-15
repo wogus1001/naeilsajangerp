@@ -43,6 +43,7 @@ export function LeadTableControls({
     onVisibleColumnsChangeAction
 }: LeadTableControlsProps) {
     const activeFilter = hasActiveLeadTableFilters(filters);
+    const visibleColumnCount = LEAD_TABLE_COLUMNS.filter(column => visibleColumns.includes(column.key)).length;
 
     return (
         <div className={styles.tableControls}>
@@ -59,7 +60,7 @@ export function LeadTableControls({
                     </select>
                 </label>
                 <details className={styles.columnPicker}>
-                    <summary>표시 컬럼 {visibleColumns.length}개</summary>
+                    <summary>표시 컬럼 {visibleColumnCount}개</summary>
                     <div className={styles.columnPickerPanel}>
                         {LEAD_TABLE_COLUMNS.map(column => {
                             const checked = visibleColumns.includes(column.key);

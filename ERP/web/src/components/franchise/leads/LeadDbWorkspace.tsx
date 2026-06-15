@@ -34,7 +34,7 @@ function getTableDescription(
     if (isContractOwnersWorkspace) return '계약완료 점주의 계약 전 확인 항목만 빠르게 점검합니다.';
     if (leadDbLayer === 'raw_intake') return 'Meta 광고, 엑셀 업로드 등 원천 유입을 먼저 모아두고 의사가 확인된 DB만 가맹 희망자로 승격합니다.';
     if (viewMode === 'pipeline') return '상태별 카드에서 상담 흐름을 빠르게 이동합니다.';
-    if (viewMode === 'tasks') return '내 담당 지연 연락, 오늘 연락, 무응답 가맹 희망자를 우선 정리합니다.';
+    if (viewMode === 'tasks') return '내 담당 연락 지연, 오늘 연락, 무응답 확인 대상을 우선 정리합니다.';
     return listPolicyText;
 }
 
@@ -99,7 +99,7 @@ export function LeadDbWorkspace({
         schemaReady: isContractChecklistSchemaReady,
         summaries: contractChecklistSummaries
     } = useLeadContractChecklistSummaries({
-        leadIds: leadDbLayer === 'candidate' ? paginatedLeads.map(lead => lead.id) : [],
+        leadIds: isContractOwnersWorkspace && leadDbLayer === 'candidate' ? paginatedLeads.map(lead => lead.id) : [],
         refreshKey: contractChecklistRefreshKey
     });
 
@@ -122,15 +122,6 @@ export function LeadDbWorkspace({
                     );
                 })}
             </div>}
-            {isContractOwnersWorkspace && (
-                <div className={styles.contractOwnerInlineSummary}>
-                    <div>
-                        <strong>계약완료 기준</strong>
-                        <span>현재 조건에 맞는 계약 점주 {visibleLayerLeadCount.toLocaleString()}건</span>
-                    </div>
-                    <b>계약 관련 체크리스트만 표시</b>
-                </div>
-            )}
             <div className={styles.tableHeader}>
                 <div>
                     <h2>{getTableTitle(leadDbLayer, effectiveViewMode, isContractOwnersWorkspace)}</h2>
@@ -193,7 +184,6 @@ export function LeadDbWorkspace({
                         safeCurrentPage={safeCurrentPage}
                         totalPages={totalPages}
                         visibleColumns={visibleTableColumns}
-                        contractChecklistSummaries={contractChecklistSummaries}
                         renderManagerOptions={renderManagerOptions}
                         getManagerName={getManagerName}
                         onBulkNextContactAtChange={onBulkNextContactAtChangeAction}

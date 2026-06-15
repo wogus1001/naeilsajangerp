@@ -4,7 +4,6 @@ import React from 'react';
 import { CheckCircle2, Clock, FileText } from 'lucide-react';
 import { getContractLockMessage, type DisclosureEligibility } from '@/lib/franchise-disclosure-deliveries';
 import { LeadDisclosureDeliveryForm } from './LeadDisclosureDeliveryForm';
-import { LeadDisclosureDocumentForm } from './LeadDisclosureDocumentForm';
 import { LeadDisclosureHistory } from './LeadDisclosureHistory';
 import { useLeadDisclosureWorkflow } from './useLeadDisclosureWorkflow';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
@@ -42,30 +41,22 @@ export function LeadDisclosureSection({
     });
     const {
         channel,
+        deliveryDocumentTitle,
         deliveryMemo,
         deliveries,
-        documents,
-        draft,
         eligibility,
         errorMessage,
         isLoading,
         isRecordingDelivery,
-        isSavingDocument,
-        isUploadingDocument,
         message,
         recipientContact,
         recordDelivery,
-        saveDocument,
-        selectedDocument,
-        selectedDocumentId,
         sentAt,
         setChannel,
+        setDeliveryDocumentTitle,
         setDeliveryMemo,
         setRecipientContact,
-        setSelectedDocumentId,
-        setSentAt,
-        updateDraft,
-        uploadDisclosureFile
+        setSentAt
     } = disclosure;
     const eligibilityClass = eligibility?.isEligible ? styles.disclosureReady : styles.disclosureLocked;
 
@@ -87,35 +78,21 @@ export function LeadDisclosureSection({
             {errorMessage && <div className={styles.disclosureError}>{errorMessage}</div>}
             {message && <div className={styles.disclosureMessage}>{message}</div>}
 
-            <div className={styles.disclosureGrid}>
-                <LeadDisclosureDocumentForm
-                    documentsCount={documents.length}
-                    draft={draft}
-                    isSavingDocument={isSavingDocument}
-                    isUploadingDocument={isUploadingDocument}
-                    onDraftChange={updateDraft}
-                    onFileUpload={(file) => void uploadDisclosureFile(file)}
-                    onSave={() => void saveDocument()}
-                />
-
-                <LeadDisclosureDeliveryForm
-                    documents={documents}
-                    selectedDocument={selectedDocument}
-                    selectedDocumentId={selectedDocumentId}
-                    sentAt={sentAt}
-                    channel={channel}
-                    recipientContact={recipientContact}
-                    deliveryMemo={deliveryMemo}
-                    isLoading={isLoading}
-                    isRecordingDelivery={isRecordingDelivery}
-                    onSelectedDocumentChange={setSelectedDocumentId}
-                    onSentAtChange={setSentAt}
-                    onChannelChange={setChannel}
-                    onRecipientContactChange={setRecipientContact}
-                    onDeliveryMemoChange={setDeliveryMemo}
-                    onRecordDelivery={() => void recordDelivery()}
-                />
-            </div>
+            <LeadDisclosureDeliveryForm
+                documentTitle={deliveryDocumentTitle}
+                sentAt={sentAt}
+                channel={channel}
+                recipientContact={recipientContact}
+                deliveryMemo={deliveryMemo}
+                isLoading={isLoading}
+                isRecordingDelivery={isRecordingDelivery}
+                onDocumentTitleChange={setDeliveryDocumentTitle}
+                onSentAtChange={setSentAt}
+                onChannelChange={setChannel}
+                onRecipientContactChange={setRecipientContact}
+                onDeliveryMemoChange={setDeliveryMemo}
+                onRecordDelivery={() => void recordDelivery()}
+            />
 
             <LeadDisclosureHistory deliveries={deliveries} />
         </section>

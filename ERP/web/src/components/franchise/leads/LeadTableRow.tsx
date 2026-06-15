@@ -11,9 +11,8 @@ import {
     UserCheck
 } from 'lucide-react';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
-import type { LeadContractChecklistSummaryView } from '@/lib/franchise-lead-contract-checklist';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
-import { LeadContractChecklistBadge } from './LeadContractChecklistBadge';
+import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead } from './types';
 import {
@@ -34,7 +33,6 @@ type LeadTableRowProps = {
     readonly convertingLeadId: string;
     readonly statusOptions: readonly FranchiseLeadStatus[];
     readonly visibleColumns: readonly LeadTableColumnKey[];
-    readonly contractChecklistSummary?: LeadContractChecklistSummaryView;
     readonly renderManagerOptions: (selectedManagerId?: string) => ReactNode;
     readonly getManagerName: (managerId?: string) => string;
     readonly onToggleSelectLead: (leadId: string, checked: boolean) => void;
@@ -59,7 +57,6 @@ export function LeadTableRow({
     convertingLeadId,
     statusOptions,
     visibleColumns,
-    contractChecklistSummary,
     renderManagerOptions,
     getManagerName,
     onToggleSelectLead,
@@ -157,11 +154,8 @@ export function LeadTableRow({
                     {formatDateTime(lead.nextContactAt)}
                 </span>
             </td>}
-            {visibleColumnSet.has('contractChecklist') && <td>
-                <LeadContractChecklistBadge summary={contractChecklistSummary} />
-            </td>}
             {visibleColumnSet.has('memo') && <td className={styles.memoCell}>{lead.memo || '-'}</td>}
-            {visibleColumnSet.has('links') && <td>
+            {ENABLE_LEAD_CUSTOMER_DB_LINKING && visibleColumnSet.has('links') && <td>
                 <div className={styles.linkBadges}>
                     {lead.linkedCustomerId && <span>고객</span>}
                     {lead.linkedBusinessCardId && <span>명함</span>}
@@ -181,7 +175,7 @@ export function LeadTableRow({
                             승격
                         </button>
                     )}
-                    {!isRawIntakeLead(lead) && (
+                    {ENABLE_LEAD_CUSTOMER_DB_LINKING && !isRawIntakeLead(lead) && (
                         lead.convertedCustomerId ? (
                             <span className={styles.convertedActionPill} data-tooltip="고객 DB 전환 완료">
                                 <CheckCircle2 size={14} />

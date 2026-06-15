@@ -23,10 +23,28 @@ export const LEAD_CONSULTATION_RESULTS = [
 export const LEAD_FIT_LEVELS = ['미확인', '적합', '보통', '부적합'] as const;
 export const LEAD_WORK_QUEUE_KEYS = ['all', 'overdue', 'today', 'no_response'] as const;
 
+const LEAD_NEXT_CONTACT_PRESET_CONFIG = {
+    today_afternoon: { label: '오늘 오후', days: 0, hour: 15, minute: 0 },
+    tomorrow_morning: { label: '내일 오전', days: 1, hour: 10, minute: 0 },
+    three_days_later: { label: '3일 후', days: 3, hour: 10, minute: 0 },
+    week_later: { label: '1주 후', days: 7, hour: 10, minute: 0 }
+} as const;
+
 export type LeadNextAction = typeof LEAD_NEXT_ACTIONS[number];
 export type LeadConsultationResult = typeof LEAD_CONSULTATION_RESULTS[number];
 export type LeadFitLevel = typeof LEAD_FIT_LEVELS[number];
 export type LeadWorkQueueKey = typeof LEAD_WORK_QUEUE_KEYS[number];
+export type LeadNextContactPresetKey = keyof typeof LEAD_NEXT_CONTACT_PRESET_CONFIG;
+
+export const LEAD_NEXT_CONTACT_PRESETS = [
+    { key: 'today_afternoon', label: LEAD_NEXT_CONTACT_PRESET_CONFIG.today_afternoon.label },
+    { key: 'tomorrow_morning', label: LEAD_NEXT_CONTACT_PRESET_CONFIG.tomorrow_morning.label },
+    { key: 'three_days_later', label: LEAD_NEXT_CONTACT_PRESET_CONFIG.three_days_later.label },
+    { key: 'week_later', label: LEAD_NEXT_CONTACT_PRESET_CONFIG.week_later.label }
+] as const satisfies readonly {
+    readonly key: LeadNextContactPresetKey;
+    readonly label: string;
+}[];
 
 export type LeadWorkflowInput = {
     readonly status: FranchiseLeadStatus | string;
@@ -93,6 +111,53 @@ function toLocalDateStamp(date: Date) {
 
 function assertNever(value: never): never {
     throw new Error(`Unhandled lead work queue: ${value}`);
+}
+
+function createScheduledContactDate(now: Date, days: number, hour: number, minute: number) {
+    const next = new Date(now);
+    next.setDate(next.getDate() + days);
+    next.setHours(hour, minute, 0, 0);
+    return next;
+}
+
+function getLeadNextContactPresetConfig(key: LeadNextContactPresetKey) {
+    return LEAD_NEXT_CONTACT_PRESET_CONFIG[key];
+}
+
+function getLeadSuggestedPresetKey(workflow: Pick<LeadWorkflowDraft, 'nextAction' | 'consultationResult'>): LeadNextContactPresetKey | null {
+    switch (workflow.consultationResult) {
+        case '이탈':
+            return null;
+        case '부재/무응답':
+            return 'tomorrow_morning';
+        case '보류':
+            return 'week_later';
+        case '조건 조율':
+            return 'three_days_later';
+        case '관심 높음':
+        case '연락 성공':
+        case '미상담':
+            break;
+        default:
+            assertNever(workflow.consultationResult);
+    }
+
+    switch (workflow.nextAction) {
+        case '오늘 연락':
+            return 'today_afternoon';
+        case '추가 상담':
+        case '자료 발송':
+        case '방문 상담':
+            return 'tomorrow_morning';
+        case '계약 조건 확인':
+            return 'three_days_later';
+        case '보류 확인':
+            return 'week_later';
+        case '미정':
+            return null;
+        default:
+            assertNever(workflow.nextAction);
+    }
 }
 
 export function isLeadPastDue(value?: string | null, now = new Date()) {
@@ -174,6 +239,19 @@ export function buildLeadWorkflowDraft(lead: LeadWorkflowInput | null): LeadWork
         regionFit: lead.regionFit || EMPTY_LEAD_WORKFLOW_DRAFT.regionFit,
         brandFit: lead.brandFit || EMPTY_LEAD_WORKFLOW_DRAFT.brandFit
     };
+}
+
+export function buildLeadNextContactAt(key: LeadNextContactPresetKey, now = new Date()) {
+    const config = getLeadNextContactPresetConfig(key);
+    return createScheduledContactDate(now, config.days, config.hour, config.minute).toISOString();
+}
+
+export function suggestLeadNextContactAt(
+    workflow: Pick<LeadWorkflowDraft, 'nextAction' | 'consultationResult'>,
+    now = new Date()
+) {
+    const presetKey = getLeadSuggestedPresetKey(workflow);
+    return presetKey ? buildLeadNextContactAt(presetKey, now) : null;
 }
 
 export function isLeadNextAction(value: string): value is LeadNextAction {

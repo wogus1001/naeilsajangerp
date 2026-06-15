@@ -32,6 +32,8 @@ export const SOURCE_FILTER_OPTIONS = ['전체', ...FRANCHISE_LEAD_SOURCES] as co
 export const RANGE_OPTIONS = ['최근 7일', '최근 30일', '최근 3개월', '전체'] as const;
 export const PAGE_SIZE_OPTIONS = [50, 100, 200] as const;
 
+export const ENABLE_LEAD_CUSTOMER_DB_LINKING = false;
+
 export const EMPTY_META_STATE: MetaIntegrationState = {
     connections: [],
     forms: [],
@@ -60,7 +62,7 @@ export const WORK_QUEUE_OPTIONS: ReadonlyArray<{ readonly key: LeadWorkQueueKey;
     { key: 'all', label: '전체 연락' },
     { key: 'overdue', label: '연락 지연' },
     { key: 'today', label: '오늘 연락' },
-    { key: 'no_response', label: '무응답' }
+    { key: 'no_response', label: '무응답 확인' }
 ];
 
 export const LEAD_DB_LAYER_OPTIONS: ReadonlyArray<{ readonly key: LeadDbLayer; readonly label: string; readonly description: string }> = [

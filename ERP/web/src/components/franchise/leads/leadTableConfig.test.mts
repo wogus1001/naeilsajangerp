@@ -17,6 +17,20 @@ test('normalizeLeadTableColumnKeys falls back to defaults when no valid columns 
     assert.deepEqual(normalizeLeadTableColumnKeys(['unknown']), DEFAULT_LEAD_TABLE_COLUMN_KEYS);
 });
 
+test('normalizeLeadTableColumnKeys removes legacy contract checklist column from generic lead table', () => {
+    assert.deepEqual(
+        normalizeLeadTableColumnKeys(['name', 'contractChecklist', 'nextContactAt']),
+        ['name', 'nextContactAt']
+    );
+});
+
+test('normalizeLeadTableColumnKeys removes hidden customer DB linking column for initial launch', () => {
+    assert.deepEqual(
+        normalizeLeadTableColumnKeys(['name', 'links', 'actions']),
+        ['name', 'actions']
+    );
+});
+
 test('toggleLeadTableColumn prevents hiding the required name column', () => {
     assert.deepEqual(toggleLeadTableColumn(['name', 'mobile'], 'name'), ['name', 'mobile']);
     assert.deepEqual(toggleLeadTableColumn(['name', 'mobile'], 'memo'), ['name', 'mobile', 'memo']);

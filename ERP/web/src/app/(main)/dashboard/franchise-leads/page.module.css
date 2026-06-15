@@ -241,6 +241,25 @@
     font-weight: 650;
 }
 
+.searchBox.toolbarControlActive,
+.filterGroup select.toolbarControlActive,
+.filterGroup input.toolbarControlActive {
+    border-color: #b9d8ff;
+    background-color: #f8fbff;
+    color: #2563eb;
+    box-shadow: none;
+}
+
+.filterGroup select.toolbarControlActive {
+    font-weight: 650;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%233182F6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.searchBox.toolbarControlActive input {
+    background: transparent;
+    color: #2563eb;
+}
+
 .dateRangeGroup {
     display: inline-flex;
     align-items: center;
@@ -2774,42 +2793,6 @@
     border-bottom: 1px solid #eef2f7;
 }
 
-.contractOwnerInlineSummary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin: 0 16px 16px;
-    padding: 14px 16px;
-    border: 1px solid var(--fr-line);
-    border-radius: var(--fr-radius);
-    background: var(--fr-blue-soft);
-}
-
-.contractOwnerInlineSummary div {
-    display: grid;
-    gap: 4px;
-}
-
-.contractOwnerInlineSummary strong {
-    color: var(--fr-text);
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.contractOwnerInlineSummary span {
-    color: var(--fr-muted);
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.contractOwnerInlineSummary b {
-    color: var(--fr-blue);
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
 .panelHeader h2,
 .tableHeader h2 {
     margin: 0 0 5px;
@@ -3260,10 +3243,6 @@
 
 .colNextContact {
     width: 142px;
-}
-
-.colContractChecklist {
-    width: 160px;
 }
 
 .colMemo {
@@ -4504,8 +4483,9 @@
 }
 
 .detailContentGrid > .detailSection:first-child,
-.detailContentGrid > .detailSection:nth-child(4),
-.detailContentGrid > .detailSection:nth-child(8),
+.detailContentGrid > .detailSection:nth-child(2),
+.detailContentGrid > .detailSection:nth-child(5),
+.detailContentGrid > .detailSection:nth-child(6),
 .contractChecklistSection {
     grid-column: 1 / -1;
 }
@@ -4596,7 +4576,7 @@
     padding: 5px 10px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -4616,9 +4596,9 @@
 .disclosureMessage {
     margin-top: 10px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: 8px;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.5;
 }
 
@@ -4647,16 +4627,20 @@
     gap: 10px;
     padding: 13px;
     border: 1px solid #e5e7eb;
-    border-radius: 14px;
+    border-radius: 8px;
     background: #ffffff;
+}
+
+.disclosureHeader ~ .disclosureFormBlock {
+    margin-top: 14px;
 }
 
 .disclosureBlockTitle strong,
 .disclosureHistoryItem strong {
     display: block;
-    color: #0f172a;
+    color: #333d4b;
     font-size: 13px;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .disclosureBlockTitle span,
@@ -4677,9 +4661,9 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    color: #334155;
+    color: #4e5968;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 600;
 }
 
 .disclosureFormGrid input,
@@ -4687,22 +4671,22 @@
 .disclosureMemoLabel textarea {
     width: 100%;
     border: 1px solid #d8dee8;
-    border-radius: 10px;
+    border-radius: 8px;
     background: #ffffff;
-    color: #0f172a;
+    color: #191f28;
     font-size: 13px;
     outline: none;
 }
 
 .disclosureFormGrid input,
 .disclosureFormGrid select {
-    height: 36px;
-    padding: 0 9px;
+    height: 40px;
+    padding: 0 10px;
 }
 
 .disclosureMemoLabel textarea {
-    min-height: 62px;
-    padding: 9px;
+    min-height: 58px;
+    padding: 10px;
     resize: vertical;
 }
 
@@ -4730,7 +4714,7 @@
     background: #eef2ff;
     color: #3730a3;
     font-size: 12px;
-    font-weight: 900;
+    font-weight: 700;
     overflow: hidden;
     cursor: pointer;
 }
@@ -4761,9 +4745,9 @@
 
 .disclosureUploadedFile span {
     min-width: 0;
-    color: #1e293b;
+    color: #333d4b;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4776,7 +4760,7 @@
     flex: 0 0 auto;
     color: #1d4ed8;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 700;
     text-decoration: none;
 }
 
@@ -4787,7 +4771,7 @@
     width: fit-content;
     color: #1d4ed8;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 700;
     text-decoration: none;
 }
 
@@ -4809,18 +4793,57 @@
     margin-top: 4px;
 }
 
-.nextContactBox {
+.nextContactQuickRow {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
 }
 
-.nextContactBox input {
-    flex: 1;
-    height: 40px;
-    border: 1px solid #d8dee8;
-    border-radius: 8px;
+.nextContactQuickButton,
+.nextContactQuickButtonActive,
+.nextContactSuggestButton,
+.nextContactClearButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
     padding: 0 10px;
-    color: #191f28;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.nextContactQuickButton {
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.nextContactQuickButton:hover {
+    border-color: #d1d6db;
+    background: #f9fafb;
+}
+
+.nextContactQuickButtonActive,
+.nextContactSuggestButton {
+    border: 1px solid #bfdbfe;
+    background: #e8f3ff;
+    color: #1d4ed8;
+}
+
+.nextContactSuggestButton {
+    border-color: #3182f6;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.nextContactClearButton {
+    border: 1px solid #e5e8eb;
+    background: #f2f4f6;
+    color: #6b7684;
 }
 
 .detailHint {
@@ -4834,7 +4857,9 @@
 }
 
 .workflowGrid label,
-.workflowMemoLabel {
+.workflowMemoLabel,
+.workflowNextContactHeader,
+.workflowNextContactHint {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -4844,6 +4869,7 @@
 }
 
 .workflowGrid select,
+.workflowNextContact input,
 .workflowMemoLabel textarea {
     width: 100%;
     border: 1px solid #d8dee8;
@@ -4854,9 +4880,57 @@
     outline: none;
 }
 
-.workflowGrid select {
+.workflowGrid select,
+.workflowNextContact input {
     height: 40px;
     padding: 0 10px;
+}
+
+.workflowNextContact {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.workflowNextContactHeader {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.workflowNextContactHeader strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.workflowNextContactHeader span,
+.workflowNextContactHint {
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.workflowNextContactControls {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+    gap: 8px;
+    align-items: start;
+}
+
+.workflowNextContact .nextContactQuickRow {
+    margin-top: 0;
+}
+
+.workflowNextContactHint {
+    margin: 8px 0 0;
 }
 
 .workflowMemoLabel {
@@ -4870,6 +4944,7 @@
 }
 
 .workflowGrid select:focus,
+.workflowNextContact input:focus,
 .workflowMemoLabel textarea:focus {
     border-color: #3182f6;
     box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
@@ -5352,13 +5427,35 @@
     font-size: 13px;
 }
 
+.detailSectionTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.detailSectionTitleRow h3 {
+    margin: 0;
+}
+
+.detailSectionTitleRow span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .activityComposer {
     display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 112px;
+    align-items: stretch;
     gap: 8px;
 }
 
 .activityComposer select,
-.activityComposer textarea {
+.activityComposer textarea,
+.timelineEditGrid select,
+.timelineEditGrid textarea {
     width: 100%;
     border: 1px solid #d8dee8;
     border-radius: 8px;
@@ -5367,21 +5464,27 @@
     font-size: 13px;
 }
 
-.activityComposer select {
-    height: 38px;
+.activityComposer select,
+.timelineEditGrid select {
+    height: 40px;
     padding: 0 10px;
 }
 
-.activityComposer textarea {
-    min-height: 64px;
+.activityComposer textarea,
+.timelineEditGrid textarea {
+    min-height: 40px;
     resize: vertical;
     padding: 11px;
 }
 
+.activityComposer .primaryButton {
+    min-height: 40px;
+}
+
 .timeline {
     display: grid;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .timelineItem {
@@ -5391,21 +5494,70 @@
     background: #f9fafb;
 }
 
-.timelineItem div {
+.timelineItemEditing {
+    background: #ffffff;
+}
+
+.timelineItemHeader,
+.timelineItemMeta,
+.timelineItemActions,
+.timelineEditActions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
+}
+
+.timelineItemHeader {
+    justify-content: space-between;
     margin-bottom: 8px;
 }
 
-.timelineItem span {
+.timelineItemMeta {
+    min-width: 0;
+}
+
+.timelineItemMeta span {
+    flex: 0 0 auto;
     color: #1d4ed8;
     background: #e8f3ff;
     border-radius: 999px;
     padding: 4px 8px;
     font-size: 11px;
     font-weight: 700;
+}
+
+.timelineItemActions {
+    flex: 0 0 auto;
+}
+
+.timelineItemActions button,
+.timelineToggleButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 32px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.timelineItemActions button {
+    padding: 0 9px;
+}
+
+.timelineItemActions button:hover,
+.timelineToggleButton:hover {
+    border-color: #d1d6db;
+    background: #f2f4f6;
+}
+
+.timelineItemActions button:last-child {
+    color: #e42939;
 }
 
 .timelineItem time,
@@ -5421,10 +5573,46 @@
     line-height: 1.6;
 }
 
+.timelineEditGrid {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 8px;
+}
+
+.timelineEditGrid textarea {
+    min-height: 72px;
+}
+
+.timelineEditActions {
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.timelineEditActions .primaryButton,
+.timelineEditActions .secondaryButton {
+    width: auto;
+    min-height: 36px;
+    padding: 0 12px;
+}
+
+.timelineEditActions .primaryButton,
+.timelineEditActions .secondaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.timelineToggleButton {
+    width: 100%;
+    margin-top: 10px;
+    padding: 0 12px;
+}
+
 .emptyTimeline {
     padding: 22px;
     border: 1px dashed #d8dee8;
-    border-radius: 14px;
+    border-radius: 8px;
     color: #94a3b8;
     text-align: center;
     font-size: 13px;
@@ -6260,14 +6448,6 @@
         align-items: stretch;
     }
 
-    .contractOwnerInlineSummary {
-        display: grid;
-    }
-
-    .contractOwnerInlineSummary b {
-        white-space: normal;
-    }
-
     .pageSizeControl,
     .tableMeta {
         flex: 1 1 auto;
@@ -6515,8 +6695,14 @@
     }
 
     .detailQuickActions,
-    .nextContactBox,
     .workflowActions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .workflowNextContactHeader,
+    .workflowNextContactControls {
+        grid-template-columns: 1fr;
         flex-direction: column;
         align-items: stretch;
     }
@@ -7398,6 +7584,20 @@
     background-size: 16px 16px;
 }
 
+.searchBox.toolbarControlActive,
+.filterGroup select.toolbarControlActive,
+.filterGroup input.toolbarControlActive {
+    border-color: #b9d8ff;
+    background-color: #f8fbff;
+    color: #2563eb;
+    box-shadow: none;
+}
+
+.filterGroup select.toolbarControlActive {
+    font-weight: 650;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%233182F6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
 .kpiGrid {
     grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
     gap: 8px;
@@ -7880,9 +8080,25 @@
         grid-template-columns: 1fr;
     }
 
+    .activityComposer,
+    .timelineEditGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .timelineItemHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .timelineItemActions,
+    .timelineItemActions button {
+        width: 100%;
+    }
+
     .detailContentGrid > .detailSection:first-child,
-    .detailContentGrid > .detailSection:nth-child(4),
-    .detailContentGrid > .detailSection:nth-child(8),
+    .detailContentGrid > .detailSection:nth-child(2),
+    .detailContentGrid > .detailSection:nth-child(5),
+    .detailContentGrid > .detailSection:nth-child(6),
     .contractChecklistSection {
         grid-column: auto;
     }

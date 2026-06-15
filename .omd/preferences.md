@@ -334,3 +334,108 @@ source_context: "ERP/web/src/components/franchise/leads/LeadContractChecklistWor
 ```
 
 Contract-owner tabs should focus on contract-related checklist progress instead of showing the full generic lead database table.
+
+## 2026-06-12T05:54:55.886Z — active-filters-should-be-visibly-highlig
+
+```omd-meta
+id: pref_mqaii80e_ac590c73
+timestamp: 2026-06-12T05:54:55.886Z
+scope: components.filter
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadToolbar.tsx"
+```
+
+Active filters should be visibly highlighted with a clear blue-tinted surface, not only a subtle border.
+
+## 2026-06-12T05:57:44.349Z — active-filter-highlights-should-stay-cal
+
+```omd-meta
+id: pref_mqailtzx_0d0d572c
+timestamp: 2026-06-12T05:57:44.349Z
+scope: components.filter
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/app/(main)/dashboard/franchise-leads/page.module.css"
+```
+
+Active filter highlights should stay calm and lightly tinted, avoiding strong blue fills or focus-like glow.
+
+## 2026-06-12T06:02:12.105Z — generic-lead-tables-should-not-show-cont
+
+```omd-meta
+id: pref_mqairkll_04a95912
+timestamp: 2026-06-12T06:02:12.105Z
+scope: components.table
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadTableView.tsx"
+```
+
+Generic lead tables should not show contract checklist columns; checklist progress belongs in the contract owner workspace.
+
+## 2026-06-12T06:28:37.912Z — contact-counts-belong-in-practitioner-fo
+
+```omd-meta
+id: pref_mqajpk7t_170e7752
+timestamp: 2026-06-12T06:28:37.912Z
+scope: layout
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadDashboard.tsx"
+```
+
+Contact counts belong in practitioner follow-up management, not executive dashboard KPI cards.
+
+## 2026-06-12T07:46:18.032Z — consultation-histories-should-stay-colla
+
+```omd-meta
+id: pref_mqamhfzk_56076f0c
+timestamp: 2026-06-12T07:46:18.032Z
+scope: layout
+signal: user-statement
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadActivitySection.tsx"
+```
+
+Consultation histories should stay collapsed or shortened by default so long records do not push core lead detail content down.
+
+## 2026-06-12T07:54:35.102Z — adjacent-operational-detail-sections-sho
+
+```omd-meta
+id: pref_mqams3j2_205a2eaa
+timestamp: 2026-06-12T07:54:35.102Z
+scope: typography
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/app/(main)/dashboard/franchise-leads/page.module.css"
+```
+
+Adjacent operational detail sections should share the same typography scale and weight unless their business state differs.
+
+## 2026-06-15T00:00:00.000Z — contact-management-tabs-should-label-no-
+
+```omd-meta
+id: pref_mqeiwcmr_4c7cc4f2
+timestamp: 2026-06-15T00:00:00.000Z
+scope: components.tabs
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/leads/LeadTaskBoard.tsx"
+```
+
+Contact management tabs should label no-response follow-ups as confirmation work, distinct from date-based overdue or today contacts.

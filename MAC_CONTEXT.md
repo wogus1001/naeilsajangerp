@@ -127,6 +127,9 @@ npm run build
     - 2026-06-11 UI/폼 1차 정리 완료: 모바일 모객 DB에서는 보조 액션과 파이프라인 단계 카드를 숨기고 `후보자 등록` 중심으로 정리했다. 대시보드는 `일별/주별/월별 DB 유입`, `담당자별 모객`, 직접 숫자 라벨 중심으로 바꿨다. 후보자 등록 폼은 연락처 자동 하이픈과 시도/시군구 다중 희망지역 선택을 적용했다.
     - 2026-06-11 DB 관리 테이블 정리 완료: `LeadDbWorkspace`로 테이블 영역을 분리하고 표시 컬럼 선택, 지역 OR 검색, 예산 범위 필터, 등록순/예산순/`중요 희망자만 보기` 정렬, 가운데 페이지네이션을 추가했다. 별표 강조 문구는 `핵심`이 아니라 `중요`로 통일했고, Playwright에서 중요 7건 필터/지역 검색/예산 정렬/별표 persistence/`핵심` 미노출을 확인했다.
     - 2026-06-12 모객 DB 구조 분리 완료: `page.tsx`에서 후보자 등록 모달, 빠른 상담 이력 모달, 후보자 상세 패널, Meta 연동 설정 패널을 `src/components/franchise/leads` 컴포넌트로 분리했고, Meta/엑셀/고객전환/후보지 연결 action도 hook으로 분리했다. `page.tsx`는 2392줄에서 1361줄로 감소했다. 검증은 `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 lead/checklist 테스트, `git diff --check`, `npm run build` 통과.
+    - 2026-06-15 모객 DB 초기 출시 UI 정리 완료: 일반 가맹 희망자 목록에서 계약 전 체크 컬럼과 신규 고객 DB 연결 UI를 숨겼고, 계약 관련 확인은 `계약 점주` 워크스페이스에 집중시켰다. 대시보드 연락 KPI는 제거하고 연락 실무 처리는 `연락 관리` 탭으로 분리했다.
+    - 2026-06-15 후보자 상세 정리 완료: 상담 이력은 기본 축약 상태에서 수정/삭제/펼치기를 지원하고, 다음 연락은 업무관리 내부의 작은 후속 관리 영역과 빠른 프리셋으로 처리한다. 정보공개서는 당장 자동 발송 없이 발송 기록 중심으로 유지한다.
+    - 2026-06-15 `/landing` 공개 랜딩 추가: 구글시트 대비 ERP 전환 메시지, 기능 상세, 모객 파이프라인/유입 경로/DB 유입/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 포함한다. CTA와 하단 도입 문의 카드는 제거했고 브랜드 표기는 `Franchise OS`로 정리했다. `/` -> `/login`은 유지한다.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외
@@ -288,24 +291,34 @@ npm run build
 - 점포 신규등록 주소 검색 표시 문제 수정
 - 리포트 형식 1~4 레이아웃 다수 조정
 
-## 현재 로컬 main 미커밋 변경 파일
-- `.gitignore`
-- `ERP/web/src/app/(main)/business-cards/page.tsx`
-- `ERP/web/src/app/(main)/contracts/builder/page.tsx`
-- `ERP/web/src/app/(main)/contracts/project/[id]/page.tsx`
-- `ERP/web/src/app/(main)/customers/page.tsx`
-- `ERP/web/src/app/(main)/properties/page.tsx`
-- `ERP/web/src/app/(main)/properties/register/page.module.css`
-- `ERP/web/src/app/(main)/properties/register/page.tsx`
-- `ERP/web/src/components/properties/PropertyCard.tsx`
-- `ERP/web/src/components/properties/reports/PropertyReportPrint.tsx`
-
-## 현재 로컬 미커밋 변경 중 눈에 띄는 항목
-- `PropertyCard.tsx`
-  - 영업/임대차 커스텀 추가 행에 삭제 버튼을 붙인 상태
-- `PropertyReportPrint.tsx`
-  - 리포트 헤더 메타 배치 및 인쇄형식 관련 조정이 누적된 상태
-- 위 변경들은 모두 로컬 main의 WIP일 수 있으므로, 맥에서 작업 시작 전 `git status`로 실제 상태를 다시 확인한다.
+## 2026-06-15 커밋/배포 대상 변경 범위
+- 모객 DB 화면과 후보자 상세 UI:
+  - `ERP/web/src/app/(main)/dashboard/franchise-leads/page.tsx`
+  - `ERP/web/src/app/(main)/dashboard/franchise-leads/page.module.css`
+  - `ERP/web/src/components/franchise/leads/*`
+  - `ERP/web/src/components/franchise/LeadDisclosure*.tsx`, `LeadWorkflowSection.tsx`
+- 신규 공개 랜딩:
+  - `ERP/web/src/app/landing/*`
+- 모객 업무/테이블 유틸과 테스트:
+  - `ERP/web/src/lib/franchise-lead-workflow.ts`
+  - `ERP/web/src/lib/franchise-lead-workflow.test.mts`
+  - `ERP/web/src/components/franchise/leads/leadTableConfig.ts`
+  - `ERP/web/src/components/franchise/leads/leadTableConfig.test.mts`
+  - `ERP/web/src/components/franchise/leads/leadActivityLog.ts`
+  - `ERP/web/src/components/franchise/leads/leadActivityLog.test.mts`
+  - `ERP/web/src/components/franchise/leads/leadWorkspaceState.ts`
+  - `ERP/web/src/components/franchise/leads/leadWorkspaceState.test.mts`
+- 문서:
+  - `MAC_CONTEXT.md`
+  - `ERP/web/docs/franchise-growth-roadmap.md`
+  - `ERP/web/docs/franchise-dev-qa-log.md`
+- 커밋 전 검증 기준:
+  - 관련 `tsx --test` 22건 통과
+  - `npx tsc --noEmit --pretty false` 통과
+  - `npm run lint -- --quiet` 통과
+  - 변경 TypeScript 20개 파일 no-excuse 규칙 검사 통과
+  - `npm run build` 통과
+  - 로컬 `/landing` 1440px/390px 브라우저 QA 통과
 
 ## 환경변수 / 외부 서비스
 - 핵심 env:

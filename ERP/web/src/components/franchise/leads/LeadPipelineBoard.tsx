@@ -6,6 +6,7 @@ import {
     type FranchiseLeadStatus
 } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 import type { FranchiseLead } from './types';
 import { getAdjacentStatus, isDueToday, isPastDue } from './utils';
 
@@ -64,7 +65,7 @@ export function LeadPipelineBoard({
                                     </button>
                                     <div className={styles.pipelineCardFooter}>
                                         <span className={lead.grade === 'HOT' ? styles.hotBadge : styles.pipelineBadge}>{getFranchiseLeadGradeLabel(lead.grade)}</span>
-                                        {lead.convertedCustomerId && <span className={styles.convertedBadge}>전환완료</span>}
+                                        {ENABLE_LEAD_CUSTOMER_DB_LINKING && lead.convertedCustomerId && <span className={styles.convertedBadge}>전환완료</span>}
                                         {isPastDue(lead.nextContactAt) && <span className={styles.dueBadgeDanger}>지연</span>}
                                         {isDueToday(lead.nextContactAt) && !isPastDue(lead.nextContactAt) && <span className={styles.dueBadge}>오늘</span>}
                                     </div>
@@ -87,15 +88,17 @@ export function LeadPipelineBoard({
                                             다음
                                             <ArrowRight size={13} />
                                         </button>
-                                        <button
-                                            type="button"
-                                            className={styles.miniButtonStrong}
-                                            disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
-                                            onClick={() => onConvertLead(lead)}
-                                        >
-                                            <UserCheck size={13} />
-                                            고객전환
-                                        </button>
+                                        {ENABLE_LEAD_CUSTOMER_DB_LINKING && (
+                                            <button
+                                                type="button"
+                                                className={styles.miniButtonStrong}
+                                                disabled={Boolean(lead.convertedCustomerId) || convertingLeadId === lead.id}
+                                                onClick={() => onConvertLead(lead)}
+                                            >
+                                                <UserCheck size={13} />
+                                                고객전환
+                                            </button>
+                                        )}
                                     </div>
                                 </article>
                             );
