@@ -117,7 +117,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
                         ) : (
                             <>
                                 <span className={styles.name}>{user?.name || '게스트'}</span>
-                                <span className={styles.role}>{user?.companyName || '내일사장'}</span>
+                                <span className={styles.role}>{user?.companyName || '부동산 ERP'}</span>
                             </>
                         )}
                     </div>

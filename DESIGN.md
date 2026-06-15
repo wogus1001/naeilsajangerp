@@ -1,11 +1,11 @@
 ---
 omd: 0.1
-brand: "내일사장 Franchise OS"
+brand: "부동산 ERP"
 bootstrapped_from: toss
 bootstrapped_at: "2026-06-11T15:02:33+09:00"
 ---
 
-# Design System - 내일사장 Franchise OS
+# Design System - 부동산 ERP
 
 Based on Toss, adapted for a franchise headquarters operating system. This is not a consumer fintech clone. The target user is a headquarters employee who repeatedly manages leads, candidate locations, disclosure documents, opening projects, and franchise operations.
 
@@ -305,7 +305,7 @@ Use Korean business language. Keep button labels short. Use helper text only whe
 
 ## 11. Brand Narrative
 
-내일사장 Franchise OS is a headquarters operating system for franchise growth teams. It connects lead intake, candidate promotion, site discovery, information disclosure delivery, contract readiness, opening preparation, and post-opening operations.
+부동산 ERP is a headquarters operating system for franchise and real-estate operations teams. It connects lead intake, candidate promotion, site discovery, information disclosure delivery, contract readiness, opening preparation, and post-opening operations.
 
 <!-- omd:limitation Founding date and official tagline are not yet confirmed. Replace before external launch material. -->
 

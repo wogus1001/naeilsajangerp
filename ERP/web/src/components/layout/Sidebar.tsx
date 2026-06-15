@@ -58,7 +58,7 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
     const [searchResults, setSearchResults] = useState<typeof SIDEBAR_MENU_ITEMS>([]);
     const isEnabled = (key: CompanyMenuFeatureKey) => isCompanyMenuEnabled(menuFlags, key);
     const visibleMenuItems = SIDEBAR_MENU_ITEMS.filter(item => isEnabled(item.featureKey));
-    const displayCompanyName = companyName?.trim() || '내일사장';
+    const displayCompanyName = companyName?.trim() || '부동산 ERP';
 
     const isSectionExpanded = (key: SidebarSectionKey) => {
         switch (key) {
