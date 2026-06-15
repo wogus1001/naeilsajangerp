@@ -15,7 +15,15 @@ export function FeatureDetailsSection() {
                         <article key={feature.title} className={styles.featureCard}>
                             <div className={styles.featureCopy}>
                                 <span className={styles.featureLabel}>업무 상황</span>
-                                <h3>{feature.title}</h3>
+                                <h3>
+                                    {feature.title}
+                                    {'statusLabel' in feature ? (
+                                        <>
+                                            {' '}
+                                            <span className={styles.eyebrow}>{feature.statusLabel}</span>
+                                        </>
+                                    ) : null}
+                                </h3>
                                 <p>{feature.situation}</p>
                                 <ul>
                                     {feature.capabilities.map(capability => (
