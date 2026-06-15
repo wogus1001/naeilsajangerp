@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getPendingApprovalLoginMessage } from '@/lib/signup-approval-policy';
 import { getSupabase } from '@/lib/supabase';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -142,7 +143,7 @@ export default function LoginPage() {
 
                 if (profile.status === 'pending_approval') {
                     await supabase.auth.signOut();
-                    setErrorMsg('승인 대기 중입니다. 팀장의 승인 후 이용 가능합니다.');
+                    setErrorMsg(getPendingApprovalLoginMessage(profile.role));
                     setIsLoading(false);
                     return;
                 }

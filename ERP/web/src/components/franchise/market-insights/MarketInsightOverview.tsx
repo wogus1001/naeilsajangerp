@@ -1,14 +1,9 @@
 "use client";
 
-import { BriefcaseBusiness, MapPin, Target, TrendingUp } from 'lucide-react';
 import type { MarketInsight } from '@/lib/franchise-market-insights';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
 type MarketInsightOverviewProps = {
-    readonly topMarketInsight: MarketInsight | null;
-    readonly strongMarketingCount: number;
-    readonly highCompetitionCount: number;
-    readonly locationInsightCount: number;
     readonly marketInsights: readonly MarketInsight[];
 };
 
@@ -18,41 +13,10 @@ function formatBudgetManwon(value: number | null) {
 }
 
 export function MarketInsightOverview({
-    topMarketInsight,
-    strongMarketingCount,
-    highCompetitionCount,
-    locationInsightCount,
     marketInsights
 }: MarketInsightOverviewProps) {
     return (
         <>
-            <div className={styles.marketSummaryCards}>
-                <article>
-                    <MapPin size={18} />
-                    <span>우선 검토 지역</span>
-                    <strong>{topMarketInsight?.region || '-'}</strong>
-                    <small>{topMarketInsight ? `기회점수 ${topMarketInsight.opportunityScore}점` : '지역 데이터 없음'}</small>
-                </article>
-                <article>
-                    <TrendingUp size={18} />
-                    <span>마케팅 반응 우수</span>
-                    <strong>{strongMarketingCount.toLocaleString()}곳</strong>
-                    <small>마케팅 반응 70점 이상</small>
-                </article>
-                <article>
-                    <Target size={18} />
-                    <span>경쟁 주의 지역</span>
-                    <strong>{highCompetitionCount.toLocaleString()}곳</strong>
-                    <small>내부+외부 경쟁강도 70점 이상</small>
-                </article>
-                <article>
-                    <BriefcaseBusiness size={18} />
-                    <span>분석 후보지</span>
-                    <strong>{locationInsightCount.toLocaleString()}개</strong>
-                    <small>점포DB + 출점 후보지</small>
-                </article>
-            </div>
-
             {marketInsights.length === 0 ? (
                 <div className={styles.marketEmpty}>
                     희망지역이 있는 후보자나 주소가 있는 출점 후보지가 쌓이면 지역별 인사이트가 표시됩니다.

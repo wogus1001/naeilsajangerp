@@ -439,3 +439,18 @@ source_context: "ERP/web/src/components/franchise/leads/LeadTaskBoard.tsx"
 ```
 
 Contact management tabs should label no-response follow-ups as confirmation work, distinct from date-based overdue or today contacts.
+
+## 2026-06-15T07:17:04.469Z — market-insight-pages-should-avoid-redu
+
+```omd-meta
+id: pref_mqevrexh_3beb8a95
+timestamp: 2026-06-15T07:17:04.469Z
+scope: layout
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/components/franchise/market-insights/MarketInsightOverview.tsx"
+```
+
+Market insight pages should avoid redundant top summary card rows and decorative header pills or icons when the section content already communicates the workflow.

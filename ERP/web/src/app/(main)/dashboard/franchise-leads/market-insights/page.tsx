@@ -272,8 +272,6 @@ export default function FranchiseMarketInsightsPage() {
         [leads, locationInsightItems]
     );
     const topMarketInsight = marketInsights[0] || null;
-    const highCompetitionCount = marketInsights.filter(item => item.competitionScore >= 70).length;
-    const strongMarketingCount = marketInsights.filter(item => item.marketingScore >= 70).length;
     const firstSitePlanningLocation = sitePlanningLocations[0];
     const realtyInitialRegion = topMarketInsight?.region
         || firstSitePlanningLocation?.region
@@ -483,14 +481,9 @@ export default function FranchiseMarketInsightsPage() {
                         <h2>출점 후보지 인사이트</h2>
                         <p>후보자 희망지역, 점포DB, 출점 후보지를 묶어 우선 검토 지역을 봅니다.</p>
                     </div>
-                    <span>출점 계획 · 경쟁스캔</span>
                 </div>
                 <div className={styles.marketInsightBody}>
                     <MarketInsightOverview
-                        topMarketInsight={topMarketInsight}
-                        strongMarketingCount={strongMarketingCount}
-                        highCompetitionCount={highCompetitionCount}
-                        locationInsightCount={locationInsightItems.length}
                         marketInsights={marketInsights}
                     />
 

@@ -1,16 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from '../login/page.module.css'; // Reuse login styles
 import { AlertModal } from '@/components/common/AlertModal';
-
-interface Company {
-    id: string;
-    name: string;
-    manager_name: string;
-    created_at: string;
-}
+import { CompanySearchModal, type Company } from './CompanySearchModal';
+import { SignupApprovalNotice } from './SignupApprovalNotice';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -23,6 +18,7 @@ export default function SignupPage() {
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    const [isNewCompanyRequest, setIsNewCompanyRequest] = useState(false);
 
     // Alert Modal State
     const [alertConfig, setAlertConfig] = useState<{
@@ -46,25 +42,20 @@ export default function SignupPage() {
         if (onOk) onOk();
     };
 
-    const handleSignup = async (e: React.FormEvent) => {
+    const getInputValue = (id: string) => {
+        const input = document.getElementById(id);
+        return input instanceof HTMLInputElement ? input.value : '';
+    };
+
+    const handleSignup = async (e: FormEvent) => {
         // ... (unchanged)
         e.preventDefault();
         setIsLoading(true);
 
-        const id = (document.getElementById('id') as HTMLInputElement).value;
-        const password = (document.getElementById('password') as HTMLInputElement).value;
-        const name = (document.getElementById('name') as HTMLInputElement).value;
-        const companyName = (document.getElementById('companyName') as HTMLInputElement).value;
-
-        // Get selected role
-        const roleInputs = document.getElementsByName('role') as NodeListOf<HTMLInputElement>;
-        let role = 'staff';
-        for (const input of Array.from(roleInputs)) {
-            if (input.checked) {
-                role = input.value;
-                break;
-            }
-        }
+        const id = getInputValue('id');
+        const password = getInputValue('password');
+        const name = getInputValue('name');
+        const companyName = getInputValue('companyName');
 
         if (password.length < 6) {
             showAlert('비밀번호는 최소 6자 이상이어야 합니다.', 'error');
@@ -84,7 +75,7 @@ export default function SignupPage() {
             const res = await fetch('/api/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, password, name, companyName, role }),
+                body: JSON.stringify({ id, password, name, companyName, role: isNewCompanyRequest ? 'manager' : 'staff' }),
             });
 
             const data = await res.json();
@@ -110,8 +101,7 @@ export default function SignupPage() {
         }
     };
 
-    const handleSearch = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+    const handleSearch = async (e?: FormEvent) => {
         if (e) e.preventDefault();
         if (!searchQuery.trim()) {
             showAlert('검색어를 입력해주세요.', 'info');
@@ -138,13 +128,36 @@ export default function SignupPage() {
     };
 
     const handleSelectCompany = (company: Company) => {
-        const companyNameInput = document.getElementById('companyName') as HTMLInputElement;
-        if (companyNameInput) {
+        const companyNameInput = document.getElementById('companyName');
+        if (companyNameInput instanceof HTMLInputElement) {
             companyNameInput.value = company.name;
         }
         setSelectedCompany(company);
+        setIsNewCompanyRequest(false);
         setShowSearchModal(false);
     };
+
+    const handleRegisterNewCompany = (companyName: string) => {
+        const companyNameInput = document.getElementById('companyName');
+        if (companyNameInput instanceof HTMLInputElement) {
+            companyNameInput.value = companyName;
+        }
+        setSelectedCompany(null);
+        setIsNewCompanyRequest(true);
+        setShowSearchModal(false);
+    };
+
+    const approvalTitle = isNewCompanyRequest
+        ? '신규 회사 팀장 가입 요청'
+        : selectedCompany
+            ? '기존 회사 직원 가입 요청'
+            : '회사 선택 후 승인 방식이 정해집니다.';
+
+    const approvalDescription = isNewCompanyRequest
+        ? '아직 등록되지 않은 회사는 최초 가입자가 팀장 권한으로 접수되며, 관리자 승인 후 로그인할 수 있습니다.'
+        : selectedCompany
+            ? '이미 등록된 회사의 추가 계정은 직원으로 접수되며, 소속 회사 팀장 승인 후 로그인할 수 있습니다.'
+            : '회사 찾기에서 기존 회사를 선택하거나 신규 회사명을 등록해주세요.';
 
     return (
         <div className={styles.container}>
@@ -227,31 +240,8 @@ export default function SignupPage() {
                     </div>
 
                     <div className={styles.inputGroup} style={{ marginBottom: '20px' }}>
-                        <label className={styles.label}>가입 유형</label>
-                        <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
-                                <input
-                                    type="radio"
-                                    name="role"
-                                    value="manager"
-                                    defaultChecked
-                                    style={{ accentColor: '#339af0' }}
-                                />
-                                팀장
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
-                                <input
-                                    type="radio"
-                                    name="role"
-                                    value="staff"
-                                    style={{ accentColor: '#339af0' }}
-                                />
-                                직원
-                            </label>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#868e96', marginTop: '4px' }}>
-                            * 처음 등록하는 회사의 경우 자동으로 팀장 권한이 부여됩니다.
-                        </p>
+                        <label className={styles.label}>가입 승인 방식</label>
+                        <SignupApprovalNotice title={approvalTitle} description={approvalDescription} />
                     </div>
 
                     <button type="submit" className={styles.loginButton} disabled={isLoading}>
@@ -265,143 +255,22 @@ export default function SignupPage() {
                 </div>
             </div>
 
-            {/* Search Modal */}
             {showSearchModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000
-                }}>
-                    <div style={{
-                        backgroundColor: 'white',
-                        padding: '24px',
-                        borderRadius: '12px',
-                        width: '90%',
-                        maxWidth: '400px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '16px',
-                        maxHeight: '80vh'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>회사 찾기</h3>
-                            <button
-                                onClick={() => setShowSearchModal(false)}
-                                style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer' }}
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                                type="text"
-                                placeholder="회사명을 검색하세요"
-                                value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value);
-                                    setHasSearched(false); // Reset when user types
-                                }}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #ced4da',
-                                    fontSize: '14px'
-                                }}
-                                autoFocus
-                            />
-                            <button
-                                type="submit"
-                                style={{
-                                    padding: '8px 16px',
-                                    borderRadius: '6px',
-                                    backgroundColor: '#339af0',
-                                    color: 'white',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontSize: '14px'
-                                }}
-                            >
-                                검색
-                            </button>
-                        </form>
-                        <div style={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            minHeight: '200px',
-                            border: '1px solid #f1f3f5',
-                            borderRadius: '6px',
-                            padding: '8px'
-                        }}>
-                            {isSearching ? (
-                                <div style={{ textAlign: 'center', padding: '20px', color: '#868e96' }}>검색 중...</div>
-                            ) : searchResults.length > 0 ? (
-                                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                    {searchResults.map((company) => (
-                                        <li
-                                            key={company.id}
-                                            onClick={() => handleSelectCompany(company)}
-                                            style={{
-                                                padding: '12px',
-                                                borderBottom: '1px solid #f1f3f5',
-                                                cursor: 'pointer',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                        >
-                                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>{company.name}</div>
-                                            <div style={{ fontSize: '12px', color: '#868e96' }}>
-                                                대표: {company.manager_name || '(미정)'}
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <div style={{ textAlign: 'center', padding: '20px', color: '#868e96', fontSize: '14px' }}>
-                                    {hasSearched ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                            <span>검색 결과가 없습니다.</span>
-                                            <button
-                                                onClick={() => {
-                                                    const companyNameInput = document.getElementById('companyName') as HTMLInputElement;
-                                                    if (companyNameInput) {
-                                                        companyNameInput.value = searchQuery;
-                                                    }
-                                                    setSelectedCompany(null);
-                                                    setShowSearchModal(false);
-                                                }}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    borderRadius: '6px',
-                                                    backgroundColor: '#339af0',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    fontSize: '14px'
-                                                }}
-                                            >
-                                                '{searchQuery}'(으)로 신규 등록하기
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        '회사명을 검색해보세요.'
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div >
-                </div >
-            )
-            }
+                <CompanySearchModal
+                    searchQuery={searchQuery}
+                    searchResults={searchResults}
+                    isSearching={isSearching}
+                    hasSearched={hasSearched}
+                    onQueryChange={(value) => {
+                        setSearchQuery(value);
+                        setHasSearched(false);
+                    }}
+                    onSearch={handleSearch}
+                    onClose={() => setShowSearchModal(false)}
+                    onSelectCompany={handleSelectCompany}
+                    onRegisterNewCompany={handleRegisterNewCompany}
+                />
+            )}
             {/* Alert Modal */}
             <AlertModal
                 isOpen={alertConfig.isOpen}
