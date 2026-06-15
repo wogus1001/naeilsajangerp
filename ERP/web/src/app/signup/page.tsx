@@ -182,7 +182,7 @@ export default function SignupPage() {
                         <div className={styles.gridIcon} />
                     </div>
                     <h1 className={styles.title}>회원가입</h1>
-                    <p className={styles.subtitle}>내일사장 서비스 이용을 위한 가입</p>
+                    <p className={styles.subtitle}>부동산 ERP 서비스 이용을 위한 가입</p>
                 </div>
 
                 <form onSubmit={handleSignup} className={styles.form}>

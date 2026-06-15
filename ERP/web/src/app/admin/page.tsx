@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
         <div style={styles.container}>
             <div style={styles.header}>
                 <h1 style={styles.title}>시스템 관리</h1>
-                <p style={styles.subtitle}>내일사장 시스템 전반을 관리하고 모니터링합니다.</p>
+                <p style={styles.subtitle}>부동산 ERP 시스템 전반을 관리하고 모니터링합니다.</p>
             </div>
 
             {/* Stats Overview */}
