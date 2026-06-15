@@ -2,11 +2,15 @@
 
 import React from 'react';
 import { Megaphone, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
+import { setAdminCompanyScope } from '@/utils/userUtils';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useResponsiveSidebar } from './useResponsiveSidebar';
+import { CompanyMenuDisabledNotice } from './CompanyMenuDisabledNotice';
+import { MaintenanceScreen } from './MaintenanceScreen';
+import { useCompanyMenuFeatures } from './useCompanyMenuFeatures';
 import styles from './MainLayout.module.css';
 
 interface MainLayoutProps {
@@ -44,6 +48,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const [userRole, setUserRole] = React.useState<string>('');
 
     const router = useRouter();
+    const pathname = usePathname();
+    const { flags: menuFlags, blockedFeature } = useCompanyMenuFeatures(authUser, pathname);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -56,6 +62,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 console.error('Failed to sign out stale session:', error);
             }
             localStorage.removeItem('user');
+            setAdminCompanyScope(null);
             if (!cancelled) {
                 setIsAuthReady(true);
                 router.replace('/login');
@@ -130,6 +137,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 if (meRes.status === 401 || meRes.status === 403) {
                     await supabase.auth.signOut();
                     localStorage.removeItem('user');
+                    setAdminCompanyScope(null);
                 }
 
                 return null;
@@ -212,6 +220,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         }
 
         localStorage.removeItem('user');
+        setAdminCompanyScope(null);
         router.replace('/login');
     };
 
@@ -229,24 +238,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
     // If maintenance mode is active and user is NOT an admin, block the whole page
     if (maintenance?.active && userRole !== 'admin') {
-        return (
-            <div style={{
-                height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa',
-                fontFamily: 'var(--font-pretendard)', textAlign: 'center', padding: '20px'
-            }}>
-                <div style={{ backgroundColor: '#fff5f5', color: '#fa5252', padding: '16px', borderRadius: '50%', marginBottom: '24px' }}>
-                    <Megaphone size={48} />
-                </div>
-                <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#212529', marginBottom: '16px' }}>시스템 점검 중</h1>
-                <p style={{ fontSize: '18px', color: '#495057', lineHeight: 1.6, maxWidth: '500px' }}>
-                    {maintenance.message || "더 나은 서비스를 위해 시스템 정기 점검을 진행하고 있습니다. 잠시 후 다시 접속해주세요."}
-                </p>
-                <div style={{ marginTop: '32px', fontSize: '14px', color: '#adb5bd' }}>
-                    관리자 문의: admin@naeilsajang.com
-                </div>
-            </div>
-        );
+        return <MaintenanceScreen message={maintenance.message} />;
     }
 
     return (
@@ -279,7 +271,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </div>
             )}
 
-            <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+            <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} menuFlags={menuFlags} />
 
             <div
                 className={`${styles.mainWrapper} ${!isSidebarOpen ? styles.collapsed : ''} global-main-wrapper`}
@@ -287,7 +279,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             >
                 <Header user={authUser} onLogout={handleLogout} />
                 <main className={`${styles.content} global-content`}>
-                    {children}
+                    {blockedFeature ? <CompanyMenuDisabledNotice feature={blockedFeature} /> : children}
                 </main>
             </div>
         </div>

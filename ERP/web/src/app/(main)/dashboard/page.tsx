@@ -5,6 +5,13 @@ import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckC
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertModal } from '@/components/common/AlertModal';
+import {
+    getRequesterId,
+    getStoredCompanyId,
+    getStoredCompanyName,
+    getStoredUser,
+    type StoredUser
+} from '@/utils/userUtils';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -28,7 +35,7 @@ export default function DashboardPage() {
     const [isNoticeModalOpen, setIsNoticeModalOpen] = React.useState(false);
     const [newNotice, setNewNotice] = React.useState({ title: '', content: '', type: 'team', isPinned: false });
     const [isSavingNotice, setIsSavingNotice] = React.useState(false);
-    const [userData, setUserData] = React.useState<any>(null);
+    const [userData, setUserData] = React.useState<StoredUser>(null);
 
     const [alertConfig, setAlertConfig] = React.useState<{ isOpen: boolean; message: string; type: 'success' | 'error' | 'info'; onClose?: () => void }>({
         isOpen: false,
@@ -46,28 +53,22 @@ export default function DashboardPage() {
     };
 
     React.useEffect(() => {
-        // Mock user ID - in real app, get from auth context or session
-        let currentUserId = localStorage.getItem('userId') || 'admin';
-        let companyName = '';
+        const user = getStoredUser();
+        const currentUserId = getRequesterId(user) || localStorage.getItem('userId') || 'admin';
+        const companyName = getStoredCompanyName(user);
+        const companyId = getStoredCompanyId(user);
 
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            try {
-                const user = JSON.parse(userStr);
-                setUserData(user);
-                setUserName(user.name || '사장님');
-                currentUserId = user.uid || user.id;
-                companyName = user.companyName;
-            } catch (e) {
-                console.error(e);
-            }
-        }
+        setUserData(user);
+        setUserName(user?.name || '사장님');
         setUserId(currentUserId);
 
         // Fetch Dashboard Data
         const fetchDashboardData = async () => {
             try {
-                const res = await fetch(`/api/dashboard?userId=${currentUserId}`);
+                const params = new URLSearchParams({ userId: currentUserId });
+                if (companyId) params.set('companyId', companyId);
+
+                const res = await fetch(`/api/dashboard?${params.toString()}`);
                 const data = await res.json();
 
                 if (data.stats) {
@@ -118,7 +119,7 @@ export default function DashboardPage() {
 
     const fetchDashboardNotices = async () => {
         try {
-            const companyName = userData?.companyName || '';
+            const companyName = getStoredCompanyName(userData);
             const res = await fetch(`/api/notices?companyName=${encodeURIComponent(companyName)}&limit=5`);
             const data = await res.json();
             setNotices(data);
@@ -143,7 +144,7 @@ export default function DashboardPage() {
                     authorName: userData?.name || '관리자',
                     authorRole: userData?.role || 'staff',
                     authorId: userId,
-                    companyName: userData?.companyName
+                    companyName: getStoredCompanyName(userData)
                 })
             });
 

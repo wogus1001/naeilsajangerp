@@ -127,11 +127,16 @@
 - 2026-06-15 모객 DB/상세 화면 초기 출시 정리를 진행했다. 일반 가맹 희망자 목록에서 계약 전 체크 컬럼과 신규 고객 DB 연결 UI를 숨기고, 계약 관련 확인은 `계약 점주` 워크스페이스에 집중시켰다. 대시보드 연락 KPI는 제거하고, 연락 실무 처리는 `연락 관리` 탭으로 분리했다.
 - 2026-06-15 후보자 상세 상담 이력은 기본 축약 상태로 두고, 수정/삭제/펼치기 기능을 추가했다. 업무관리 안에 다음 연락 입력과 `오늘 오후`/`내일 오전`/`3일 후`/`1주 후` 프리셋을 넣어 담당자가 후속 연락일을 입력하지 않는 문제를 줄이도록 했다.
 - 2026-06-15 `/landing` 공개 랜딩 페이지를 추가하고 기능 섹션을 고도화했다. 구글시트 대비 ERP 전환 메시지, 모객 파이프라인/유입 경로/DB 유입 추이/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 반영했다. 사용자의 피드백에 따라 CTA 버튼과 하단 도입 문의 카드는 제거하고, 랜딩 상단 브랜드는 `Franchise OS`로 정리했다.
+- 2026-06-15 관리자 회사별 메뉴 on/off와 슈퍼어드민 회사 조회 스코프를 추가했다. `/admin`은 회사별 메뉴 기능을 관리하고, 헤더 `조회 회사` 선택은 대시보드/모객 DB/출점 후보지/브랜드 모니터링/가맹 운영/고객/명함/점포/직원 화면의 회사 범위를 바꾼다.
+- 2026-06-15 회사 메뉴 설정 저장용 `supabase_company_menu_features_migration.sql`, `/api/admin/company-access`, `/api/company-menu-features`, 전역 사이드바 메뉴 설정/비활성 안내 컴포넌트를 추가했다. SQL 미적용 환경에서는 메뉴를 기본 ON으로 두고 관리자 저장 API가 migration 필요 상태를 반환한다.
 
 ## QA 결과
 
 ### 통과
 
+- 2026-06-15 관리자 회사 스코프 QA 통과: 로그인 세션에서 `/dashboard/franchise-leads/market-insights`에 `조회 회사` selector가 노출되고 여러 회사 옵션을 선택할 수 있음을 확인했다. 프로필 표기는 기존 로그인 회사/역할을 유지하고, 선택 회사는 조회 스코프에만 사용한다.
+- 2026-06-15 관리자 API QA 통과: `/api/admin/company-access?requesterId=admin`은 회사 목록을 반환했고, `/api/dashboard?userId=admin`은 관리자 전체 요약, `/api/dashboard?userId=admin&companyId=<company>`는 선택 회사 기준 요약을 반환했다. 관리자 아닌 사용자의 교차 회사 조회는 403 정책을 유지한다.
+- 2026-06-15 관리자 회사 스코프 정적 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
 - 2026-06-15 모객 DB/랜딩 정리 검증 통과: `npx tsx --test src/lib/franchise-lead-workflow.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/components/franchise/leads/leadActivityLog.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts` 결과 22건 통과.
 - 2026-06-15 최종 정적 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 변경 TypeScript 20개 파일 no-excuse 규칙 검사, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
 - 2026-06-15 브라우저 QA 통과: 로컬 `http://localhost:3000/landing`은 로그인 없이 열리고, 1440px에서 `scrollWidth=clientWidth=1425`, 390px에서 `scrollWidth=clientWidth=375`, overflow element 0건을 확인했다. 랜딩에서 `Franchise OS`, 구글시트 비교 메시지, `Meta Lead Ads 유입 연동`, `Meta 광고` 문구는 보이고 `데모 문의`, `로그인`, `내일사장` 문구는 노출되지 않았다.

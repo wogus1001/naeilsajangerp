@@ -3,6 +3,7 @@
 import React from 'react';
 import { ChevronDown, LogOut, LogIn, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { AdminCompanySelector } from './AdminCompanySelector';
 import styles from './Header.module.css';
 
 type HeaderUser = {
@@ -11,6 +12,7 @@ type HeaderUser = {
     name?: string;
     role?: string;
     companyName?: string;
+    companyId?: string;
 };
 
 interface HeaderProps {
@@ -98,6 +100,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
             </div>
 
             <div className={styles.actions}>
+                <AdminCompanySelector user={user} />
 
                 <div
                     className={styles.profile}
