@@ -24,7 +24,46 @@
 .actions {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
+}
+
+.companyScope {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.companyScopeLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7684;
+    white-space: nowrap;
+}
+
+.companyScopeSelect {
+    min-width: 160px;
+    max-width: 220px;
+    height: 36px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 34px 0 12px;
+    cursor: pointer;
+}
+
+.companyScopeSelect:focus {
+    outline: none;
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px #e8f3ff;
+}
+
+.companyScopeSelect:disabled {
+    background-color: #f2f4f6;
+    color: #8b95a1;
+    cursor: default;
 }
 
 .notificationBtn {
@@ -81,4 +120,10 @@
 
 .profileIcon {
     color: var(--text-sub);
+}
+
+@media (max-width: 768px) {
+    .companyScope {
+        display: none;
+    }
 }

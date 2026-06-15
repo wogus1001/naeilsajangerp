@@ -51,11 +51,20 @@ supabase_franchise_brands_migration.sql
 supabase_franchise_disclosures_migration.sql
 supabase_franchise_contract_checklist_migration.sql
 supabase_franchise_market_monitoring_migration.sql
+supabase_company_menu_features_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `franchise_lead_contract_checklist_steps`, 또는 `franchise_market_monitoring` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+## Admin Company Access Setup
+
+Run `supabase_company_menu_features_migration.sql` before enabling company-level menu on/off persistence.
+
+The admin page manages menu availability per company through `/api/admin/company-access`. Super admins can choose a company from the header selector, and supported dashboards read the selected company scope so the same screen shows that company's data. The selected company is stored only in the admin user's browser session and is cleared on logout; company staff do not see the super-admin lookup account or selector.
+
+If the migration is not applied, menu features fall back to enabled for the product screens and the admin save API returns a migration-required error instead of silently losing settings.
 
 ## Meta Lead Ads Setup
 

@@ -11,6 +11,7 @@ import ViewModeSwitcher, { ViewMode } from '@/components/properties/ViewModeSwit
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { parseSearchTerms } from '@/utils/search';
+import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 interface BusinessCardData {
     id: string;
@@ -184,19 +185,18 @@ function BusinessCardListContent() {
 
     const fetchManagers = async () => {
         try {
-            const userStr = localStorage.getItem('user');
-            const parsed = userStr ? JSON.parse(userStr) : {};
-            const user = parsed.user || parsed;
-            if (!user?.companyName) {
-                const ownId = user?.uid || user?.id;
+            const user = getStoredUser();
+            const companyName = getStoredCompanyName(user);
+            if (!companyName) {
+                const ownId = getRequesterId(user);
                 if (ownId) {
                     setManagers({ [ownId]: user?.name || ownId });
                 }
                 return;
             }
-            const requesterId = user?.uid || user?.id || '';
+            const requesterId = getRequesterId(user);
             const params = new URLSearchParams();
-            params.set('company', user.companyName);
+            params.set('company', companyName);
             if (requesterId) params.set('requesterId', requesterId);
             const companyQuery = params.toString() ? `?${params.toString()}` : '';
 
@@ -216,7 +216,7 @@ function BusinessCardListContent() {
     };
 
     const buildBusinessCardQueryString = React.useCallback((requestedLimit: number | 'all', search?: string) => {
-        const userStr = localStorage.getItem('user');
+        const user = getStoredUser();
         const params = new URLSearchParams();
 
         if (requestedLimit !== 'all') {
@@ -225,12 +225,11 @@ function BusinessCardListContent() {
             params.append('limit', 'all');
         }
 
-        if (userStr) {
-            const parsed = JSON.parse(userStr);
-            const user = parsed.user || parsed;
-            if (user.companyName) params.append('company', user.companyName);
-            if (user.uid) params.append('userId', user.uid);
-            else if (user.id) params.append('userId', user.id);
+        if (user) {
+            const companyName = getStoredCompanyName(user);
+            const requesterId = getRequesterId(user);
+            if (companyName) params.append('company', companyName);
+            if (requesterId) params.append('userId', requesterId);
         }
 
         if (search?.trim()) {
@@ -361,14 +360,12 @@ function BusinessCardListContent() {
                 const historyData = uploadFiles.history ? await parseExcel(uploadFiles.history) : [];
 
                 // Add metadata (managerId, etc)
-                const userStr = localStorage.getItem('user');
+                const user = getStoredUser();
                 let userCompanyName = 'Unknown';
                 let managerIdVal = 'Unknown';
-                if (userStr) {
-                    const parsed = JSON.parse(userStr);
-                    const user = parsed.user || parsed;
-                    userCompanyName = user.companyName || 'Unknown';
-                    managerIdVal = user.uid || user.id || 'Unknown';
+                if (user) {
+                    userCompanyName = getStoredCompanyName(user) || 'Unknown';
+                    managerIdVal = getRequesterId(user) || 'Unknown';
                 }
 
                 const payload = {
@@ -413,14 +410,12 @@ function BusinessCardListContent() {
         showConfirm('현재 등록된 명함의 내역과 점포 데이터를 동기화하시겠습니까?\n(오래 걸릴 수 있습니다.)', async () => {
             setLoading(true);
             try {
-                const userStr = localStorage.getItem('user');
-                const parsed = userStr ? JSON.parse(userStr) : {};
-                const user = parsed.user || parsed;
+                const user = getStoredUser();
 
                 const res = await fetch('/api/business-cards/sync', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ companyId: user.companyId || user.company_id })
+                    body: JSON.stringify({ companyId: getStoredCompanyId(user) })
                 });
                 const result = await readApiJson(res);
 
@@ -543,10 +538,7 @@ function BusinessCardListContent() {
         showConfirm(`${selectedIds.length}개의 명함을 삭제하시겠습니까?`, async () => {
             setLoading(true);
             try {
-                const userStr = localStorage.getItem('user');
-                const parsed = userStr ? JSON.parse(userStr) : {};
-                const user = parsed.user || parsed;
-                const requesterId = user?.uid || user?.id || '';
+                const requesterId = getRequesterId(getStoredUser());
 
                 for (const id of selectedIds) {
                     await fetch(`/api/business-cards?id=${id}&requesterId=${encodeURIComponent(requesterId)}`, { method: 'DELETE' });
@@ -571,10 +563,7 @@ function BusinessCardListContent() {
         setSearchCards(prev => prev?.map(c => c.id === id ? { ...c, isFavorite: newStatus } : c) ?? null);
 
         try {
-            const userStr = localStorage.getItem('user');
-            const parsed = userStr ? JSON.parse(userStr) : {};
-            const user = parsed.user || parsed;
-            const requesterId = user?.uid || user?.id || '';
+            const requesterId = getRequesterId(getStoredUser());
 
             await fetch('/api/business-cards', {
                 method: 'PUT',
@@ -653,13 +642,11 @@ function BusinessCardListContent() {
     });
 
     const getStoredUserContext = () => {
-        const userStr = localStorage.getItem('user');
-        const parsed = userStr ? JSON.parse(userStr) : {};
-        const user = parsed.user || parsed;
+        const user = getStoredUser();
 
         return {
-            requesterId: user?.uid || user?.uuid || user?.id || user?.userId || user?.user_id || '',
-            companyName: user?.companyName || ''
+            requesterId: getRequesterId(user),
+            companyName: getStoredCompanyName(user)
         };
     };
 

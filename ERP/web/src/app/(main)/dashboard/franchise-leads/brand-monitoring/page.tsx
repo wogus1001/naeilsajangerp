@@ -16,6 +16,11 @@ import {
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import {
+    getStoredCompanyId,
+    getStoredCompanyName,
+    getStoredUser
+} from '@/utils/userUtils';
 import styles from '../page.module.css';
 
 type AuthUser = {
@@ -145,7 +150,7 @@ function formatDateTime(value: string | null | undefined) {
     }).format(date);
 }
 
-function getRequesterId(user: AuthUser | null) {
+function getMonitoringRequesterId(user: AuthUser | null) {
     return user?.uid || user?.id || '';
 }
 
@@ -171,12 +176,12 @@ export default function FranchiseBrandMonitoringPage() {
     const [message, setMessage] = React.useState('');
     const [messageType, setMessageType] = React.useState<'info' | 'warn' | 'error'>('info');
 
-    const requesterId = getRequesterId(user);
+    const requesterId = getMonitoringRequesterId(user);
     const latestSnapshot = snapshots[0] || null;
     const canUseSerp = Boolean(config?.searchApiConfigured || config?.serpApiConfigured);
 
     const fetchDashboard = React.useCallback(async (nextUser: AuthUser) => {
-        const nextRequesterId = getRequesterId(nextUser);
+        const nextRequesterId = getMonitoringRequesterId(nextUser);
         if (!nextRequesterId) return;
 
         setIsLoading(true);
@@ -201,23 +206,24 @@ export default function FranchiseBrandMonitoringPage() {
     }, []);
 
     React.useEffect(() => {
-        const rawUser = localStorage.getItem('user');
-        if (!rawUser) {
+        const storedUser = getStoredUser();
+        if (!storedUser) {
             setIsLoading(false);
             setMessage('로그인 정보가 필요합니다.');
             setMessageType('error');
             return;
         }
 
-        try {
-            const parsedUser = JSON.parse(rawUser) as AuthUser;
-            setUser(parsedUser);
-            void fetchDashboard(parsedUser);
-        } catch {
-            setIsLoading(false);
-            setMessage('로그인 정보를 읽을 수 없습니다.');
-            setMessageType('error');
-        }
+        const parsedUser: AuthUser = {
+            id: storedUser.id,
+            uid: storedUser.uid,
+            name: storedUser.name,
+            role: storedUser.role,
+            companyName: getStoredCompanyName(storedUser),
+            companyId: getStoredCompanyId(storedUser) || null
+        };
+        setUser(parsedUser);
+        void fetchDashboard(parsedUser);
     }, [fetchDashboard]);
 
     const handleSelectBrand = (brand: FranchiseBrand) => {

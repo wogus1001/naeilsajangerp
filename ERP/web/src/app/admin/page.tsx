@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Users, Building, ShieldCheck, Settings, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { AlertModal } from '@/components/common/AlertModal';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { CompanyAccessManager } from '@/components/admin/company-access/CompanyAccessManager';
 
 // Reusing dashboard styles + some admin specific ones
 const styles = {
@@ -178,6 +178,7 @@ export default function AdminDashboardPage() {
                 message={alertConfig.message}
                 title={alertConfig.title}
             />
+            <CompanyAccessManager />
         </div>
     );
 }
