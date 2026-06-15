@@ -7,6 +7,15 @@ import { AlertModal } from '@/components/common/AlertModal';
 import { CompanySearchModal, type Company } from './CompanySearchModal';
 import { SignupApprovalNotice } from './SignupApprovalNotice';
 
+function normalizeCompanyName(value: string): string {
+    return value.trim().normalize('NFC').replace(/\s+/g, '');
+}
+
+function findSameNameCompany(companies: readonly Company[], companyName: string): Company | undefined {
+    const normalizedCompanyName = normalizeCompanyName(companyName);
+    return companies.find((company) => normalizeCompanyName(company.name) === normalizedCompanyName);
+}
+
 export default function SignupPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
@@ -138,6 +147,12 @@ export default function SignupPage() {
     };
 
     const handleRegisterNewCompany = (companyName: string) => {
+        const sameNameCompany = findSameNameCompany(searchResults, companyName);
+        if (sameNameCompany) {
+            handleSelectCompany(sameNameCompany);
+            return;
+        }
+
         const companyNameInput = document.getElementById('companyName');
         if (companyNameInput instanceof HTMLInputElement) {
             companyNameInput.value = companyName;
