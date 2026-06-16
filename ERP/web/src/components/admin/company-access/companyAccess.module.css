@@ -181,6 +181,79 @@
     font-size: 14px;
 }
 
+.dashboardModeSetting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.settingTitle {
+    margin: 0 0 4px;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.settingDescription {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.modeTabs {
+    display: inline-flex;
+    gap: 6px;
+    padding: 3px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.modeTab,
+.modeTabActive {
+    min-width: 102px;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b7684;
+    cursor: pointer;
+    text-align: left;
+}
+
+.modeTab strong,
+.modeTabActive strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.modeTab span,
+.modeTabActive span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.modeTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
 .featureGroup + .featureGroup {
     margin-top: 18px;
 }
@@ -242,6 +315,20 @@
     .contentGrid,
     .featureList {
         grid-template-columns: 1fr;
+    }
+
+    .dashboardModeSetting {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .modeTabs {
+        width: 100%;
+    }
+
+    .modeTab,
+    .modeTabActive {
+        flex: 1;
     }
 
     .saveButton {

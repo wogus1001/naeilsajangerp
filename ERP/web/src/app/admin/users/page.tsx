@@ -9,7 +9,7 @@ import { createClient } from '@/utils/supabase/client';
 import {
     AdminUserRoleSelect,
     getAdminUserRoleLabel,
-    type AdminUserRole
+    type AssignableAdminUserRole
 } from './AdminUserRoleSelect';
 
 type AdminUserRow = {
@@ -155,7 +155,7 @@ export default function AdminUsersPage() {
         });
     };
 
-    const handleRoleChange = (user: AdminUserRow, role: AdminUserRole) => {
+    const handleRoleChange = (user: AdminUserRow, role: AssignableAdminUserRole) => {
         if (role === user.role) return;
 
         const targetName = user.name || user.id || '사용자';

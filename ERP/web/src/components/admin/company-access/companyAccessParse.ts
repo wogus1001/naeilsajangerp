@@ -1,4 +1,4 @@
-import { isCompanyMenuFeatureKey } from '@/lib/company-menu-features';
+import { isCompanyMenuFeatureKey, normalizeCompanyDashboardMode } from '@/lib/company-menu-features';
 import type {
     AdminCompanyAccessApiResponse,
     AdminCompanyAccessData,
@@ -92,10 +92,11 @@ function parseAccessData(value: unknown): AdminCompanyAccessData | null {
 
     const companies = parseCompanyArray(value.companies);
     const selectedCompany = value.selectedCompany === null ? null : parseCompany(value.selectedCompany);
+    const dashboardMode = normalizeCompanyDashboardMode(value.dashboardMode);
     const features = parseFeatureArray(value.features);
 
     if (!companies || selectedCompany === null && value.selectedCompany !== null || !features) return null;
-    return { companies, selectedCompany, features };
+    return { companies, selectedCompany, dashboardMode, features };
 }
 
 export function parseCompanyAccessResponse(value: unknown): AdminCompanyAccessApiResponse | null {

@@ -1,7 +1,12 @@
 "use client";
 
 import React from 'react';
+import {
+    DEFAULT_COMPANY_DASHBOARD_MODE,
+    type CompanyDashboardMode
+} from '@/lib/company-menu-features';
 import { getRequesterId } from '@/utils/userUtils';
+import { CompanyDashboardModeSetting } from './CompanyDashboardModeSetting';
 import { parseCompanyAccessResponse } from './companyAccessParse';
 import styles from './companyAccess.module.css';
 import type { AdminCompanyFeature, AdminCompanySummary } from './types';
@@ -89,6 +94,7 @@ export function CompanyAccessManager() {
     const [companies, setCompanies] = React.useState<readonly AdminCompanySummary[]>([]);
     const [selectedCompany, setSelectedCompany] = React.useState<AdminCompanySummary | null>(null);
     const [features, setFeatures] = React.useState<readonly AdminCompanyFeature[]>([]);
+    const [dashboardMode, setDashboardMode] = React.useState<CompanyDashboardMode>(DEFAULT_COMPANY_DASHBOARD_MODE);
     const [selectedCompanyId, setSelectedCompanyId] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -114,6 +120,7 @@ export function CompanyAccessManager() {
             setCompanies(payload.data.companies);
             setSelectedCompany(payload.data.selectedCompany);
             setSelectedCompanyId(payload.data.selectedCompany?.id || '');
+            setDashboardMode(payload.data.dashboardMode);
             setFeatures(payload.data.features);
             setIsDirty(false);
         } catch (error) {
@@ -142,6 +149,12 @@ export function CompanyAccessManager() {
         setMessage('');
     };
 
+    const handleDashboardModeChange = (mode: CompanyDashboardMode) => {
+        setDashboardMode(mode);
+        setIsDirty(true);
+        setMessage('');
+    };
+
     const handleSave = async () => {
         if (!selectedCompanyId) return;
         setIsSaving(true);
@@ -156,6 +169,7 @@ export function CompanyAccessManager() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     companyId: selectedCompanyId,
+                    dashboardMode,
                     features: features.map(feature => ({ key: feature.key, enabled: feature.enabled }))
                 })
             });
@@ -166,6 +180,7 @@ export function CompanyAccessManager() {
             }
 
             if (payload?.data?.features) setFeatures(payload.data.features);
+            if (payload?.data?.dashboardMode) setDashboardMode(payload.data.dashboardMode);
             setIsDirty(false);
             setMessage('회사별 메뉴 설정을 저장했습니다.');
         } catch (error) {
@@ -219,6 +234,8 @@ export function CompanyAccessManager() {
                         </div>
                         {isDirty && <span className={styles.unsavedBadge}>저장 필요</span>}
                     </div>
+
+                    <CompanyDashboardModeSetting mode={dashboardMode} onChange={handleDashboardModeChange} />
 
                     {groupFeatures(features).map(([category, list]) => (
                         <div className={styles.featureGroup} key={category}>

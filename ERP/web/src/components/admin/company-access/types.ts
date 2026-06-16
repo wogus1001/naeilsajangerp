@@ -1,4 +1,4 @@
-import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
+import type { CompanyDashboardMode, CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 
 export type AdminCompanySummary = {
     readonly id: string;
@@ -23,6 +23,7 @@ export type AdminCompanyFeature = {
 export type AdminCompanyAccessData = {
     readonly companies: readonly AdminCompanySummary[];
     readonly selectedCompany: AdminCompanySummary | null;
+    readonly dashboardMode: CompanyDashboardMode;
     readonly features: readonly AdminCompanyFeature[];
 };
 
