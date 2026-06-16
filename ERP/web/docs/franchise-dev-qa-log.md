@@ -136,6 +136,10 @@
 - 2026-06-15 로그인/가입/관리자/공통 fallback의 하드코딩 브랜드 문구를 `부동산 ERP`로 맞추고, 공개 로그인 화면에서 `내일사장` 타이틀이 노출되지 않도록 정리했다.
 - 2026-06-15 랜딩 기능 상세에서 `정보공개서/계약`, `가맹 운영` 카드에 `개발 진행중` 배지를 추가해 현재 개발 상태를 명확히 표시했다.
 - 2026-06-15 첨부 요구사항 문서 `내일사장 ERP : 기능 요구사항 정의서 v2`를 학습해 로드맵에 반영했다. 사용자의 정정에 따라 기존 점포개발 업무의 `/properties` 점포목록/점포등록은 수정 대상에서 제외하고, 점포 DB 요구사항은 `/dashboard/franchise-leads/market-insights` 출점 후보지 마스터(`franchise_locations`) 개편 범위로 정리했다.
+- 2026-06-16 출점 후보지 마스터 1차 개편을 구현했다. `/properties`는 그대로 두고 `/dashboard/franchise-leads/market-insights`에서 후보지 목록/등록/지역 인사이트를 분리했으며, 후보지 폼을 `기본 위치`, `면적·시설`, `입점비용`, `임차조건`, `임대인`, `종합메모` 중심으로 재구성했다.
+- 2026-06-16 후보지 등록 폼의 담당자 선택은 같은 회사 직원만 이름으로 표시하도록 정리했다. 관리자/슈퍼어드민, 이메일, UUID는 드롭다운과 목록에서 노출하지 않는다.
+- 2026-06-16 후보지 목록에 표시 수, 표시 컬럼, 정렬, 페이지네이션을 추가하고, 목록 액션은 `기록`, `수정`, `삭제` 중심으로 정리했다. 경쟁 컬럼과 경쟁스캔 버튼은 잠시 숨김 처리했으며, 기존 API와 저장 데이터는 유지한다.
+- 2026-06-16 물건별 협업 기록 UI를 추가했다. `supabase_franchise_location_messages_migration.sql`, `/api/franchise-locations/messages`, `LocationMessagePanel`을 통해 회사 임직원이 후보지별 `정보`/`요청` 메시지를 남기고 요청을 `처리완료`로 닫을 수 있다. 완료 요청의 `다시 열기` 버튼은 제거했다.
 
 ## QA 결과
 
@@ -155,6 +159,10 @@
 - 2026-06-15 로그인 브랜드 QA 통과: 로컬 `http://localhost:3000/login` 1080x1350/390x844에서 `부동산 ERP`가 표시되고 `내일사장` 타이틀은 노출되지 않았다. `/signup`도 `부동산 ERP 서비스 이용을 위한 가입` 문구와 page overflow 0을 확인했다.
 - 2026-06-15 dev 배포 통합 완료: `codex/franchise-leads-20260608` 변경을 `dev`에 병합해 `9281017` `merge: deploy franchise lead workspace to dev`로 push했고, Vercel dev deployment가 READY 상태임을 확인했다. Preview URL은 Vercel Authentication 보호가 적용되어 본문 fetch는 401로 제한된다.
 - 2026-06-15 production release branch 검증 통과: `origin/dev`를 release branch에 병합한 뒤 `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-lead-workflow.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/components/franchise/leads/leadActivityLog.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts src/app/api/franchise-leads/batch/route.ts` 23건, 변경 TS no-excuse 규칙, `npm run build`를 통과했다.
+- 2026-06-16 출점 후보지 마스터/기록 UI 정적 검증 통과: `git diff --check`, `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
+- 2026-06-16 출점 후보지 협업 기록 API QA 통과: 같은 회사 후보지의 메시지 조회/정보 작성/요청 작성/처리완료 변경을 확인했고, 교차 회사 requester는 조회/작성/상태변경 모두 403으로 차단됐다. QA 메시지와 임시 후보지는 검증 후 삭제했다.
+- 2026-06-16 Supabase migration 적용 확인: dev와 production Supabase에 `supabase_franchise_location_messages_migration.sql`을 적용했고, production에서 `public.franchise_location_messages`와 `franchise_location_messages_location_created_idx` 존재를 확인했다.
+- 2026-06-16 브라우저 QA 통과: 로컬 `http://127.0.0.1:3000/dashboard/franchise-leads/market-insights`에서 물건 기록 패널이 열리고, 정보/요청 메시지 작성, 요청 처리완료, 완료 요청의 다시 열기 미노출, 작성자 이름만 표시, 1440px/390px overflow 없음, 경쟁스캔/경쟁 보기/키워드필요 미노출을 확인했다.
 - `npm run lint -- --quiet`
 - `npx tsc --noEmit`
 - `npm run build`
@@ -223,6 +231,7 @@
 
 - SearchAPI 현재 키는 `monthly_allowance=0`, `remaining_credits=-3` 상태라 Naver 신규 수집이 429로 차단된다.
 - SearchAPI 한도 초과 상태에서 기존 Naver 성공 값이 덮어쓰기되는 문제는 P0로 남아 있다.
+- 출점 후보지 경쟁스캔 UI는 2026-06-16 기준 목록에서 임시 숨김 상태다. API와 저장 구조는 유지하므로 provider 비용/정책 정리 후 재노출할 때 경쟁스캔 모달과 캐시 정책을 다시 QA한다.
 - Playwright MCP 스크린샷 확인은 Chrome 프로필 잠금 이슈로 완료하지 못한 이력이 있다.
 - 실제 로그인 세션에서 모객 DB P0 핵심 플로우는 2026-06-11에 완료했다. `연락 완료` 저장 흐름도 API/DB 기준으로 재검증했다. 엑셀 유입 runner는 `admin` requester와 실제 `.xlsx` fixture로 통과했다. 남은 것은 실제 Meta 유입과 실운영 계정 권한 조합별 live 회귀 QA다.
 - 모바일 전역 사이드바 기본 접힘은 2026-06-11 route sweep으로 통과했다. 다만 각 화면의 내부 대형 표/지도는 데이터가 많을 때 별도 모바일 정보 구조 개선 대상이다.

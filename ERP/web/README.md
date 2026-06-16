@@ -46,6 +46,7 @@ npm run start -- -p 3000
 
 ```text
 supabase_franchise_locations_migration.sql
+supabase_franchise_location_messages_migration.sql
 supabase_franchise_opening_projects_migration.sql
 supabase_franchise_brands_migration.sql
 supabase_franchise_disclosures_migration.sql
@@ -56,7 +57,7 @@ supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Admin Company Access Setup
 
@@ -86,7 +87,7 @@ Use `/api/integrations/meta/webhook` as the Meta Webhook callback path. Vercel r
 
 ## Franchise Location Insights Setup
 
-Run `supabase_franchise_locations_migration.sql` before enabling the location master and market insights screen.
+Run `supabase_franchise_locations_migration.sql` before enabling the location master and market insights screen. Run `supabase_franchise_location_messages_migration.sql` before enabling per-location records and request notes.
 
 Optional environment variables for Kakao Local address search and competitor scans:
 
@@ -95,7 +96,9 @@ KAKAO_REST_API_KEY=
 NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY=
 ```
 
-Address search uses `/api/integrations/kakao/address`. The competitor scan endpoint is `/api/franchise-locations/competitors`. Both use the server-side Kakao REST API key, so the key is never exposed to the browser. Company-level data isolation still follows the existing `company_id` access rules; the Kakao key is not configured per company.
+Address search uses `/api/integrations/kakao/address`. The candidate master stores site condition, landlord, cost, lease, and development-stage fields in `franchise_locations.data`, while core columns continue to hold the location name, address, region, status, importance, brand, and owner scope. The per-location records panel uses `/api/franchise-locations/messages` and stores company-scoped notes/requests in `franchise_location_messages`.
+
+The competitor scan endpoint is `/api/franchise-locations/competitors`. Both address and competitor APIs use the server-side Kakao REST API key, so the key is never exposed to the browser. Company-level data isolation still follows the existing `company_id` access rules; the Kakao key is not configured per company. The candidate list currently hides the competitor-scan entry point while the API and stored `competitionScan` data are retained for later re-enable.
 
 Competitor scans use `competitionKeyword` first, then `brand`. They intentionally do not fall back to the location name because area names such as "군자" or "강남" return unrelated nearby places.
 

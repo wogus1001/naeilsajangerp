@@ -718,6 +718,102 @@
     padding: 18px 20px 20px;
 }
 
+.marketWorkspace {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+    min-width: 0;
+}
+
+.marketViewToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.marketViewToolbar > div:first-child {
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.marketViewToolbar h2 {
+    margin: 0 0 3px;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.marketViewToolbar p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.marketViewTabs {
+    display: inline-flex;
+    gap: 4px;
+    width: fit-content;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 3px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.marketViewTab,
+.marketViewTabActive {
+    display: inline-flex;
+    flex: 0 0 auto;
+    min-height: 36px;
+    min-width: 142px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.marketViewTab span,
+.marketViewTabActive span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.marketViewTab small,
+.marketViewTabActive small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.marketViewTabActive {
+    border-color: #b7d7ff;
+    background: #e8f3ff;
+    color: #3182f6;
+}
+
+.marketViewTabActive small {
+    color: #2272eb;
+}
+
 .marketSummaryCards {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1721,24 +1817,24 @@
 }
 
 .locationMasterPanel {
-    margin-top: 16px;
+    margin-top: 0;
     border: 1px solid #e5e7eb;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.82);
+    border-radius: 8px;
+    background: #ffffff;
     overflow: hidden;
 }
 
 .locationMasterHeader {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    padding: 16px;
+    gap: 12px;
+    padding: 10px 12px;
     border-bottom: 1px solid #eef2f7;
 }
 
 .locationMasterHeader h3 {
-    margin: 0 0 5px;
+    margin: 0;
     color: #0f172a;
     font-size: 15px;
     font-weight: 900;
@@ -1750,11 +1846,79 @@
     font-size: 12px;
 }
 
+.locationMasterHeaderActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.locationModeTabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.locationModeTab,
+.locationModeTabActive {
+    height: 30px;
+    padding: 0 11px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.locationModeTabActive {
+    border-color: #b7d7ff;
+    background: #e8f3ff;
+    color: #3182f6;
+}
+
+.locationMasterBody {
+    padding: 12px;
+}
+
+.locationMasterFormPane {
+    width: 100%;
+    max-width: none;
+}
+
 .locationMasterGrid {
     display: grid;
-    grid-template-columns: minmax(340px, 0.95fr) minmax(420px, 1.05fr);
+    grid-template-columns: minmax(360px, 0.78fr) minmax(560px, 1.22fr);
     gap: 14px;
     padding: 16px;
+}
+
+.locationFormStack {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.locationFormSection {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationFormSection h4 {
+    margin: 0;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .locationFormGrid {
@@ -1769,6 +1933,10 @@
     color: #64748b;
     font-size: 11px;
     font-weight: 900;
+}
+
+.locationFormGrid .locationWideField {
+    grid-column: 1 / -1;
 }
 
 .locationFormGrid input,
@@ -1786,6 +1954,71 @@
 .locationFormGrid select {
     height: 38px;
     padding: 0 10px;
+}
+
+.locationFormGrid .locationMoneyInput,
+.locationFilterField .locationMoneyInput,
+.locationFilterActive .locationMoneyInput {
+    padding-right: 14px;
+    text-align: right;
+}
+
+.locationMoneyInput::placeholder {
+    text-align: right;
+}
+
+.locationAreaField {
+    display: grid;
+    gap: 6px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.locationAreaField > label {
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.locationAreaInputRow {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.locationAreaInputRow input {
+    min-width: 0;
+}
+
+.locationAreaUnitSwitch {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 38px;
+    padding: 3px;
+    border: 1px solid #e5e8eb;
+    border-radius: 999px;
+    background: #f9fafb;
+}
+
+.locationAreaUnit,
+.locationAreaUnitActive {
+    min-width: 34px;
+    height: 24px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.locationAreaUnitActive {
+    background: #e8f3ff;
+    color: #3182f6;
 }
 
 .locationFormGrid textarea {
@@ -1897,11 +2130,742 @@
     grid-column: 1 / -1;
 }
 
+.locationConditionControl {
+    display: grid;
+    grid-template-columns: minmax(94px, 0.8fr) minmax(130px, 1fr);
+    gap: 8px;
+}
+
 .locationFormActions {
     grid-column: 1 / -1;
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+}
+
+.locationMasterListPane {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.locationFilterPanel {
+    display: grid;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.locationFilterCompactBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 6px 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationFilterSummary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 4px;
+    min-width: 0;
+}
+
+.locationFilterSummary strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.locationFilterSummary span {
+    color: #6b7684;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.locationFilterSummary em {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1b64da;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.weakButton {
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.locationFilterSearch,
+.locationFilterCompactField {
+    min-width: 0;
+    height: 32px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.locationFilterSearch {
+    display: flex;
+    flex: 1 1 220px;
+    align-items: center;
+    gap: 6px;
+    max-width: 360px;
+    padding: 0 10px;
+    color: #8b95a1;
+}
+
+.locationFilterSearchActive {
+    border-color: #b7d7ff;
+    background: #f5fbff;
+    color: #1b64da;
+}
+
+.locationFilterSearch input {
+    min-width: 0;
+    flex: 1;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.locationFilterSearch input::placeholder {
+    color: #8b95a1;
+}
+
+.locationFilterSearch:focus-within,
+.locationFilterCompactField:focus-within,
+.locationFilterToggle:focus-visible,
+.locationFilterToggleActive:focus-visible,
+.locationFilterPanel .weakButton:focus-visible {
+    border-color: #8ec5ff;
+    outline: 2px solid rgba(49, 130, 246, 0.16);
+    outline-offset: 1px;
+}
+
+.locationFilterCompactField {
+    display: inline-flex;
+    flex: 0 1 150px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 6px 0 10px;
+}
+
+.locationFilterCompactFieldActive {
+    border-color: #b7d7ff;
+    background: #f5fbff;
+}
+
+.locationFilterCompactField span {
+    flex: 0 0 auto;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.locationFilterCompactFieldActive span {
+    color: #1b64da;
+}
+
+.locationFilterCompactField select {
+    min-width: 0;
+    flex: 1;
+    height: 28px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.locationFilterToggle,
+.locationFilterToggleActive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.locationFilterToggleActive {
+    border-color: #b7d7ff;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.locationFilterToggleActive span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1b64da;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.locationFilterAdvancedGrid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationFilterField,
+.locationFilterActive {
+    display: grid;
+    gap: 5px;
+    padding: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #4e5968;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.locationFilterActive {
+    border-color: #b7d7ff;
+    background: #e8f3ff;
+}
+
+.locationFilterField input,
+.locationFilterField select,
+.locationFilterActive input,
+.locationFilterActive select {
+    width: 100%;
+    height: 34px;
+    border: 1px solid #d1d6db;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+}
+
+.locationListShell {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.locationListControlBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationListMeta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 6px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.locationSortControl {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.locationSortControl select {
+    height: 34px;
+    min-width: 132px;
+    padding: 0 34px 0 12px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    appearance: none;
+    background:
+        url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center,
+        #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.locationTableWrap {
+    overflow-x: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationMasterTable {
+    width: 100%;
+    min-width: 1360px;
+    border-collapse: collapse;
+}
+
+.locationMasterTable th,
+.locationMasterTable td {
+    padding: 10px 9px;
+    border-bottom: 1px solid #eef2f7;
+    color: #333d4b;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+    vertical-align: top;
+}
+
+.locationMasterTable th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f9fafb;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.locationMasterTable td strong {
+    display: block;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.locationMasterTable td small {
+    display: block;
+    max-width: 220px;
+    color: #6b7684;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.locationImportanceBadge,
+.locationStageBadge,
+.locationReadyBadge {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.locationImportanceBadge {
+    background: #f2f4f6;
+    color: #4e5968;
+}
+
+.locationStageBadge {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.locationReadyBadge {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.locationMapLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 220px;
+    color: #3182f6;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.locationMapLink:hover {
+    text-decoration: underline;
+}
+
+.locationCompetitionCell {
+    display: grid;
+    gap: 3px;
+}
+
+.locationCompetitionCell b {
+    color: #191f28;
+    font-size: 12px;
+}
+
+.locationCompetitionCell span {
+    color: #8b95a1;
+    font-size: 11px;
+}
+
+.locationTableActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 162px;
+}
+
+.locationTableActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.locationTableActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.locationRecordBadge,
+.locationOpenRequestBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.locationRecordBadge {
+    background: #f2f4f6;
+    color: #6b7684;
+}
+
+.locationOpenRequestBadge {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.locationCompetitionRow td {
+    padding: 0 9px 10px;
+    background: #fbfdff;
+}
+
+.locationMessageBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 5100;
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.28);
+}
+
+.locationMessagePanel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: min(560px, 100%);
+    max-height: calc(100dvh - 32px);
+    border: 1px solid #d8dee8;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+}
+
+.locationMessageHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.locationMessageHeader h3 {
+    margin: 7px 0 4px;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 850;
+}
+
+.locationMessageHeader p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.locationMessageEyebrow,
+.locationMessageMeta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    color: #3182f6;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.locationMessageMeta {
+    margin-top: 10px;
+    color: #6b7684;
+}
+
+.locationMessageMeta span {
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f2f4f6;
+}
+
+.locationMessageCloseButton {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.locationMessageTimeline {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 18px;
+    background: #f9fafb;
+}
+
+.locationMessageItem,
+.locationMessageItemRequest {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationMessageItemRequest {
+    border-color: #dbeafe;
+    background: #fbfdff;
+}
+
+.locationMessageItemHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.locationMessageItemHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.locationMessageItemHeader time,
+.locationMessageItem small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.locationMessageItem p,
+.locationMessageItemRequest p {
+    margin: 0;
+    color: #333d4b;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+}
+
+.locationMessageBadges,
+.locationMessageItemActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.locationMessageBadgeNote,
+.locationMessageBadgeRequest,
+.locationMessageBadgeOpen,
+.locationMessageBadgeDone {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.locationMessageBadgeNote {
+    background: #f2f4f6;
+    color: #4e5968;
+}
+
+.locationMessageBadgeRequest,
+.locationMessageBadgeOpen {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.locationMessageBadgeDone {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.locationMessageItemActions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 9px;
+    border: 1px solid #d8dee8;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.locationMessageItemActions button:disabled {
+    opacity: 0.55;
+}
+
+.locationMessageEmpty {
+    display: flex;
+    min-height: 160px;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #d8dee8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #8b95a1;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.locationMessageComposer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: end;
+    padding: 14px 18px;
+    border-top: 1px solid #eef2f7;
+    background: #ffffff;
+}
+
+.locationMessageKindSwitch {
+    display: inline-grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid #d8dee8;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.locationMessageKindSwitch button,
+.locationMessageComposer>button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 36px;
+    border: 0;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.locationMessageKindSwitch button {
+    min-width: 52px;
+    background: transparent;
+    color: #6b7684;
+}
+
+.locationMessageKindSwitch .locationMessageKindActive {
+    background: #e8f3ff;
+    color: #1d4ed8;
+}
+
+.locationMessageComposer textarea {
+    width: 100%;
+    min-height: 38px;
+    max-height: 110px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid #d8dee8;
+    border-radius: 8px;
+    color: #191f28;
+    font-size: 13px;
+    outline: none;
+}
+
+.locationMessageComposer textarea:focus {
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
+}
+
+.locationMessageComposer>button {
+    padding: 0 13px;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.locationMessageComposer>button:disabled {
+    background: #e5e8eb;
+    color: #8b95a1;
 }
 
 .locationList {
@@ -2341,6 +3305,27 @@
     color: #0f172a;
     font-size: 18px;
     font-weight: 950;
+}
+
+.locationCompetitionLoading {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    min-height: 280px;
+    padding: 32px 20px;
+    color: #6b7684;
+    text-align: center;
+}
+
+.locationCompetitionLoading strong {
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.locationCompetitionLoading span {
+    color: #6b7684;
+    font-size: 13px;
 }
 
 .locationCompetitionModalBody {
@@ -6348,6 +7333,14 @@
         grid-template-columns: 1fr;
     }
 
+    .locationFilterCompactBar {
+        grid-template-columns: minmax(132px, auto) minmax(180px, 1fr) repeat(2, minmax(120px, 0.7fr));
+    }
+
+    .locationFilterAdvancedGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .openingProjectMeta {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -6574,6 +7567,35 @@
 
     .locationFormGrid {
         grid-template-columns: 1fr;
+    }
+
+    .locationFilterCompactBar {
+        align-items: stretch;
+    }
+
+    .locationFilterSummary,
+    .locationFilterSearch {
+        flex: 1 1 100%;
+        max-width: none;
+    }
+
+    .locationFilterCompactField {
+        flex: 1 1 calc(50% - 4px);
+    }
+
+    .locationFilterAdvancedGrid,
+    .locationConditionControl {
+        grid-template-columns: 1fr;
+    }
+
+    .locationFilterSummary {
+        justify-content: space-between;
+    }
+
+    .locationFilterToggle,
+    .locationFilterToggleActive,
+    .locationFilterPanel .weakButton {
+        width: 100%;
     }
 
     .locationFormActions,
@@ -6933,6 +7955,7 @@
 .metaPanel,
 .kpiCard,
 .kpiCardAccent,
+.marketViewToolbar,
 .marketInsightPanel,
 .panel,
 .panelWide,
@@ -6951,6 +7974,7 @@
 }
 
 .marketInsightPanel {
+    margin-bottom: 0;
     overflow: visible;
 }
 
@@ -6960,14 +7984,20 @@
 
 .panelHeader,
 .tableHeader,
-.locationMasterHeader,
 .realtyResultHeader {
     padding: 15px 16px;
     border-bottom-color: var(--fr-line);
 }
 
+.marketViewToolbar,
+.locationMasterHeader {
+    padding: 10px 12px;
+    border-bottom-color: var(--fr-line);
+}
+
 .panelHeader h2,
 .tableHeader h2,
+.marketViewToolbar h2,
 .locationMasterHeader h3,
 .realtyResultHeader strong {
     color: var(--fr-text);
@@ -6978,6 +8008,7 @@
 
 .panelHeader p,
 .tableHeader p,
+.marketViewToolbar p,
 .locationMasterHeader p,
 .realtyResultHeader span {
     color: var(--fr-muted);
@@ -7463,9 +8494,42 @@
 
     .toolbar,
     .marketInsightBody,
+    .locationMasterBody,
     .locationMasterGrid,
     .openingProjectList {
         padding: 12px;
+    }
+
+    .marketViewToolbar {
+        display: grid;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .marketViewTabs {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .marketViewTab,
+    .marketViewTabActive {
+        flex: 1 0 142px;
+        min-width: 142px;
+    }
+
+    .locationMasterHeaderActions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .locationModeTabs {
+        flex: 1 1 auto;
+    }
+
+    .locationModeTab,
+    .locationModeTabActive {
+        flex: 1 1 50%;
     }
 
     .workspaceTabs {
@@ -8019,8 +9083,11 @@
 
     .pageSizeControl,
     .pageSizeControl select,
+    .locationSortControl,
+    .locationSortControl select,
     .columnPicker summary,
     .tableMeta,
+    .locationListMeta,
     .filterResetButton {
         width: 100%;
         justify-content: center;
@@ -8092,6 +9159,35 @@
 
     .timelineItemActions,
     .timelineItemActions button {
+        width: 100%;
+    }
+
+    .locationMessageBackdrop {
+        padding: 0;
+    }
+
+    .locationMessagePanel {
+        width: 100%;
+        max-height: 100dvh;
+        border-width: 0;
+        border-radius: 0;
+    }
+
+    .locationMessageHeader {
+        padding: 16px;
+    }
+
+    .locationMessageTimeline {
+        padding: 12px;
+    }
+
+    .locationMessageComposer {
+        grid-template-columns: 1fr;
+        padding: 12px;
+    }
+
+    .locationMessageKindSwitch,
+    .locationMessageComposer>button {
         width: 100%;
     }
 
