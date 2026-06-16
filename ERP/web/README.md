@@ -34,11 +34,16 @@ npm run start -- -p 3000
 ## Documentation Map
 
 - `../../MAC_CONTEXT.md`: 맥북 worktree 운영, 최근 작업 상태, 세션 시작 체크리스트.
+- `docs/release-management.md`: 브랜치, 커밋, dev/main 반영, 배포 이력 관리 규칙.
 - `docs/franchise-growth-roadmap.md`: 프랜차이즈 고도화 우선순위, API 정책, 다음 작업 목록.
 - `docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크.
 - `docs/fdam-reference.md`: FDAM ERP 레퍼런스 분석.
 - `docs/documentation-agent.md`: Docs Steward 권한, 금지 범위, 보고 형식.
 - `handoff.md`: 단일 작성자 규칙 때문에 Codex는 수정하지 않고 읽기 참고만 한다.
+
+## Version Control Workflow
+
+업데이트는 작업 브랜치와 커밋 해시를 기준으로 추적한다. 기능 작업은 `codex/<topic>-YYYYMMDD` 브랜치에서 시작하고, `dev`/`main` 반영은 사용자가 명시적으로 배포를 요청한 경우에만 별도 worktree에서 진행한다. 배포 후에는 `docs/release-management.md`의 ledger 형식에 맞춰 기능 커밋, dev/main 반영 커밋, Vercel 배포 URL, 검증 결과, 남은 env/migration 이슈를 함께 기록한다.
 
 ## Database Migrations
 
