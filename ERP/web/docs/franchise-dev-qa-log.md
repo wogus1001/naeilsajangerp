@@ -176,6 +176,8 @@
 - 2026-06-16 추가 개발 범위로 모객 DB 정보공개서 상태 컬럼/정렬, 요약 대시보드 A/B 타입, 어드민 사용자 직급 수정, 인앱 알림 MVP를 구현했다. 알림 적용 SQL은 `supabase_franchise_notifications_migration.sql`이고, `/api/franchise-notifications`는 정보공개서 D-3/D-1 외에도 미발송, 발송 실패, 계약 가능, 연락 지연, 오늘 연락, HOT 리드 후속 일정 미지정을 담당자 알림으로 만든다. 자동 알림 조건이 해소되면 동기화 시 stale 알림은 숨김 처리한다.
 - 2026-06-16 추가 개발 검증 통과: `git diff --check`, `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-disclosure-summary.test.mts src/lib/franchise-notifications.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/components/franchise/leads/leadTableFilters.test.mts src/components/franchise/leads/leadDashboardMetrics.test.mts` 19건, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
 - 2026-06-16 추가 개발 브라우저/API QA 통과: 1440px에서 모객 DB `DB 관리` 탭의 `정보공개서` 컬럼과 정보공개서 필요순/최근 발송순/계약 가능일 빠른순 정렬을 확인했다. `A 타입` 대시보드는 정보공개서 운영 알림, D-3/D-1, 연락 알림, 알림톡 예정 문구를 표시했다. 헤더 알림 벨은 `supabase_franchise_notifications_migration.sql` 미적용 환경에서 `설정 필요`와 `알림 스키마 적용 후 사용할 수 있습니다.`를 표시했다. `/admin/users`는 `직급/권한` 컬럼과 관리자/팀장·매니저/담당자 select가 노출됐다. 역할 변경 API는 본인 관리자 권한 하향과 미지원 역할값을 차단했다. 390px에서 모객 DB와 어드민 페이지 body overflow 0, 최근 브라우저 console error 0건을 확인했다.
+- 2026-06-16 회사별 대시보드 타입/직급 분리 업데이트: `/admin` 회사별 메뉴 관리에 `대시보드 타입` 설정을 추가하고 기본 A 타입을 선택 상태로 확인했다. `/dashboard`의 `대시보드 보기` 토글은 제거했고 저장된 회사 설정에 따라 A/B 타입을 렌더링한다. `/admin/users` 권한 드롭다운은 선택지에서 `관리자`와 `담당자`를 제거하고 `팀장`, `매니저`만 노출한다. 기존 `manager`는 팀장, 새 `sub_manager`는 매니저로 분리했다.
+- 2026-06-16 회사별 대시보드 타입/직급 분리 검증 통과: `npx tsx --test src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다. 브라우저 QA는 로그인 세션 기준 1440px `/dashboard`에서 A 타입 주요 건수 카드와 `대시보드 보기` 토글 미노출을 확인했고, `/admin`에서 A/B 타입 설정과 기본 A 선택, `/admin/users`에서 드롭다운 옵션이 `팀장`/`매니저`만 남은 것을 확인했다. 별도 headless 모바일 컨텍스트는 Supabase 세션을 재현하지 못해 `/dashboard` 모바일 렌더는 로그인 리다이렉트까지만 확인했다.
 - `npm run lint -- --quiet`
 - `npx tsc --noEmit`
 - `npm run build`
@@ -292,10 +294,10 @@
 
 ## 2026-06-16 메인 대시보드 A 타입 QA
 
-- `/dashboard` 상단에 `B 타입`/`A 타입` 전환을 추가했고, B 타입은 기존 요약 대시보드를 유지한다.
+- `/dashboard` 상단의 `B 타입`/`A 타입` 전환 버튼은 제거했다. 회사별 메뉴 관리에서 저장한 타입에 따라 렌더링하며, 기본값은 A 타입이다.
 - A 타입 상단은 기존 메인 KPI 카드 톤에 맞춰 `모객 DB`, `계약 가능`, `출점 후보지`, `연결 필요` 주요 건수를 표시한다.
 - A 타입 하단은 기존 사용감이 좋았던 `📅 예정된 일정`, `📢 공지사항`, `📌 간편 메모` 구성을 유지했다.
-- 로컬 브라우저 QA: 1440px에서 A 타입 전환 후 실제 API 기준 `모객 DB 19명`, `계약 가능 0명`, `출점 후보지 1건`, `연결 필요 19건` 표시와 섹션 아이콘 노출 확인. 390px에서 KPI 카드 4개 세로 적재, 가로 overflow 0 확인.
+- 로컬 브라우저 QA: 1440px에서 실제 API 기준 `모객 DB 19명`, `계약 가능 0명`, `출점 후보지 1건`, `연결 필요 19건` 표시와 섹션 아이콘 노출, `대시보드 보기` 버튼 미노출을 확인했다. 390px 직접 대시보드 렌더는 별도 headless 컨텍스트에서 Supabase 세션을 재현하지 못해 로그인 리다이렉트까지만 확인했다.
 - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
 - 참고: 기존 `/api/dashboard/memo` 요청에서 로컬 사용자 매핑 조건에 따라 404가 1건 관측됐다. 이번 A 타입 UI 변경과 직접 관련 없는 기존 메모 API 동작이며 별도 개선 후보로 둔다.
 

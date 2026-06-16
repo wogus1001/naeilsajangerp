@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const USER_ROLES = ['admin', 'manager', 'staff'] as const;
+const USER_ROLES = ['admin', 'manager', 'sub_manager', 'staff'] as const;
 
 type UserRole = typeof USER_ROLES[number];
 

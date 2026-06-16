@@ -1,7 +1,7 @@
 import { canAccessCompanyScope, getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { ok, fail } from '@/lib/api-response';
-import { getDefaultCompanyMenuFlags } from '@/lib/company-menu-features';
-import { fetchCompanyMenuFlags, toCompanyMenuFeatureViews } from '@/lib/company-menu-feature-store';
+import { DEFAULT_COMPANY_DASHBOARD_MODE, getDefaultCompanyMenuFlags } from '@/lib/company-menu-features';
+import { fetchCompanyDashboardMode, fetchCompanyMenuFlags, toCompanyMenuFeatureViews } from '@/lib/company-menu-feature-store';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,12 @@ export async function GET(request: Request) {
         if (!targetCompanyId) {
             if (isAdmin(requester)) {
                 const flags = getDefaultCompanyMenuFlags();
-                return ok({ companyId: null, flags, features: toCompanyMenuFeatureViews(flags) });
+                return ok({
+                    companyId: null,
+                    dashboardMode: DEFAULT_COMPANY_DASHBOARD_MODE,
+                    flags,
+                    features: toCompanyMenuFeatureViews(flags)
+                });
             }
             return fail(400, 'VALIDATION_ERROR', 'companyId is required');
         }
@@ -31,8 +36,11 @@ export async function GET(request: Request) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 
-        const flags = await fetchCompanyMenuFlags(supabaseAdmin, targetCompanyId);
-        return ok({ companyId: targetCompanyId, flags, features: toCompanyMenuFeatureViews(flags) });
+        const [flags, dashboardMode] = await Promise.all([
+            fetchCompanyMenuFlags(supabaseAdmin, targetCompanyId),
+            fetchCompanyDashboardMode(supabaseAdmin, targetCompanyId)
+        ]);
+        return ok({ companyId: targetCompanyId, dashboardMode, flags, features: toCompanyMenuFeatureViews(flags) });
     } catch (error) {
         console.error('Company menu features GET error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Internal server error');
