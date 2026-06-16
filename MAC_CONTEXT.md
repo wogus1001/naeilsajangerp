@@ -403,6 +403,7 @@ npm run build
 - 배포 전 필수 SQL: `ERP/web/supabase_franchise_gmail_disclosures_migration.sql`과 `ERP/web/supabase_franchise_notifications_migration.sql`을 dev와 production Supabase에 적용해야 한다.
 - 2026-06-16 로컬 브라우저 QA: `QA 삭제 테스트 문서` 삭제 시 active 목록에서 제거되고 archived 상태로 보관됨을 확인했다. QA 중 보관된 `qa-info-disclosure.pdf` 실문서는 `active`로 복구했다.
 - 2026-06-16 추가 개발 검증: 모객 DB 정보공개서 컬럼/정렬, A/B 대시보드, 헤더 알림 벨, 어드민 직급 select를 1440px/390px에서 확인했다. 현재 로컬 Supabase에는 `supabase_franchise_notifications_migration.sql`이 미적용이라 헤더 알림은 `설정 필요`로 표시되는 것이 정상이다. `git diff --check`, lint, tsc, 관련 tsx test 19건, build 통과.
+- 2026-06-16 메인 `/dashboard` A 타입은 B 타입과 같은 KPI 카드 톤으로 조정했다. 상단은 `모객 DB`, `계약 가능`, `출점 후보지`, `연결 필요` 주요 건수 중심이고, 하단은 기존 `📅 예정된 일정`, `📢 공지사항`, `📌 간편 메모` 구성을 유지한다. 1440px/390px 로컬 브라우저 QA, lint, tsc, build 통과.
 
 ## 새 Codex 세션 시작 체크리스트
 1. 이 문서 읽기

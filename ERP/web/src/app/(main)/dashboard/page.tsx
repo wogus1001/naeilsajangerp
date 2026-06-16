@@ -5,6 +5,8 @@ import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckC
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertModal } from '@/components/common/AlertModal';
+import { MainDashboardModeTabs, type MainDashboardMode } from '@/components/dashboard/MainDashboardModeTabs';
+import { MainDashboardTypeA } from '@/components/dashboard/MainDashboardTypeA';
 import {
     getRequesterId,
     getStoredCompanyId,
@@ -17,6 +19,8 @@ export default function DashboardPage() {
     const router = useRouter();
     const [memo, setMemo] = React.useState(''); // Simple state for memo
     const [isMemoLoaded, setIsMemoLoaded] = React.useState(false); // Track if initial memo is loaded
+    const [dashboardMode, setDashboardMode] = React.useState<MainDashboardMode>('b');
+    const [dashboardCompanyName, setDashboardCompanyName] = React.useState('');
 
     const [stats, setStats] = React.useState<any[]>([]);
     const [todaySchedules, setTodaySchedules] = React.useState<any[]>([]);
@@ -61,6 +65,7 @@ export default function DashboardPage() {
         setUserData(user);
         setUserName(user?.name || '사장님');
         setUserId(currentUserId);
+        setDashboardCompanyName(companyName || '');
 
         // Fetch Dashboard Data
         const fetchDashboardData = async () => {
@@ -252,8 +257,23 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+            <MainDashboardModeTabs mode={dashboardMode} onChange={setDashboardMode} />
+
+            {dashboardMode === 'a' ? (
+                <MainDashboardTypeA
+                    requesterId={userId}
+                    companyName={dashboardCompanyName}
+                    schedules={todaySchedules}
+                    notices={notices}
+                    memo={memo}
+                    onMemoChange={setMemo}
+                    onOpenNoticeModal={() => setIsNoticeModalOpen(true)}
+                    onNavigate={(href) => router.push(href)}
+                />
+            ) : (
+                <>
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
                 {stats.map((stat, index) => {
                     // Special rendering for Contract Card with premium integrated design
                     if (stat.id === 'contract') {
@@ -321,9 +341,9 @@ export default function DashboardPage() {
                         </div>
                     );
                 })}
-            </div>
+                    </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 {/* Left Column */}
                 <div style={styles.column}>
 
@@ -450,7 +470,9 @@ export default function DashboardPage() {
 
 
                 </div>
-            </div>
+                    </div>
+                </>
+            )}
 
             {/* --- Notice Creation Modal --- */}
             {isNoticeModalOpen && (
