@@ -23,6 +23,7 @@ import {
     getDisclosureEligibility,
     isContractLockedLeadStatus
 } from '@/lib/franchise-disclosure-deliveries';
+import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
 export const dynamic = 'force-dynamic';
@@ -492,7 +493,11 @@ export async function GET(request: Request) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
             }
 
-            return ok({ lead: transformLead(lead) });
+            const transformedLead = transformLead(lead);
+            const [leadWithDisclosureSummary] = transformedLead
+                ? await attachDisclosureSummariesToLeads(supabaseAdmin, [transformedLead])
+                : [];
+            return ok({ lead: leadWithDisclosureSummary ?? transformedLead });
         }
 
         const scope = await resolveCompanyScope(supabaseAdmin, requesterProfile, company);
@@ -571,6 +576,7 @@ export async function GET(request: Request) {
         if (searchTerms.length > 0) {
             leads = leads.filter(lead => matchesLeadSearch(lead, searchTerms));
         }
+        leads = [...await attachDisclosureSummariesToLeads(supabaseAdmin, leads)];
 
         const total = leads.length;
         const summary = buildSummary(leads);

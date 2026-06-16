@@ -7,6 +7,7 @@ import {
 } from '@/lib/franchise-lead-workflow';
 import { WORK_QUEUE_OPTIONS } from './constants';
 import { hasActiveLeadTableFilters } from './leadTableConfig';
+import { buildLeadDisclosureDashboardSummary } from './leadDashboardMetrics';
 import { filterLeadTableLeads, sortLeadTableLeads } from './leadTableFilters';
 import { filterLeadsByManagerScope } from './leadTaskScope';
 import type {
@@ -75,6 +76,7 @@ export function useLeadDerivedData({
         ...metaState.forms.map(form => form.lastSyncedAt || '')
     ].filter(Boolean).sort().at(-1) || null;
     const trendSeriesData = buildTrendSeriesData(summary);
+    const disclosureDashboardSummary = buildLeadDisclosureDashboardSummary(candidateLeads);
     const contractReadyCount = candidateLeads.filter(lead => lead.status === '계약예정' || lead.status === '계약완료').length;
     const conversionRate = candidateLeads.length > 0 ? Math.round((contractReadyCount / candidateLeads.length) * 1000) / 10 : 0;
     const activeFollowupLeads = candidateLeads.filter(lead => !lead.convertedCustomerId && lead.status !== '계약완료' && lead.status !== '보류/이탈');
@@ -134,6 +136,7 @@ export function useLeadDerivedData({
         metaErrorCount,
         metaLastSyncAt,
         trendSeriesData,
+        disclosureDashboardSummary,
         conversionRate,
         dueContactCount,
         overdueContactCount,

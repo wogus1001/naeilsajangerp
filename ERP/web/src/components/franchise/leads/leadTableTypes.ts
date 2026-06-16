@@ -3,6 +3,7 @@ export type LeadTableColumnKey =
     | 'name'
     | 'mobile'
     | 'status'
+    | 'disclosure'
     | 'manager'
     | 'source'
     | 'desiredRegion'
@@ -24,4 +25,7 @@ export type LeadTableSortKey =
     | 'created_asc'
     | 'budget_asc'
     | 'budget_desc'
-    | 'priority_only';
+    | 'priority_only'
+    | 'disclosure_action'
+    | 'disclosure_recent'
+    | 'disclosure_eligible';

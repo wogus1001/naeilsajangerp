@@ -56,6 +56,7 @@ supabase_franchise_opening_projects_migration.sql
 supabase_franchise_brands_migration.sql
 supabase_franchise_disclosures_migration.sql
 supabase_franchise_gmail_disclosures_migration.sql
+supabase_franchise_notifications_migration.sql
 supabase_franchise_contract_checklist_migration.sql
 supabase_franchise_market_monitoring_migration.sql
 supabase_company_menu_features_migration.sql
@@ -63,7 +64,7 @@ supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Admin Company Access Setup
 
@@ -197,6 +198,14 @@ If the OAuth app is still in testing, add the sender Gmail account under `API �
 Gmail routes are `/api/integrations/gmail/connect`, `/api/integrations/gmail/callback`, `/api/integrations/gmail/status`, `/api/integrations/gmail/disconnect`, `/api/franchise-lead-disclosures/send-email`, `/api/franchise-lead-disclosures/open?token=...`, and `/api/franchise-lead-disclosures/confirm?token=...`. OAuth tokens are stored encrypted in `profile_gmail_connections`; successful sends write Gmail message metadata to `franchise_lead_disclosure_deliveries`.
 
 Lead status changes to `계약예정` or `계약완료` are blocked until 14 days after the latest successful or manually recorded disclosure delivery. Gmail `failed` and `pending` rows do not unlock contract status. Email image loading writes `opened_at` as an operational "열람 추정" signal only; customer receipt confirmation is tracked by `confirmed_at` when the email confirmation link is clicked. Gmail native read receipts are not used as the product source of truth.
+
+## Franchise Notifications Setup
+
+Run `supabase_franchise_notifications_migration.sql` before enabling in-app franchise alerts.
+
+The header bell uses `/api/franchise-notifications` to create and read 담당자 alerts. V1 alerts are in-app only and are derived from franchise lead data: disclosure not sent, Gmail send failure, disclosure D-3/D-1, contract eligibility, overdue contact, today's contact, and HOT lead follow-up scheduling. Stale automatic alerts are dismissed during sync when their source condition no longer applies. Future Kakao 알림톡 delivery can reuse `franchise_notifications.delivery_channel`, `kakao_template_key`, and `data`.
+
+The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The summary dashboard defaults to `B 타입` for the existing chart view and includes `A 타입` for disclosure and alert-centered operations.
 
 ## Franchise Contract Checklist Setup
 

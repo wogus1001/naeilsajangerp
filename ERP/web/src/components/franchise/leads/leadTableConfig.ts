@@ -22,7 +22,10 @@ export const LEAD_TABLE_SORT_OPTIONS: ReadonlyArray<{ readonly key: LeadTableSor
     { key: 'created_asc', label: '오래된 등록순' },
     { key: 'budget_asc', label: '예산 낮은순' },
     { key: 'budget_desc', label: '예산 높은순' },
-    { key: 'priority_only', label: '중요 희망자만 보기' }
+    { key: 'priority_only', label: '중요 희망자만 보기' },
+    { key: 'disclosure_action', label: '정보공개서 필요순' },
+    { key: 'disclosure_recent', label: '정보공개서 최근 발송순' },
+    { key: 'disclosure_eligible', label: '계약 가능일 빠른순' }
 ] as const;
 
 const CUSTOMER_DB_LINK_COLUMNS = [
@@ -34,6 +37,7 @@ export const LEAD_TABLE_COLUMNS: readonly LeadTableColumnConfig[] = [
     { key: 'name', label: '가맹 희망자', defaultVisible: true, required: true },
     { key: 'mobile', label: '연락처', defaultVisible: true },
     { key: 'status', label: '상태', defaultVisible: true },
+    { key: 'disclosure', label: '정보공개서', defaultVisible: true },
     { key: 'manager', label: '담당자', defaultVisible: true },
     { key: 'source', label: '유입', defaultVisible: true },
     { key: 'desiredRegion', label: '희망지역', defaultVisible: true },
