@@ -24,6 +24,16 @@ test('buildAutomaticFranchiseNotifications creates disclosure D-3 reminder', () 
     assert.equal(notifications.some(item => item.sourceType === 'disclosure-due' && item.title === '정보공개서 D-3'), true);
 });
 
+test('buildAutomaticFranchiseNotifications links notification to lead detail tab', () => {
+    const notifications = buildAutomaticFranchiseNotifications([
+        { ...baseLead, nextContactAt: '2026-06-13T09:00:00.000Z', disclosureSummary: buildLeadDisclosureSummary([]) }
+    ], new Date('2026-06-14T00:00:00.000Z'));
+
+    const overdueNotification = notifications.find(item => item.sourceType === 'contact-overdue');
+
+    assert.equal(overdueNotification?.actionUrl, '/dashboard/franchise-leads?tab=db&leadId=lead-1');
+});
+
 test('buildAutomaticFranchiseNotifications creates contact and missing disclosure alerts', () => {
     const notifications = buildAutomaticFranchiseNotifications([
         { ...baseLead, nextContactAt: '2026-06-13T09:00:00.000Z', disclosureSummary: buildLeadDisclosureSummary([]) }

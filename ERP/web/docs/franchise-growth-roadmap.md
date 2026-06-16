@@ -54,6 +54,7 @@
 - 2026-06-15 출점 후보지 화면은 상단 요약 카드와 보조 칩을 제거해, 지역 인사이트 본문과 외부 상가/후보지 검토 흐름에 집중하도록 정리했다.
 - 2026-06-16 모객 DB 목록에 `정보공개서` 컬럼과 정렬을 추가했다. 컬럼은 미발송, 발송 실패, D-day, 열람 추정, 수령 확인, 계약 가능 상태를 요약하고, 정렬은 정보공개서 필요순/최근 발송순/계약 가능일 빠른순을 제공한다.
 - 2026-06-16 요약 대시보드는 회사별 기본값을 `A 타입`으로 두고, 모객 DB와 출점 후보지 주요 건수를 먼저 보여준다. `B 타입`은 일정/계약/점포/고객 중심 기존 요약 화면으로 유지하며, 슈퍼어드민이 회사별 메뉴 관리에서 회사마다 지정한다.
+- 2026-06-16 모객 DB 내부 `요약 대시보드`의 A/B 전환은 제거하고, 기존 모객 흐름 분석형 화면만 유지한다.
 
 ### 공개 랜딩/도입 메시지
 
@@ -264,6 +265,7 @@
 - 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)는 2026-06-11 `admin` requester와 실제 `.xlsx` fixture로 통과했다. runner 생성 리드는 `raw_intake` 저장 후 `candidate` 승격과 cleanup까지 확인했다.
 - 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.
 - 본사별 정보공개서 저장/후보자 발송/발송 후 14일 계약 잠금 MVP는 2026-06-11 구현 및 SQL 적용 후 live QA까지 완료했다. 2026-06-16에는 회사별 문서관리 탭, Gmail OAuth 발송, 열람 추정/수령 확인, 문서 soft delete까지 연결했다. 다음 고도화는 카카오 알림톡 또는 발송 템플릿 관리로 분리한다.
+- 2026-06-16 Google OAuth 검증 준비용 공개 개인정보처리방침 페이지를 `/privacy`에 추가했다. Gmail 연동 검증 제출에는 개인정보처리방침 URL과 별도로 비공개 YouTube 데모 영상 링크를 준비한다.
 - 모객 DB UI/등록 폼 개선은 2026-06-11 로컬 dev 서버와 Playwright에서 확인했다. 남은 P0 범위는 UI 기능 자체가 아니라 실제 Meta 유입, 실운영 계정 role matrix, 오픈 준비 프로젝트 브라우저 persistence 회귀다.
 - 2026-06-15 `/landing`은 로컬 서버에서 로그인 없이 접근 가능하고, 1440px/390px 모두 가로 overflow 없이 렌더링됨을 확인했다. 공개 랜딩은 DB/API 없이 정적 페이지로 유지한다.
 - 2026-06-15 dev Vercel deployment는 READY다. dev preview는 Vercel Authentication 보호가 있어 외부 본문 fetch가 401로 제한된다.

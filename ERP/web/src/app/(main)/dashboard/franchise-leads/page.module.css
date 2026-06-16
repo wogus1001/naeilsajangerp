@@ -731,100 +731,6 @@
     font-size: 13px;
 }
 
-.dashboardModeTabs {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #f9fafb;
-}
-
-.dashboardModeTab,
-.dashboardModeTabActive {
-    height: 32px;
-    padding: 0 12px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: #6b7684;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.dashboardModeTabActive {
-    background: #3182f6;
-    color: #ffffff;
-}
-
-.dashboardActionGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 18px;
-}
-
-.dashboardActionList {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    padding: 6px 18px 18px;
-}
-
-.dashboardActionList div {
-    display: grid;
-    gap: 6px;
-    padding: 14px;
-    border-right: 1px solid #eef2f7;
-}
-
-.dashboardActionList div:last-child {
-    border-right: none;
-}
-
-.dashboardActionList strong,
-.dashboardActionStack strong {
-    color: #191f28;
-    font-weight: 700;
-}
-
-.dashboardActionList span {
-    color: #3182f6;
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.dashboardActionList small {
-    color: #6b7684;
-    font-size: 12px;
-    line-height: 1.45;
-    white-space: normal;
-}
-
-.dashboardActionStack {
-    display: grid;
-    gap: 10px;
-    padding: 14px 18px 18px;
-}
-
-.dashboardActionStack span {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eef2f7;
-    color: #4e5968;
-    font-size: 13px;
-}
-
-.dashboardActionStack span:last-child {
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
 .marketInsightPanel {
     margin-bottom: 18px;
     overflow: hidden;
@@ -4676,16 +4582,16 @@
 .statusSelect,
 .managerSelect {
     width: 100%;
-    max-width: 116px;
+    max-width: 92px;
     height: 32px;
     border: 1px solid #d8dee8;
     border-radius: 9px;
     appearance: none;
     background:
-        url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center,
+        url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 6.25L8 9.75L11.5 6.25' stroke='%234e5968' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center,
         #ffffff;
     color: transparent;
-    padding: 0 32px;
+    padding: 0 24px 0 10px;
     font-size: 12px;
     font-weight: 750;
     text-align: center;
@@ -4698,7 +4604,7 @@
 }
 
 .managerSelect {
-    max-width: 126px;
+    max-width: 104px;
 }
 
 .selectCell {
@@ -4713,12 +4619,12 @@
     position: relative;
     display: inline-flex;
     width: 100%;
-    max-width: 116px;
+    max-width: 92px;
     height: 34px;
 }
 
 .managerSelectWrap {
-    max-width: 126px;
+    max-width: 104px;
 }
 
 .tableSelectWrap select {
@@ -4731,7 +4637,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 32px;
+    padding: 0 24px 0 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: #334155;
     font-size: 12px;
     font-weight: 750;

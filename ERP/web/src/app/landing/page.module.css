@@ -656,10 +656,32 @@
     gap: 18px;
 }
 
+.footerCopy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 .footer strong {
     color: #191f28;
     font-size: 15px;
     font-weight: 700;
+}
+
+.footerLinks {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.footerLinks a {
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.footerLinks a:hover {
+    color: #3182f6;
 }
 
 @media (max-width: 1040px) {
