@@ -13,6 +13,7 @@ import {
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
+import { LeadDisclosureStatusCell } from './LeadDisclosureStatusCell';
 import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead } from './types';
 import {
@@ -120,6 +121,9 @@ export function LeadTableRow({
                     </select>
                     <span className={styles.tableSelectValue} aria-hidden="true">{lead.status}</span>
                 </span>
+            </td>}
+            {visibleColumnSet.has('disclosure') && <td>
+                <LeadDisclosureStatusCell summary={lead.disclosureSummary} />
             </td>}
             {visibleColumnSet.has('manager') && <td className={styles.selectCell}>
                 <span className={`${styles.tableSelectWrap} ${styles.managerSelectWrap}`}>

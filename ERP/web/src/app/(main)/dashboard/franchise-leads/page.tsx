@@ -501,7 +501,10 @@ export default function FranchiseLeadsPage() {
         metaErrorCount,
         metaLastSyncAt,
         trendSeriesData,
+        disclosureDashboardSummary,
         conversionRate,
+        dueContactCount,
+        overdueContactCount,
         pipelineColumns,
         taskLeads,
         taskQueueOptions,
@@ -1182,6 +1185,9 @@ export default function FranchiseLeadsPage() {
                     sourceChartData={sourceChartData}
                     managerChartData={managerChartData}
                     trendSeriesData={trendSeriesData}
+                    disclosureSummary={disclosureDashboardSummary}
+                    dueContactCount={dueContactCount}
+                    overdueContactCount={overdueContactCount}
                     onStatusFilterChangeAction={handleStatusFilterChange}
                 />
             )}

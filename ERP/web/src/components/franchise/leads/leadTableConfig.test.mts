@@ -24,6 +24,13 @@ test('normalizeLeadTableColumnKeys removes legacy contract checklist column from
     );
 });
 
+test('normalizeLeadTableColumnKeys keeps disclosure status column in configured order', () => {
+    assert.deepEqual(
+        normalizeLeadTableColumnKeys(['actions', 'disclosure', 'name']),
+        ['name', 'disclosure', 'actions']
+    );
+});
+
 test('normalizeLeadTableColumnKeys removes hidden customer DB linking column for initial launch', () => {
     assert.deepEqual(
         normalizeLeadTableColumnKeys(['name', 'links', 'actions']),

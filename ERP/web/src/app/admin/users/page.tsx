@@ -2,9 +2,25 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, CheckCircle, XCircle, Shield, User, Clock, Key, Lock } from 'lucide-react';
+import { Trash2, CheckCircle, Key } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { createClient } from '@/utils/supabase/client';
+import {
+    AdminUserRoleSelect,
+    getAdminUserRoleLabel,
+    type AdminUserRole
+} from './AdminUserRoleSelect';
+
+type AdminUserRow = {
+    readonly id: string | null;
+    readonly uuid: string;
+    readonly name: string | null;
+    readonly companyName: string | null;
+    readonly role: string | null;
+    readonly status: string | null;
+    readonly joinedAt: string | null;
+};
 
 // Reuse some styles but inline for admin specific needs to avoid module weirdness
 const styles = {
@@ -50,14 +66,13 @@ const styles = {
     statusBadge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 },
 };
 
-import { createClient } from '@/utils/supabase/client';
-
 export default function AdminUsersPage() {
     const router = useRouter();
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<AdminUserRow[]>([]);
     const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null);
 
     // Alert & Confirm State
     const [alertConfig, setAlertConfig] = useState({ isOpen: false, message: '', title: '' });
@@ -86,18 +101,24 @@ export default function AdminUsersPage() {
         fetchUsers();
     }, []);
 
+    const getCurrentRequesterId = () => {
+        const userStr = localStorage.getItem('user');
+        const parsed: unknown = userStr ? JSON.parse(userStr) : {};
+        const currentUser = typeof parsed === 'object' && parsed !== null && 'user' in parsed
+            ? (parsed as { readonly user?: { readonly uid?: string; readonly id?: string } }).user
+            : parsed as { readonly uid?: string; readonly id?: string };
+        return currentUser?.uid || currentUser?.id || '';
+    };
+
     const fetchUsers = async () => {
         setIsLoading(true);
         try {
-            const userStr = localStorage.getItem('user');
-            const parsed = userStr ? JSON.parse(userStr) : {};
-            const currentUser = parsed.user || parsed;
-            const requesterId = currentUser.uid || currentUser.id || '';
+            const requesterId = getCurrentRequesterId();
             const query = requesterId ? `?requesterId=${encodeURIComponent(requesterId)}` : '';
 
             const res = await fetch(`/api/users${query}`);
             if (res.ok) {
-                const data = await res.json();
+                const data = await res.json() as AdminUserRow[];
                 setUsers(data);
             }
         } catch (error) {
@@ -107,13 +128,10 @@ export default function AdminUsersPage() {
         }
     };
 
-    const handleApprove = (user: any) => {
-        showConfirm(`${user.name}님의 가입을 승인하시겠습니까?`, async () => {
+    const handleApprove = (user: AdminUserRow) => {
+        showConfirm(`${user.name || user.id || '사용자'}님의 가입을 승인하시겠습니까?`, async () => {
             try {
-                const userStr = localStorage.getItem('user');
-                const parsed = userStr ? JSON.parse(userStr) : {};
-                const currentUser = parsed.user || parsed;
-                const requesterId = currentUser.uid || currentUser.id || '';
+                const requesterId = getCurrentRequesterId();
 
                 const res = await fetch(`/api/users?requesterId=${encodeURIComponent(requesterId)}`, {
                     method: 'PUT',
@@ -137,14 +155,45 @@ export default function AdminUsersPage() {
         });
     };
 
+    const handleRoleChange = (user: AdminUserRow, role: AdminUserRole) => {
+        if (role === user.role) return;
+
+        const targetName = user.name || user.id || '사용자';
+        showConfirm(`${targetName}님의 직급을 ${getAdminUserRoleLabel(role)}로 변경하시겠습니까?`, async () => {
+            setUpdatingRoleUserId(user.uuid);
+            try {
+                const requesterId = getCurrentRequesterId();
+                const res = await fetch(`/api/users?requesterId=${encodeURIComponent(requesterId)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: user.uuid,
+                        role
+                    })
+                });
+
+                if (res.ok) {
+                    showAlert('직급이 변경되었습니다.');
+                    await fetchUsers();
+                    return;
+                }
+
+                const data = await res.json() as { readonly error?: string };
+                showAlert(`직급 변경 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
+            } catch (error) {
+                console.error(error);
+                showAlert('직급 변경 중 오류가 발생했습니다.');
+            } finally {
+                setUpdatingRoleUserId(null);
+            }
+        });
+    };
+
     const handleDelete = async () => {
         if (!deleteTargetId) return;
 
         try {
-            const userStr = localStorage.getItem('user');
-            const parsed = userStr ? JSON.parse(userStr) : {};
-            const currentUser = parsed.user || parsed;
-            const requesterId = currentUser.uid || currentUser.id || '';
+            const requesterId = getCurrentRequesterId();
 
             const res = await fetch(`/api/users?id=${deleteTargetId}&requesterId=${encodeURIComponent(requesterId)}`, { method: 'DELETE' });
             if (res.ok) {
@@ -166,16 +215,7 @@ export default function AdminUsersPage() {
     const pendingUsers = users.filter(u => u.status === 'pending_approval');
     const filteredUsers = activeTab === 'pending' ? pendingUsers : users;
 
-    const getRoleBadge = (role: string) => {
-        switch (role) {
-            case 'admin': return <span style={{ ...styles.statusBadge, backgroundColor: '#e7f5ff', color: '#1971c2' }}>관리자</span>;
-            case 'manager': return <span style={{ ...styles.statusBadge, backgroundColor: '#fff0f6', color: '#c2255c' }}>팀장</span>;
-            case 'staff': return <span style={{ ...styles.statusBadge, backgroundColor: '#f3f0ff', color: '#7950f2' }}>직원</span>;
-            default: return <span style={{ ...styles.statusBadge, backgroundColor: '#f8f9fa', color: '#868e96' }}>사용자</span>;
-        }
-    };
-
-    const getStatusBadge = (status: string) => {
+    const getStatusBadge = (status: string | null) => {
         switch (status) {
             case 'active': return <span style={{ ...styles.statusBadge, backgroundColor: '#e6fcf5', color: '#0ca678' }}>활성</span>;
             case 'pending_approval': return <span style={{ ...styles.statusBadge, backgroundColor: '#fff9db', color: '#f08c00' }}>승인대기</span>;
@@ -234,7 +274,7 @@ export default function AdminUsersPage() {
                     // Production-friendly message
                     showAlert(`변경 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
                 }
-            } catch (e: any) {
+            } catch (e: unknown) {
                 console.error('Password reset failed', e);
                 showAlert('오류가 발생했습니다.');
             } finally {
@@ -279,7 +319,7 @@ export default function AdminUsersPage() {
                         <tr>
                             <th style={styles.th}>사용자 정보</th>
                             <th style={styles.th}>소속 회사</th>
-                            <th style={styles.th}>권한</th>
+                            <th style={styles.th}>직급/권한</th>
                             <th style={styles.th}>상태</th>
                             <th style={styles.th}>가입일</th>
                             <th style={styles.th}>관리</th>
@@ -288,13 +328,20 @@ export default function AdminUsersPage() {
                     <tbody>
                         {filteredUsers.length > 0 ? (
                             filteredUsers.map((user) => (
-                                <tr key={user.id} style={styles.tr}>
+                                <tr key={user.uuid} style={styles.tr}>
                                     <td style={styles.td}>
                                         <div style={{ fontWeight: 'bold', color: '#343a40' }}>{user.id}</div>
                                         <div style={{ fontSize: '12px', color: '#868e96' }}>{user.name}</div>
                                     </td>
                                     <td style={styles.td}>{user.companyName || '-'}</td>
-                                    <td style={styles.td}>{getRoleBadge(user.role)}</td>
+                                    <td style={styles.td}>
+                                        <AdminUserRoleSelect
+                                            role={user.role}
+                                            userName={user.name || user.id || '사용자'}
+                                            isUpdating={updatingRoleUserId === user.uuid}
+                                            onChange={role => handleRoleChange(user, role)}
+                                        />
+                                    </td>
                                     <td style={styles.td}>{getStatusBadge(user.status)}</td>
                                     <td style={styles.td}><span style={{ color: '#868e96', fontSize: '13px' }}>{user.joinedAt ? new Date(user.joinedAt).toLocaleDateString() : '-'}</span></td>
                                     <td style={styles.td}>
