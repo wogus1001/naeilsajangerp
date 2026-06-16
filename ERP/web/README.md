@@ -50,6 +50,7 @@ supabase_franchise_location_messages_migration.sql
 supabase_franchise_opening_projects_migration.sql
 supabase_franchise_brands_migration.sql
 supabase_franchise_disclosures_migration.sql
+supabase_franchise_gmail_disclosures_migration.sql
 supabase_franchise_contract_checklist_migration.sql
 supabase_franchise_market_monitoring_migration.sql
 supabase_company_menu_features_migration.sql
@@ -57,7 +58,7 @@ supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Admin Company Access Setup
 
@@ -97,6 +98,8 @@ NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY=
 ```
 
 Address search uses `/api/integrations/kakao/address`. The candidate master stores site condition, landlord, cost, lease, and development-stage fields in `franchise_locations.data`, while core columns continue to hold the location name, address, region, status, importance, brand, and owner scope. The per-location records panel uses `/api/franchise-locations/messages` and stores company-scoped notes/requests in `franchise_location_messages`.
+
+The region insight table is based on `franchise_locations` opening candidates, not ERP `properties` or external store listings. It compares regional lead demand with candidate locations and counts lead records that still need a `franchise_leads.data.locationLinks` connection to a same-region `franchise_location`.
 
 The competitor scan endpoint is `/api/franchise-locations/competitors`. Both address and competitor APIs use the server-side Kakao REST API key, so the key is never exposed to the browser. Company-level data isolation still follows the existing `company_id` access rules; the Kakao key is not configured per company. The candidate list currently hides the competitor-scan entry point while the API and stored `competitionScan` data are retained for later re-enable.
 
@@ -164,11 +167,31 @@ The brand selector shows company-saved brands first, then shared disclosure bran
 
 ## Franchise Disclosure Compliance Setup
 
-Run `supabase_franchise_disclosures_migration.sql` before enabling HQ disclosure document storage and candidate disclosure delivery tracking.
+Run `supabase_franchise_disclosures_migration.sql` before enabling HQ disclosure document storage and candidate disclosure delivery tracking. Run `supabase_franchise_gmail_disclosures_migration.sql` before enabling Gmail OAuth send status, open tracking, and customer confirmation tracking.
 
-The candidate detail panel uploads disclosure files through `/api/upload` to the existing Supabase Storage `property-documents` bucket under `franchise-disclosures/<company>/...`, then stores company-scoped document metadata in `franchise_disclosure_documents`. Company employees reuse the same company disclosure document list, while per-lead delivery records keep sent time, channel, recipient contact, memo, and the document version snapshot.
+The candidate detail panel manages disclosure files through the `문서 관리` dialog. The dialog uploads files through `/api/upload` to the existing Supabase Storage `property-documents` bucket under `franchise-disclosures/<company>/...`, then stores company-scoped document metadata in `franchise_disclosure_documents`. Company employees reuse the same company disclosure document list, and Gmail delivery sends the selected saved document. Deleting a document from `문서 관리` soft-archives the document metadata so it disappears from active send options while existing delivery history remains intact. Per-lead delivery records keep the automatic Gmail sent time, recipient, memo, status, and document version snapshot.
 
-Lead status changes to `계약예정` or `계약완료` are blocked until 14 days after the latest disclosure delivery. Future delivery automation should integrate either email or Kakao AlimTalk and write provider send status back into the disclosure delivery workflow.
+Gmail delivery uses the 담당자 personal OAuth connection with the minimal Gmail send scope. Required environment variables:
+
+```bash
+GOOGLE_GMAIL_CLIENT_ID=
+GOOGLE_GMAIL_CLIENT_SECRET=
+GMAIL_TOKEN_ENCRYPTION_KEY=
+NEXT_PUBLIC_APP_URL=
+```
+
+If the three Gmail-specific variables are missing, the disclosure panel shows `설정 필요` and keeps the Gmail connection action disabled. Restart the Next.js process after changing `.env.local` or deployment environment variables.
+
+For local OAuth, add both redirect URIs in Google Cloud `API 및 서비스` -> `사용자 인증 정보` -> OAuth client:
+
+- `http://localhost:3000/api/integrations/gmail/callback`
+- `http://127.0.0.1:3000/api/integrations/gmail/callback`
+
+If the OAuth app is still in testing, add the sender Gmail account under `API 및 서비스` -> `OAuth 동의 화면` or `Google 인증 플랫폼` -> `대상`/`테스트 사용자`. Otherwise Google blocks the flow with `403 access_denied`.
+
+Gmail routes are `/api/integrations/gmail/connect`, `/api/integrations/gmail/callback`, `/api/integrations/gmail/status`, `/api/integrations/gmail/disconnect`, `/api/franchise-lead-disclosures/send-email`, `/api/franchise-lead-disclosures/open?token=...`, and `/api/franchise-lead-disclosures/confirm?token=...`. OAuth tokens are stored encrypted in `profile_gmail_connections`; successful sends write Gmail message metadata to `franchise_lead_disclosure_deliveries`.
+
+Lead status changes to `계약예정` or `계약완료` are blocked until 14 days after the latest successful or manually recorded disclosure delivery. Gmail `failed` and `pending` rows do not unlock contract status. Email image loading writes `opened_at` as an operational "열람 추정" signal only; customer receipt confirmation is tracked by `confirmed_at` when the email confirmation link is clicked. Gmail native read receipts are not used as the product source of truth.
 
 ## Franchise Contract Checklist Setup
 

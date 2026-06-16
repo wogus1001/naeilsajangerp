@@ -505,14 +505,52 @@ create table if not exists public.franchise_lead_disclosure_deliveries (
   document_title text not null,
   document_version text default 'v1' not null,
   evidence_url text,
+  send_status text default 'recorded' not null,
+  gmail_connection_id uuid,
+  gmail_message_id text,
+  gmail_thread_id text,
+  gmail_sender_email text,
+  recipient_email text,
+  opened_at timestamp with time zone,
+  confirmed_at timestamp with time zone,
+  open_token_hash text,
+  confirmation_token_hash text,
+  send_error text,
   memo text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   data jsonb default '{}'::jsonb
 );
 
+create table if not exists public.profile_gmail_connections (
+  id uuid default uuid_generate_v4() primary key,
+  profile_id uuid references public.profiles(id) on delete cascade not null,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  gmail_email text not null,
+  encrypted_access_token text not null,
+  encrypted_refresh_token text,
+  token_expires_at timestamp with time zone,
+  scope text default 'https://www.googleapis.com/auth/gmail.send' not null,
+  status text default 'active' not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'franchise_lead_disclosure_deliveries_gmail_connection_fkey'
+  ) then
+    alter table public.franchise_lead_disclosure_deliveries
+      add constraint franchise_lead_disclosure_deliveries_gmail_connection_fkey
+      foreign key (gmail_connection_id) references public.profile_gmail_connections(id) on delete set null;
+  end if;
+end $$;
+
 alter table public.franchise_disclosure_documents enable row level security;
 alter table public.franchise_lead_disclosure_deliveries enable row level security;
+alter table public.profile_gmail_connections enable row level security;
 
 create policy "Company members can view franchise_disclosure_documents" on public.franchise_disclosure_documents
   for select using (company_id = get_my_company_id());
@@ -540,6 +578,19 @@ create policy "Company members can update franchise_lead_disclosure_deliveries" 
 create policy "Company members can delete franchise_lead_disclosure_deliveries" on public.franchise_lead_disclosure_deliveries
   for delete using (company_id = get_my_company_id());
 
+create policy "Company members can view profile_gmail_connections" on public.profile_gmail_connections
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert profile_gmail_connections" on public.profile_gmail_connections
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update profile_gmail_connections" on public.profile_gmail_connections
+  for update using (company_id = get_my_company_id())
+  with check (company_id = get_my_company_id());
+
+create policy "Company members can delete profile_gmail_connections" on public.profile_gmail_connections
+  for delete using (company_id = get_my_company_id());
+
 create index if not exists idx_franchise_disclosure_documents_company_status
   on public.franchise_disclosure_documents (company_id, status, updated_at desc);
 
@@ -554,6 +605,26 @@ create index if not exists idx_franchise_lead_disclosure_deliveries_company_sent
 
 create index if not exists idx_franchise_lead_disclosure_deliveries_document
   on public.franchise_lead_disclosure_deliveries (document_id);
+
+create unique index if not exists idx_profile_gmail_connections_profile_company
+  on public.profile_gmail_connections (profile_id, company_id);
+
+create index if not exists idx_profile_gmail_connections_company_status
+  on public.profile_gmail_connections (company_id, status, updated_at desc);
+
+create index if not exists idx_franchise_lead_disclosure_deliveries_send_status
+  on public.franchise_lead_disclosure_deliveries (lead_id, send_status, sent_at desc);
+
+create index if not exists idx_franchise_lead_disclosure_deliveries_gmail_connection
+  on public.franchise_lead_disclosure_deliveries (gmail_connection_id);
+
+create unique index if not exists idx_franchise_lead_disclosure_deliveries_confirm_token
+  on public.franchise_lead_disclosure_deliveries (confirmation_token_hash)
+  where confirmation_token_hash is not null;
+
+create unique index if not exists idx_franchise_lead_disclosure_deliveries_open_token
+  on public.franchise_lead_disclosure_deliveries (open_token_hash)
+  where open_token_hash is not null;
 
 create table if not exists public.franchise_lead_contract_checklist_steps (
   id uuid default uuid_generate_v4() primary key,

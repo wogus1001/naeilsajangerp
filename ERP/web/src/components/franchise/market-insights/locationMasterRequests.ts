@@ -1,5 +1,4 @@
 import type { FranchiseBrand } from '@/lib/franchise-brands';
-import type { LocationInsightProperty } from '@/lib/franchise-market-insights';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import type {
     FranchiseLead,
@@ -17,7 +16,6 @@ type RequestScope = {
 
 type FetchMarketInsightDataResult = {
     readonly leads: readonly FranchiseLead[];
-    readonly properties: readonly LocationInsightProperty[];
     readonly locations: readonly FranchiseLocation[];
 };
 
@@ -92,28 +90,22 @@ export async function fetchMarketInsightData({
 }: RequestScope): Promise<FetchMarketInsightDataResult> {
     const leadParams = new URLSearchParams({ requesterId: userId, limit: 'all', summary: 'true' });
     const locationParams = new URLSearchParams({ requesterId: userId });
-    const propertyParams = new URLSearchParams({ requesterId: userId, limit: 'all' });
     if (companyName) {
         leadParams.set('company', companyName);
         locationParams.set('company', companyName);
-        propertyParams.set('company', companyName);
     }
-    const [leadResponse, propertyResponse, locationResponse] = await Promise.all([
+    const [leadResponse, locationResponse] = await Promise.all([
         fetch(`/api/franchise-leads?${leadParams.toString()}`, { cache: 'no-store' }),
-        fetch(`/api/properties?${propertyParams.toString()}`, { cache: 'no-store' }),
         fetch(`/api/franchise-locations?${locationParams.toString()}`, { cache: 'no-store' })
     ]);
-    const [leadPayload, propertyPayload, locationPayload]: readonly unknown[] = await Promise.all([
+    const [leadPayload, locationPayload]: readonly unknown[] = await Promise.all([
         leadResponse.json(),
-        propertyResponse.json(),
         locationResponse.json()
     ]);
     if (!leadResponse.ok) throw new Error(readApiError(leadPayload));
-    if (!propertyResponse.ok) throw new Error(readApiError(propertyPayload));
     if (!locationResponse.ok) throw new Error(readApiError(locationPayload));
     return {
         leads: unwrapApiData<LeadListResponse>(leadPayload).leads || [],
-        properties: unwrapApiData<readonly LocationInsightProperty[]>(propertyPayload) || [],
         locations: unwrapApiData<LocationListResponse>(locationPayload).locations || []
     };
 }

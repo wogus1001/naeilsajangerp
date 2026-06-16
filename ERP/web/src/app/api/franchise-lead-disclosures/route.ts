@@ -2,9 +2,13 @@ import { canAccessCompanyResource, canAccessCompanyScope, getRequesterProfile } 
 import { fail, ok } from '@/lib/api-response';
 import {
     getDisclosureEligibility,
-    normalizeDisclosureChannel,
-    type FranchiseLeadDisclosureDelivery
+    normalizeDisclosureChannel
 } from '@/lib/franchise-disclosure-deliveries';
+import {
+    readDisclosureJsonRecord,
+    transformLeadDisclosureDelivery,
+    type DisclosureDeliveryRow
+} from '@/lib/franchise-lead-disclosure-records';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -27,25 +31,6 @@ type DisclosureDocumentRow = {
     readonly status: string | null;
 };
 
-type DisclosureDeliveryRow = {
-    readonly id: string;
-    readonly company_id: string;
-    readonly lead_id: string;
-    readonly document_id: string | null;
-    readonly sent_by: string | null;
-    readonly sent_at: string;
-    readonly channel: string | null;
-    readonly recipient_name: string | null;
-    readonly recipient_contact: string | null;
-    readonly document_title: string | null;
-    readonly document_version: string | null;
-    readonly evidence_url: string | null;
-    readonly memo: string | null;
-    readonly created_at: string;
-    readonly updated_at: string;
-    readonly data: unknown;
-};
-
 function isRecord(value: unknown): value is JsonRecord {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -61,10 +46,6 @@ function cleanString(value: unknown): string | null {
     if (value === null || value === undefined) return null;
     const normalized = String(value).trim();
     return normalized.length > 0 ? normalized : null;
-}
-
-function readJsonRecord(value: unknown): JsonRecord {
-    return isRecord(value) ? value : {};
 }
 
 async function readBody(request: Request): Promise<JsonRecord> {
@@ -104,7 +85,7 @@ function handleLeadDisclosureError(error: unknown, action: string) {
         return fail(
             424,
             'VALIDATION_ERROR',
-            '정보공개서 발송 이력 테이블이 아직 적용되지 않았습니다. supabase_franchise_disclosures_migration.sql 적용 후 다시 확인해주세요.'
+            '정보공개서/Gmail 발송 이력 스키마가 아직 적용되지 않았습니다. supabase_franchise_disclosures_migration.sql과 supabase_franchise_gmail_disclosures_migration.sql 적용 후 다시 확인해주세요.'
         );
     }
     return fail(500, 'INTERNAL_ERROR', `Failed to ${action.toLowerCase()} lead disclosure delivery${action === 'GET' ? 'ies' : ''}`);
@@ -116,27 +97,6 @@ function parseSentAt(value: unknown) {
     const parsed = new Date(raw);
     if (Number.isNaN(parsed.getTime())) return null;
     return parsed.toISOString();
-}
-
-function transformDelivery(row: DisclosureDeliveryRow): FranchiseLeadDisclosureDelivery {
-    return {
-        ...readJsonRecord(row.data),
-        id: row.id,
-        companyId: row.company_id,
-        leadId: row.lead_id,
-        documentId: row.document_id,
-        sentBy: row.sent_by,
-        sentAt: row.sent_at,
-        channel: normalizeDisclosureChannel(row.channel),
-        recipientName: row.recipient_name || '',
-        recipientContact: row.recipient_contact || '',
-        documentTitle: row.document_title || '',
-        documentVersion: row.document_version || 'v1',
-        evidenceUrl: row.evidence_url || '',
-        memo: row.memo || '',
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-    };
 }
 
 async function fetchLead(
@@ -173,7 +133,7 @@ async function fetchDeliveries(
         .eq('lead_id', leadId)
         .order('sent_at', { ascending: false });
     if (error) throw error;
-    return ((data || []) as DisclosureDeliveryRow[]).map(transformDelivery);
+    return ((data || []) as DisclosureDeliveryRow[]).map(transformLeadDisclosureDelivery);
 }
 
 export async function GET(request: Request) {
@@ -244,10 +204,11 @@ export async function POST(request: Request) {
             document_title: documentTitle,
             document_version: documentVersion,
             evidence_url: cleanString(getFirst(body, ['evidenceUrl', 'evidence_url'])) || '',
+            send_status: 'recorded',
             memo: cleanString(getFirst(body, ['memo'])) || '',
             created_at: now,
             updated_at: now,
-            data: readJsonRecord(getFirst(body, ['data']))
+            data: readDisclosureJsonRecord(getFirst(body, ['data']))
         };
 
         const { data, error } = await supabaseAdmin
@@ -257,7 +218,7 @@ export async function POST(request: Request) {
             .single();
         if (error) throw error;
 
-        const delivery = transformDelivery(data as DisclosureDeliveryRow);
+        const delivery = transformLeadDisclosureDelivery(data as DisclosureDeliveryRow);
         const deliveries = await fetchDeliveries(supabaseAdmin, lead.id);
         return ok({
             delivery,

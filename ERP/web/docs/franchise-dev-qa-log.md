@@ -163,6 +163,16 @@
 - 2026-06-16 출점 후보지 협업 기록 API QA 통과: 같은 회사 후보지의 메시지 조회/정보 작성/요청 작성/처리완료 변경을 확인했고, 교차 회사 requester는 조회/작성/상태변경 모두 403으로 차단됐다. QA 메시지와 임시 후보지는 검증 후 삭제했다.
 - 2026-06-16 Supabase migration 적용 확인: dev와 production Supabase에 `supabase_franchise_location_messages_migration.sql`을 적용했고, production에서 `public.franchise_location_messages`와 `franchise_location_messages_location_created_idx` 존재를 확인했다.
 - 2026-06-16 브라우저 QA 통과: 로컬 `http://127.0.0.1:3000/dashboard/franchise-leads/market-insights`에서 물건 기록 패널이 열리고, 정보/요청 메시지 작성, 요청 처리완료, 완료 요청의 다시 열기 미노출, 작성자 이름만 표시, 1440px/390px overflow 없음, 경쟁스캔/경쟁 보기/키워드필요 미노출을 확인했다.
+- 2026-06-16 지역 인사이트 고도화와 정보공개서 Gmail 발송 1차 구현을 완료했다. 추가 SQL은 `supabase_franchise_gmail_disclosures_migration.sql`이며, Gmail OAuth 토큰은 `profile_gmail_connections`, 발송/수신확인 감사값은 `franchise_lead_disclosure_deliveries`에 저장한다.
+- 2026-06-16 지역 인사이트 유닛 테스트 통과: `npx tsx --test src/lib/franchise-market-insights.test.mts`에서 보유 후보지 수, 연결 완료 수, 연결 필요 수, 정렬 기준을 확인했다.
+- 2026-06-16 Gmail/정보공개서 유닛 테스트 통과: `npx tsx --test src/lib/franchise-disclosure-deliveries.test.mts src/lib/franchise-lead-disclosure-records.test.mts src/lib/gmail-integration.test.mts src/lib/gmail-provider.test.mts src/components/franchise/leadDisclosureFormUtils.test.mts`에서 Gmail MIME 생성, 저장 리드명 미사용 메일 문구, 열람 추정 픽셀 URL, OAuth token 암복호화, 확인 token hash, 로컬 OAuth redirect URI, `pending`/`failed` 발송 제외, 정보공개서 기본값과 OAuth 결과 메시지를 확인했다.
+- 2026-06-16 통합 정적 검증 통과: `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, 관련 `npx tsx --test ...`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, multiple lockfiles/root, Browserslist stale 경고만 출력했다.
+- 2026-06-16 브라우저 QA 통과: `admin / 1234` 로그인 세션에서 `/dashboard/franchise-leads/market-insights?view=region-insight`의 삭제 대상 컬럼(`유입 채널`, `경쟁업체`, `마케팅`, `경쟁`, `추천 액션`, `다음 확장`, `평균예산`, `목록`)과 `후보지 보기` 버튼이 DOM에 없고, 새 컬럼(`지역`, `후보자 수`, `상담 우선`, `계약 진행`, `보유 후보지`, `연결 완료`, `연결 필요`)이 보임을 확인했다. 지역 인사이트는 `시도`/`시군구` 필터와 10개 단위 페이지네이션을 제공하며, `서울` 시도 선택 시 서울 지역만, `강남구` 시군구 선택 시 `서울 강남구`만 표시된다. 지역 행 클릭 후 후보지 목록으로 전환되고 지역 필터에 `서울 강남구`가 적용됐다. 1440px/390px page overflow는 0건이다.
+- 2026-06-16 정보공개서 브라우저 QA 통과: `테스트_강태오` 상세 패널에서 `문서 저장`, `저장 문서`, `Gmail 발송`, `수동 발송 기록`, `발송 기록`이 노출됨을 확인했다. 로컬 `.env.local`에 Gmail OAuth env 3종이 추가된 뒤 `/api/integrations/gmail/status`는 `configReady: true`, `connected: false`를 반환했다. 연결 URL은 Google OAuth로 307 이동하며 `NEXT_PUBLIC_APP_URL=http://localhost:3000` 기준 redirect URI는 `http://localhost:3000/api/integrations/gmail/callback`이다. `127.0.0.1`만 등록했을 때는 Google `redirect_uri_mismatch`, redirect URI 보정/등록 후에는 Google 테스트 사용자 미등록으로 `403 access_denied`가 재현됐다. `gmail=error&reason=access_denied`로 돌아온 리드 상세에는 `Google OAuth 앱의 테스트 사용자에 이 Gmail 계정을 추가해야 연결할 수 있습니다.` 메시지가 표시된다. 390px 모바일에서 상태 select 높이는 40px로 정상 표시되고, 스크롤 하단에서도 Gmail/수동 발송 controls와 연결 후보지 영역이 가로 overflow 없이 표시됐다. 실제 Gmail 승인 완료와 외부 수신자 발송은 Google 테스트 사용자 등록 이후 재시도한다.
+- 2026-06-16 정보공개서 메일 문구/열람 추정 업데이트: 메일 본문은 저장된 리드명을 인사말에 쓰지 않고 `안녕하세요. 가맹 상담 담당자입니다.`로 시작한다. HTML 본문에는 문서 열기/수령 확인 버튼과 보이지 않는 열람 추정 이미지가 포함되며, 이미지 로드 시 `/api/franchise-lead-disclosures/open?token=...`가 `opened_at`을 최초 1회 기록한다. 이 값은 영업 참고용 `열람 추정`으로만 표시하고, 법적/운영 확정 수령은 계속 `confirmed_at`으로 구분한다.
+- 2026-06-16 정보공개서 문서 관리 UI를 단순화했다. 후보자 상세의 직접 `문서 저장` 블록은 제거하고, `Gmail 발송` 폼의 `문서 관리` 버튼으로 회사별 정보공개서 등록 팝업을 연다. 저장 문서가 없으면 같은 위치에서 `문서 등록` 팝업을 바로 열 수 있다. Gmail 폼은 저장 문서/수신 이메일/발송 메모만 받고, 발송일시와 발송 채널은 Gmail 발송 성공 시 자동 기록한다.
+- 2026-06-16 정보공개서 문서 관리 브라우저 QA 통과: `내일` 회사의 `샘플_인스타폼_박서연` 상세에서 `문서 저장`, `발송일시`, `발송 채널` 미노출을 확인했고, `발송 메모` 아래 `연결 해제`/`Gmail 발송` 버튼이 노출된다. `문서 관리` 팝업은 `문서 등록` 폼과 저장 문서 목록/`발송 문서로 선택` 액션을 함께 표시한다. 1440px 기준 body overflow 0, dialog width 820px, mobile 390px 기준 body overflow 0, dialog width 342px로 확인했다.
+- 2026-06-16 정보공개서 문서 삭제 QA 통과: `문서 관리` 저장 문서 목록에 삭제 아이콘을 추가했고, `QA 삭제 테스트 문서`를 UI에서 삭제하면 `franchise_disclosure_documents.status=archived`로 보관 처리되어 저장 문서/발송 선택 목록에서 빠짐을 확인했다. 삭제는 기존 발송 이력을 지우지 않는 soft archive 방식이다. QA 중 잘못 보관 처리된 `qa-info-disclosure.pdf` 문서는 즉시 `active`로 복구했고, 390px 모바일 문서관리 팝업에서 delete button 2개, body/dialog horizontal overflow 0을 확인했다.
 - `npm run lint -- --quiet`
 - `npx tsc --noEmit`
 - `npm run build`
@@ -285,6 +295,8 @@
 - 실운영 계정 role matrix 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
 - 오픈 준비 프로젝트 브라우저 UI 저장과 새로고침 persistence 확인
+- Gmail OAuth 운영 env(`GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_APP_URL`) 준비 후 dev 서버 재시작, Google Cloud OAuth client에 `localhost`/`127.0.0.1` callback URI 모두 등록, 테스트 모드라면 실제 담당자 Gmail을 테스트 사용자에 추가, 실제 담당자 계정 연결, 저장 문서 발송, 고객 확인 링크 클릭, 중복 클릭 idempotency, 14일 잠금 기준 유지 확인
+- `supabase_franchise_gmail_disclosures_migration.sql`을 대상 Supabase 환경에 적용한 뒤 `profile_gmail_connections`와 확장된 `franchise_lead_disclosure_deliveries` schema cache가 반영됐는지 확인
 
 ### P1
 

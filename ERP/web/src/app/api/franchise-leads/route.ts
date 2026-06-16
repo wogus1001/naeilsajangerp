@@ -442,7 +442,7 @@ async function validateDisclosureBeforeContractStatus(
 
     const { data, error } = await supabaseAdmin
         .from('franchise_lead_disclosure_deliveries')
-        .select('id, sent_at, document_title, document_version')
+        .select('id, sent_at, document_title, document_version, send_status')
         .eq('lead_id', leadId);
 
     if (error) {
@@ -450,7 +450,7 @@ async function validateDisclosureBeforeContractStatus(
             return fail(
                 424,
                 'VALIDATION_ERROR',
-                '정보공개서 발송 이력 테이블이 아직 적용되지 않았습니다. supabase_franchise_disclosures_migration.sql 적용 후 다시 확인해주세요.'
+                '정보공개서/Gmail 발송 이력 스키마가 아직 적용되지 않았습니다. supabase_franchise_disclosures_migration.sql과 supabase_franchise_gmail_disclosures_migration.sql 적용 후 다시 확인해주세요.'
             );
         }
         throw error;

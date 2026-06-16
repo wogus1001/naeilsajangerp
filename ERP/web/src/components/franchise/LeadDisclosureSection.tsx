@@ -4,6 +4,7 @@ import React from 'react';
 import { CheckCircle2, Clock, FileText } from 'lucide-react';
 import { getContractLockMessage, type DisclosureEligibility } from '@/lib/franchise-disclosure-deliveries';
 import { LeadDisclosureDeliveryForm } from './LeadDisclosureDeliveryForm';
+import { LeadDisclosureDocumentManagerDialog } from './LeadDisclosureDocumentManagerDialog';
 import { LeadDisclosureHistory } from './LeadDisclosureHistory';
 import { useLeadDisclosureWorkflow } from './useLeadDisclosureWorkflow';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
@@ -29,6 +30,7 @@ export function LeadDisclosureSection({
     interestedBrand,
     onEligibilityChange
 }: Props) {
+    const [isDocumentManagerOpen, setIsDocumentManagerOpen] = React.useState(false);
     const disclosure = useLeadDisclosureWorkflow({
         leadId,
         userId,
@@ -40,23 +42,31 @@ export function LeadDisclosureSection({
         onEligibilityChange
     });
     const {
-        channel,
-        deliveryDocumentTitle,
         deliveryMemo,
         deliveries,
+        deleteDocument,
+        deletingDocumentId,
+        documents,
+        draft,
         eligibility,
         errorMessage,
+        gmailStatus,
         isLoading,
-        isRecordingDelivery,
+        isSavingDocument,
+        isSendingEmail,
+        isUploadingDocument,
         message,
-        recipientContact,
-        recordDelivery,
-        sentAt,
-        setChannel,
-        setDeliveryDocumentTitle,
+        recipientEmail,
+        connectGmail,
+        disconnectGmail,
+        saveDocument,
+        sendDisclosureEmail,
+        selectedDocumentId,
+        selectDocument,
         setDeliveryMemo,
-        setRecipientContact,
-        setSentAt
+        setRecipientEmail,
+        updateDraft,
+        uploadDisclosureFile
     } = disclosure;
     const eligibilityClass = eligibility?.isEligible ? styles.disclosureReady : styles.disclosureLocked;
 
@@ -79,22 +89,40 @@ export function LeadDisclosureSection({
             {message && <div className={styles.disclosureMessage}>{message}</div>}
 
             <LeadDisclosureDeliveryForm
-                documentTitle={deliveryDocumentTitle}
-                sentAt={sentAt}
-                channel={channel}
-                recipientContact={recipientContact}
+                documents={documents}
+                selectedDocumentId={selectedDocumentId}
+                recipientEmail={recipientEmail}
                 deliveryMemo={deliveryMemo}
+                gmailStatus={gmailStatus}
                 isLoading={isLoading}
-                isRecordingDelivery={isRecordingDelivery}
-                onDocumentTitleChange={setDeliveryDocumentTitle}
-                onSentAtChange={setSentAt}
-                onChannelChange={setChannel}
-                onRecipientContactChange={setRecipientContact}
+                isSendingEmail={isSendingEmail}
+                onSelectedDocumentChange={selectDocument}
+                onRecipientEmailChange={setRecipientEmail}
                 onDeliveryMemoChange={setDeliveryMemo}
-                onRecordDelivery={() => void recordDelivery()}
+                onConnectGmail={connectGmail}
+                onDisconnectGmail={() => void disconnectGmail()}
+                onOpenDocumentManager={() => setIsDocumentManagerOpen(true)}
+                onSendEmail={() => void sendDisclosureEmail()}
             />
 
             <LeadDisclosureHistory deliveries={deliveries} />
+
+            {isDocumentManagerOpen ? (
+                <LeadDisclosureDocumentManagerDialog
+                    documents={documents}
+                    draft={draft}
+                    isSavingDocument={isSavingDocument}
+                    isUploadingDocument={isUploadingDocument}
+                    deletingDocumentId={deletingDocumentId}
+                    selectedDocumentId={selectedDocumentId}
+                    onClose={() => setIsDocumentManagerOpen(false)}
+                    onDeleteDocument={(documentId) => void deleteDocument(documentId)}
+                    onDraftChange={updateDraft}
+                    onFileUpload={(file) => void uploadDisclosureFile(file)}
+                    onSave={() => void saveDocument()}
+                    onSelectDocument={selectDocument}
+                />
+            ) : null}
         </section>
     );
 }

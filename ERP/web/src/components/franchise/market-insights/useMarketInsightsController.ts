@@ -3,14 +3,8 @@
 import React from 'react';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
-import {
-    buildMarketInsights,
-    normalizeRegion,
-    type LocationInsightProperty
-} from '@/lib/franchise-market-insights';
-import {
-    useLocationManagers
-} from './useLocationManagers';
+import { buildMarketInsights, normalizeRegion } from '@/lib/franchise-market-insights';
+import { useLocationManagers } from './useLocationManagers';
 import type {
     FranchiseLead,
     FranchiseLocation,
@@ -46,7 +40,6 @@ export function useMarketInsightsController() {
         currentUserRole
     });
     const [leads, setLeads] = React.useState<readonly FranchiseLead[]>([]);
-    const [locationProperties, setLocationProperties] = React.useState<readonly LocationInsightProperty[]>([]);
     const [franchiseLocations, setFranchiseLocations] = React.useState<readonly FranchiseLocation[]>([]);
     const [locationForm, setLocationForm] = React.useState<LocationFormState>(EMPTY_LOCATION_FORM);
     const [locationFilters, setLocationFilters] = React.useState<LocationMasterFilters>(EMPTY_LOCATION_FILTERS);
@@ -70,7 +63,6 @@ export function useMarketInsightsController() {
         try {
             const data = await fetchMarketInsightData({ userId, companyName });
             setLeads(data.leads);
-            setLocationProperties(data.properties);
             setFranchiseLocations(data.locations);
         } catch (error) {
             if (error instanceof Error) {
@@ -80,7 +72,6 @@ export function useMarketInsightsController() {
                 throw error;
             }
             setLeads([]);
-            setLocationProperties([]);
             setFranchiseLocations([]);
         } finally {
             setIsLoading(false);
@@ -100,26 +91,18 @@ export function useMarketInsightsController() {
         () => filterLocationMasterItems(sitePlanningLocations, locationFilters),
         [locationFilters, sitePlanningLocations]
     );
-    const locationInsightItems = React.useMemo<readonly LocationInsightProperty[]>(
-        () => [
-            ...locationProperties,
-            ...sitePlanningLocations.map(location => ({
-                id: location.id,
-                name: location.name,
-                region: location.region,
-                address: location.address,
-                status: location.status,
-                locationType: location.locationType,
-                lat: location.latitude ?? undefined,
-                lng: location.longitude ?? undefined,
-                externalCompetitorCount: location.competitionScan?.totalCount || location.competitionScan?.competitors?.length || 0
-            }))
-        ],
-        [locationProperties, sitePlanningLocations]
-    );
     const marketInsights = React.useMemo(
-        () => buildMarketInsights([...leads], [...locationInsightItems]),
-        [leads, locationInsightItems]
+        () => buildMarketInsights(leads, sitePlanningLocations.map(location => ({
+            id: location.id,
+            name: location.name,
+            region: location.region,
+            address: location.address,
+            status: location.status,
+            locationType: location.locationType,
+            lat: location.latitude ?? undefined,
+            lng: location.longitude ?? undefined
+        }))),
+        [leads, sitePlanningLocations]
     );
     const topMarketInsight = marketInsights[0] || null;
     const firstSitePlanningLocation = sitePlanningLocations[0];
