@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { mergeFranchiseLocationData } from '@/lib/franchise-location-master';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -39,6 +41,15 @@ const CONTROL_FIELDS = new Set([
     'source_property_id',
     'memo'
 ]);
+
+type ManagerReferenceRow = {
+    readonly manager_id?: string | null;
+};
+
+type ManagerProfileRow = {
+    readonly id: string;
+    readonly name: string | null;
+};
 
 function getFirst(body: Record<string, any>, keys: string[]) {
     for (const key of keys) {
@@ -88,14 +99,45 @@ function normalizeRegion(value: unknown) {
     return raw.replace(/\s+/g, ' ');
 }
 
-function transformLocation(row: any) {
+function getManagerDisplayName(profile: ManagerProfileRow): string {
+    const name = cleanString(profile.name);
+    if (name) return name;
+    return '이름 미등록';
+}
+
+async function fetchManagerNameMap(
+    supabaseAdmin: SupabaseClient,
+    rows: readonly ManagerReferenceRow[]
+): Promise<ReadonlyMap<string, string>> {
+    const managerIds = Array.from(new Set(
+        rows.map(row => cleanString(row.manager_id)).filter((managerId): managerId is string => Boolean(managerId))
+    ));
+    if (managerIds.length === 0) return new Map<string, string>();
+
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name')
+        .in('id', managerIds)
+        .returns<ManagerProfileRow[]>();
+
+    if (error) {
+        console.warn('Failed to fetch franchise location manager names:', error);
+        return new Map<string, string>();
+    }
+
+    return new Map((data || []).map(profile => [profile.id, getManagerDisplayName(profile)]));
+}
+
+function transformLocation(row: any, managerNames: ReadonlyMap<string, string> = new Map()) {
     if (!row) return null;
     const data = row.data || {};
+    const managerId = cleanString(row.manager_id);
     return {
         ...data,
         id: row.id,
         companyId: row.company_id,
-        managerId: row.manager_id,
+        managerId,
+        managerName: managerId ? managerNames.get(managerId) || '' : '',
         name: row.name || '',
         locationType: row.location_type || '예정점',
         brand: row.brand || '',
@@ -165,12 +207,11 @@ function buildDataPayload(body: Record<string, any>, existingData: Record<string
         if (!CONTROL_FIELDS.has(key)) extras[key] = value;
     });
 
-    return {
-        ...existingData,
+    return mergeFranchiseLocationData(existingData, {
         ...extras,
         ...(body.companyName !== undefined ? { companyName: body.companyName } : {}),
         ...(body.managerId !== undefined ? { managerId: body.managerId } : {})
-    };
+    });
 }
 
 function buildInsertPayload(body: Record<string, any>, companyId: string, managerUuid: string | null) {
@@ -247,7 +288,8 @@ export async function GET(request: Request) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
             }
 
-            return ok({ location: transformLocation(location) });
+            const managerNames = await fetchManagerNameMap(supabaseAdmin, [location]);
+            return ok({ location: transformLocation(location, managerNames) });
         }
 
         const scope = await resolveCompanyScope(supabaseAdmin, requesterProfile, company);
@@ -265,8 +307,9 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) throw error;
+        const managerNames = await fetchManagerNameMap(supabaseAdmin, data || []);
 
-        return ok({ locations: (data || []).map(transformLocation).filter(Boolean) });
+        return ok({ locations: (data || []).map(row => transformLocation(row, managerNames)).filter(Boolean) });
     } catch (error) {
         console.error('Franchise locations GET error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise locations');
@@ -300,7 +343,8 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
-        return ok({ location: transformLocation(inserted) }, 201);
+        const managerNames = await fetchManagerNameMap(supabaseAdmin, [inserted]);
+        return ok({ location: transformLocation(inserted, managerNames) }, 201);
     } catch (error) {
         console.error('Franchise locations POST error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to create franchise location');
@@ -343,7 +387,7 @@ export async function PUT(request: Request) {
 
         const updates = buildUpdatePayload(body, existing.data || {});
         updates.company_id = existing.company_id;
-        if (body.managerId || body.manager_id) updates.manager_id = scope.managerUuid;
+        if (hasAny(body, ['managerId', 'manager_id'])) updates.manager_id = scope.managerUuid;
 
         const { data: updated, error } = await supabaseAdmin
             .from('franchise_locations')
@@ -353,7 +397,8 @@ export async function PUT(request: Request) {
             .single();
 
         if (error) throw error;
-        return ok({ location: transformLocation(updated) });
+        const managerNames = await fetchManagerNameMap(supabaseAdmin, [updated]);
+        return ok({ location: transformLocation(updated, managerNames) });
     } catch (error) {
         console.error('Franchise locations PUT error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to update franchise location');

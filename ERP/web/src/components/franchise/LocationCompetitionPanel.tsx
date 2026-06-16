@@ -120,6 +120,10 @@ type LocationCompetitionPanelProps = {
     lat?: number | string | null;
     lng?: number | string | null;
     scan?: LocationCompetitionScan;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    isScanning?: boolean;
+    surface?: 'inline' | 'dialog';
 };
 
 const KAKAO_JAVASCRIPT_KEY = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY || '26c1197bae99e17f8c1f3e688e22914d';
@@ -275,8 +279,13 @@ export default function LocationCompetitionPanel(props: LocationCompetitionPanel
         libraries: ['services']
     });
 
-    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [localModalOpen, setLocalModalOpen] = React.useState(false);
     const [shouldRenderMap, setShouldRenderMap] = React.useState(false);
+    const isModalOpen = props.open ?? localModalOpen;
+    const setModalOpen = (open: boolean) => {
+        props.onOpenChange?.(open);
+        if (props.open === undefined) setLocalModalOpen(open);
+    };
     const competitors = props.scan?.competitors || [];
     const center = getCenter(props);
     const mappableCompetitors = competitors
@@ -301,6 +310,18 @@ export default function LocationCompetitionPanel(props: LocationCompetitionPanel
     }, [isModalOpen]);
 
     React.useEffect(() => {
+        if (!isModalOpen) return;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                props.onOpenChange?.(false);
+                if (props.open === undefined) setLocalModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isModalOpen, props.onOpenChange, props.open]);
+
+    React.useEffect(() => {
         if (!isModalOpen) {
             setShouldRenderMap(false);
             return;
@@ -310,13 +331,206 @@ export default function LocationCompetitionPanel(props: LocationCompetitionPanel
         return () => window.clearTimeout(timer);
     }, [isModalOpen]);
 
-    if (!props.scan && !center) {
+    if (!props.scan && !center && props.surface !== 'dialog') {
         return (
             <div className={styles.locationCompetitionEmpty}>
                 주소 저장 후 경쟁스캔을 실행하면 지도와 경쟁사 지표가 표시됩니다.
             </div>
         );
     }
+
+    const modal = isModalOpen ? (
+        <div
+            className={styles.locationCompetitionModalBackdrop}
+            role="presentation"
+            onMouseDown={() => setModalOpen(false)}
+        >
+            <section
+                className={styles.locationCompetitionModal}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${props.locationName} 경쟁환경 상세`}
+                onMouseDown={(event) => event.stopPropagation()}
+            >
+                <header className={styles.locationCompetitionModalHeader}>
+                    <div>
+                        <h3>{props.locationName || '후보지'} 경쟁환경</h3>
+                        <p>경쟁검색 {props.scan?.query || '키워드 미수집'} · {props.address || '주소 미입력'}</p>
+                    </div>
+                    <button type="button" onClick={() => setModalOpen(false)} aria-label="닫기">
+                        <X size={18} />
+                    </button>
+                </header>
+
+                <div className={styles.locationCompetitionModalStats}>
+                    <div>
+                        <span>경쟁사</span>
+                        <strong>{formatCount(summaryCount)}곳</strong>
+                    </div>
+                    <div>
+                        <span>리뷰 상세</span>
+                        <strong>{reviewLimit ? `${reviewLimit}곳` : '미연동'}</strong>
+                    </div>
+                    <div>
+                        <span>네이버 광고</span>
+                        <strong>{adSummary.label}</strong>
+                    </div>
+                    <div>
+                        <span>반경</span>
+                        <strong>{formatDistance(props.scan?.radius || 700)}</strong>
+                    </div>
+                </div>
+
+                {props.isScanning ? (
+                    <div className={styles.locationCompetitionLoading}>
+                        <strong>경쟁스캔 실행 중</strong>
+                        <span>주변 경쟁업체와 광고 정보를 수집하고 있습니다.</span>
+                    </div>
+                ) : (
+                    <div className={styles.locationCompetitionModalBody}>
+                        <div className={styles.locationCompetitionModalMapColumn}>
+                            <div className={styles.locationCompetitionModalMap}>
+                                {kakaoLoadError ? (
+                                    <div className={styles.locationMapFallback}>Kakao 지도 도메인 설정 필요</div>
+                                ) : isKakaoLoading || !shouldRenderMap ? (
+                                    <div className={styles.locationMapFallback}>지도 로딩 중</div>
+                                ) : center ? (
+                                    <Map
+                                        key={`${center.lat}-${center.lng}-${props.scan?.scannedAt || 'scan'}`}
+                                        center={center}
+                                        level={4}
+                                        onCreate={(map) => relayoutKakaoMap(map, center)}
+                                        style={{ width: '100%', height: '100%' }}
+                                    >
+                                        <Circle
+                                            center={center}
+                                            radius={props.scan?.radius || 700}
+                                            strokeWeight={1}
+                                            strokeColor="#2563eb"
+                                            strokeOpacity={0.58}
+                                            fillColor="#dbeafe"
+                                            fillOpacity={0.18}
+                                        />
+                                        <MapMarker position={center} />
+                                        <CustomOverlayMap position={center} yAnchor={1.6}>
+                                            <div className={styles.locationMapLabel}>
+                                                <MapPin size={11} />
+                                                {props.locationName || '후보지'}
+                                            </div>
+                                        </CustomOverlayMap>
+                                        {mappableCompetitors.map(({ competitor, position }, index) => (
+                                            <React.Fragment key={competitor.id || `${competitor.name}-${index}`}>
+                                                <MapMarker position={position} />
+                                                <CustomOverlayMap position={position} yAnchor={1.9}>
+                                                    <div className={styles.locationMapCompetitorLabel}>
+                                                        {index + 1}
+                                                    </div>
+                                                </CustomOverlayMap>
+                                            </React.Fragment>
+                                        ))}
+                                    </Map>
+                                ) : (
+                                    <div className={styles.locationMapFallback}>좌표 미수집</div>
+                                )}
+                            </div>
+
+                            <div className={styles.locationDistanceBands}>
+                                {bands.map(band => (
+                                    <span key={band.label}>{band.label} 이내 <b>{band.count.toLocaleString()}</b></span>
+                                ))}
+                            </div>
+
+                            <div className={styles.locationAdList}>
+                                <strong>네이버 광고 영역</strong>
+                                <small>{adSummary.detail}</small>
+                                {adSummary.debugDetail ? <small title={adSummary.debugDetail}>검색 범위를 넓혀가며 확인했습니다.</small> : null}
+                                {adItems.length === 0 ? (
+                                    <span>{props.scan?.naverAdSnapshot ? '수집된 광고가 없습니다.' : '경쟁스캔을 다시 실행하면 광고 결과가 저장됩니다.'}</span>
+                                ) : adItems.slice(0, 5).map(ad => (
+                                    ad.link ? (
+                                        <a key={`${ad.position}-${ad.title}`} href={ad.link} target="_blank" rel="noreferrer">
+                                            {ad.position ? `광고 ${ad.position}위 · ` : ''}{ad.title}
+                                        </a>
+                                    ) : (
+                                        <span key={`${ad.position}-${ad.title}`}>
+                                            {ad.position ? `광고 ${ad.position}위 · ` : ''}{ad.title}
+                                        </span>
+                                    )
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className={styles.locationCompetitionModalListColumn}>
+                            <div className={styles.locationCompetitionModalSectionHeader}>
+                                <h4>경쟁사 리스트</h4>
+                                <span>{listRankLabel} 상위 {Math.min(competitors.length, 8).toLocaleString()}곳</span>
+                            </div>
+                            {competitors.length === 0 ? (
+                                <div className={styles.locationCompetitionEmpty}>
+                                    경쟁스캔 결과가 없습니다.
+                                </div>
+                            ) : (
+                                <div className={styles.locationCompetitorList}>
+                                    {competitors.slice(0, 8).map((competitor, index) => {
+                                        const naverPlaceUrl = normalizeNaverPlaceUrl(competitor.reviewStats?.naver?.placeUrl);
+                                        return (
+                                            <article key={competitor.id || `${competitor.name}-${index}`} className={styles.locationCompetitorItem}>
+                                                <div className={styles.locationCompetitorHead}>
+                                                    <div>
+                                                        <strong>{index + 1}. {competitor.name}</strong>
+                                                        <span>{formatDistance(competitor.distance)} · {competitor.category || '카테고리 없음'}</span>
+                                                    </div>
+                                                    <div className={styles.locationCompetitorLinks}>
+                                                        {competitor.placeUrl ? (
+                                                            <a href={competitor.placeUrl} target="_blank" rel="noreferrer" title="Kakao맵 매장 페이지">
+                                                                Kakao맵 <ExternalLink size={11} />
+                                                            </a>
+                                                        ) : null}
+                                                        {naverPlaceUrl ? (
+                                                            <a href={naverPlaceUrl} target="_blank" rel="noreferrer" title="Naver 플레이스">
+                                                                Naver <ExternalLink size={11} />
+                                                            </a>
+                                                        ) : null}
+                                                        {competitor.reviewStats?.google?.placeUrl ? (
+                                                            <a href={competitor.reviewStats.google.placeUrl} target="_blank" rel="noreferrer" title="Google 장소">
+                                                                Google <ExternalLink size={11} />
+                                                            </a>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                                <small>{getDisplayAddress(competitor) || props.address || '주소 없음'}</small>
+                                                <div className={styles.locationReviewGrid}>
+                                                    <div title={competitor.reviewStats?.naver?.query ? `Naver 리뷰 검색어: ${competitor.reviewStats.naver.query}` : undefined}>
+                                                        <MessageSquareText size={12} />
+                                                        {renderNaverReview(competitor)}
+                                                    </div>
+                                                    <div>
+                                                        <MessageSquareText size={12} />
+                                                        {renderGoogleReview(competitor)}
+                                                    </div>
+                                                    <div title="Kakao Local 공식 API는 리뷰 수와 리뷰 본문을 제공하지 않아 Kakao맵 매장 페이지만 연결합니다.">
+                                                        <MessageSquareText size={12} />
+                                                        <span>Kakao API 리뷰 미제공</span>
+                                                        <span>Kakao맵에서 확인</span>
+                                                    </div>
+                                                    <div title="검색광고 순위는 수집 검색어의 SERP 광고 목록과 업체명이 매칭될 때만 표시합니다. 네이버 플레이스 광고 배지는 현재 자동 수집하지 않습니다.">
+                                                        <Megaphone size={12} />
+                                                        {renderNaverAd(competitor)}
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </section>
+        </div>
+    ) : null;
+
+    if (props.surface === 'dialog') return modal;
 
     return (
         <div className={styles.locationCompetitionPanel}>
@@ -331,7 +545,7 @@ export default function LocationCompetitionPanel(props: LocationCompetitionPanel
                 <button
                     type="button"
                     className={styles.locationCompetitionDetailButton}
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => setModalOpen(true)}
                 >
                     <span>{formatDistance(props.scan?.radius || 700)}</span>
                     상세 보기
@@ -359,189 +573,7 @@ export default function LocationCompetitionPanel(props: LocationCompetitionPanel
                 </div>
             ) : null}
 
-            {isModalOpen ? (
-                <div
-                    className={styles.locationCompetitionModalBackdrop}
-                    role="presentation"
-                    onMouseDown={() => setIsModalOpen(false)}
-                >
-                    <section
-                        className={styles.locationCompetitionModal}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label={`${props.locationName} 경쟁환경 상세`}
-                        onMouseDown={(event) => event.stopPropagation()}
-                    >
-                        <header className={styles.locationCompetitionModalHeader}>
-                            <div>
-                                <h3>{props.locationName || '후보지'} 경쟁환경</h3>
-                                <p>경쟁검색 {props.scan?.query || '키워드 미수집'} · {props.address || '주소 미입력'}</p>
-                            </div>
-                            <button type="button" onClick={() => setIsModalOpen(false)} aria-label="닫기">
-                                <X size={18} />
-                            </button>
-                        </header>
-
-                        <div className={styles.locationCompetitionModalStats}>
-                            <div>
-                                <span>경쟁사</span>
-                                <strong>{formatCount(summaryCount)}곳</strong>
-                            </div>
-                            <div>
-                                <span>리뷰 상세</span>
-                                <strong>{reviewLimit ? `${reviewLimit}곳` : '미연동'}</strong>
-                            </div>
-                            <div>
-                                <span>네이버 광고</span>
-                                <strong>{adSummary.label}</strong>
-                            </div>
-                            <div>
-                                <span>반경</span>
-                                <strong>{formatDistance(props.scan?.radius || 700)}</strong>
-                            </div>
-                        </div>
-
-                        <div className={styles.locationCompetitionModalBody}>
-                            <div className={styles.locationCompetitionModalMapColumn}>
-                                <div className={styles.locationCompetitionModalMap}>
-                                    {kakaoLoadError ? (
-                                        <div className={styles.locationMapFallback}>Kakao 지도 도메인 설정 필요</div>
-                                    ) : isKakaoLoading || !shouldRenderMap ? (
-                                        <div className={styles.locationMapFallback}>지도 로딩 중</div>
-                                    ) : center ? (
-                                        <Map
-                                            key={`${center.lat}-${center.lng}-${props.scan?.scannedAt || 'scan'}`}
-                                            center={center}
-                                            level={4}
-                                            onCreate={(map) => relayoutKakaoMap(map, center)}
-                                            style={{ width: '100%', height: '100%' }}
-                                        >
-                                            <Circle
-                                                center={center}
-                                                radius={props.scan?.radius || 700}
-                                                strokeWeight={1}
-                                                strokeColor="#2563eb"
-                                                strokeOpacity={0.58}
-                                                fillColor="#dbeafe"
-                                                fillOpacity={0.18}
-                                            />
-                                            <MapMarker position={center} />
-                                            <CustomOverlayMap position={center} yAnchor={1.6}>
-                                                <div className={styles.locationMapLabel}>
-                                                    <MapPin size={11} />
-                                                    {props.locationName || '후보지'}
-                                                </div>
-                                            </CustomOverlayMap>
-                                            {mappableCompetitors.map(({ competitor, position }, index) => (
-                                                <React.Fragment key={competitor.id || `${competitor.name}-${index}`}>
-                                                    <MapMarker position={position} />
-                                                    <CustomOverlayMap position={position} yAnchor={1.9}>
-                                                        <div className={styles.locationMapCompetitorLabel}>
-                                                            {index + 1}
-                                                        </div>
-                                                    </CustomOverlayMap>
-                                                </React.Fragment>
-                                            ))}
-                                        </Map>
-                                    ) : (
-                                        <div className={styles.locationMapFallback}>좌표 미수집</div>
-                                    )}
-                                </div>
-
-                                <div className={styles.locationDistanceBands}>
-                                    {bands.map(band => (
-                                        <span key={band.label}>{band.label} 이내 <b>{band.count.toLocaleString()}</b></span>
-                                    ))}
-                                </div>
-
-                                <div className={styles.locationAdList}>
-                                    <strong>네이버 광고 영역</strong>
-                                    <small>{adSummary.detail}</small>
-                                    {adSummary.debugDetail ? <small title={adSummary.debugDetail}>검색 범위를 넓혀가며 확인했습니다.</small> : null}
-                                    {adItems.length === 0 ? (
-                                        <span>{props.scan?.naverAdSnapshot ? '수집된 광고가 없습니다.' : '경쟁스캔을 다시 실행하면 광고 결과가 저장됩니다.'}</span>
-                                    ) : adItems.slice(0, 5).map(ad => (
-                                        ad.link ? (
-                                            <a key={`${ad.position}-${ad.title}`} href={ad.link} target="_blank" rel="noreferrer">
-                                                {ad.position ? `광고 ${ad.position}위 · ` : ''}{ad.title}
-                                            </a>
-                                        ) : (
-                                            <span key={`${ad.position}-${ad.title}`}>
-                                                {ad.position ? `광고 ${ad.position}위 · ` : ''}{ad.title}
-                                            </span>
-                                        )
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className={styles.locationCompetitionModalListColumn}>
-                                <div className={styles.locationCompetitionModalSectionHeader}>
-                                    <h4>경쟁사 리스트</h4>
-                                    <span>{listRankLabel} 상위 {Math.min(competitors.length, 8).toLocaleString()}곳</span>
-                                </div>
-                                {competitors.length === 0 ? (
-                                    <div className={styles.locationCompetitionEmpty}>
-                                        경쟁스캔 결과가 없습니다.
-                                    </div>
-                                ) : (
-                                    <div className={styles.locationCompetitorList}>
-                                        {competitors.slice(0, 8).map((competitor, index) => {
-                                            const naverPlaceUrl = normalizeNaverPlaceUrl(competitor.reviewStats?.naver?.placeUrl);
-                                            return (
-                                                <article key={competitor.id || `${competitor.name}-${index}`} className={styles.locationCompetitorItem}>
-                                                    <div className={styles.locationCompetitorHead}>
-                                                        <div>
-                                                            <strong>{index + 1}. {competitor.name}</strong>
-                                                            <span>{formatDistance(competitor.distance)} · {competitor.category || '카테고리 없음'}</span>
-                                                        </div>
-                                                        <div className={styles.locationCompetitorLinks}>
-                                                            {competitor.placeUrl ? (
-                                                                <a href={competitor.placeUrl} target="_blank" rel="noreferrer" title="Kakao맵 매장 페이지">
-                                                                    Kakao맵 <ExternalLink size={11} />
-                                                                </a>
-                                                            ) : null}
-                                                            {naverPlaceUrl ? (
-                                                                <a href={naverPlaceUrl} target="_blank" rel="noreferrer" title="Naver 플레이스">
-                                                                    Naver <ExternalLink size={11} />
-                                                                </a>
-                                                            ) : null}
-                                                            {competitor.reviewStats?.google?.placeUrl ? (
-                                                                <a href={competitor.reviewStats.google.placeUrl} target="_blank" rel="noreferrer" title="Google 장소">
-                                                                    Google <ExternalLink size={11} />
-                                                                </a>
-                                                            ) : null}
-                                                        </div>
-                                                    </div>
-                                                    <small>{getDisplayAddress(competitor) || props.address || '주소 없음'}</small>
-                                                    <div className={styles.locationReviewGrid}>
-                                                        <div title={competitor.reviewStats?.naver?.query ? `Naver 리뷰 검색어: ${competitor.reviewStats.naver.query}` : undefined}>
-                                                            <MessageSquareText size={12} />
-                                                            {renderNaverReview(competitor)}
-                                                        </div>
-                                                        <div>
-                                                            <MessageSquareText size={12} />
-                                                            {renderGoogleReview(competitor)}
-                                                        </div>
-                                                        <div title="Kakao Local 공식 API는 리뷰 수와 리뷰 본문을 제공하지 않아 Kakao맵 매장 페이지만 연결합니다.">
-                                                            <MessageSquareText size={12} />
-                                                            <span>Kakao API 리뷰 미제공</span>
-                                                            <span>Kakao맵에서 확인</span>
-                                                        </div>
-                                                        <div title="검색광고 순위는 수집 검색어의 SERP 광고 목록과 업체명이 매칭될 때만 표시합니다. 네이버 플레이스 광고 배지는 현재 자동 수집하지 않습니다.">
-                                                            <Megaphone size={12} />
-                                                            {renderNaverAd(competitor)}
-                                                        </div>
-                                                    </div>
-                                                </article>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            ) : null}
+            {modal}
         </div>
     );
 }
