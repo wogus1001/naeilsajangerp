@@ -1,44 +1,49 @@
+import { normalizeLeadLocationLinks } from './franchise-lead-location-links';
+
 export type MarketInsightLead = {
-    desiredRegion?: string;
-    grade?: string;
-    status?: string;
-    source?: string;
-    budgetMin?: number | null;
-    budgetMax?: number | null;
+    readonly desiredRegion?: string;
+    readonly grade?: string;
+    readonly status?: string;
+    readonly source?: string;
+    readonly budgetMin?: number | null;
+    readonly budgetMax?: number | null;
+    readonly locationLinks?: unknown;
 };
 
 export type LocationInsightProperty = {
-    id: string;
-    name?: string;
-    region?: string;
-    address?: string;
-    status?: string;
-    locationType?: string;
-    operationType?: string;
-    type?: string;
-    coordinates?: {
-        lat?: number | string;
-        lng?: number | string;
+    readonly id: string;
+    readonly name?: string;
+    readonly region?: string;
+    readonly address?: string;
+    readonly status?: string;
+    readonly locationType?: string;
+    readonly operationType?: string;
+    readonly type?: string;
+    readonly coordinates?: {
+        readonly lat?: number | string;
+        readonly lng?: number | string;
     };
-    lat?: number | string;
-    lng?: number | string;
-    externalCompetitorCount?: number;
+    readonly lat?: number | string;
+    readonly lng?: number | string;
+    readonly externalCompetitorCount?: number;
 };
 
 export type MarketInsight = {
-    region: string;
-    leadCount: number;
-    hotCount: number;
-    contractCount: number;
-    propertyCount: number;
-    externalCompetitorCount: number;
-    sourceCount: number;
-    avgBudgetManwon: number | null;
-    marketingScore: number;
-    competitionScore: number;
-    opportunityScore: number;
-    action: string;
-    tone: 'good' | 'warning' | 'neutral';
+    readonly region: string;
+    readonly leadCount: number;
+    readonly hotCount: number;
+    readonly contractCount: number;
+    readonly propertyCount: number;
+    readonly linkedLeadCount: number;
+    readonly matchingNeededCount: number;
+    readonly externalCompetitorCount: number;
+    readonly sourceCount: number;
+    readonly avgBudgetManwon: number | null;
+    readonly marketingScore: number;
+    readonly competitionScore: number;
+    readonly opportunityScore: number;
+    readonly action: string;
+    readonly tone: 'good' | 'warning' | 'neutral';
 };
 
 const REGION_ALIAS_MAP: Record<string, string> = {
@@ -62,6 +67,20 @@ const REGION_ALIAS_MAP: Record<string, string> = {
     경상북도: '경북',
     경상남도: '경남',
     제주특별자치도: '제주'
+};
+
+type RegionBucket = {
+    leadCount: number;
+    hotCount: number;
+    contractCount: number;
+    propertyCount: number;
+    linkedLeadCount: number;
+    matchingNeededCount: number;
+    externalCompetitorCount: number;
+    budgetTotal: number;
+    budgetCount: number;
+    sources: Set<string>;
+    locationIds: Set<string>;
 };
 
 function clampScore(value: number) {
@@ -94,6 +113,22 @@ export function toBudgetManwonValue(value: number | null | undefined) {
     return Math.round(numericValue / 10_000);
 }
 
+function createBucket(): RegionBucket {
+    return {
+        leadCount: 0,
+        hotCount: 0,
+        contractCount: 0,
+        propertyCount: 0,
+        linkedLeadCount: 0,
+        matchingNeededCount: 0,
+        externalCompetitorCount: 0,
+        budgetTotal: 0,
+        budgetCount: 0,
+        sources: new Set<string>(),
+        locationIds: new Set<string>()
+    };
+}
+
 function getPropertyRegion(property: LocationInsightProperty) {
     return normalizeRegion(property.region || property.address || '');
 }
@@ -105,55 +140,66 @@ function getLeadBudgetMidpointManwon(lead: MarketInsightLead) {
     return min ?? max;
 }
 
-export function buildMarketInsights(leads: MarketInsightLead[], properties: LocationInsightProperty[]): MarketInsight[] {
-    const regions = new Map<string, {
-        leadCount: number;
-        hotCount: number;
-        contractCount: number;
-        propertyCount: number;
-        externalCompetitorCount: number;
-        budgetTotal: number;
-        budgetCount: number;
-        sources: Set<string>;
-    }>();
+function splitLeadRegions(value: string | null | undefined): readonly string[] {
+    const regions = String(value || '')
+        .split(/[,/|]+/)
+        .map(item => normalizeRegion(item))
+        .filter(region => region !== '지역 미지정');
+    return regions.length > 0 ? Array.from(new Set(regions)) : ['지역 미지정'];
+}
 
+function isSitePlanningLocation(property: LocationInsightProperty): boolean {
+    return property.locationType === '예정점' || property.status === '검토중' || property.status === '오픈준비';
+}
+
+function hasLinkedRegionLocation(lead: MarketInsightLead, locationIds: ReadonlySet<string>): boolean {
+    return normalizeLeadLocationLinks(lead.locationLinks).some(link => (
+        link.targetType === 'franchise_location' && locationIds.has(link.targetId)
+    ));
+}
+
+export function buildMarketInsights(
+    leads: readonly MarketInsightLead[],
+    properties: readonly LocationInsightProperty[]
+): MarketInsight[] {
+    const regions = new Map<string, RegionBucket>();
     const getRegionBucket = (region: string) => {
         const key = region || '지역 미지정';
-        if (!regions.has(key)) {
-            regions.set(key, {
-                leadCount: 0,
-                hotCount: 0,
-                contractCount: 0,
-                propertyCount: 0,
-                externalCompetitorCount: 0,
-                budgetTotal: 0,
-                budgetCount: 0,
-                sources: new Set()
-            });
-        }
-        return regions.get(key)!;
+        const existing = regions.get(key);
+        if (existing) return existing;
+        const nextBucket = createBucket();
+        regions.set(key, nextBucket);
+        return nextBucket;
     };
 
-    leads.forEach(lead => {
-        const bucket = getRegionBucket(normalizeRegion(lead.desiredRegion));
-        bucket.leadCount += 1;
-        if (lead.grade === 'HOT') bucket.hotCount += 1;
-        if (lead.status === '계약예정' || lead.status === '계약완료') bucket.contractCount += 1;
-        if (lead.source) bucket.sources.add(lead.source);
-
-        const budget = getLeadBudgetMidpointManwon(lead);
-        if (budget !== null) {
-            bucket.budgetTotal += budget;
-            bucket.budgetCount += 1;
-        }
-    });
-
-    properties.forEach(property => {
+    properties.filter(isSitePlanningLocation).forEach(property => {
         const region = getPropertyRegion(property);
         if (region === '지역 미지정') return;
         const bucket = getRegionBucket(region);
         bucket.propertyCount += 1;
+        bucket.locationIds.add(property.id);
         bucket.externalCompetitorCount += Math.max(0, Number(property.externalCompetitorCount || 0));
+    });
+
+    leads.forEach(lead => {
+        const leadRegions = splitLeadRegions(lead.desiredRegion);
+        leadRegions.forEach(region => {
+            const bucket = getRegionBucket(region);
+            const isLinked = hasLinkedRegionLocation(lead, bucket.locationIds);
+
+            bucket.leadCount += 1;
+            if (lead.grade === 'HOT') bucket.hotCount += 1;
+            if (lead.status === '계약예정' || lead.status === '계약완료') bucket.contractCount += 1;
+            if (lead.source) bucket.sources.add(lead.source);
+            if (isLinked) bucket.linkedLeadCount += 1;
+            if (!isLinked) bucket.matchingNeededCount += 1;
+
+            const budget = getLeadBudgetMidpointManwon(lead);
+            if (budget !== null) {
+                bucket.budgetTotal += budget;
+                bucket.budgetCount += 1;
+            }
+        });
     });
 
     return Array.from(regions.entries())
@@ -167,27 +213,15 @@ export function buildMarketInsights(leads: MarketInsightLead[], properties: Loca
                 bucket.contractCount * 18 +
                 bucket.sources.size * 5
             );
-            const competitionScore = clampScore(bucket.propertyCount * 16 + bucket.externalCompetitorCount * 5);
+            const competitionScore = clampScore(bucket.propertyCount * 16);
             const budgetSignal = avgBudgetManwon ? Math.min(18, avgBudgetManwon / 1200) : 0;
-            const opportunityScore = clampScore(marketingScore - competitionScore * 0.45 + budgetSignal);
-
-            let action = '테스트 캠페인 권장';
-            let tone: MarketInsight['tone'] = 'neutral';
-            if (bucket.leadCount === 0) {
-                action = '리드 누적 필요';
-            } else if (competitionScore >= 70 && marketingScore >= 60) {
-                action = '경쟁 높음: 차별화 필요';
-                tone = 'warning';
-            } else if (competitionScore >= 70) {
-                action = '광고비 보수적 운영';
-                tone = 'warning';
-            } else if (marketingScore >= 70 && competitionScore < 45) {
-                action = '우선 출점/광고 확대';
-                tone = 'good';
-            } else if (marketingScore >= 50) {
-                action = '상담 집중 지역';
-                tone = 'good';
-            }
+            const opportunityScore = clampScore(
+                bucket.matchingNeededCount * 16 +
+                bucket.leadCount * 8 +
+                bucket.propertyCount * 6 +
+                budgetSignal
+            );
+            const tone: MarketInsight['tone'] = bucket.matchingNeededCount > 0 ? 'warning' : 'good';
 
             return {
                 region,
@@ -195,16 +229,21 @@ export function buildMarketInsights(leads: MarketInsightLead[], properties: Loca
                 hotCount: bucket.hotCount,
                 contractCount: bucket.contractCount,
                 propertyCount: bucket.propertyCount,
+                linkedLeadCount: bucket.linkedLeadCount,
+                matchingNeededCount: bucket.matchingNeededCount,
                 externalCompetitorCount: bucket.externalCompetitorCount,
                 sourceCount: bucket.sources.size,
                 avgBudgetManwon,
                 marketingScore,
                 competitionScore,
                 opportunityScore,
-                action,
+                action: bucket.matchingNeededCount > 0 ? '후보지 매칭 필요' : '후보지 연결 완료',
                 tone
             };
         })
-        .sort((a, b) => b.opportunityScore - a.opportunityScore || b.leadCount - a.leadCount)
-        .slice(0, 8);
+        .sort((a, b) => (
+            b.matchingNeededCount - a.matchingNeededCount ||
+            b.leadCount - a.leadCount ||
+            b.propertyCount - a.propertyCount
+        ));
 }

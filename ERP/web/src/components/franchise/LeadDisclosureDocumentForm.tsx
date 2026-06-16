@@ -34,7 +34,7 @@ export function LeadDisclosureDocumentForm({
     return (
         <div className={styles.disclosureFormBlock}>
             <div className={styles.disclosureBlockTitle}>
-                <strong>문서 저장</strong>
+                <strong>문서 등록</strong>
                 <span>{documentsCount.toLocaleString()}개</span>
             </div>
             <div className={styles.disclosureFormGrid}>
@@ -87,7 +87,7 @@ export function LeadDisclosureDocumentForm({
                 disabled={isSavingDocument || isUploadingDocument}
             >
                 <Plus size={14} />
-                {isSavingDocument ? '저장 중' : '문서 저장'}
+                {isSavingDocument ? '저장 중' : '문서 등록'}
             </button>
         </div>
     );

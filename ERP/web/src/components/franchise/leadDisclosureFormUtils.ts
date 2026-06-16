@@ -69,11 +69,62 @@ export function buildInitialDraft(leadName: string, interestedBrand: string): Do
     };
 }
 
+export function buildDefaultDeliveryDocumentTitle(leadName: string, interestedBrand: string): string {
+    const brand = interestedBrand.trim();
+    return brand ? `${brand} 정보공개서` : `${leadName} 정보공개서`;
+}
+
+export function buildDefaultDeliveryDocumentVersion(): string {
+    return new Date().getFullYear().toString();
+}
+
 export function isDisclosureChannel(value: string): value is DisclosureChannel {
     return value === 'manual'
         || value === 'email'
         || value === 'sms'
         || value === 'kakao';
+}
+
+export function getGmailOAuthResultMessage(searchParams: URLSearchParams): { readonly type: 'success' | 'error'; readonly message: string } | null {
+    const result = searchParams.get('gmail');
+    if (result === 'connected') {
+        const email = searchParams.get('email')?.trim();
+        return {
+            type: 'success',
+            message: email ? `${email} Gmail 계정을 연결했습니다.` : 'Gmail 계정을 연결했습니다.'
+        };
+    }
+    if (result !== 'error') return null;
+
+    const reason = searchParams.get('reason') || '';
+    if (reason === 'access_denied') {
+        return {
+            type: 'error',
+            message: 'Google OAuth 앱의 테스트 사용자에 이 Gmail 계정을 추가해야 연결할 수 있습니다.'
+        };
+    }
+    if (reason === 'invalid_state') {
+        return {
+            type: 'error',
+            message: 'Gmail 연결 세션이 만료되었습니다. 다시 연결해주세요.'
+        };
+    }
+    if (reason === 'auth_required') {
+        return {
+            type: 'error',
+            message: '로그인 정보가 만료되었습니다. 다시 로그인한 뒤 Gmail을 연결해주세요.'
+        };
+    }
+    if (reason === 'company_scope') {
+        return {
+            type: 'error',
+            message: '현재 회사 범위에서 Gmail을 연결할 권한이 없습니다.'
+        };
+    }
+    return {
+        type: 'error',
+        message: reason ? `Gmail 연결에 실패했습니다. 사유: ${reason}` : 'Gmail 연결에 실패했습니다.'
+    };
 }
 
 export function toDateTimeLocalValue(date: Date): string {

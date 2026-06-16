@@ -1,4 +1,5 @@
 import type { LocationCompetitionScan } from '@/components/franchise/LocationCompetitionPanel';
+import type { LeadLocationLink } from '@/lib/franchise-lead-location-links';
 import type { FranchiseLocationMasterData } from '@/lib/franchise-location-master';
 
 export const FRANCHISE_LOCATION_TYPES = ['직영점', '가맹점', '예정점'] as const;
@@ -24,6 +25,7 @@ export type FranchiseLead = {
     readonly source: string;
     readonly budgetMin: number | null;
     readonly budgetMax: number | null;
+    readonly locationLinks?: readonly LeadLocationLink[];
 };
 
 export type FranchiseLocation = FranchiseLocationMasterData & {

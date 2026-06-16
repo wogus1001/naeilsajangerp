@@ -2,9 +2,11 @@ import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 
 export const DISCLOSURE_CONTRACT_WAIT_DAYS = 14;
 export const DISCLOSURE_CHANNELS = ['manual', 'email', 'sms', 'kakao'] as const;
+export const DISCLOSURE_SEND_STATUSES = ['recorded', 'pending', 'sent', 'failed'] as const;
 export const CONTRACT_LOCKED_LEAD_STATUSES = ['계약예정', '계약완료'] as const satisfies readonly FranchiseLeadStatus[];
 
 export type DisclosureChannel = typeof DISCLOSURE_CHANNELS[number];
+export type DisclosureSendStatus = typeof DISCLOSURE_SEND_STATUSES[number];
 
 export type DisclosureDocumentStatus = 'active' | 'archived';
 
@@ -38,6 +40,15 @@ export type FranchiseLeadDisclosureDelivery = {
     readonly documentTitle: string;
     readonly documentVersion: string;
     readonly evidenceUrl: string;
+    readonly sendStatus: DisclosureSendStatus;
+    readonly gmailConnectionId: string | null;
+    readonly gmailMessageId: string;
+    readonly gmailThreadId: string;
+    readonly gmailSenderEmail: string;
+    readonly recipientEmail: string;
+    readonly openedAt: string | null;
+    readonly confirmedAt: string | null;
+    readonly sendError: string;
     readonly memo: string;
     readonly createdAt: string;
     readonly updatedAt: string;
@@ -51,6 +62,8 @@ export type DisclosureDeliveryForEligibility = {
     readonly document_title?: string | null;
     readonly documentVersion?: string | null;
     readonly document_version?: string | null;
+    readonly sendStatus?: string | null;
+    readonly send_status?: string | null;
 };
 
 export type DisclosureEligibility = {
@@ -88,8 +101,18 @@ export function normalizeDisclosureChannel(value: unknown): DisclosureChannel {
     return DISCLOSURE_CHANNELS.find(channel => channel === raw) || 'manual';
 }
 
+export function normalizeDisclosureSendStatus(value: unknown): DisclosureSendStatus {
+    const raw = cleanString(value);
+    return DISCLOSURE_SEND_STATUSES.find(status => status === raw) || 'recorded';
+}
+
 export function isContractLockedLeadStatus(status: unknown): status is typeof CONTRACT_LOCKED_LEAD_STATUSES[number] {
     return CONTRACT_LOCKED_LEAD_STATUSES.some(item => item === status);
+}
+
+function countsTowardContractWait(delivery: DisclosureDeliveryForEligibility): boolean {
+    const status = normalizeDisclosureSendStatus(delivery.sendStatus ?? delivery.send_status);
+    return status === 'recorded' || status === 'sent';
 }
 
 export function getDisclosureEligibility(
@@ -97,6 +120,7 @@ export function getDisclosureEligibility(
     now: Date = new Date()
 ): DisclosureEligibility {
     const latest = deliveries
+        .filter(countsTowardContractWait)
         .map(delivery => {
             const sentAt = parseDate(delivery.sentAt ?? delivery.sent_at);
             if (!sentAt) return null;

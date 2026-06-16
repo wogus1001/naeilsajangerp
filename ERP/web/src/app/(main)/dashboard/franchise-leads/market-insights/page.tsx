@@ -11,12 +11,16 @@ import styles from '../page.module.css';
 
 export default function FranchiseMarketInsightsPage() {
     const controller = useMarketInsightsController();
+    const openRegionLocations = (region: string) => {
+        controller.updateLocationFilters({ region });
+        controller.selectMarketView('location-list');
+    };
 
     return (
         <div className={styles.pageShell}>
             <FranchiseWorkspaceHero
                 title="출점 후보지"
-                description="입점 후보지와 가맹 희망자의 희망지역을 연결해 지역 반응, 점포 조건, 경쟁강도를 확인합니다."
+                description="입점 후보지와 가맹 희망자의 희망지역을 연결해 지역 반응과 점포 조건을 확인합니다."
             />
 
             <MarketInsightWorkspaceTabs
@@ -71,7 +75,10 @@ export default function FranchiseMarketInsightsPage() {
                                 </div>
                             </div>
                             <div className={styles.marketInsightBody}>
-                                <MarketInsightOverview marketInsights={controller.marketInsights} />
+                                <MarketInsightOverview
+                                    marketInsights={controller.marketInsights}
+                                    onSelectRegion={openRegionLocations}
+                                />
                             </div>
                         </section>
                     )}

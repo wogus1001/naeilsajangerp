@@ -128,10 +128,11 @@ npm run build
     - 2026-06-11 DB 관리 테이블 정리 완료: `LeadDbWorkspace`로 테이블 영역을 분리하고 표시 컬럼 선택, 지역 OR 검색, 예산 범위 필터, 등록순/예산순/`중요 희망자만 보기` 정렬, 가운데 페이지네이션을 추가했다. 별표 강조 문구는 `핵심`이 아니라 `중요`로 통일했고, Playwright에서 중요 7건 필터/지역 검색/예산 정렬/별표 persistence/`핵심` 미노출을 확인했다.
     - 2026-06-12 모객 DB 구조 분리 완료: `page.tsx`에서 후보자 등록 모달, 빠른 상담 이력 모달, 후보자 상세 패널, Meta 연동 설정 패널을 `src/components/franchise/leads` 컴포넌트로 분리했고, Meta/엑셀/고객전환/후보지 연결 action도 hook으로 분리했다. `page.tsx`는 2392줄에서 1361줄로 감소했다. 검증은 `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 lead/checklist 테스트, `git diff --check`, `npm run build` 통과.
     - 2026-06-15 모객 DB 초기 출시 UI 정리 완료: 일반 가맹 희망자 목록에서 계약 전 체크 컬럼과 신규 고객 DB 연결 UI를 숨겼고, 계약 관련 확인은 `계약 점주` 워크스페이스에 집중시켰다. 대시보드 연락 KPI는 제거하고 연락 실무 처리는 `연락 관리` 탭으로 분리했다.
-    - 2026-06-15 후보자 상세 정리 완료: 상담 이력은 기본 축약 상태에서 수정/삭제/펼치기를 지원하고, 다음 연락은 업무관리 내부의 작은 후속 관리 영역과 빠른 프리셋으로 처리한다. 정보공개서는 당장 자동 발송 없이 발송 기록 중심으로 유지한다.
+    - 2026-06-15 후보자 상세 정리 완료: 상담 이력은 기본 축약 상태에서 수정/삭제/펼치기를 지원하고, 다음 연락은 업무관리 내부의 작은 후속 관리 영역과 빠른 프리셋으로 처리한다. 정보공개서는 이 시점에는 수동 발송 기록 중심으로 유지했다.
     - 2026-06-15 `/landing` 공개 랜딩 추가: 구글시트 대비 ERP 전환 메시지, 기능 상세, 모객 파이프라인/유입 경로/DB 유입/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 포함한다. CTA와 하단 도입 문의 카드는 제거했고 브랜드 표기는 `Franchise OS`로 정리했다. `/` -> `/login`은 유지한다.
     - 2026-06-15 관리자 회사별 메뉴/조회 범위 추가: `/admin`에서 회사별 메뉴 on/off를 관리하고, 슈퍼어드민은 헤더 `조회 회사` 선택으로 대시보드/모객 DB/출점 후보지/브랜드 모니터링/가맹 운영/고객/명함/점포/직원 화면을 선택 회사 데이터로 조회한다. 적용 SQL은 `ERP/web/supabase_company_menu_features_migration.sql`이며, 미적용 환경에서는 메뉴가 기본 ON으로 보이고 저장 API가 migration 필요 상태를 반환한다.
     - 2026-06-16 출점 후보지 마스터 1차 개편 완료: `/dashboard/franchise-leads/market-insights`에서 후보지 목록/등록/지역 인사이트를 분리하고, 후보지 폼을 `기본 위치`, `면적·시설`, `입점비용`, `임차조건`, `임대인`, `종합메모` 중심으로 재구성했다. 목록은 표시 수/컬럼/정렬/페이지네이션을 제공하고, 담당자 선택은 같은 회사 직원 이름만 노출한다. `franchise_location_messages` 기반 물건별 기록 UI를 추가했으며, dev/prod Supabase에 `ERP/web/supabase_franchise_location_messages_migration.sql` 적용을 확인했다. 경쟁스캔 버튼/경쟁 컬럼은 임시 숨김이며 API와 저장 데이터는 유지한다.
+    - 2026-06-16 지역 인사이트 고도화 완료: 지역 표에서 경쟁/마케팅/추천 액션 계열 컬럼과 하단 확장 칩을 제거하고, `franchise_locations` 출점 후보지 기준의 `후보자 수`, `상담 우선`, `계약 진행`, `보유 후보지`, `연결 완료`, `연결 필요` 컬럼으로 재구성했다. 전체 지역을 계산한 뒤 화면에서 `시도`/`시군구` 필터와 10개 단위 페이지네이션으로 탐색하며, 지역 행 클릭은 후보지 목록으로 이동해 해당 지역 필터를 자동 적용한다.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외
@@ -176,6 +177,8 @@ npm run build
       - 공식 API 검색 속도 개선: 기준년도 기본 우선순위는 `FRANCHISE_DISCLOSURE_BASE_YEAR` 미설정 시 최근 완료 가능성이 높은 연도부터 조회하고, 페이지 조회는 병렬 처리 후 서버 프로세스 메모리에 6시간 캐시한다. 프론트는 로컬 캐시 결과를 먼저 표시하고 공식 API는 최대 3.5초만 버튼 로딩 상태로 기다린 뒤 늦게 도착하면 결과를 갱신한다.
       - 공식 API 키가 없거나 결과가 없으면 기존 `/api/franchise?query=` 로컬 정보공개서 캐시(`src/data/franchises.json`)를 보조로 병합한다. 저장 브랜드를 먼저 보여주고, 공식/캐시 검색 결과를 뒤에 병합한다.
       - 2026-06-11 구현/QA 완료: 본사별 정보공개서 문서함과 후보자별 발송 이력 MVP를 추가했다. `supabase_franchise_disclosures_migration.sql`, `/api/franchise-disclosure-documents`, `/api/franchise-lead-disclosures`, 후보자 상세 정보공개서 섹션, `franchise-leads` 계약 상태 전환 서버 가드를 추가했다. 정보공개서 파일은 기존 Supabase Storage `property-documents/franchise-disclosures/<company>/...` 경로로 업로드하고, 같은 회사 직원이 회사 문서함을 공유한다. 발송 기록 UI에서는 증빙 URL을 제거했다. 최신 정보공개서 발송 후 14일이 지나야 `계약예정`/`계약완료`로 변경할 수 있으며, SQL 적용 후 업로드/저장/발송/새로고침 persistence/계약 단계 400 차단을 Playwright로 확인했다. 2차 계획은 이메일 또는 카카오 알림톡 자동발송 연동이다.
+      - 2026-06-16 정보공개서 Gmail 발송 1차 완료: `supabase_franchise_gmail_disclosures_migration.sql`, Gmail OAuth 연결/상태/해제 API, `/api/franchise-lead-disclosures/send-email`, `/api/franchise-lead-disclosures/open`, `/api/franchise-lead-disclosures/confirm`을 추가했다. 저장된 회사별 정보공개서 문서를 담당자 개인 Gmail에서 고객에게 발송하며, 계약 잠금 14일 기준은 Gmail 성공 발송 시각 `sent_at`이고 메일 이미지 로드 시각 `opened_at`은 열람 추정으로만 표시하며 고객 수신확인은 확인 링크 클릭 시각 `confirmed_at`으로 별도 관리한다. Gmail native read receipt는 v1 기준으로 사용하지 않는다. 로컬 `.env.local`에 Gmail OAuth env가 없으면 화면은 `설정 필요`를 표시하고 연결 버튼을 비활성화한다. Google Cloud OAuth client에는 `localhost`/`127.0.0.1` callback URI를 모두 등록하고, 테스트 모드 앱은 담당자 Gmail을 테스트 사용자에 추가해야 한다.
+      - 2026-06-16 정보공개서 UI 정리 완료: 후보자 상세의 직접 `문서 저장` 블록을 제거하고 `Gmail 발송` 폼의 `문서 관리` 팝업에서 회사별 문서를 등록/선택하도록 정리했다. Gmail 폼은 저장 문서, 수신 이메일, 발송 메모만 받고 발송일시/채널은 Gmail 발송 성공 시 자동 기록한다. 브라우저 QA는 `내일` 회사 `샘플_인스타폼_박서연` 상세에서 1440px/390px overflow 0으로 확인했다.
       - 2026-06-12 계약 전 준비 체크리스트 MVP 구현: `supabase_franchise_contract_checklist_migration.sql`, `/api/franchise-lead-contract-checklist`, `/api/franchise-lead-contract-checklist/summaries`, 후보자 상세 `계약 전 체크` 섹션, 모객 DB `계약 전 체크` 컬럼, 모객 DB 내부 `계약 점주` 탭을 추가했다. `계약 점주` 탭은 `계약완료` 상태를 자동 적용하고 일반 DB 테이블 대신 계약 전 체크 진행률과 미완료 항목만 보이는 전용 화면으로 정리했다. 기본 스텝은 정보공개서 수령 확인, 브랜드/본사 사이트 확인, 예상 투자금 재확인, 희망지역/상권자료 확인, 인근 가맹점 현황 확인, 계약 가능일 도래, 계약서/가맹금 안내다. 이 체크는 운영 확인용이며, 14일 계약 잠금 기준일은 계속 정보공개서 발송 이력 `sent_at`으로 계산한다. summary API는 계약완료 리드 1건에 0/7 기본 요약을 반환했다. 코드 리뷰 후 `lead_id + company_id` composite FK/RLS와 API company 조건으로 교차 회사 체크리스트 spoof를 막고, `계약 점주` 탭의 열기 동작을 체크리스트 전용 패널로 제한했다. 로그인 세션에서 저장/새로고침 persistence와 실운영 role matrix live QA가 남아 있다.
       - 출점 후보지/가맹 운영 주소 검색도 점포 신규등록과 같은 Daum 우편번호 검색 모달 방식으로 맞췄다. 주소 선택 시 주소/지역을 채우고 좌표는 비워두며, 경쟁스캔은 기존처럼 서버에서 주소 기반 좌표 변환을 수행한다.
       - 적용 SQL: `ERP/web/supabase_franchise_market_monitoring_migration.sql`
@@ -380,6 +383,13 @@ npm run build
   - `FRANCHISE_DISCLOSURE_CONCURRENCY`, `FRANCHISE_DISCLOSURE_CACHE_TTL_SECONDS` (선택: 공식 API 병렬 조회/메모리 캐시 조절)
 - 실서버 Supabase는 dev와 별도 프로젝트로 분리되어 있음
 - 실서버 Vercel 프로젝트와 dev 프로젝트의 env는 다를 수 있으므로 배포 전 확인 필요
+
+## 2026-06-16 지역 인사이트/Gmail 정보공개서 배포 묶음
+- 지역 인사이트는 출점 후보지 기준 수요/공급 매칭 표로 단순화했고, 시도/시군구 필터와 페이지네이션을 제공한다.
+- 정보공개서는 회사별 `문서 관리` 팝업에서 등록/선택/삭제한다. 삭제는 `franchise_disclosure_documents.status=archived` soft archive이며 기존 발송 이력은 유지한다.
+- Gmail 발송은 담당자 개인 OAuth 연결, 최소 `gmail.send` scope, 암호화 토큰 저장, 발송 성공 시 자동 발송일시 기록, 열람 추정 `opened_at`, 수령 확인 `confirmed_at`을 사용한다.
+- 배포 전 필수 SQL: `ERP/web/supabase_franchise_gmail_disclosures_migration.sql`을 dev와 production Supabase에 적용해야 한다.
+- 2026-06-16 로컬 브라우저 QA: `QA 삭제 테스트 문서` 삭제 시 active 목록에서 제거되고 archived 상태로 보관됨을 확인했다. QA 중 보관된 `qa-info-disclosure.pdf` 실문서는 `active`로 복구했다.
 
 ## 새 Codex 세션 시작 체크리스트
 1. 이 문서 읽기

@@ -8,6 +8,13 @@ type Props = {
     readonly deliveries: readonly FranchiseLeadDisclosureDelivery[];
 };
 
+const SEND_STATUS_LABELS: Record<FranchiseLeadDisclosureDelivery['sendStatus'], string> = {
+    recorded: '기록됨',
+    pending: '발송 대기',
+    sent: '발송됨',
+    failed: '실패'
+};
+
 export function LeadDisclosureHistory({ deliveries }: Props) {
     return (
         <div className={styles.disclosureHistory}>
@@ -17,7 +24,12 @@ export function LeadDisclosureHistory({ deliveries }: Props) {
                 <article key={delivery.id} className={styles.disclosureHistoryItem}>
                     <div>
                         <strong>{delivery.documentTitle}</strong>
-                        <span>{delivery.documentVersion} · {CHANNEL_LABELS[delivery.channel]} · {formatDateTime(delivery.sentAt)}</span>
+                        <span>
+                            {delivery.documentVersion} · {CHANNEL_LABELS[delivery.channel]} · {SEND_STATUS_LABELS[delivery.sendStatus]} · {formatDateTime(delivery.sentAt)}
+                        </span>
+                        {delivery.openedAt ? <span>열람 추정 · {formatDateTime(delivery.openedAt)}</span> : null}
+                        {delivery.confirmedAt ? <span>수령 확인 · {formatDateTime(delivery.confirmedAt)}</span> : null}
+                        {delivery.sendError ? <span>오류 · {delivery.sendError}</span> : null}
                     </div>
                 </article>
             ))}

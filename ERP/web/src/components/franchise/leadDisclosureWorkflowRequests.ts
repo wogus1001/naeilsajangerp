@@ -1,8 +1,7 @@
-import {
-    type DisclosureChannel,
-    type DisclosureEligibility,
-    type FranchiseDisclosureDocument,
-    type FranchiseLeadDisclosureDelivery
+import type {
+    DisclosureEligibility,
+    FranchiseDisclosureDocument,
+    FranchiseLeadDisclosureDelivery
 } from '@/lib/franchise-disclosure-deliveries';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import {
@@ -20,6 +19,15 @@ export type LeadDisclosureWorkflowState = {
 export type LeadDisclosuresResponse = {
     readonly deliveries?: readonly FranchiseLeadDisclosureDelivery[];
     readonly eligibility?: DisclosureEligibility;
+};
+
+export type GmailConnectionStatus = {
+    readonly configReady: boolean;
+    readonly connected: boolean;
+    readonly connection: {
+        readonly id: string;
+        readonly gmailEmail: string;
+    } | null;
 };
 
 type DisclosureDocumentsResponse = {
@@ -50,17 +58,17 @@ type SaveDisclosureDocumentInput = {
     readonly draft: DocumentDraft;
 };
 
-type RecordDisclosureDeliveryInput = {
+type SendDisclosureEmailInput = {
     readonly requesterId: string;
     readonly leadId: string;
     readonly documentId: string;
-    readonly documentTitle: string;
-    readonly documentVersion: string;
-    readonly sentAt: string;
-    readonly channel: DisclosureChannel;
-    readonly recipientName: string;
-    readonly recipientContact: string;
+    readonly recipientEmail: string;
     readonly memo: string;
+};
+
+type DeleteDisclosureDocumentInput = {
+    readonly requesterId: string;
+    readonly documentId: string;
 };
 
 function buildUploadSuffix(): string {
@@ -128,24 +136,56 @@ export async function saveDisclosureDocumentRequest(input: SaveDisclosureDocumen
     return data.document;
 }
 
-export async function recordDisclosureDeliveryRequest(input: RecordDisclosureDeliveryInput): Promise<LeadDisclosuresResponse> {
-    const response = await fetch('/api/franchise-lead-disclosures', {
+export async function deleteDisclosureDocumentRequest(input: DeleteDisclosureDocumentInput): Promise<void> {
+    const params = new URLSearchParams({
+        id: input.documentId,
+        requesterId: input.requesterId
+    });
+    const response = await fetch(`/api/franchise-disclosure-documents?${params.toString()}`, { method: 'DELETE' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(readApiError(payload));
+}
+
+export async function fetchGmailConnectionStatus(input: {
+    readonly userId: string;
+    readonly companyName: string;
+}): Promise<GmailConnectionStatus> {
+    const params = new URLSearchParams({ requesterId: input.userId });
+    if (input.companyName) params.set('company', input.companyName);
+    const response = await fetch(`/api/integrations/gmail/status?${params.toString()}`, { cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(readApiError(payload));
+    return unwrapApiData<GmailConnectionStatus>(payload);
+}
+
+export async function disconnectGmailRequest(input: {
+    readonly requesterId: string;
+    readonly companyName: string;
+}): Promise<void> {
+    const response = await fetch('/api/integrations/gmail/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            requesterId: input.requesterId,
+            companyName: input.companyName
+        })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(readApiError(payload));
+}
+
+export async function sendDisclosureEmailRequest(input: SendDisclosureEmailInput): Promise<void> {
+    const response = await fetch('/api/franchise-lead-disclosures/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             requesterId: input.requesterId,
             leadId: input.leadId,
-            documentId: input.documentId || undefined,
-            documentTitle: input.documentTitle,
-            documentVersion: input.documentVersion,
-            sentAt: input.sentAt,
-            channel: input.channel,
-            recipientName: input.recipientName,
-            recipientContact: input.recipientContact,
+            documentId: input.documentId,
+            recipientEmail: input.recipientEmail,
             memo: input.memo
         })
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
-    return unwrapApiData<LeadDisclosuresResponse>(payload);
 }

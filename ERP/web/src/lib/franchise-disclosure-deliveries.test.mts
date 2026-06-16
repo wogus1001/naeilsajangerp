@@ -5,7 +5,8 @@ import {
     canEnterContractStatus,
     getDisclosureEligibility,
     isContractLockedLeadStatus,
-    normalizeDisclosureChannel
+    normalizeDisclosureChannel,
+    normalizeDisclosureSendStatus
 } from './franchise-disclosure-deliveries.js';
 
 test('addDisclosureWaitDays returns exactly 14 days after the sent timestamp', () => {
@@ -61,4 +62,20 @@ test('normalizeDisclosureChannel and contract status guards fall back safely', (
     assert.equal(normalizeDisclosureChannel('unknown'), 'manual');
     assert.equal(isContractLockedLeadStatus('계약예정'), true);
     assert.equal(isContractLockedLeadStatus('상담중'), false);
+});
+
+test('getDisclosureEligibility ignores pending and failed Gmail deliveries', () => {
+    const eligibility = getDisclosureEligibility(
+        [
+            { id: 'failed', sentAt: '2026-06-01T03:00:00.000Z', sendStatus: 'failed' },
+            { id: 'pending', sentAt: '2026-06-02T03:00:00.000Z', send_status: 'pending' },
+            { id: 'sent', sentAt: '2026-06-03T03:00:00.000Z', sendStatus: 'sent' }
+        ],
+        new Date('2026-06-16T03:00:00.000Z')
+    );
+
+    assert.equal(eligibility.hasDelivery, true);
+    assert.equal(eligibility.latestDeliveryId, 'sent');
+    assert.equal(eligibility.isEligible, false);
+    assert.equal(normalizeDisclosureSendStatus('unknown'), 'recorded');
 });
