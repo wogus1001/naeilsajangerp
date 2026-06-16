@@ -48,3 +48,14 @@ YYYY-MM-DD
 - 2026-06-16 기준 최근 실서버 반영 커밋: `9817b10 feat(franchise): connect insights and disclosure email`
 - 이 커밋은 지역 인사이트 고도화, 정보공개서 Gmail 발송/열람 추정/수신 확인, 문서 관리 팝업, 문서 삭제를 포함한다.
 - production Gmail 발송은 Vercel production 환경변수 설정 전까지 `configReady: false`가 정상 상태다.
+
+## Release Ledger
+
+2026-06-16
+- 작업 브랜치: `codex/franchise-next-alerts-20260616`
+- 기능 커밋: `5b4bf8d docs(franchise): document release management workflow`, `de3127d feat(franchise): add disclosure alerts and role controls`, `bdad4ae feat(dashboard): add franchise KPI view`, `8d2082f feat(admin): configure company dashboard roles`, `8f5dfde feat(franchise): finalize alerts and OAuth policy`
+- dev 반영: `2b50bb4 docs(franchise): document release management workflow`, `ee9a70b feat(franchise): add disclosure alerts and role controls`, `bb17d0e feat(dashboard): add franchise KPI view`, `e38d7e3 feat(admin): configure company dashboard roles`, `056b731 feat(franchise): finalize alerts and OAuth policy`
+- main 반영: none
+- 배포 URL: `https://naeilsajang-dev.vercel.app` (`dev` Vercel deployment success, public curl is blocked by Vercel Authentication with 401)
+- 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/components/franchise/leads/leadWorkspaceState.test.mts src/components/franchise/leads/leadDetailDeepLink.test.mts src/lib/franchise-notifications.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/lib/company-menu-features.test.mts`, `npm run build`, local `/privacy` and `/landing` HTTP checks
+- 남은 이슈: production `https://naeilsajang.vercel.app/privacy`는 main 배포 전까지 404다. Google OAuth production 검증 전에는 main 배포, Google Cloud production privacy URL 확인, 비공개 YouTube 데모 영상 준비, 알림 SQL 적용 여부 확인이 필요하다.
