@@ -188,6 +188,15 @@ NEXT_PUBLIC_APP_URL=
 
 If the three Gmail-specific variables are missing, the disclosure panel shows `설정 필요` and keeps the Gmail connection action disabled. Restart the Next.js process after changing `.env.local` or deployment environment variables.
 
+Google OAuth verification support URLs:
+
+- App home page URI: `https://naeilsajang.vercel.app/landing`
+- Privacy policy URI: `https://naeilsajang.vercel.app/privacy`
+- Local privacy page: `/privacy`
+- Demo video: use an unlisted YouTube video that shows the Gmail OAuth consent flow and the information disclosure email send flow.
+
+The landing footer links to the privacy policy. The privacy policy page discloses that the app only requests `gmail.send`, does not read Gmail inbox content, stores Gmail tokens encrypted, and uses Google user data only for information disclosure email delivery and delivery records.
+
 For local OAuth, add both redirect URIs in Google Cloud `API 및 서비스` -> `사용자 인증 정보` -> OAuth client:
 
 - `http://localhost:3000/api/integrations/gmail/callback`

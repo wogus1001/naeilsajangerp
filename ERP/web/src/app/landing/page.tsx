@@ -51,8 +51,13 @@ export default function LandingPage() {
 
             <footer className={styles.footer}>
                 <div className={styles.inner}>
-                    <strong>Franchise OS</strong>
-                    <span>프랜차이즈 본사를 위한 모객, 출점, 계약, 오픈, 운영 통합 솔루션</span>
+                    <div className={styles.footerCopy}>
+                        <strong>Franchise OS</strong>
+                        <span>프랜차이즈 본사를 위한 모객, 출점, 계약, 오픈, 운영 통합 솔루션</span>
+                    </div>
+                    <nav className={styles.footerLinks} aria-label="서비스 정책">
+                        <Link href="/privacy">개인정보처리방침</Link>
+                    </nav>
                 </div>
             </footer>
         </main>

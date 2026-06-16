@@ -20,7 +20,9 @@ import { LeadQuickActivityModal } from '@/components/franchise/leads/LeadQuickAc
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
 import { LeadWorkspaceTabs, type LeadWorkspaceTab } from '@/components/franchise/leads/LeadWorkspaceTabs';
 import { useLeadCustomerConversion } from '@/components/franchise/leads/useLeadCustomerConversion';
+import { mergeDeepLinkedLead } from '@/components/franchise/leads/leadDetailDeepLink';
 import { useLeadDerivedData } from '@/components/franchise/leads/useLeadDerivedData';
+import { useLeadDetailDeepLink } from '@/components/franchise/leads/useLeadDetailDeepLink';
 import { useLeadExcelImport } from '@/components/franchise/leads/useLeadExcelImport';
 import { useLeadLocationLinks } from '@/components/franchise/leads/useLeadLocationLinks';
 import { useLeadMetaIntegration } from '@/components/franchise/leads/useLeadMetaIntegration';
@@ -441,9 +443,9 @@ export default function FranchiseLeadsPage() {
         return () => controller.abort();
     }, [companyName, selectedLead, selectedLeadDetailMode, userId]);
 
-    const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
+    const showAlert = React.useCallback((message: string, type: 'success' | 'error' | 'info' = 'info', title = '알림') => {
         setAlertConfig({ isOpen: true, title, message, type });
-    };
+    }, []);
 
     const {
         canManageMeta,
@@ -603,6 +605,34 @@ export default function FranchiseLeadsPage() {
         setSelectedLeadDetailMode('default');
         setSelectedLeadId(leadId);
     };
+
+    const openDeepLinkedLeadDetail = React.useCallback((target: {
+        readonly leadId: string;
+        readonly workspaceTab: LeadWorkspaceTab;
+        readonly leadDbLayer: LeadDbLayer;
+        readonly viewMode: LeadViewMode;
+    }) => {
+        setWorkspaceTab(target.workspaceTab);
+        setStatusFilter('전체');
+        setLeadDbLayer(target.leadDbLayer);
+        setViewMode(target.viewMode);
+        setSelectedLeadDetailMode('default');
+        setSelectedLeadId(target.leadId);
+    }, []);
+
+    const mergeDeepLinkedLeadIntoState = React.useCallback((lead: FranchiseLead) => {
+        setLeads(prev => mergeDeepLinkedLead(prev, lead));
+        setPipelineStageLeads(prev => mergeDeepLinkedLead(prev, lead));
+    }, []);
+
+    useLeadDetailDeepLink({
+        userId,
+        companyName,
+        leads,
+        onLeadLoadedAction: mergeDeepLinkedLeadIntoState,
+        onOpenLeadAction: openDeepLinkedLeadDetail,
+        showAlertAction: showAlert
+    });
 
     const openLeadContractChecklist = (leadId: string) => {
         setSelectedLeadDetailMode('contractChecklist');

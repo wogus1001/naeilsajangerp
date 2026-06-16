@@ -32,8 +32,8 @@ const STATE_CLASS: Record<LeadDisclosureSummaryState, string> = {
     eligible: styles.disclosureBadgeSuccess
 };
 
-function getCaption(summary: LeadDisclosureSummary): string {
-    if (summary.state === 'none') return '발송 필요';
+function getCaption(summary: LeadDisclosureSummary): string | null {
+    if (summary.state === 'none') return null;
     if (summary.state === 'failed') return '재발송 필요';
     if (summary.contractEligibleAt) return `가능일 ${formatDate(summary.contractEligibleAt)}`;
     if (summary.latestSentAt) return `${formatDate(summary.latestSentAt)} 발송`;
@@ -42,13 +42,14 @@ function getCaption(summary: LeadDisclosureSummary): string {
 
 export function LeadDisclosureStatusCell({ summary }: LeadDisclosureStatusCellProps) {
     const effectiveSummary = summary ?? EMPTY_DISCLOSURE_SUMMARY;
+    const caption = getCaption(effectiveSummary);
 
     return (
         <span className={styles.disclosureStatusCell}>
             <span className={`${styles.disclosureBadge} ${STATE_CLASS[effectiveSummary.state]}`}>
                 {effectiveSummary.label}
             </span>
-            <small>{getCaption(effectiveSummary)}</small>
+            {caption ? <small>{caption}</small> : null}
         </span>
     );
 }

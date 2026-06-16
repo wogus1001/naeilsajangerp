@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import type { StoredUser } from '@/utils/userUtils';
 import {
     fetchHeaderNotifications,
@@ -9,7 +9,7 @@ import {
     markHeaderNotificationRead,
     type HeaderNotification
 } from './notificationRequests';
-import styles from './Header.module.css';
+import styles from './NotificationBell.module.css';
 
 type NotificationBellProps = {
     readonly user: StoredUser;
@@ -19,7 +19,7 @@ function formatNotificationTime(value: string | null): string {
     if (!value) return '';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
 function getSeverityLabel(severity: HeaderNotification['severity']): string {
@@ -40,6 +40,7 @@ export function NotificationBell({ user }: NotificationBellProps) {
     const [schemaReady, setSchemaReady] = React.useState(true);
     const [unreadCount, setUnreadCount] = React.useState(0);
     const [notifications, setNotifications] = React.useState<readonly HeaderNotification[]>([]);
+    const [markingNotificationId, setMarkingNotificationId] = React.useState<string | null>(null);
     const panelRef = React.useRef<HTMLDivElement>(null);
 
     const refreshNotifications = React.useCallback(async () => {
@@ -72,10 +73,23 @@ export function NotificationBell({ user }: NotificationBellProps) {
     }, []);
 
     const openNotification = async (notification: HeaderNotification) => {
-        await markHeaderNotificationRead(user, notification.id);
-        await refreshNotifications();
+        if (!notification.readAt) {
+            await markHeaderNotificationRead(user, notification.id);
+            await refreshNotifications();
+        }
         if (notification.actionUrl) {
             window.location.href = notification.actionUrl;
+        }
+    };
+
+    const markOneRead = async (notification: HeaderNotification) => {
+        if (notification.readAt) return;
+        setMarkingNotificationId(notification.id);
+        try {
+            await markHeaderNotificationRead(user, notification.id);
+            await refreshNotifications();
+        } finally {
+            setMarkingNotificationId(null);
         }
     };
 
@@ -116,19 +130,35 @@ export function NotificationBell({ user }: NotificationBellProps) {
                     ) : (
                         <div className={styles.notificationList}>
                             {notifications.map(notification => (
-                                <button
+                                <div
                                     key={notification.id}
-                                    type="button"
                                     className={notification.readAt ? styles.notificationItem : styles.notificationItemUnread}
-                                    onClick={() => void openNotification(notification)}
                                 >
-                                    <span className={`${styles.notificationSeverity} ${styles[`notificationSeverity_${notification.severity}`]}`}>
-                                        {getSeverityLabel(notification.severity)}
-                                    </span>
-                                    <strong>{notification.title}</strong>
-                                    <small>{notification.body}</small>
-                                    {notification.dueAt && <em>{formatNotificationTime(notification.dueAt)}</em>}
-                                </button>
+                                    <button
+                                        type="button"
+                                        className={notification.readAt ? styles.notificationItemContentFull : styles.notificationItemContent}
+                                        onClick={() => void openNotification(notification)}
+                                    >
+                                        <span className={`${styles.notificationSeverity} ${styles[`notificationSeverity_${notification.severity}`]}`}>
+                                            {getSeverityLabel(notification.severity)}
+                                        </span>
+                                        <strong>{notification.title}</strong>
+                                        <small>{notification.body}</small>
+                                        {notification.dueAt && <em>{formatNotificationTime(notification.dueAt)}</em>}
+                                    </button>
+                                    {!notification.readAt && (
+                                        <button
+                                            type="button"
+                                            className={styles.notificationReadButton}
+                                            disabled={markingNotificationId === notification.id}
+                                            aria-label={`${notification.title} 읽음 처리`}
+                                            onClick={() => void markOneRead(notification)}
+                                        >
+                                            <Check size={12} aria-hidden="true" />
+                                            읽음
+                                        </button>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     )}

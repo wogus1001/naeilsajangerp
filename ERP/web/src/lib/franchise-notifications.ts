@@ -93,7 +93,7 @@ function isPast(value: string | null | undefined, now: Date): boolean {
 }
 
 function buildLeadActionUrl(leadId: string): string {
-    return `/dashboard/franchise-leads?leadId=${encodeURIComponent(leadId)}`;
+    return `/dashboard/franchise-leads?tab=db&leadId=${encodeURIComponent(leadId)}`;
 }
 
 function createCandidate(
