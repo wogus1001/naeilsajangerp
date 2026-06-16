@@ -5,8 +5,9 @@ import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckC
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertModal } from '@/components/common/AlertModal';
-import { MainDashboardModeTabs, type MainDashboardMode } from '@/components/dashboard/MainDashboardModeTabs';
+import { fetchDashboardModePreference } from '@/components/dashboard/dashboardModePreference';
 import { MainDashboardTypeA } from '@/components/dashboard/MainDashboardTypeA';
+import { DEFAULT_COMPANY_DASHBOARD_MODE, type CompanyDashboardMode } from '@/lib/company-menu-features';
 import {
     getRequesterId,
     getStoredCompanyId,
@@ -19,7 +20,7 @@ export default function DashboardPage() {
     const router = useRouter();
     const [memo, setMemo] = React.useState(''); // Simple state for memo
     const [isMemoLoaded, setIsMemoLoaded] = React.useState(false); // Track if initial memo is loaded
-    const [dashboardMode, setDashboardMode] = React.useState<MainDashboardMode>('b');
+    const [dashboardMode, setDashboardMode] = React.useState<CompanyDashboardMode>(DEFAULT_COMPANY_DASHBOARD_MODE);
     const [dashboardCompanyName, setDashboardCompanyName] = React.useState('');
 
     const [stats, setStats] = React.useState<any[]>([]);
@@ -66,6 +67,19 @@ export default function DashboardPage() {
         setUserName(user?.name || '사장님');
         setUserId(currentUserId);
         setDashboardCompanyName(companyName || '');
+
+        const fetchDashboardMode = async () => {
+            try {
+                const nextDashboardMode = await fetchDashboardModePreference({
+                    requesterId: currentUserId,
+                    companyId
+                });
+                setDashboardMode(nextDashboardMode);
+            } catch (error) {
+                console.error('Failed to fetch dashboard mode', error);
+                setDashboardMode(DEFAULT_COMPANY_DASHBOARD_MODE);
+            }
+        };
 
         // Fetch Dashboard Data
         const fetchDashboardData = async () => {
@@ -117,6 +131,7 @@ export default function DashboardPage() {
             }
         };
 
+        fetchDashboardMode();
         fetchDashboardData();
         fetchNotices();
         fetchMemo();
@@ -256,8 +271,6 @@ export default function DashboardPage() {
                     {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
                 </div>
             </div>
-
-            <MainDashboardModeTabs mode={dashboardMode} onChange={setDashboardMode} />
 
             {dashboardMode === 'a' ? (
                 <MainDashboardTypeA

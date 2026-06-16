@@ -18,6 +18,27 @@ export type CompanyMenuFeatureKey =
 
 export type CompanyMenuFlagMap = Readonly<Record<CompanyMenuFeatureKey, boolean>>;
 
+export type CompanyDashboardMode = 'a' | 'b';
+
+export const DEFAULT_COMPANY_DASHBOARD_MODE: CompanyDashboardMode = 'a';
+
+export const COMPANY_DASHBOARD_MODES: readonly {
+    readonly mode: CompanyDashboardMode;
+    readonly label: string;
+    readonly description: string;
+}[] = [
+    {
+        mode: 'a',
+        label: 'A 타입',
+        description: '모객 DB와 출점 후보지 주요 건수를 먼저 보여줍니다.'
+    },
+    {
+        mode: 'b',
+        label: 'B 타입',
+        description: '일정, 계약, 점포, 고객 중심의 기존 요약 화면입니다.'
+    }
+] as const;
+
 export type CompanyMenuFeatureDefinition = {
     readonly key: CompanyMenuFeatureKey;
     readonly category: string;
@@ -169,6 +190,14 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
 
 export function isCompanyMenuFeatureKey(value: string): value is CompanyMenuFeatureKey {
     return COMPANY_MENU_FEATURES.some(feature => feature.key === value);
+}
+
+export function isCompanyDashboardMode(value: unknown): value is CompanyDashboardMode {
+    return value === 'a' || value === 'b';
+}
+
+export function normalizeCompanyDashboardMode(value: unknown): CompanyDashboardMode {
+    return isCompanyDashboardMode(value) ? value : DEFAULT_COMPANY_DASHBOARD_MODE;
 }
 
 export function normalizeCompanyMenuFlags(rows: readonly CompanyMenuFeatureRow[]): CompanyMenuFlagMap {

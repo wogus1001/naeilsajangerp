@@ -1,12 +1,17 @@
 import { getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
+    DEFAULT_COMPANY_DASHBOARD_MODE,
     getDefaultCompanyMenuFlags,
+    isCompanyDashboardMode,
     isCompanyMenuFeatureKey,
+    type CompanyDashboardMode,
     type CompanyMenuFeatureKey
 } from '@/lib/company-menu-features';
 import {
+    fetchCompanyDashboardMode,
     fetchCompanyMenuFlags,
+    saveCompanyDashboardMode,
     saveCompanyMenuFlags,
     toCompanyMenuFeatureViews,
     CompanyMenuFeatureStoreError,
@@ -51,11 +56,13 @@ type AdminCompanySummary = {
 type AdminCompanyAccessResponse = {
     readonly companies: readonly AdminCompanySummary[];
     readonly selectedCompany: AdminCompanySummary | null;
+    readonly dashboardMode: CompanyDashboardMode;
     readonly features: readonly CompanyMenuFeatureView[];
 };
 
 type SavePayload = {
     readonly companyId: string;
+    readonly dashboardMode: CompanyDashboardMode;
     readonly features: readonly CompanyMenuFeatureUpdate[];
 };
 
@@ -66,6 +73,7 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function parseSavePayload(value: unknown): SavePayload | null {
     if (!isPlainRecord(value)) return null;
     if (typeof value.companyId !== 'string' || !Array.isArray(value.features)) return null;
+    if (value.dashboardMode !== undefined && !isCompanyDashboardMode(value.dashboardMode)) return null;
 
     const features: CompanyMenuFeatureUpdate[] = [];
     for (const item of value.features) {
@@ -75,7 +83,11 @@ function parseSavePayload(value: unknown): SavePayload | null {
         features.push({ key: item.key, enabled: item.enabled });
     }
 
-    return { companyId: value.companyId, features };
+    return {
+        companyId: value.companyId,
+        dashboardMode: isCompanyDashboardMode(value.dashboardMode) ? value.dashboardMode : DEFAULT_COMPANY_DASHBOARD_MODE,
+        features
+    };
 }
 
 function summarizeCompanies(
@@ -141,13 +153,22 @@ async function buildAccessResponse(request: Request, selectedCompanyId: string |
 
     if (!targetCompanyId || !selectedCompany) {
         const flags = toCompanyMenuFeatureViews(getDefaultCompanyMenuFlags());
-        return ok<AdminCompanyAccessResponse>({ companies: summaries, selectedCompany: null, features: flags });
+        return ok<AdminCompanyAccessResponse>({
+            companies: summaries,
+            selectedCompany: null,
+            dashboardMode: DEFAULT_COMPANY_DASHBOARD_MODE,
+            features: flags
+        });
     }
 
-    const flags = await fetchCompanyMenuFlags(supabaseAdmin, targetCompanyId);
+    const [flags, dashboardMode] = await Promise.all([
+        fetchCompanyMenuFlags(supabaseAdmin, targetCompanyId),
+        fetchCompanyDashboardMode(supabaseAdmin, targetCompanyId)
+    ]);
     return ok<AdminCompanyAccessResponse>({
         companies: summaries,
         selectedCompany,
+        dashboardMode,
         features: toCompanyMenuFeatureViews(flags)
     });
 }
@@ -167,15 +188,24 @@ export async function PUT(request: Request) {
         const payload = parseSavePayload(await request.json());
         if (!payload) return fail(400, 'VALIDATION_ERROR', 'Invalid company menu feature payload');
 
-        const savedFlags = await saveCompanyMenuFlags(
-            supabaseAdmin,
-            payload.companyId,
-            payload.features,
-            requester.id
-        );
+        const [savedFlags, savedDashboardMode] = await Promise.all([
+            saveCompanyMenuFlags(
+                supabaseAdmin,
+                payload.companyId,
+                payload.features,
+                requester.id
+            ),
+            saveCompanyDashboardMode(
+                supabaseAdmin,
+                payload.companyId,
+                payload.dashboardMode,
+                requester.id
+            )
+        ]);
 
         return ok({
             companyId: payload.companyId,
+            dashboardMode: savedDashboardMode,
             features: toCompanyMenuFeatureViews(savedFlags)
         });
     } catch (error) {
