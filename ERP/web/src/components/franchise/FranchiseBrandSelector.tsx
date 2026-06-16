@@ -236,7 +236,7 @@ export default function FranchiseBrandSelector({
                     readOnly
                     disabled={disabled}
                     onClick={openModal}
-                    placeholder="브랜드 찾기 버튼을 눌러주세요"
+                    placeholder="검색으로 브랜드를 선택하세요"
                 />
                 <button
                     type="button"
@@ -245,7 +245,7 @@ export default function FranchiseBrandSelector({
                     disabled={disabled}
                 >
                     <Search size={16} />
-                    브랜드 찾기
+                    검색
                 </button>
             </div>
             {isModalOpen && (
