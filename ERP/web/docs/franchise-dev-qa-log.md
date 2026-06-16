@@ -178,6 +178,8 @@
 - 2026-06-16 추가 개발 브라우저/API QA 통과: 1440px에서 모객 DB `DB 관리` 탭의 `정보공개서` 컬럼과 정보공개서 필요순/최근 발송순/계약 가능일 빠른순 정렬을 확인했다. `A 타입` 대시보드는 정보공개서 운영 알림, D-3/D-1, 연락 알림, 알림톡 예정 문구를 표시했다. 헤더 알림 벨은 `supabase_franchise_notifications_migration.sql` 미적용 환경에서 `설정 필요`와 `알림 스키마 적용 후 사용할 수 있습니다.`를 표시했다. `/admin/users`는 `직급/권한` 컬럼과 관리자/팀장·매니저/담당자 select가 노출됐다. 역할 변경 API는 본인 관리자 권한 하향과 미지원 역할값을 차단했다. 390px에서 모객 DB와 어드민 페이지 body overflow 0, 최근 브라우저 console error 0건을 확인했다.
 - 2026-06-16 회사별 대시보드 타입/직급 분리 업데이트: `/admin` 회사별 메뉴 관리에 `대시보드 타입` 설정을 추가하고 기본 A 타입을 선택 상태로 확인했다. `/dashboard`의 `대시보드 보기` 토글은 제거했고 저장된 회사 설정에 따라 A/B 타입을 렌더링한다. `/admin/users` 권한 드롭다운은 선택지에서 `관리자`와 `담당자`를 제거하고 `팀장`, `매니저`만 노출한다. 기존 `manager`는 팀장, 새 `sub_manager`는 매니저로 분리했다.
 - 2026-06-16 회사별 대시보드 타입/직급 분리 검증 통과: `npx tsx --test src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다. 브라우저 QA는 로그인 세션 기준 1440px `/dashboard`에서 A 타입 주요 건수 카드와 `대시보드 보기` 토글 미노출을 확인했고, `/admin`에서 A/B 타입 설정과 기본 A 선택, `/admin/users`에서 드롭다운 옵션이 `팀장`/`매니저`만 남은 것을 확인했다. 별도 headless 모바일 컨텍스트는 Supabase 세션을 재현하지 못해 `/dashboard` 모바일 렌더는 로그인 리다이렉트까지만 확인했다.
+- 2026-06-16 모객 DB 내부 `요약 대시보드`의 A 타입과 A/B 전환 버튼을 제거했다. `/dashboard/franchise-leads`의 요약 화면은 기존 모객 흐름 분석형만 렌더링한다.
+- 2026-06-16 모객 DB 테이블에서 정보공개서 `미발송` 상태의 `발송 필요` 보조문구를 제거했다. 상태 select는 92px, 담당자 select는 104px로 줄여 테이블 행의 가로 폭 부담을 낮췄다. 브라우저 QA에서 `A 타입`/`B 타입`/`발송 필요` 미노출과 `정보공개서` 컬럼 유지, 상태/담당자 select 폭 축소를 확인했다.
 - `npm run lint -- --quiet`
 - `npx tsc --noEmit`
 - `npm run build`
@@ -300,6 +302,31 @@
 - 로컬 브라우저 QA: 1440px에서 실제 API 기준 `모객 DB 19명`, `계약 가능 0명`, `출점 후보지 1건`, `연결 필요 19건` 표시와 섹션 아이콘 노출, `대시보드 보기` 버튼 미노출을 확인했다. 390px 직접 대시보드 렌더는 별도 headless 컨텍스트에서 Supabase 세션을 재현하지 못해 로그인 리다이렉트까지만 확인했다.
 - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
 - 참고: 기존 `/api/dashboard/memo` 요청에서 로컬 사용자 매핑 조건에 따라 404가 1건 관측됐다. 이번 A 타입 UI 변경과 직접 관련 없는 기존 메모 API 동작이며 별도 개선 후보로 둔다.
+
+## 2026-06-16 알림 개별 읽음 UX QA
+
+- 알림 팝오버에서 전체 행 클릭 외에 미확인 알림별 `읽음` 버튼을 추가했다. 행 클릭은 기존처럼 관련 화면 이동 전 읽음 처리하고, `읽음` 버튼은 해당 알림만 읽음 처리하며 화면 이동하지 않는다.
+- 알림 생성 조건은 정보공개서 미발송/발송 실패/D-3/D-1/계약 가능, 다음 연락일 지남/오늘 연락, HOT 리드 후속 관리 기준이다. `보류/이탈` 상태 리드는 자동 알림 대상에서 제외한다.
+- 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-notifications.test.mts`, `npm run build` 통과.
+- 로컬 브라우저 QA: 기존 로그인 세션이 남은 컨텍스트에서는 실제 알림 카운트 0건으로 확인되어 개별 버튼이 노출되지 않았다. 새 headless Chrome 컨텍스트에서는 Supabase `signInWithPassword` 요청이 `Failed to fetch`로 실패해 보호 라우트 렌더를 재현하지 못했다. 실제 로그인된 운영 브라우저에서 미확인 알림이 생기면 `읽음` 버튼 노출과 단건 카운트 감소만 추가 확인하면 된다.
+
+## 2026-06-16 알림 상세 딥링크/날짜 QA
+
+- 자동 알림 action URL을 `/dashboard/franchise-leads?tab=db&leadId=...`로 변경했다. 알림 클릭 시 모객 DB 목록까지만 이동하지 않고, `leadId`를 읽어 해당 가맹 희망자 상세 패널을 연다.
+- 목록에 없는 리드 id로 진입한 경우 `/api/franchise-leads?id=...`로 단건을 조회해 상태에 병합한 뒤 상세 패널을 연다. 교차 회사/없는 리드는 기존 API 권한 가드와 오류 안내를 따른다.
+- 알림 날짜는 `06. 11.` 같은 숫자 포맷 대신 `6월 11일`로 표시하고, 날짜 줄은 제목/본문 영역에 맞춰 정렬되도록 보정했다.
+- `page.tsx` 대형 파일 검토 결과, 이번 변경 범위에서는 딥링크 파싱/리드 병합/상세 오픈 타깃 계산만 `leadDetailDeepLink.ts`와 `useLeadDetailDeepLink.ts`로 분리했다. `page.tsx`는 여전히 순수 LOC 약 1249줄이라, 다음 분리 후보는 `상세 패널 오픈 상태`, `일괄 액션`, `연락 관리 저장`, `고객/명함 연결` 훅이다.
+- 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/components/franchise/leads/leadWorkspaceState.test.mts src/components/franchise/leads/leadDetailDeepLink.test.mts src/lib/franchise-notifications.test.mts`, `npm run build` 통과.
+- 로컬 브라우저 QA: headless 브라우저에서 보호 라우트 진입용 Supabase 세션 재현이 실패해 `/login` 리다이렉트까지만 확인했다. API mock 기반 클릭 QA는 인증 가드 앞에서 중단됐으므로, 실제 로그인 세션에서 미확인 알림 클릭 시 URL의 `tab=db&leadId=...`, 상세 패널 제목, 날짜 `M월 D일` 표시를 추가 확인한다.
+
+## 2026-06-16 Google OAuth 개인정보처리방침 페이지 QA
+
+- 공개 개인정보처리방침 페이지를 `/privacy`에 추가했다. Google Cloud OAuth 동의 화면의 개인정보처리방침 URL에는 실서버 기준 `https://naeilsajang.vercel.app/privacy`를 사용한다.
+- Google Cloud 홈페이지 URL에는 실서버 기준 `https://naeilsajang.vercel.app/landing`을 사용한다. 랜딩 푸터에서 `/privacy`로 이동하는 개인정보처리방침 링크를 제공한다.
+- 본문에는 `gmail.send` 최소 범위 사용, Gmail 수신함 미조회, 토큰 암호화 저장, 정보공개서 이메일 발송과 발송 기록 외 목적 미사용을 명시했다.
+- Google 공식 민감 범위 검증 문서 기준으로, 공개 개인정보처리방침과 별도로 비공개 YouTube 데모 영상 링크를 준비해야 한다. 영상에는 OAuth 동의 화면, 앱 이름, client ID가 보이는 주소창, Gmail 발송 기능 사용 장면을 포함한다.
+- 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 로컬 브라우저 QA: `http://127.0.0.1:3000/privacy` 1440px/390px 렌더를 확인했고, `http://127.0.0.1:3000/landing`은 200 응답과 푸터의 개인정보처리방침 링크 포함을 확인했다.
 
 ## 다음 QA 체크리스트
 
