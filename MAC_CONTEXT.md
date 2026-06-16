@@ -101,9 +101,17 @@ npm run build
   - 예외적으로 사용자가 실서버 먼저 요청한 경우만 `main` 우선
   - 리뷰/후속 작업은 `codex/` 접두사의 작업 브랜치를 만들고, dev/main 반영 브랜치를 분리한다.
 
+## 버전관리 운영 규칙
+- 기능 업데이트는 기본적으로 `codex/<topic>-YYYYMMDD` 작업 브랜치에서 진행한다.
+- 커밋은 기능 단위로 만들고, 커밋 해시/메시지를 작업 요약에 남긴다.
+- `dev`와 `main` 반영은 사용자가 명시적으로 배포를 요청한 경우에만 진행한다.
+- 배포가 진행되면 기능 커밋, dev 반영 커밋, main 반영 커밋, Vercel 배포 URL, 검증 결과를 함께 기록한다.
+- 상세 규칙과 ledger 형식은 `ERP/web/docs/release-management.md`를 따른다.
+
 ## 최근 배포 이력 기준점
-- `dev` 최신 확인 커밋: `9281017` `merge: deploy franchise lead workspace to dev`
-- `main` 최신 확인 상태: 2026-06-15 production release branch에서 dev 병합 후 타입/린트/테스트/no-excuse/build 검증 통과. main push 후 Vercel production READY 확인 필요.
+- `dev` 최신 확인 커밋: `e11de81` `feat(franchise): connect insights and disclosure email`
+- `main` 최신 확인 커밋: `9817b10` `feat(franchise): connect insights and disclosure email`
+- 2026-06-16 production Vercel READY 확인 완료. 단, production Gmail 발송은 Vercel production env의 `GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` 설정 전까지 `configReady: false`가 정상 상태다.
 
 ## 최근 중요 작업 요약
 - 2026-06-09 Meta Lead Ads 개발 HOLD
