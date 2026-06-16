@@ -1,5 +1,6 @@
 import type { LeadLocationMatchLocation } from '@/lib/franchise-lead-location-matching';
 import type { LeadLocationLink } from '@/lib/franchise-lead-location-links';
+import type { LeadDisclosureSummary } from '@/lib/franchise-lead-disclosure-summary';
 import type { FranchiseLeadStage, FranchiseLeadStatus } from '@/lib/franchise-leads';
 import type { LeadConsultationResult, LeadFitLevel, LeadNextAction } from '@/lib/franchise-lead-workflow';
 
@@ -43,6 +44,7 @@ export type FranchiseLead = {
     readonly convertedCustomerName?: string;
     readonly convertedAt?: string;
     readonly locationLinks?: readonly LeadLocationLink[];
+    readonly disclosureSummary?: LeadDisclosureSummary;
 };
 
 export type LeadActivityType = '전화' | '문자' | '방문상담' | '계약검토' | '메모' | '상태변경' | '고객전환';

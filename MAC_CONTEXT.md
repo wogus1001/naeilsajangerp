@@ -141,6 +141,9 @@ npm run build
     - 2026-06-15 관리자 회사별 메뉴/조회 범위 추가: `/admin`에서 회사별 메뉴 on/off를 관리하고, 슈퍼어드민은 헤더 `조회 회사` 선택으로 대시보드/모객 DB/출점 후보지/브랜드 모니터링/가맹 운영/고객/명함/점포/직원 화면을 선택 회사 데이터로 조회한다. 적용 SQL은 `ERP/web/supabase_company_menu_features_migration.sql`이며, 미적용 환경에서는 메뉴가 기본 ON으로 보이고 저장 API가 migration 필요 상태를 반환한다.
     - 2026-06-16 출점 후보지 마스터 1차 개편 완료: `/dashboard/franchise-leads/market-insights`에서 후보지 목록/등록/지역 인사이트를 분리하고, 후보지 폼을 `기본 위치`, `면적·시설`, `입점비용`, `임차조건`, `임대인`, `종합메모` 중심으로 재구성했다. 목록은 표시 수/컬럼/정렬/페이지네이션을 제공하고, 담당자 선택은 같은 회사 직원 이름만 노출한다. `franchise_location_messages` 기반 물건별 기록 UI를 추가했으며, dev/prod Supabase에 `ERP/web/supabase_franchise_location_messages_migration.sql` 적용을 확인했다. 경쟁스캔 버튼/경쟁 컬럼은 임시 숨김이며 API와 저장 데이터는 유지한다.
     - 2026-06-16 지역 인사이트 고도화 완료: 지역 표에서 경쟁/마케팅/추천 액션 계열 컬럼과 하단 확장 칩을 제거하고, `franchise_locations` 출점 후보지 기준의 `후보자 수`, `상담 우선`, `계약 진행`, `보유 후보지`, `연결 완료`, `연결 필요` 컬럼으로 재구성했다. 전체 지역을 계산한 뒤 화면에서 `시도`/`시군구` 필터와 10개 단위 페이지네이션으로 탐색하며, 지역 행 클릭은 후보지 목록으로 이동해 해당 지역 필터를 자동 적용한다.
+    - 2026-06-16 모객 DB 추가 개편 진행: 가맹 희망자 목록에 `정보공개서` 컬럼과 정보공개서 필요순/최근 발송순/계약 가능일 빠른순 정렬을 추가했다. 요약 대시보드는 기존 그래프 화면을 기본 `B 타입`으로 두고, 정보공개서/연락 알림 중심의 `A 타입`을 추가했다.
+    - 2026-06-16 인앱 알림 MVP 진행: `ERP/web/supabase_franchise_notifications_migration.sql`, `/api/franchise-notifications`, 헤더 알림 벨을 추가했다. 정보공개서 미발송/실패/D-3/D-1/계약 가능, 연락 지연/오늘 연락, HOT 리드 후속 일정 미지정을 담당자 알림으로 만든다. v1은 인앱만 발송하고, 향후 알림톡 고도화를 위해 `delivery_channel`, `kakao_template_key`, `data`를 남겼다.
+    - 2026-06-16 어드민 회원 관리 보강 진행: `/admin/users`에서 사용자별 직급/권한을 관리자, 팀장/매니저, 담당자로 변경할 수 있게 했다. 본인 관리자 권한 하향과 마지막 관리자 제거는 API에서 차단한다.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외
@@ -396,8 +399,10 @@ npm run build
 - 지역 인사이트는 출점 후보지 기준 수요/공급 매칭 표로 단순화했고, 시도/시군구 필터와 페이지네이션을 제공한다.
 - 정보공개서는 회사별 `문서 관리` 팝업에서 등록/선택/삭제한다. 삭제는 `franchise_disclosure_documents.status=archived` soft archive이며 기존 발송 이력은 유지한다.
 - Gmail 발송은 담당자 개인 OAuth 연결, 최소 `gmail.send` scope, 암호화 토큰 저장, 발송 성공 시 자동 발송일시 기록, 열람 추정 `opened_at`, 수령 확인 `confirmed_at`을 사용한다.
-- 배포 전 필수 SQL: `ERP/web/supabase_franchise_gmail_disclosures_migration.sql`을 dev와 production Supabase에 적용해야 한다.
+- 알림은 v1에서 인앱 헤더 알림만 제공하고, 정보공개서/연락/HOT 리드 후속 관리를 담당자별로 안내한다.
+- 배포 전 필수 SQL: `ERP/web/supabase_franchise_gmail_disclosures_migration.sql`과 `ERP/web/supabase_franchise_notifications_migration.sql`을 dev와 production Supabase에 적용해야 한다.
 - 2026-06-16 로컬 브라우저 QA: `QA 삭제 테스트 문서` 삭제 시 active 목록에서 제거되고 archived 상태로 보관됨을 확인했다. QA 중 보관된 `qa-info-disclosure.pdf` 실문서는 `active`로 복구했다.
+- 2026-06-16 추가 개발 검증: 모객 DB 정보공개서 컬럼/정렬, A/B 대시보드, 헤더 알림 벨, 어드민 직급 select를 1440px/390px에서 확인했다. 현재 로컬 Supabase에는 `supabase_franchise_notifications_migration.sql`이 미적용이라 헤더 알림은 `설정 필요`로 표시되는 것이 정상이다. `git diff --check`, lint, tsc, 관련 tsx test 19건, build 통과.
 
 ## 새 Codex 세션 시작 체크리스트
 1. 이 문서 읽기

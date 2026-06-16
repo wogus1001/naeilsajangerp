@@ -4,6 +4,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const USER_ROLES = ['admin', 'manager', 'staff'] as const;
+
+type UserRole = typeof USER_ROLES[number];
 
 type RequesterProfileRow = {
     readonly id: string;
@@ -88,6 +91,10 @@ function getStringField(value: unknown, key: string): string | null {
     if (typeof rawValue !== 'string') return null;
     const trimmed = rawValue.trim();
     return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeUserRole(value: string | null): UserRole | null {
+    return USER_ROLES.find(role => role === value) ?? null;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -463,10 +470,15 @@ export async function PUT(request: Request) {
         const body = await request.json();
         const id = getStringField(body, 'id');
         const status = getStringField(body, 'status');
-        const role = getStringField(body, 'role');
+        const rawRole = getStringField(body, 'role');
+        const role = normalizeUserRole(rawRole);
 
         if (!id) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+        }
+
+        if (rawRole && !role) {
+            return NextResponse.json({ error: '지원하지 않는 직급입니다.' }, { status: 400 });
         }
 
         const supabaseAdmin = await getSupabaseAdmin();
@@ -502,6 +514,22 @@ export async function PUT(request: Request) {
 
         if (targetError || !targetProfile) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        if (role && role !== 'admin' && adminCheck.profile.id === targetUuid) {
+            return NextResponse.json({ error: '본인 관리자 권한은 직접 낮출 수 없습니다.' }, { status: 400 });
+        }
+
+        if (role && role !== 'admin' && targetProfile.role === 'admin') {
+            const { count: otherAdminCount } = await supabaseAdmin
+                .from('profiles')
+                .select('id', { count: 'exact', head: true })
+                .eq('role', 'admin')
+                .neq('id', targetUuid);
+
+            if ((otherAdminCount || 0) === 0) {
+                return NextResponse.json({ error: '최소 1명의 관리자는 유지해야 합니다.' }, { status: 400 });
+            }
         }
 
         const updates: Record<string, string> = {};
