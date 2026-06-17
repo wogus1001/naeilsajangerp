@@ -336,6 +336,13 @@
 - production 도메인 `https://naeilsajang.vercel.app/privacy`는 main 배포 전이라 404를 반환한다. Google OAuth production 제출에는 main 배포 후 다시 확인해야 한다.
 - dev worktree 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 `npx tsx --test ...`, `npm run build` 통과.
 
+## 2026-06-17 알림 읽음 항목 숨김 QA
+
+- 기존 알림 팝오버는 `0건 미확인` 상태에서도 `read_at`이 채워진 읽음 알림을 최근 목록에 계속 표시했다. 이는 삭제 지연이 아니라 DB 감사 기록과 헤더 표시 필터가 분리되지 않은 상태였다.
+- 헤더 알림 요청 유틸에서 `readAt`이 있는 항목을 화면 목록에서 제외하도록 변경했다. DB의 `read_at` 기록은 유지하고, 담당자가 보는 헤더 팝오버에는 읽지 않은 알림만 남긴다.
+- 검증: `npx tsx --test src/components/layout/notificationRequests.test.mts src/lib/franchise-notifications.test.mts src/components/franchise/leads/leadDetailDeepLink.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 로컬 브라우저 QA: Playwright 컨텍스트에 Supabase 로그인 세션이 없어 `/dashboard/franchise-leads` 접근 시 `/login` 리다이렉트까지만 확인했다. 로그인 세션에서는 읽음 클릭 후 헤더 목록에서 해당 알림이 사라지는지 운영 화면에서 추가 확인한다.
+
 ## 다음 QA 체크리스트
 
 ### P0

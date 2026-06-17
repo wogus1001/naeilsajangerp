@@ -38,6 +38,10 @@ function parseNotification(value: unknown): HeaderNotification | null {
     };
 }
 
+export function filterUnreadHeaderNotifications(notifications: readonly HeaderNotification[]): readonly HeaderNotification[] {
+    return notifications.filter(notification => !notification.readAt);
+}
+
 export async function fetchHeaderNotifications(user: StoredUser): Promise<HeaderNotificationResponse> {
     const requesterId = getRequesterId(user);
     if (!requesterId) return { notifications: [], unreadCount: 0, schemaReady: true };
@@ -51,8 +55,9 @@ export async function fetchHeaderNotifications(user: StoredUser): Promise<Header
     const payload: unknown = await response.json();
     const data = isRecord(payload) && isRecord(payload.data) ? payload.data : {};
     const rawNotifications = Array.isArray(data.notifications) ? data.notifications : [];
+    const notifications = rawNotifications.map(parseNotification).filter((item): item is HeaderNotification => item !== null);
     return {
-        notifications: rawNotifications.map(parseNotification).filter((item): item is HeaderNotification => item !== null),
+        notifications: filterUnreadHeaderNotifications(notifications),
         unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : 0,
         schemaReady: typeof data.schemaReady === 'boolean' ? data.schemaReady : true
     };
