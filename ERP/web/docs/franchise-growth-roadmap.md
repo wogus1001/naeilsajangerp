@@ -90,6 +90,10 @@
 - 초기 구현은 기존 ERP 위치 DB와 저장된 외부 상가 DB만 사용한다. SearchAPI 유료 결제 전까지 외부 검색 API 의존성 없이 담당자 수동 매칭을 우선한다.
 - 다음 단계는 연결된 후보지에서 출점 후보지 인사이트/경쟁스캔 상세로 이동하는 흐름이다. 선택 외부 매물을 ERP 물건지로 승격하는 1차 흐름은 완료했다.
 - 2026-06-16 지역 인사이트를 출점 후보지 매칭 중심으로 정리했다. 기존 `유입 채널`, `경쟁업체`, `마케팅`, `경쟁`, `추천 액션`, `다음 확장` UI는 제거하고, 지역별 `후보자 수`, `상담 우선`, `계약 진행`, `보유 후보지`, `연결 완료`, `연결 필요`를 본다. `후보자 수`는 해당 지역을 희망지역으로 가진 전체 가맹 희망자 수, `상담 우선`은 HOT 등급 리드 수, `계약 진행`은 계약예정/계약완료 리드 수다. `보유 후보지`는 `franchise_locations` 출점 후보지 수, `연결 완료`는 같은 지역 후보지와 연결된 후보자 수, `연결 필요`는 아직 같은 지역 후보지에 연결되지 않은 후보자 수로 계산한다.
+- 2026-06-17 프랜차이즈 인입용 `물건 등록`과 `프랜차이즈 매칭 요청`을 기존 점포개발 업무와 분리했다. 기존 `/properties/register` 점포 신규등록은 원본 화면 그대로 유지하고, 새 물건 등록은 `/dashboard/franchise-leads/property-registration`에서 `properties.operation_type='물건등록'`, `data.sourceType='franchise_property_registration'`로 저장한다. 매칭 요청은 `/dashboard/franchise-leads/matching-request`에서 기존 `franchise_leads`에 `source='프랜차이즈 매칭 요청'`으로 저장한다. 두 폼의 `희망 업종`은 회사 저장 브랜드(`franchise_brands`) 분류와 기존 커스텀 업종(`custom_categories`)을 재사용하고, 데이터가 없으면 기본 업종 옵션으로 fallback 한다.
+- 2026-06-17 `가맹 희망자 등록`은 모객 DB 즉시 생성이 아니라 별도 `franchise_lead_registration_requests` 인입 DB로 분리했다. `/dashboard/franchise-leads/lead-registration`에서 입력하고, `/dashboard/franchise-leads/work-intake`의 업무 목록 탭에서 물건 등록/가맹 희망자 등록/프랜차이즈 매칭 요청을 직원이 표로 확인한다.
+- 2026-06-17 `/admin/franchise-intake`에서 새 물건 등록 리스트, 가맹 희망자 등록 리스트, 프랜차이즈 매칭요청 리스트를 회사별로 본다. 관리자가 물건 등록 건을 선택해 프랜차이즈 DB로 밀어넣으면 `franchise_locations` 출점 후보지로 생성하고, 후보지 컬럼에 맞는 값은 직접 매핑하며 남는 물건 등록 전용 값은 `[물건 등록 원본 정보]` 메모와 snapshot에 남긴다. 가맹 희망자 등록 건은 관리자가 확인 후 `franchise_leads`로 밀어넣는다. 이미 밀어넣은 원본을 수정하면 즉시 target을 덮어쓰지 않고 admin 목록에 `수정` 상태를 띄우며, 담당자가 `업데이트`를 눌렀을 때 반영한다. 중복 방지는 `supabase_franchise_property_promotion_migration.sql`의 `company_id + source_property_id` unique index와 `franchise_lead_registration_requests.promoted_lead_id`로 관리한다.
+- 2026-06-17 출점 후보지 등록 폼에도 `사진 및 자료` 파일 메타데이터 등록을 추가했다. 첨부는 물건 등록과 같은 정책(PDF/JPG/PNG/WebP/HEIC, 파일당 10MB, 최대 10개, 총 50MB)으로 `franchise_locations.data.fileAttachments/fileNames`에 저장하고, 물건 등록을 프랜차이즈 DB로 밀어넣을 때 기존 첨부 메타데이터를 후보지 데이터와 원본 snapshot에 함께 연결한다.
 
 ### 출점 후보지 마스터 1차 개편
 
@@ -98,7 +102,7 @@
 - 출점 후보지는 고객 DB와 분리된 입점지 후보 데이터로 관리한다. 후보자와는 `franchise_leads.data.locationLinks`로 연결하고, 기존 ERP 점포 DB(`properties`)와는 자동 동기화하지 않는다.
 - 출점 후보지 등록 폼은 현재 `market-insights/page.tsx`의 출점 후보지 마스터 폼을 기준으로 확장한다. 회사 스코프, 브랜드 선택, 주소 검색, 상태, 메모 저장 흐름은 유지하고, 저장은 `franchise_locations`의 주요 컬럼과 `data` JSON 확장 필드에 둔다.
 - 주소 입력은 기존 출점 후보지 주소 검색 UI를 유지하고, 목록/상세에서 저장 주소를 바로 네이버지도로 열 수 있는 외부 링크를 제공한다. 지도 내장보다 네이버지도 검색 URL 연결을 우선해 Kakao 지도 도메인 설정 리스크와 분리한다.
-- 등록 폼의 1차 핵심 입력 섹션은 `기본 위치`, `면적·시설`, `입점비용`, `임차조건`, `임대인`, `종합메모`로 둔다. 운영점 마스터에 가까운 `오픈일` 중심 입력보다, 후보 입점지 검토에 필요한 조건 입력을 앞에 둔다.
+- 등록 폼의 1차 핵심 입력 섹션은 `기본 위치`, `면적·시설`, `입점비용`, `임차조건`, `사진 및 자료`, `임대인`, `종합메모`로 둔다. 운영점 마스터에 가까운 `오픈일` 중심 입력보다, 후보 입점지 검토에 필요한 조건 입력을 앞에 둔다.
 - 점포 조건 필드는 `전용면적`, `화장실 여부`, `엘리베이터 여부`, `철거 여부`, `주차 여부`를 기본으로 두고, 각 항목에 현장 메모를 남길 수 있게 한다. 전용면적은 화면에서 `평`/`m²` 입력 전환을 지원하며, 값은 `franchise_locations.data.siteCondition` 같은 구조화 필드로 저장한다.
 - 임대인 정보는 `임대인명`, `임대인 연락처`, `임대인정보 및 성향`을 내부 검토용으로 둔다. 임대인 연락처와 성향은 외부 브리핑/브랜드 전송에는 기본 노출하지 않는다.
 - 입점비용은 `보증금 + 권리금` 합계로 계산한다. 출점 후보지 데이터에 `deposit`, `premium`, `acquisitionCostMemo`를 저장하고, 목록에서는 `입점비용`과 메모 요약을 함께 볼 수 있게 한다.

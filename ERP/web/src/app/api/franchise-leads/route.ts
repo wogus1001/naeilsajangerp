@@ -220,6 +220,10 @@ function isTransformedLead(lead: TransformedLead | null): lead is TransformedLea
     return lead !== null;
 }
 
+function isPendingLeadRegistrationRequest(lead: TransformedLead): boolean {
+    return lead.data.sourceType === 'franchise_lead_registration' && lead.data.adminIntakeStatus !== 'promoted';
+}
+
 function matchesLeadSearch(lead: TransformedLead, terms: string[]) {
     if (terms.length === 0) return true;
 
@@ -383,9 +387,15 @@ function buildInsertPayload(body: Record<string, unknown>, companyId: string, ma
 }
 
 function buildUpdatePayload(body: Record<string, unknown>, existingData: Record<string, unknown> = {}) {
+    const existingStage = normalizeLeadStage(existingData.leadStage);
+    const incomingStage = hasAny(body, ['leadStage']) ? normalizeLeadStage(body.leadStage) : null;
+    const preserveCandidateStage = existingStage === 'candidate' && incomingStage === 'raw_intake';
     const updates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
-        data: buildDataPayload(body, existingData)
+        data: {
+            ...buildDataPayload(body, existingData),
+            ...(preserveCandidateStage ? { leadStage: 'candidate' } : {})
+        }
     };
 
     if (hasAny(body, ['name', '이름', '성명'])) updates.name = cleanString(getFirst(body, ['name', '이름', '성명'])) || '';
@@ -572,7 +582,7 @@ export async function GET(request: Request) {
             }
         }
 
-        let leads = rows.map(transformLead).filter(isTransformedLead);
+        let leads = rows.map(transformLead).filter(isTransformedLead).filter(lead => !isPendingLeadRegistrationRequest(lead));
         if (searchTerms.length > 0) {
             leads = leads.filter(lead => matchesLeadSearch(lead, searchTerms));
         }

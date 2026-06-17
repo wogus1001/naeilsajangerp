@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
@@ -123,11 +121,11 @@ export function LocationMasterSection({
                             managerOptions={managerOptions}
                             isManagerLoading={isManagerLoading}
                             isSaving={isSaving}
-                            onChange={onFormChange}
-                            onReset={onResetForm}
-                            onSave={onSave}
-                            onSelectAddress={onSelectAddress}
-                            onSelectBrand={onSelectBrand}
+                            onChangeAction={onFormChange}
+                            onResetAction={onResetForm}
+                            onSaveAction={onSave}
+                            onSelectAddressAction={onSelectAddress}
+                            onSelectBrandAction={onSelectBrand}
                         />
                     </div>
                 )}

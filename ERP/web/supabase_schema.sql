@@ -345,6 +345,60 @@ create unique index if not exists idx_franchise_leads_company_mobile_unique
 create unique index if not exists idx_franchise_leads_id_company_unique
   on public.franchise_leads (id, company_id);
 
+create table if not exists public.franchise_lead_registration_requests (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  manager_id uuid references public.profiles(id) on delete set null,
+  name text not null,
+  mobile text,
+  mobile_normalized text,
+  source text,
+  status text default '문의접수' not null,
+  grade text,
+  desired_region text,
+  budget_min numeric,
+  budget_max numeric,
+  interested_brand text,
+  memo text,
+  next_contact_at timestamp with time zone,
+  promoted_lead_id uuid references public.franchise_leads(id) on delete set null,
+  promoted_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  data jsonb default '{}'::jsonb not null
+);
+
+alter table public.franchise_lead_registration_requests enable row level security;
+
+create policy "Company members can view franchise_lead_registration_requests"
+  on public.franchise_lead_registration_requests
+  for select using (company_id = get_my_company_id());
+
+create policy "Company members can insert franchise_lead_registration_requests"
+  on public.franchise_lead_registration_requests
+  for insert with check (company_id = get_my_company_id());
+
+create policy "Company members can update franchise_lead_registration_requests"
+  on public.franchise_lead_registration_requests
+  for update using (company_id = get_my_company_id());
+
+create policy "Company members can delete franchise_lead_registration_requests"
+  on public.franchise_lead_registration_requests
+  for delete using (company_id = get_my_company_id());
+
+create index if not exists idx_franchise_lead_registration_requests_company_created
+  on public.franchise_lead_registration_requests (company_id, created_at desc);
+
+create index if not exists idx_franchise_lead_registration_requests_company_manager
+  on public.franchise_lead_registration_requests (company_id, manager_id);
+
+create index if not exists idx_franchise_lead_registration_requests_promoted
+  on public.franchise_lead_registration_requests (company_id, promoted_at);
+
+create unique index if not exists idx_franchise_lead_registration_requests_pending_mobile_unique
+  on public.franchise_lead_registration_requests (company_id, mobile_normalized)
+  where mobile_normalized is not null and mobile_normalized <> '' and promoted_at is null;
+
 -- 19. FRANCHISE LOCATION MASTER Tables
 create table if not exists public.franchise_locations (
   id uuid default uuid_generate_v4() primary key,
@@ -389,6 +443,10 @@ create index if not exists idx_franchise_locations_company_type_status
 
 create index if not exists idx_franchise_locations_company_region
   on public.franchise_locations (company_id, region);
+
+create unique index if not exists idx_franchise_locations_company_source_property_unique
+  on public.franchise_locations (company_id, source_property_id)
+  where source_property_id is not null;
 
 -- 20. FRANCHISE OPENING PROJECTS Tables
 create table if not exists public.franchise_opening_projects (

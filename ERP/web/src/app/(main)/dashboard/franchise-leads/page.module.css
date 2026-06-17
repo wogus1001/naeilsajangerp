@@ -2124,6 +2124,122 @@
     resize: vertical;
 }
 
+.locationFileBox {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px dashed #9ac2ff;
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+.locationFileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.locationFileHeader strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.locationFileHeader span,
+.locationEmptyFiles {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.locationFileSelectButton {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.locationFileSelectButton:hover {
+    background: #f2f4f6;
+}
+
+.locationFileInput {
+    display: none;
+}
+
+.locationFileError {
+    margin: 0;
+    color: #e42939;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.locationFileList {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.locationFileList li {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto 30px;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 7px 9px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationFileList span {
+    min-width: 0;
+    overflow: hidden;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.locationFileList em {
+    color: #6b7684;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.locationFileList button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 6px;
+    color: #e42939;
+    background: #fff1f2;
+    cursor: pointer;
+}
+
+.locationEmptyFiles {
+    margin: 0;
+}
+
 .locationAddressSearchRow {
     display: flex;
     gap: 6px;
@@ -9303,6 +9419,15 @@
     }
 
     .regionAddButton {
+        width: 100%;
+    }
+
+    .locationFileHeader {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .locationFileSelectButton {
         width: 100%;
     }
 

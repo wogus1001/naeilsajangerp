@@ -1,6 +1,10 @@
 export type CompanyMenuFeatureKey =
     | 'dashboard'
     | 'franchiseLeads'
+    | 'franchiseWorkIntake'
+    | 'franchiseMatchingRequest'
+    | 'franchisePropertyRegistration'
+    | 'franchiseLeadRegistration'
     | 'marketInsights'
     | 'franchiseOperations'
     | 'properties'
@@ -66,6 +70,34 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         title: '모객 DB',
         description: '가맹 희망자 유입, 상담, 계약 전환 흐름을 관리합니다.',
         routePrefixes: ['/dashboard/franchise-leads']
+    },
+    {
+        key: 'franchiseMatchingRequest',
+        category: '업무',
+        title: '프랜차이즈 매칭 요청',
+        description: '프랜차이즈 매칭 문의를 모객 DB로 등록합니다.',
+        routePrefixes: ['/dashboard/franchise-leads/matching-request']
+    },
+    {
+        key: 'franchisePropertyRegistration',
+        category: '업무',
+        title: '물건 등록',
+        description: '프랜차이즈 매칭용 물건 정보를 별도로 등록합니다.',
+        routePrefixes: ['/dashboard/franchise-leads/property-registration']
+    },
+    {
+        key: 'franchiseLeadRegistration',
+        category: '업무',
+        title: '가맹 희망자 등록',
+        description: '가맹 희망자 접수 DB를 어드민 검수 전 단계로 등록합니다.',
+        routePrefixes: ['/dashboard/franchise-leads/lead-registration']
+    },
+    {
+        key: 'franchiseWorkIntake',
+        category: '업무',
+        title: '업무 목록',
+        description: '물건 등록, 가맹 희망자 등록, 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.',
+        routePrefixes: ['/dashboard/franchise-leads/work-intake']
     },
     {
         key: 'marketInsights',
@@ -171,6 +203,10 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
     return {
         dashboard: true,
         franchiseLeads: true,
+        franchiseWorkIntake: true,
+        franchiseMatchingRequest: true,
+        franchisePropertyRegistration: true,
+        franchiseLeadRegistration: true,
         marketInsights: true,
         franchiseOperations: true,
         properties: true,

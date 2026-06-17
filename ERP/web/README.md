@@ -59,6 +59,8 @@ supabase_franchise_gmail_disclosures_migration.sql
 supabase_franchise_notifications_migration.sql
 supabase_franchise_contract_checklist_migration.sql
 supabase_franchise_market_monitoring_migration.sql
+supabase_franchise_lead_registration_requests_migration.sql
+supabase_franchise_property_promotion_migration.sql
 supabase_company_menu_features_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
@@ -130,6 +132,24 @@ Franchise location screens are split by operating intent:
 
 - `/dashboard/franchise-leads/market-insights`: site planning for future openings and lead-linked regional demand.
 - `/dashboard/franchise-operations`: current franchise/direct-store operations and store status management.
+
+## Franchise Intake Property Registration Setup
+
+The existing 점포개발 업무 route `/properties/register` remains the original 점포 신규등록 screen and stores general ERP `properties`.
+
+Franchise-specific intake uses separate protected routes:
+
+- `/dashboard/franchise-leads/property-registration`: 공인중개사용 물건 등록. It stores into `properties` with `operation_type='물건등록'` and `data.sourceType='franchise_property_registration'`.
+- `/dashboard/franchise-leads/lead-registration`: internal 가맹 희망자 등록. It stores review-ready requests in `franchise_lead_registration_requests` and does not immediately create `franchise_leads`.
+- `/dashboard/franchise-leads/matching-request`: 예비 창업자 프랜차이즈 매칭 요청. It stores into `franchise_leads` with `source='프랜차이즈 매칭 요청'`.
+- `/dashboard/franchise-leads/work-intake`: staff-facing list tabs for 물건 등록, 가맹 희망자 등록, and 프랜차이즈 매칭 요청 intake records.
+- `/admin/franchise-intake`: admin review tabs for `물건 등록 리스트`, `가맹 희망자 등록`, and `프랜차이즈 매칭요청`.
+
+The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/leads/promote` to create a real franchise lead from a pending lead-registration request. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target.
+
+Apply `supabase_franchise_lead_registration_requests_migration.sql` before enabling the lead-registration intake screen. Apply `supabase_franchise_property_promotion_migration.sql` so each company can promote the same source property only once through the `franchise_locations(company_id, source_property_id)` unique index.
+
+Admin user approval depends on UUID lookup through `/api/users`. Keep the full UUID regex format `8-4-4-4-12`; otherwise a valid profile UUID can be misread as a legacy short login id and approval fails with `User not found`.
 
 ## Realty Import Setup
 

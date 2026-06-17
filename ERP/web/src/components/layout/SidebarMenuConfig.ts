@@ -1,7 +1,13 @@
 import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 
-export type SidebarSectionKey = 'dashboard' | 'consulting' | 'customers' | 'businessCards' | 'contracts';
-export type SidebarLinkIcon = 'target' | 'mapPin' | 'store';
+export type SidebarSectionKey =
+    | 'dashboard'
+    | 'franchiseWork'
+    | 'consulting'
+    | 'customers'
+    | 'businessCards'
+    | 'contracts';
+export type SidebarLinkIcon = 'target' | 'mapPin' | 'store' | 'users' | 'list';
 
 export type SidebarMenuItem = {
     readonly title: string;
@@ -15,6 +21,7 @@ export type SidebarMenuSection = {
     readonly key: SidebarSectionKey;
     readonly title: string;
     readonly collapsedTitle: string;
+    readonly direct?: boolean;
     readonly items: readonly SidebarMenuItem[];
 };
 
@@ -28,6 +35,17 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
             { title: '모객 DB', url: '/dashboard/franchise-leads', category: '대시보드', featureKey: 'franchiseLeads', icon: 'target' },
             { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '대시보드', featureKey: 'marketInsights', icon: 'mapPin' },
             { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '대시보드', featureKey: 'franchiseOperations', icon: 'store' }
+        ]
+    },
+    {
+        key: 'franchiseWork',
+        title: '업무',
+        collapsedTitle: '업무',
+        items: [
+            { title: '업무 목록', url: '/dashboard/franchise-leads/work-intake', category: '업무', featureKey: 'franchiseWorkIntake', icon: 'list' },
+            { title: '물건 등록', url: '/dashboard/franchise-leads/property-registration', category: '업무', featureKey: 'franchisePropertyRegistration', icon: 'store' },
+            { title: '가맹 희망자 등록', url: '/dashboard/franchise-leads/lead-registration', category: '업무', featureKey: 'franchiseLeadRegistration', icon: 'users' },
+            { title: '프랜차이즈 매칭 요청', url: '/dashboard/franchise-leads/matching-request', category: '업무', featureKey: 'franchiseMatchingRequest', icon: 'target' }
         ]
     },
     {

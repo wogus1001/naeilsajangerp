@@ -6,7 +6,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 
-export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type RequesterProfileRow = RequesterProfile;
 
@@ -32,6 +32,16 @@ type UserDeleteGuardContext = {
     readonly targetProfile: Pick<RequesterProfileRow, 'id' | 'role' | 'company_id'>;
     readonly otherManagersCount: number;
     readonly otherMembersCount: number;
+};
+
+type UserUpdateLookupInput = {
+    readonly id: string;
+    readonly email: string | null;
+};
+
+type UserUpdateLookup = {
+    readonly ids: readonly string[];
+    readonly emails: readonly string[];
 };
 
 export type UserDeleteGuardResult =
@@ -94,6 +104,38 @@ export function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     if (isRecord(error) && typeof error.message === 'string') return error.message;
     return String(error);
+}
+
+function pushUnique(values: string[], value: string | null): void {
+    if (!value || values.includes(value)) return;
+    values.push(value);
+}
+
+function appendEmailCandidates(emails: string[], rawValue: string | null): void {
+    if (!rawValue) return;
+    if (rawValue.includes('@')) {
+        pushUnique(emails, rawValue);
+        return;
+    }
+    pushUnique(emails, `${rawValue}@example.com`);
+    pushUnique(emails, rawValue);
+}
+
+export function buildUserUpdateLookup(input: UserUpdateLookupInput): UserUpdateLookup {
+    const id = input.id.trim();
+    const email = input.email?.trim() || null;
+    const ids: string[] = [];
+    const emails: string[] = [];
+
+    if (UUID_REGEX.test(id)) {
+        pushUnique(ids, id);
+    } else {
+        appendEmailCandidates(emails, id);
+    }
+
+    appendEmailCandidates(emails, email);
+
+    return { ids, emails };
 }
 
 export function evaluateUserDeleteGuard(context: UserDeleteGuardContext): UserDeleteGuardResult {

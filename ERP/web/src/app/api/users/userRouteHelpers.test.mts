@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateUserDeleteGuard } from './userRouteHelpers.js';
+import { buildUserUpdateLookup, evaluateUserDeleteGuard } from './userRouteHelpers.js';
 
 const adminRequester = { id: 'admin-1', role: 'admin' };
 const managerTarget = { id: 'manager-1', role: 'manager', company_id: 'company-1' };
@@ -59,4 +59,25 @@ test('evaluateUserDeleteGuard allows deleting a non-admin when company guard pas
     });
 
     assert.deepEqual(result, { allowed: true });
+});
+
+test('buildUserUpdateLookup keeps uuid and email fallback for pending user approval', () => {
+    const result = buildUserUpdateLookup({
+        id: '60295f17-02b6-4e68-bb35-dd9ad23e80ac',
+        email: 'remax@naver.com'
+    });
+
+    assert.deepEqual(result, {
+        ids: ['60295f17-02b6-4e68-bb35-dd9ad23e80ac'],
+        emails: ['remax@naver.com']
+    });
+});
+
+test('buildUserUpdateLookup preserves legacy short id email lookup', () => {
+    const result = buildUserUpdateLookup({ id: 'admin', email: null });
+
+    assert.deepEqual(result, {
+        ids: [],
+        emails: ['admin@example.com', 'admin']
+    });
 });
