@@ -1,4 +1,4 @@
-import { getRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
+import { getAuthenticatedRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import {
@@ -162,8 +162,8 @@ async function syncAutomaticNotifications(
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request);
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
 
         const { searchParams } = new URL(request.url);
         const requestedCompanyName = cleanString(searchParams.get('company') || searchParams.get('companyName'));
@@ -187,16 +187,23 @@ export async function GET(request: Request) {
             .order('due_at', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: false })
             .limit(limit);
+        let unreadCountQuery = supabaseAdmin
+            .from('franchise_notifications')
+            .select('id', { count: 'exact', head: true })
+            .is('dismissed_at', null)
+            .is('read_at', null);
 
         if (companyId) query = query.eq('company_id', companyId);
-        if (!isAdmin(requester)) query = query.eq('recipient_profile_id', requester.id);
+        if (companyId) unreadCountQuery = unreadCountQuery.eq('company_id', companyId);
+        query = query.eq('recipient_profile_id', requester.id);
+        unreadCountQuery = unreadCountQuery.eq('recipient_profile_id', requester.id);
 
-        const { data, error } = await query;
+        const [{ data, error }, { count, error: countError }] = await Promise.all([query, unreadCountQuery]);
         if (error) throw error;
+        if (countError) throw countError;
 
         const notifications = ((data || []) as FranchiseNotificationRow[]).map(transformFranchiseNotification);
-        const unreadCount = notifications.filter(item => !item.readAt).length;
-        return ok({ notifications, unreadCount, schemaReady: true });
+        return ok({ notifications, unreadCount: count || 0, schemaReady: true });
     } catch (error) {
         if (isMissingNotificationSchemaError(error)) {
             return ok({ notifications: [], unreadCount: 0, schemaReady: false });
@@ -209,18 +216,23 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request);
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
 
         const body = await readBody(request);
         const now = new Date().toISOString();
+        const { searchParams } = new URL(request.url);
+        const requestedCompanyName = cleanString(searchParams.get('company') || searchParams.get('companyName'));
+        const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
+        const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;
 
         if (body.markAllRead === true) {
             let query = supabaseAdmin
                 .from('franchise_notifications')
                 .update({ read_at: now, updated_at: now })
-                .is('dismissed_at', null);
-            if (!isAdmin(requester)) query = query.eq('recipient_profile_id', requester.id);
+                .is('dismissed_at', null)
+                .eq('recipient_profile_id', requester.id);
+            if (companyId) query = query.eq('company_id', companyId);
             const { error } = await query;
             if (error) throw error;
             return ok({ success: true });
@@ -232,8 +244,9 @@ export async function PATCH(request: Request) {
         let query = supabaseAdmin
             .from('franchise_notifications')
             .update({ read_at: now, updated_at: now })
-            .eq('id', notificationId);
-        if (!isAdmin(requester)) query = query.eq('recipient_profile_id', requester.id);
+            .eq('id', notificationId)
+            .eq('recipient_profile_id', requester.id);
+        if (companyId) query = query.eq('company_id', companyId);
 
         const { error } = await query;
         if (error) throw error;

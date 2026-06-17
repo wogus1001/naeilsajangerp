@@ -1,5 +1,6 @@
 import type { StoredUser } from '@/utils/userUtils';
 import { getRequesterId, getStoredCompanyName } from '@/utils/userUtils';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 export type HeaderNotification = {
     readonly id: string;
@@ -50,7 +51,10 @@ export async function fetchHeaderNotifications(user: StoredUser): Promise<Header
     const companyName = getStoredCompanyName(user);
     if (companyName) params.set('companyName', companyName);
 
-    const response = await fetch(`/api/franchise-notifications?${params.toString()}`, { cache: 'no-store' });
+    const response = await fetch(`/api/franchise-notifications?${params.toString()}`, {
+        cache: 'no-store',
+        headers: await getApiAuthHeaders()
+    });
     if (!response.ok) throw new Error('Failed to fetch notifications');
     const payload: unknown = await response.json();
     const data = isRecord(payload) && isRecord(payload.data) ? payload.data : {};
@@ -67,20 +71,26 @@ export async function markHeaderNotificationRead(user: StoredUser, notificationI
     const requesterId = getRequesterId(user);
     if (!requesterId) return;
     const params = new URLSearchParams({ requesterId });
-    await fetch(`/api/franchise-notifications?${params.toString()}`, {
+    const companyName = getStoredCompanyName(user);
+    if (companyName) params.set('companyName', companyName);
+    const response = await fetch(`/api/franchise-notifications?${params.toString()}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ notificationId })
     });
+    if (!response.ok) throw new Error('Failed to mark notification as read');
 }
 
 export async function markAllHeaderNotificationsRead(user: StoredUser): Promise<void> {
     const requesterId = getRequesterId(user);
     if (!requesterId) return;
     const params = new URLSearchParams({ requesterId });
-    await fetch(`/api/franchise-notifications?${params.toString()}`, {
+    const companyName = getStoredCompanyName(user);
+    if (companyName) params.set('companyName', companyName);
+    const response = await fetch(`/api/franchise-notifications?${params.toString()}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ markAllRead: true })
     });
+    if (!response.ok) throw new Error('Failed to mark all notifications as read');
 }

@@ -1,4 +1,4 @@
-import { getRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
     DEFAULT_COMPANY_DASHBOARD_MODE,
@@ -118,8 +118,8 @@ function summarizeCompanies(
 
 async function buildAccessResponse(request: Request, selectedCompanyId: string | null): Promise<Response> {
     const supabaseAdmin = getSupabaseAdmin();
-    const requester = await getRequesterProfile(supabaseAdmin, request);
-    if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+    const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+    if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
     if (!isAdmin(requester)) return fail(403, 'FORBIDDEN', 'Admin access required');
 
     const { data: companies, error: companyError } = await supabaseAdmin
@@ -181,8 +181,8 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request);
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
         if (!isAdmin(requester)) return fail(403, 'FORBIDDEN', 'Admin access required');
 
         const payload = parseSavePayload(await request.json());

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertModal } from '@/components/common/AlertModal';
 import { fetchDashboardModePreference } from '@/components/dashboard/dashboardModePreference';
+import { fetchDashboardNotices, type DashboardNotice } from '@/components/dashboard/dashboardNotices';
 import { MainDashboardTypeA } from '@/components/dashboard/MainDashboardTypeA';
 import { DEFAULT_COMPANY_DASHBOARD_MODE, type CompanyDashboardMode } from '@/lib/company-menu-features';
 import {
@@ -26,7 +27,7 @@ export default function DashboardPage() {
     const [stats, setStats] = React.useState<any[]>([]);
     const [todaySchedules, setTodaySchedules] = React.useState<any[]>([]);
     const [recentContracts, setRecentContracts] = React.useState<any[]>([]);
-    const [notices, setNotices] = React.useState<any[]>([]); // Notices from API
+    const [notices, setNotices] = React.useState<DashboardNotice[]>([]);
 
     const [userName, setUserName] = React.useState('사장님'); // Default to '사장님' if no name
     const [userId, setUserId] = React.useState('');
@@ -110,13 +111,7 @@ export default function DashboardPage() {
 
         // Fetch Notices
         const fetchNotices = async () => {
-            try {
-                const res = await fetch(`/api/notices?companyName=${encodeURIComponent(companyName || '')}&limit=5`);
-                const data = await res.json();
-                setNotices(data);
-            } catch (error) {
-                console.error('Failed to fetch notices', error);
-            }
+            setNotices(await fetchDashboardNotices(companyName || ''));
         };
 
         // Fetch Memo
@@ -137,15 +132,9 @@ export default function DashboardPage() {
         fetchMemo();
     }, []);
 
-    const fetchDashboardNotices = async () => {
-        try {
-            const companyName = getStoredCompanyName(userData);
-            const res = await fetch(`/api/notices?companyName=${encodeURIComponent(companyName)}&limit=5`);
-            const data = await res.json();
-            setNotices(data);
-        } catch (error) {
-            console.error(error);
-        }
+    const refreshDashboardNotices = async () => {
+        const companyName = getStoredCompanyName(userData);
+        setNotices(await fetchDashboardNotices(companyName || ''));
     };
 
     const handleCreateNotice = async () => {
@@ -172,7 +161,7 @@ export default function DashboardPage() {
                 showAlert('공지사항이 등록되었습니다.', 'success');
                 setIsNoticeModalOpen(false);
                 setNewNotice({ title: '', content: '', type: 'team', isPinned: false });
-                fetchDashboardNotices(); // Refresh list
+                refreshDashboardNotices();
             }
         } catch (error) {
             console.error(error);

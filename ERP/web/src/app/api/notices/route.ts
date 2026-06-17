@@ -1,4 +1,10 @@
 import { NextResponse } from 'next/server';
+import {
+    formatNoticeRows,
+    parseNoticeLimit,
+    type NoticeAuthor,
+    type NoticeRow
+} from '@/lib/notices';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Service Role Client moved to handlers
@@ -9,7 +15,7 @@ export async function GET(request: Request) {
         const supabaseAdmin = getSupabaseAdmin();
         const { searchParams } = new URL(request.url);
         const companyName = searchParams.get('companyName');
-        const limit = searchParams.get('limit');
+        const limit = parseNoticeLimit(searchParams.get('limit'));
 
         // 1. Resolve Company ID if needed
         let companyId = null;
@@ -21,10 +27,7 @@ export async function GET(request: Request) {
         // 2. Build Query
         let query = supabaseAdmin
             .from('notices')
-            .select(`
-                *,
-                author:profiles!author_id(name, role)
-            `)
+            .select('*')
             .order('is_pinned', { ascending: false })
             .order('created_at', { ascending: false });
 
@@ -37,30 +40,48 @@ export async function GET(request: Request) {
             query = query.is('company_id', null);
         }
 
-        if (limit) {
-            query = query.limit(parseInt(limit));
-        }
+        if (limit) query = query.limit(limit);
 
         const { data: notices, error } = await query;
 
         if (error) throw error;
 
-        // Transform for frontend compatibility if needed
-        // (Date format, author info structure, etc.)
-        const formatted = notices.map(n => ({
-            ...n,
-            createdAt: new Date(n.created_at).toLocaleDateString().replace(/-/g, '.'), // Keep YYYY.MM.DD
-            authorName: n.author?.name || '관리자', // Join profile name
-            authorRole: n.author?.role || 'admin',
-            // isPinned is snake_case in DB, camelCase in frontend? map if needed
-            isPinned: n.is_pinned
-        }));
+        const rows: NoticeRow[] = Array.isArray(notices) ? notices : [];
+        const authors = await fetchNoticeAuthors(rows);
+        const formatted = formatNoticeRows(rows, authors);
 
         return NextResponse.json(formatted);
     } catch (error) {
         console.error('Fetch notices error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+}
+
+async function fetchNoticeAuthors(rows: readonly NoticeRow[]): Promise<Map<string, NoticeAuthor>> {
+    const authorIds = [...new Set(rows.flatMap(row => row.author_id ? [row.author_id] : []))];
+    const authors = new Map<string, NoticeAuthor>();
+    if (authorIds.length === 0) return authors;
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id,name,role')
+        .in('id', authorIds);
+
+    if (error) {
+        console.warn('Fetch notice authors warning:', error);
+        return authors;
+    }
+
+    for (const author of data || []) {
+        if (typeof author.id !== 'string') continue;
+        authors.set(author.id, {
+            name: typeof author.name === 'string' ? author.name : null,
+            role: typeof author.role === 'string' ? author.role : null
+        });
+    }
+
+    return authors;
 }
 
 // POST: Create Notice

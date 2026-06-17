@@ -3,6 +3,7 @@
 import React from 'react';
 import { parseCompanyAccessResponse } from '@/components/admin/company-access/companyAccessParse';
 import type { AdminCompanySummary } from '@/components/admin/company-access/types';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     getAdminCompanyScope,
     getRequesterId,
@@ -54,7 +55,10 @@ export function AdminCompanySelector({ user }: AdminCompanySelectorProps) {
             if (preferredCompanyId) params.set('companyId', preferredCompanyId);
 
             try {
-                const response = await fetch(`/api/admin/company-access?${params.toString()}`, { cache: 'no-store' });
+                const response = await fetch(`/api/admin/company-access?${params.toString()}`, {
+                    cache: 'no-store',
+                    headers: await getApiAuthHeaders()
+                });
                 const payload = parseCompanyAccessResponse(await response.json());
 
                 if (cancelled) return;

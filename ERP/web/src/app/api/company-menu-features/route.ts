@@ -1,4 +1,4 @@
-import { canAccessCompanyScope, getRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { canAccessCompanyScope, getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { ok, fail } from '@/lib/api-response';
 import { DEFAULT_COMPANY_DASHBOARD_MODE, getDefaultCompanyMenuFlags } from '@/lib/company-menu-features';
 import { fetchCompanyDashboardMode, fetchCompanyMenuFlags, toCompanyMenuFeatureViews } from '@/lib/company-menu-feature-store';
@@ -9,10 +9,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request);
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
 
         if (!requester) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
         }
 
         const { searchParams } = new URL(request.url);
