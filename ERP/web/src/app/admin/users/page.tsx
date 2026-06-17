@@ -2,69 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, CheckCircle, Key } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { createClient } from '@/utils/supabase/client';
 import {
-    AdminUserRoleSelect,
     getAdminUserRoleLabel,
     type AssignableAdminUserRole
 } from './AdminUserRoleSelect';
-
-type AdminUserRow = {
-    readonly id: string | null;
-    readonly uuid: string;
-    readonly name: string | null;
-    readonly companyName: string | null;
-    readonly role: string | null;
-    readonly status: string | null;
-    readonly joinedAt: string | null;
-};
-
-// Reuse some styles but inline for admin specific needs to avoid module weirdness
-const styles = {
-    container: { padding: '32px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'var(--font-pretendard)' },
-    header: { marginBottom: '24px' },
-    title: { fontSize: '24px', fontWeight: '800', margin: '0 0 8px 0', color: '#212529' },
-    subtitle: { fontSize: '16px', color: '#868e96', margin: 0 },
-
-    // Tab Styles
-    tabContainer: { display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid #dee2e6' },
-    tab: {
-        padding: '12px 20px',
-        fontSize: '15px',
-        fontWeight: 600,
-        cursor: 'pointer',
-        borderBottom: '2px solid transparent',
-        color: '#868e96',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
-    },
-    activeTab: {
-        borderBottom: '2px solid #1971c2',
-        color: '#1971c2'
-    },
-    badge: {
-        backgroundColor: '#fa5252', color: 'white', fontSize: '11px', padding: '2px 6px', borderRadius: '10px', fontWeight: 700
-    },
-
-    // Table Styles
-    tableContainer: { backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e9ecef', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' },
-    table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '14px' },
-    th: { textAlign: 'left' as const, padding: '16px', borderBottom: '1px solid #e9ecef', color: '#868e96', fontWeight: 600, fontSize: '13px', backgroundColor: '#f8f9fa' },
-    td: { padding: '16px', borderBottom: '1px solid #f1f3f5', color: '#495057' },
-    tr: { transition: 'background-color 0.2s' },
-
-    // Actions
-    actionBtn: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 },
-    approveBtn: { backgroundColor: '#e6fcf5', color: '#0ca678' },
-    rejectBtn: { backgroundColor: '#fff5f5', color: '#fa5252' },
-
-    // Status Badges
-    statusBadge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 },
-};
+import { AdminUserModals } from './AdminUserModals';
+import { AdminUsersTable } from './AdminUsersTable';
+import {
+    approveAdminUser,
+    deleteAdminUser,
+    fetchAdminUsers,
+    updateAdminUserRole,
+    type AdminUserRow
+} from './adminUsersRequests';
+import { adminUsersStyles as styles } from './adminUsersStyles';
 
 export default function AdminUsersPage() {
     const router = useRouter();
@@ -114,15 +68,10 @@ export default function AdminUsersPage() {
         setIsLoading(true);
         try {
             const requesterId = getCurrentRequesterId();
-            const query = requesterId ? `?requesterId=${encodeURIComponent(requesterId)}` : '';
-
-            const res = await fetch(`/api/users${query}`);
-            if (res.ok) {
-                const data = await res.json() as AdminUserRow[];
-                setUsers(data);
-            }
+            setUsers([...(await fetchAdminUsers(requesterId))]);
         } catch (error) {
             console.error('Failed to fetch users:', error);
+            showAlert(error instanceof Error ? error.message : '회원 목록을 불러오지 못했습니다.');
         } finally {
             setIsLoading(false);
         }
@@ -132,25 +81,12 @@ export default function AdminUsersPage() {
         showConfirm(`${user.name || user.id || '사용자'}님의 가입을 승인하시겠습니까?`, async () => {
             try {
                 const requesterId = getCurrentRequesterId();
-
-                const res = await fetch(`/api/users?requesterId=${encodeURIComponent(requesterId)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: user.uuid,
-                        status: 'active'
-                    })
-                });
-
-                if (res.ok) {
-                    showAlert('승인되었습니다.');
-                    fetchUsers();
-                } else {
-                    showAlert('승인 처리 실패');
-                }
+                await approveAdminUser(requesterId, user.uuid);
+                showAlert('승인되었습니다.');
+                fetchUsers();
             } catch (e) {
                 console.error(e);
-                showAlert('오류가 발생했습니다.');
+                showAlert(e instanceof Error ? e.message : '오류가 발생했습니다.');
             }
         });
     };
@@ -163,26 +99,12 @@ export default function AdminUsersPage() {
             setUpdatingRoleUserId(user.uuid);
             try {
                 const requesterId = getCurrentRequesterId();
-                const res = await fetch(`/api/users?requesterId=${encodeURIComponent(requesterId)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: user.uuid,
-                        role
-                    })
-                });
-
-                if (res.ok) {
-                    showAlert('직급이 변경되었습니다.');
-                    await fetchUsers();
-                    return;
-                }
-
-                const data = await res.json() as { readonly error?: string };
-                showAlert(`직급 변경 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
+                await updateAdminUserRole(requesterId, user.uuid, role);
+                showAlert('직급이 변경되었습니다.');
+                await fetchUsers();
             } catch (error) {
                 console.error(error);
-                showAlert('직급 변경 중 오류가 발생했습니다.');
+                showAlert(error instanceof Error ? `직급 변경 실패: ${error.message}` : '직급 변경 중 오류가 발생했습니다.');
             } finally {
                 setUpdatingRoleUserId(null);
             }
@@ -194,35 +116,18 @@ export default function AdminUsersPage() {
 
         try {
             const requesterId = getCurrentRequesterId();
-
-            const res = await fetch(`/api/users?id=${deleteTargetId}&requesterId=${encodeURIComponent(requesterId)}`, { method: 'DELETE' });
-            if (res.ok) {
-                setDeleteTargetId(null);
-                fetchUsers();
-            } else {
-                const data = await res.json();
-                console.error('Delete failed response:', data);
-                // Production-friendly message
-                showAlert(`삭제 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
-            }
+            await deleteAdminUser(requesterId, deleteTargetId);
+            setDeleteTargetId(null);
+            fetchUsers();
         } catch (error) {
             console.error(error);
-            showAlert('삭제 중 오류 발생');
+            showAlert(error instanceof Error ? `삭제 실패: ${error.message}` : '삭제 중 오류 발생');
         }
     };
 
     // Derived state
     const pendingUsers = users.filter(u => u.status === 'pending_approval');
     const filteredUsers = activeTab === 'pending' ? pendingUsers : users;
-
-    const getStatusBadge = (status: string | null) => {
-        switch (status) {
-            case 'active': return <span style={{ ...styles.statusBadge, backgroundColor: '#e6fcf5', color: '#0ca678' }}>활성</span>;
-            case 'pending_approval': return <span style={{ ...styles.statusBadge, backgroundColor: '#fff9db', color: '#f08c00' }}>승인대기</span>;
-            case 'blocked': return <span style={{ ...styles.statusBadge, backgroundColor: '#fff5f5', color: '#fa5252' }}>차단됨</span>;
-            default: return <span style={{ ...styles.statusBadge, backgroundColor: '#f8f9fa', color: '#868e96' }}>-</span>;
-        }
-    };
 
     // --- PASSWORD RESET LOGIC ---
     const [resetTargetId, setResetTargetId] = useState<string | null>(null);
@@ -312,143 +217,29 @@ export default function AdminUsersPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div style={styles.tableContainer}>
-                <table style={styles.table}>
-                    <thead>
-                        <tr>
-                            <th style={styles.th}>사용자 정보</th>
-                            <th style={styles.th}>소속 회사</th>
-                            <th style={styles.th}>직급/권한</th>
-                            <th style={styles.th}>상태</th>
-                            <th style={styles.th}>가입일</th>
-                            <th style={styles.th}>관리</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredUsers.length > 0 ? (
-                            filteredUsers.map((user) => (
-                                <tr key={user.uuid} style={styles.tr}>
-                                    <td style={styles.td}>
-                                        <div style={{ fontWeight: 'bold', color: '#343a40' }}>{user.id}</div>
-                                        <div style={{ fontSize: '12px', color: '#868e96' }}>{user.name}</div>
-                                    </td>
-                                    <td style={styles.td}>{user.companyName || '-'}</td>
-                                    <td style={styles.td}>
-                                        <AdminUserRoleSelect
-                                            role={user.role}
-                                            userName={user.name || user.id || '사용자'}
-                                            isUpdating={updatingRoleUserId === user.uuid}
-                                            onChange={role => handleRoleChange(user, role)}
-                                        />
-                                    </td>
-                                    <td style={styles.td}>{getStatusBadge(user.status)}</td>
-                                    <td style={styles.td}><span style={{ color: '#868e96', fontSize: '13px' }}>{user.joinedAt ? new Date(user.joinedAt).toLocaleDateString() : '-'}</span></td>
-                                    <td style={styles.td}>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {user.status === 'pending_approval' && (
-                                                <button
-                                                    style={{ ...styles.actionBtn, ...styles.approveBtn }}
-                                                    onClick={() => handleApprove(user)}
-                                                >
-                                                    <CheckCircle size={14} /> 승인
-                                                </button>
-                                            )}
+            <AdminUsersTable
+                users={filteredUsers}
+                updatingRoleUserId={updatingRoleUserId}
+                onApprove={handleApprove}
+                onRoleChange={handleRoleChange}
+                onDelete={setDeleteTargetId}
+                onResetPassword={(userId) => {
+                    setResetTargetId(userId);
+                    setNewPassword('');
+                }}
+            />
 
-                                            <button
-                                                style={{ ...styles.actionBtn, backgroundColor: '#f1f3f5', color: '#495057' }}
-                                                onClick={() => { setResetTargetId(user.uuid); setNewPassword(''); }}
-                                                title="비밀번호 변경"
-                                            >
-                                                <Key size={14} /> <span style={{ fontSize: '11px' }}>비번변경</span>
-                                            </button>
-
-                                            {user.role !== 'admin' && (
-                                                <button
-                                                    style={{ ...styles.actionBtn, color: '#fa5252', backgroundColor: 'transparent' }}
-                                                    onClick={() => setDeleteTargetId(user.uuid)}
-                                                    title="삭제"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#adb5bd' }}>
-                                    데이터가 없습니다.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Delete Modal */}
-            {deleteTargetId && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                }}>
-                    <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '320px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '18px' }}>사용자 삭제</h3>
-                        <p style={{ color: '#666', marginBottom: '24px' }}>정말 이 사용자를 삭제하시겠습니까?</p>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                            <button onClick={() => setDeleteTargetId(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', backgroundColor: 'white', cursor: 'pointer' }}>취소</button>
-                            <button onClick={handleDelete} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#fa5252', color: 'white', cursor: 'pointer' }}>삭제</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Password Reset Modal */}
-            {resetTargetId && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                }}>
-                    <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '360px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '18px' }}>비밀번호 변경</h3>
-                        <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>
-                            새로운 비밀번호를 입력하세요. <br />
-                            (변경 후 즉시 적용됩니다)
-                        </p>
-                        <input
-                            type="password"
-                            placeholder="새 비밀번호 (6자 이상)"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            style={{
-                                width: '100%', padding: '10px', borderRadius: '6px',
-                                border: '1px solid #dee2e6', marginBottom: '20px', fontSize: '14px'
-                            }}
-                            autoFocus
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                            <button
-                                onClick={() => setResetTargetId(null)}
-                                style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', backgroundColor: 'white', cursor: 'pointer' }}
-                            >
-                                취소
-                            </button>
-                            <button
-                                onClick={handlePasswordReset}
-                                disabled={resetLoading}
-                                style={{
-                                    padding: '8px 16px', borderRadius: '6px', border: 'none',
-                                    backgroundColor: '#228be6', color: 'white', cursor: 'pointer',
-                                    opacity: resetLoading ? 0.7 : 1
-                                }}
-                            >
-                                {resetLoading ? '변경 중...' : '변경하기'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <AdminUserModals
+                deleteTargetId={deleteTargetId}
+                resetTargetId={resetTargetId}
+                newPassword={newPassword}
+                resetLoading={resetLoading}
+                onCancelDelete={() => setDeleteTargetId(null)}
+                onConfirmDelete={() => void handleDelete()}
+                onCancelReset={() => setResetTargetId(null)}
+                onPasswordChange={setNewPassword}
+                onConfirmReset={() => void handlePasswordReset()}
+            />
 
 
             <AlertModal

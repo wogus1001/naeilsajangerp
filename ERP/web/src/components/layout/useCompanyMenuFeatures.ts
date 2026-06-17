@@ -7,6 +7,7 @@ import {
     type CompanyMenuFeatureDefinition,
     type CompanyMenuFlagMap
 } from '@/lib/company-menu-features';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getAdminCompanyScope } from '@/utils/userUtils';
 
 type LayoutUser = {
@@ -96,7 +97,10 @@ export function useCompanyMenuFeatures(user: LayoutUser | null, pathname: string
             if (targetCompanyId) params.set('companyId', targetCompanyId);
 
             try {
-                const response = await fetch(`/api/company-menu-features?${params.toString()}`, { cache: 'no-store' });
+                const response = await fetch(`/api/company-menu-features?${params.toString()}`, {
+                    cache: 'no-store',
+                    headers: await getApiAuthHeaders()
+                });
                 const nextFlags = parseResponseFlags(await response.json());
                 if (!cancelled && response.ok && nextFlags) {
                     setFlags(nextFlags);

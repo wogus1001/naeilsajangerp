@@ -3,6 +3,7 @@ import {
     normalizeCompanyDashboardMode,
     type CompanyDashboardMode
 } from '@/lib/company-menu-features';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 type DashboardModePreferenceParams = {
     readonly requesterId: string;
@@ -28,7 +29,10 @@ export async function fetchDashboardModePreference({
     params.set('requesterId', requesterId);
     if (companyId) params.set('companyId', companyId);
 
-    const response = await fetch(`/api/company-menu-features?${params.toString()}`, { cache: 'no-store' });
+    const response = await fetch(`/api/company-menu-features?${params.toString()}`, {
+        cache: 'no-store',
+        headers: await getApiAuthHeaders()
+    });
     const payload: unknown = await response.json();
     if (!response.ok) return DEFAULT_COMPANY_DASHBOARD_MODE;
 

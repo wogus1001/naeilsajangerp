@@ -1,4 +1,5 @@
-﻿import type { SupabaseClient } from '@supabase/supabase-js';
+﻿import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -7,6 +8,12 @@ export interface RequesterProfile {
     role: string | null;
     company_id: string | null;
 }
+
+type RequesterProfileRow = {
+    readonly id: string;
+    readonly role: string | null;
+    readonly company_id: string | null;
+};
 
 function normalizeRawUser(rawUser: string | null | undefined): string | null {
     if (!rawUser) return null;
@@ -24,6 +31,28 @@ export function extractRequesterRaw(request: Request, fallbackRaw?: string | nul
         fallbackRaw ||
         null
     );
+}
+
+export function extractBearerToken(request: Request): string | null {
+    const authorization = request.headers.get('authorization') || request.headers.get('Authorization') || '';
+    const bearerToken = authorization.toLowerCase().startsWith('bearer ')
+        ? authorization.slice(7).trim()
+        : '';
+    return bearerToken || request.headers.get('x-access-token')?.trim() || null;
+}
+
+async function resolveAuthenticatedUserId(request: Request): Promise<string | null> {
+    const token = extractBearerToken(request);
+    if (!token) return null;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) return null;
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user?.id) return null;
+    return data.user.id;
 }
 
 export async function resolveUserUuid(
@@ -58,6 +87,25 @@ export async function resolveUserUuid(
     return null;
 }
 
+async function fetchRequesterProfileById(
+    supabaseAdmin: SupabaseClient,
+    requesterId: string
+): Promise<RequesterProfile | null> {
+    const { data: requester } = await supabaseAdmin
+        .from('profiles')
+        .select('id, role, company_id')
+        .eq('id', requesterId)
+        .maybeSingle<RequesterProfileRow>();
+
+    if (!requester) return null;
+
+    return {
+        id: requester.id,
+        role: requester.role,
+        company_id: requester.company_id
+    };
+}
+
 export async function resolveCompanyIdByName(
     supabaseAdmin: SupabaseClient,
     companyName: string | null | undefined
@@ -79,23 +127,30 @@ export async function getRequesterProfile(
     request: Request,
     fallbackRaw?: string | null
 ): Promise<RequesterProfile | null> {
+    const authenticatedUserId = await resolveAuthenticatedUserId(request);
     const requesterRaw = extractRequesterRaw(request, fallbackRaw);
+
+    if (authenticatedUserId) {
+        if (requesterRaw) {
+            const requesterId = await resolveUserUuid(supabaseAdmin, requesterRaw);
+            if (requesterId && requesterId !== authenticatedUserId) return null;
+        }
+        return fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
+    }
+
     const requesterId = await resolveUserUuid(supabaseAdmin, requesterRaw);
     if (!requesterId) return null;
 
-    const { data: requester } = await supabaseAdmin
-        .from('profiles')
-        .select('id, role, company_id')
-        .eq('id', requesterId)
-        .maybeSingle();
+    return fetchRequesterProfileById(supabaseAdmin, requesterId);
+}
 
-    if (!requester) return null;
-
-    return {
-        id: requester.id,
-        role: requester.role,
-        company_id: requester.company_id
-    };
+export async function getAuthenticatedRequesterProfile(
+    supabaseAdmin: SupabaseClient,
+    request: Request
+): Promise<RequesterProfile | null> {
+    const authenticatedUserId = await resolveAuthenticatedUserId(request);
+    if (!authenticatedUserId) return null;
+    return fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
 }
 
 export function isAdmin(requester: RequesterProfile | null): boolean {
