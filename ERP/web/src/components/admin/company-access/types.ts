@@ -10,6 +10,10 @@ export type AdminCompanySummary = {
     readonly activeUserCount: number;
     readonly pendingUserCount: number;
     readonly managerNames: readonly string[];
+    readonly logoUrl: string | null;
+    readonly logoFileName: string | null;
+    readonly logoFileSize: number | null;
+    readonly logoUpdatedAt: string | null;
 };
 
 export type AdminCompanyFeature = {

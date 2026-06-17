@@ -131,11 +131,11 @@ export default function FranchiseMatchingRequestPage() {
             if (!response.ok) throw new Error(readApiError(payload));
 
             setForm(MATCHING_REQUEST_INITIAL_FORM);
-            setMessage({ kind: 'success', text: '프랜차이즈 매칭 요청이 모객 DB에 등록됐습니다.' });
+            setMessage({ kind: 'success', text: '예비 창업자 정보가 모객 DB에 등록됐습니다.' });
         } catch (error) {
             setMessage({
                 kind: 'error',
-                text: error instanceof Error ? error.message : '매칭 요청 등록 중 오류가 발생했습니다.'
+                text: error instanceof Error ? error.message : '예비 창업자 등록 중 오류가 발생했습니다.'
             });
         } finally {
             setIsSaving(false);
@@ -147,7 +147,7 @@ export default function FranchiseMatchingRequestPage() {
             <section className={styles.header}>
                 <div>
                     <span className={styles.eyebrow}>모객 DB 연동</span>
-                    <h1>프랜차이즈 매칭 요청</h1>
+                    <h1>예비 창업자 등록</h1>
                     <p>예비 창업자 조건을 접수하면 기존 모객 DB에 같은 유입 채널로 저장됩니다.</p>
                 </div>
             </section>

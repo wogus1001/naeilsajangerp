@@ -114,11 +114,11 @@ export function PropertyRegistrationForm() {
             if (!response.ok) throw new Error(readApiError(payload));
 
             setForm(PROPERTY_REGISTRATION_INITIAL_FORM);
-            setMessage({ kind: 'success', text: '물건 등록 DB에 저장했습니다.' });
+            setMessage({ kind: 'success', text: '입점 요청 DB에 저장했습니다.' });
         } catch (error) {
             setMessage({
                 kind: 'error',
-                text: error instanceof Error ? error.message : '물건 등록 저장 중 오류가 발생했습니다.'
+                text: error instanceof Error ? error.message : '입점 요청 저장 중 오류가 발생했습니다.'
             });
         } finally {
             setIsSaving(false);
@@ -130,7 +130,7 @@ export function PropertyRegistrationForm() {
             <section className={styles.header}>
                 <div className={styles.iconBox}><Building2 size={20} /></div>
                 <div>
-                    <h1>물건 등록</h1>
+                    <h1>입점 요청</h1>
                     <p>공인중개사용 물건·창업자 매칭 정보를 입력합니다.</p>
                 </div>
             </section>

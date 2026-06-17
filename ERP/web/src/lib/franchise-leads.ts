@@ -13,6 +13,7 @@ export type FranchiseLeadStatus = typeof FRANCHISE_LEAD_STATUSES[number];
 export const DEFAULT_FRANCHISE_LEAD_STATUS: FranchiseLeadStatus = '문의접수';
 
 export const FRANCHISE_MATCHING_REQUEST_SOURCE = '프랜차이즈 매칭 요청';
+export const FRANCHISE_MATCHING_REQUEST_SOURCE_LABEL = '예비 창업자 등록';
 export const FRANCHISE_LEAD_REGISTRATION_SOURCE = '가맹 희망자 등록';
 
 export const FRANCHISE_LEAD_SOURCES = [
@@ -98,4 +99,9 @@ export function getFranchiseLeadStageLabel(value?: string | null): string {
     return normalizeLeadStage(value) === 'raw_intake'
         ? FRANCHISE_LEAD_STAGE_LABELS.raw_intake
         : FRANCHISE_LEAD_STAGE_LABELS.candidate;
+}
+
+export function getFranchiseLeadSourceLabel(value?: string | null): string {
+    if (!value) return '유입 미지정';
+    return value === FRANCHISE_MATCHING_REQUEST_SOURCE ? FRANCHISE_MATCHING_REQUEST_SOURCE_LABEL : value;
 }

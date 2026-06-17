@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div style={styles.menuTexts}>
                             <span style={styles.menuTitle}>프랜차이즈 인입 관리</span>
-                            <span style={styles.menuDesc}>물건 등록, 매칭 요청, 출점 후보지 반영</span>
+                            <span style={styles.menuDesc}>입점 요청, 예비 창업자 등록, 출점 후보지 반영</span>
                         </div>
                     </div>
                     <ChevronRight size={20} color="#adb5bd" />

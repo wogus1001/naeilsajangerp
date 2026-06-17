@@ -2,6 +2,7 @@ import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 
 export type SidebarSectionKey =
     | 'dashboard'
+    | 'franchise'
     | 'franchiseWork'
     | 'consulting'
     | 'customers'
@@ -30,11 +31,19 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         key: 'dashboard',
         title: '대시보드',
         collapsedTitle: '대시보드',
+        direct: true,
         items: [
-            { title: '요약', url: '/dashboard', category: '대시보드', featureKey: 'dashboard' },
-            { title: '모객 DB', url: '/dashboard/franchise-leads', category: '대시보드', featureKey: 'franchiseLeads', icon: 'target' },
-            { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '대시보드', featureKey: 'marketInsights', icon: 'mapPin' },
-            { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '대시보드', featureKey: 'franchiseOperations', icon: 'store' }
+            { title: '대시보드', url: '/dashboard', category: '대시보드', featureKey: 'dashboard' }
+        ]
+    },
+    {
+        key: 'franchise',
+        title: '프랜차이즈',
+        collapsedTitle: '프랜차이즈',
+        items: [
+            { title: '모객 DB', url: '/dashboard/franchise-leads', category: '프랜차이즈', featureKey: 'franchiseLeads', icon: 'target' },
+            { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '프랜차이즈', featureKey: 'marketInsights', icon: 'mapPin' },
+            { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store' }
         ]
     },
     {
@@ -42,9 +51,9 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         title: '업무',
         collapsedTitle: '업무',
         items: [
-            { title: '업무 목록', url: '/dashboard/franchise-leads/work-intake', category: '업무', featureKey: 'franchiseWorkIntake', icon: 'list' },
-            { title: '물건 등록', url: '/dashboard/franchise-leads/property-registration', category: '업무', featureKey: 'franchisePropertyRegistration', icon: 'store' },
-            { title: '프랜차이즈 매칭 요청', url: '/dashboard/franchise-leads/matching-request', category: '업무', featureKey: 'franchiseMatchingRequest', icon: 'target' }
+            { title: '진행현황', url: '/dashboard/franchise-leads/work-intake', category: '업무', featureKey: 'franchiseWorkIntake', icon: 'list' },
+            { title: '입점 요청', url: '/dashboard/franchise-leads/property-registration', category: '업무', featureKey: 'franchisePropertyRegistration', icon: 'store' },
+            { title: '예비 창업자 등록', url: '/dashboard/franchise-leads/matching-request', category: '업무', featureKey: 'franchiseMatchingRequest', icon: 'target' }
         ]
     },
     {

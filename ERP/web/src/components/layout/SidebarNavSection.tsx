@@ -18,6 +18,8 @@ function renderSectionIcon(key: SidebarSectionKey) {
     switch (key) {
         case 'dashboard':
             return <LayoutDashboard size={18} />;
+        case 'franchise':
+            return <Store size={18} />;
         case 'franchiseWork':
             return <Briefcase size={18} />;
         case 'consulting':
