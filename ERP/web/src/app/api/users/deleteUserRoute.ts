@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
-    getErrorMessage,
-    getErrorValue,
+    evaluateUserDeleteGuard,
     getRequesterProfile,
-    stringifyError,
     UUID_REGEX,
     type RequesterProfileRow
 } from './userRouteHelpers';
@@ -68,29 +66,6 @@ export async function DELETE(request: Request) {
             } else {
                 targetUuid = profile.id;
 
-                if (profile.role === 'manager') {
-                    const { count: otherManagersCount } = await supabaseAdmin
-                        .from('profiles')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('company_id', profile.company_id)
-                        .eq('role', 'manager')
-                        .neq('id', targetUuid);
-
-                    const { count: otherMembersCount } = await supabaseAdmin
-                        .from('profiles')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('company_id', profile.company_id)
-                        .neq('id', targetUuid);
-
-                    const otherManagers = otherManagersCount || 0;
-                    const otherMembers = otherMembersCount || 0;
-
-                    if (otherManagers === 0 && otherMembers > 0) {
-                        return NextResponse.json({
-                            error: '남은 직원이 있는 경우, 팀장은 최소 1명 이상 유지되어야 합니다. 다른 직원에게 팀장 권한을 위임하거나, 모든 직원을 정리한 후 다시 시도해주세요.'
-                        }, { status: 400 });
-                    }
-                }
             }
         }
 
@@ -104,21 +79,45 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        if (requesterProfile.role !== 'admin' && requesterProfile.id !== targetUuid) {
-            return NextResponse.json({ error: 'Forbidden: You can only delete your own account' }, { status: 403 });
+        const [otherManagersResult, otherMembersResult] = targetProfile.role === 'manager'
+            ? await Promise.all([
+                supabaseAdmin
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('company_id', targetProfile.company_id)
+                    .eq('role', 'manager')
+                    .neq('id', targetUuid),
+                supabaseAdmin
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('company_id', targetProfile.company_id)
+                    .neq('id', targetUuid)
+            ])
+            : [{ count: 0 }, { count: 0 }];
+
+        if (otherManagersResult.error) throw otherManagersResult.error;
+        if (otherMembersResult.error) throw otherMembersResult.error;
+
+        const deleteGuard = evaluateUserDeleteGuard({
+            requesterProfile,
+            targetProfile,
+            otherManagersCount: otherManagersResult.count || 0,
+            otherMembersCount: otherMembersResult.count || 0
+        });
+        if (!deleteGuard.allowed) {
+            return NextResponse.json({ error: deleteGuard.error }, { status: deleteGuard.status });
         }
 
         for (const { table, col } of USER_REFERENCE_CLEANUP_TABLES) {
             try {
-                console.log(`[DEBUG-DELETE] Unlinking ${table}.${col}...`);
                 const { error } = await supabaseAdmin.from(table).update({ [col]: null }).eq(col, targetUuid);
                 if (error) {
-                    console.error(`[DEBUG-DELETE] Failed to unlink ${table}: ${error.message}`);
-                    return NextResponse.json({ error: `[DEBUG-DELETE] Failed to unlink ${table}: ${error.message}` }, { status: 500 });
+                    console.error(`Failed to unlink user reference ${table}.${col}:`, error);
+                    return NextResponse.json({ error: '사용자 연결 데이터 정리 중 오류가 발생했습니다.' }, { status: 500 });
                 }
             } catch (err: unknown) {
-                console.error(`[DEBUG-DELETE] Exception unlinking ${table}:`, err);
-                return NextResponse.json({ error: `[DEBUG-DELETE] Exception unlinking ${table}: ${getErrorMessage(err)}` }, { status: 500 });
+                console.error(`Exception unlinking user reference ${table}.${col}:`, err);
+                return NextResponse.json({ error: '사용자 연결 데이터 정리 중 오류가 발생했습니다.' }, { status: 500 });
             }
         }
 
@@ -126,11 +125,9 @@ export async function DELETE(request: Request) {
         const { count: templateCount } = await supabaseAdmin.from('contract_templates').select('id', { count: 'exact', head: true }).eq('created_by', targetUuid);
         const { count: companyCount } = await supabaseAdmin.from('companies').select('id', { count: 'exact', head: true }).eq('owner_id', targetUuid);
 
-        console.log(`[DEBUG-DELETE] Cleanup Verification - Projects: ${projectCount}, Templates: ${templateCount}, Companies: ${companyCount}`);
-
         if ((projectCount || 0) > 0 || (templateCount || 0) > 0 || (companyCount || 0) > 0) {
             return NextResponse.json({
-                error: `데이터 연결 해제 실패. 프로젝트: ${projectCount}, 템플릿: ${templateCount}, 회사소유: ${companyCount}. (DB 제약조건으로 인해 업데이트가 무시되었을 수 있습니다.)`
+                error: '데이터 연결 해제 실패로 사용자를 삭제할 수 없습니다.'
             }, { status: 409 });
         }
 
@@ -143,7 +140,6 @@ export async function DELETE(request: Request) {
         const companyIdToClean = profileForCleanup?.company_id;
 
         try {
-            console.log('[DEBUG-DELETE] Anonymizing storage objects...');
             const { error: storageError } = await supabaseAdmin
                 .schema('storage')
                 .from('objects')
@@ -151,22 +147,18 @@ export async function DELETE(request: Request) {
                 .eq('owner', targetUuid);
 
             if (storageError) {
-                console.error('[DEBUG-DELETE] Storage unlink failed (will try ignore):', storageError);
-            } else {
-                console.log('[DEBUG-DELETE] Storage objects anonymized successfully.');
+                console.error('Storage object owner cleanup failed:', storageError);
             }
         } catch (error: unknown) {
-            console.error('[DEBUG-DELETE] Failed to access storage schema:', error);
+            console.error('Failed to access storage schema for user cleanup:', error);
         }
 
         try {
             const { error: profileDeleteError } = await supabaseAdmin.from('profiles').delete().eq('id', targetUuid);
             if (profileDeleteError) {
-                console.error('[DEBUG-DELETE] Profile delete failed:', profileDeleteError);
                 throw profileDeleteError;
             }
         } catch (error: unknown) {
-            console.error('[DEBUG-DELETE] Captured profile delete error:', error);
             throw error;
         }
 
@@ -186,7 +178,6 @@ export async function DELETE(request: Request) {
                 .eq('company_id', companyIdToClean);
 
             if (count === 0) {
-                console.log(`[CLEANUP] Deleting empty company: ${companyIdToClean}`);
                 await supabaseAdmin.from('companies').delete().eq('id', companyIdToClean);
             }
         }
@@ -194,21 +185,8 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ success: true });
     } catch (error: unknown) {
         console.error('Delete user error:', error);
-
-        const errorDetails = {
-            message: getErrorMessage(error),
-            code: getErrorValue(error, 'code'),
-            details: getErrorValue(error, 'details'),
-            hint: getErrorValue(error, 'hint'),
-            constraint: getErrorValue(error, 'constraint'),
-            tableName: getErrorValue(error, 'table'),
-            columnName: getErrorValue(error, 'column'),
-            fullError: stringifyError(error)
-        };
-
         return NextResponse.json({
-            error: `[DEBUG-DELETE] 서버 오류: ${getErrorMessage(error)}`,
-            debug: errorDetails
+            error: '사용자 삭제 중 서버 오류가 발생했습니다.'
         }, { status: 500 });
     }
 }

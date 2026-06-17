@@ -27,6 +27,17 @@ export type UserListProfileRow = {
 
 type RequesterLookupResult = { readonly profile: RequesterProfileRow } | { readonly error: NextResponse };
 
+type UserDeleteGuardContext = {
+    readonly requesterProfile: Pick<RequesterProfileRow, 'id' | 'role'>;
+    readonly targetProfile: Pick<RequesterProfileRow, 'id' | 'role' | 'company_id'>;
+    readonly otherManagersCount: number;
+    readonly otherMembersCount: number;
+};
+
+export type UserDeleteGuardResult =
+    | { readonly allowed: true }
+    | { readonly allowed: false; readonly status: 400 | 403; readonly error: string };
+
 export async function resolveUserUuid(supabaseAdmin: SupabaseClient, rawId: string | null) {
     return resolveApiUserUuid(supabaseAdmin, rawId);
 }
@@ -85,19 +96,24 @@ export function getErrorMessage(error: unknown): string {
     return String(error);
 }
 
-export function getErrorValue(error: unknown, key: string): unknown {
-    if (!isRecord(error)) return undefined;
-    return error[key];
-}
+export function evaluateUserDeleteGuard(context: UserDeleteGuardContext): UserDeleteGuardResult {
+    const { requesterProfile, targetProfile, otherManagersCount, otherMembersCount } = context;
 
-export function stringifyError(error: unknown): string {
-    try {
-        if (error instanceof Error) {
-            return JSON.stringify(error, Object.getOwnPropertyNames(error));
-        }
-
-        return JSON.stringify(error);
-    } catch {
-        return String(error);
+    if (requesterProfile.role !== 'admin' && requesterProfile.id !== targetProfile.id) {
+        return { allowed: false, status: 403, error: 'Forbidden: You can only delete your own account' };
     }
+
+    if (targetProfile.role === 'admin') {
+        return { allowed: false, status: 403, error: '관리자 계정은 사용자 관리에서 삭제할 수 없습니다.' };
+    }
+
+    if (targetProfile.role === 'manager' && otherManagersCount === 0 && otherMembersCount > 0) {
+        return {
+            allowed: false,
+            status: 400,
+            error: '남은 직원이 있는 경우, 팀장은 최소 1명 이상 유지되어야 합니다. 다른 직원에게 팀장 권한을 위임하거나, 모든 직원을 정리한 후 다시 시도해주세요.'
+        };
+    }
+
+    return { allowed: true };
 }
