@@ -144,14 +144,6 @@ export default function FranchiseMatchingRequestPage() {
 
     return (
         <main className={styles.page}>
-            <section className={styles.header}>
-                <div>
-                    <span className={styles.eyebrow}>모객 DB 연동</span>
-                    <h1>예비 창업자 등록</h1>
-                    <p>예비 창업자 조건을 접수하면 기존 모객 DB에 같은 유입 채널로 저장됩니다.</p>
-                </div>
-            </section>
-
             <form className={styles.form} onSubmit={handleSubmit}>
                 {sections
                     .filter(section => section.id !== 'owned-property-detail' || form.ownedPropertyStatus === '보유')

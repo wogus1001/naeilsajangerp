@@ -1,8 +1,7 @@
 "use client";
 
 import React from 'react';
-import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
-import { useFranchiseIndustryOptionGroups, useFranchiseIndustryOptions } from '@/components/franchise/useFranchiseIndustryOptions';
+import { useFranchiseIndustryOptions } from '@/components/franchise/useFranchiseIndustryOptions';
 import { formatLeadPhoneInput } from '@/components/franchise/leads/leadFormFormatters';
 import {
     FRANCHISE_LEAD_GRADES,
@@ -13,7 +12,6 @@ import {
     getFranchiseLeadSourceLabel,
     normalizeLeadStatus
 } from '@/lib/franchise-leads';
-import { getFranchiseIndustryCategoriesForBusinessType } from '@/lib/franchise-industry-options';
 import type { LeadRegistrationForm } from '@/lib/franchise-lead-registration';
 import {
     buildMatchingRequestSections,
@@ -21,18 +19,8 @@ import {
     type MatchingRequestFieldKey,
     type MatchingRequestForm
 } from '@/lib/franchise-matching-request';
-import type { PropertyRegistrationFieldKey } from '@/lib/franchise-property-registration';
-import {
-    buildPropertyRegistrationSections,
-    type PropertyRegistrationForm
-} from '@/lib/franchise-property-registration';
-import {
-    convertPrivateAreaValue,
-    readPropertyAreaUnit,
-    type PropertyAreaUnit
-} from '@/lib/franchise-property-registration-format';
-import { renderPropertyRegistrationField } from '../property-registration/PropertyRegistrationFieldRenderer';
 import type { WorkIntakeEditForm } from './requests';
+import { PropertyWorkIntakeEditFields } from './PropertyWorkIntakeEditFields';
 import styles from './WorkIntakeEditModal.module.css';
 
 type WorkIntakeEditFieldsProps = {
@@ -104,60 +92,6 @@ function renderMatchingField(
     );
 }
 
-function PropertyEditFields({ value, onChange }: {
-    readonly value: PropertyRegistrationForm;
-    readonly onChange: (value: PropertyRegistrationForm) => void;
-}) {
-    const optionGroups = useFranchiseIndustryOptionGroups();
-    const industryOptions = React.useMemo(
-        () => getFranchiseIndustryCategoriesForBusinessType(optionGroups, value.desiredBusinessType),
-        [optionGroups, value.desiredBusinessType]
-    );
-    const sections = React.useMemo(
-        () => buildPropertyRegistrationSections(industryOptions, optionGroups.businessTypes),
-        [industryOptions, optionGroups.businessTypes]
-    );
-
-    const updateField = (key: PropertyRegistrationFieldKey, fieldValue: string) => {
-        onChange(key === 'desiredBusinessType'
-            ? { ...value, desiredBusinessType: fieldValue, desiredCategory: '' }
-            : { ...value, [key]: fieldValue });
-    };
-    const selectAddress = (result: KakaoAddressResult) => onChange({
-        ...value,
-        propertyAddress: result.address,
-        propertyRegion: result.region,
-        roadAddress: result.roadAddress,
-        jibunAddress: result.jibunAddress,
-        zoneNo: result.zoneNo
-    });
-    const updatePrivateAreaUnit = (unit: PropertyAreaUnit) => {
-        const currentUnit = readPropertyAreaUnit(value.privateAreaUnit);
-        onChange({
-            ...value,
-            privateArea: convertPrivateAreaValue(value.privateArea, currentUnit, unit),
-            privateAreaUnit: unit
-        });
-    };
-
-    return (
-        <>
-            {sections.map(section => (
-                <section className={styles.section} key={section.id}>
-                    <h3 className={styles.sectionTitle}>{section.title}</h3>
-                    <div className={styles.editGrid}>
-                        {section.fields.map(field => renderPropertyRegistrationField(field, value, updateField, selectAddress, updatePrivateAreaUnit))}
-                    </div>
-                </section>
-            ))}
-            <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>사진 및 자료</h3>
-                <p className={styles.fileSummary}>등록 파일 {Math.max(value.fileNames.length, value.fileAttachments.length).toLocaleString('ko-KR')}건</p>
-            </section>
-        </>
-    );
-}
-
 function LeadRegistrationEditFields({ value, onChange }: {
     readonly value: LeadRegistrationForm;
     readonly onChange: (value: LeadRegistrationForm) => void;
@@ -216,7 +150,7 @@ function MatchingRequestEditFields({ value, onChange }: {
 
 export function WorkIntakeEditFields({ form, onChangeAction }: WorkIntakeEditFieldsProps) {
     if (form.kind === 'properties') {
-        return <PropertyEditFields value={form.value} onChange={value => onChangeAction({ kind: 'properties', value })} />;
+        return <PropertyWorkIntakeEditFields value={form.value} onChangeAction={value => onChangeAction({ kind: 'properties', value })} />;
     }
     if (form.kind === 'leadRegistrations') {
         return <LeadRegistrationEditFields value={form.value} onChange={value => onChangeAction({ kind: 'leadRegistrations', value })} />;

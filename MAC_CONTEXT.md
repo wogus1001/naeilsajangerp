@@ -409,6 +409,15 @@ npm run build
 - 2026-06-16 어드민 사용자 권한 부여 드롭다운은 `관리자`/`담당자` 선택지를 제거하고 `팀장`/`매니저`만 노출한다. 기존 `manager`는 팀장 권한, 새 `sub_manager`는 매니저 직급으로 저장한다. 검증은 `company-menu-features.test.mts`, lint, tsc, build, 1440px 브라우저 QA를 통과했다.
 - 2026-06-17 헤더 알림은 읽음 처리 후 DB `read_at` 감사 기록은 유지하되 팝오버 목록에서는 숨긴다. 알림 조건이 해소되면 기존처럼 `dismissed_at`으로 stale 알림을 정리한다.
 
+## 2026-06-17 인입 관리/로고 배포 묶음
+- `/dashboard/franchise-leads/property-registration`은 공인중개사용 `입점 요청` 입력 화면이고, `/dashboard/franchise-leads/matching-request`는 `예비 창업자 등록` 입력 화면이다. 두 화면은 `업무` 상위 메뉴 아래 `진행현황`에서 탭 목록으로 확인한다.
+- 기존 `/properties/register` 점포 신규등록은 별도 원본 화면으로 유지한다. `가맹 희망자 등록` route/DB는 보존하되 직원/어드민 메뉴에서는 숨겨 둔다.
+- `/admin/franchise-intake`는 `입점 요청 리스트`와 `예비 창업자 등록`을 회사별로 관리한다. 입점 요청은 `franchise_locations` 출점 후보지로, 예비 창업자 등록은 회사별 `franchise_leads` 1차 유입 DB로 밀어넣는다. 원본 수정 후에는 admin에 `수정` 상태가 표시되고 `업데이트`를 눌러야 대상 DB에 반영된다.
+- 예비 창업자 등록 밀어넣기에서 모객 DB 컬럼과 맞는 이름/연락처/이메일/희망지역/예산/브랜드/담당자는 직접 매핑하고, 보유 물건/임대 조건/매칭 요청 조건/리스크/추천 메모는 메모와 snapshot에 보존한다.
+- `/dashboard/franchise-leads/matching-request` 상단 중복 제목 카드는 제거했고, 폼 내부 `예비 창업자 정보` 섹션명은 유지했다.
+- 회사 로고 업로드는 기존 `property-images/company-logos/<company_id>/...` 경로를 사용한다. 업로드 API는 storage bucket 준비를 먼저 시도하도록 보강했으므로, 실서버에서 계속 실패하면 production Supabase storage policy와 service-role env를 확인한다.
+- 로컬 QA 자동화용으로 `playwright`를 devDependency에 명시했다.
+
 ## 새 Codex 세션 시작 체크리스트
 1. 이 문서 읽기
 2. `git worktree list`

@@ -147,7 +147,7 @@ Franchise-specific intake uses separate protected routes:
 - `/dashboard/franchise-leads/work-intake`: staff-facing `진행현황` tabs for 입점 요청 and 예비 창업자 등록 intake records.
 - `/admin/franchise-intake`: admin review tabs for `입점 요청 리스트` and `예비 창업자 등록`.
 
-The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/leads/promote` to create a real franchise lead from a pending lead-registration request. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target.
+The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/matching-requests/promote` to create a first-ingress `franchise_leads` record from an 예비 창업자 등록 request. The hidden lead-registration route keeps `/api/admin/franchise-intake/leads/promote` available for future internal review flows. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target through the matching or property update endpoint.
 
 Apply `supabase_franchise_lead_registration_requests_migration.sql` before enabling the lead-registration intake screen. Apply `supabase_franchise_property_promotion_migration.sql` so each company can promote the same source property only once through the `franchise_locations(company_id, source_property_id)` unique index.
 
@@ -163,6 +163,7 @@ Company logos are stored as metadata on `companies` and files under the existing
 - Runtime display: the sidebar uses a fixed 40x40 logo box with a bordered white background and slight scale/contrast compensation; profile/admin previews use 64x64.
 - `/profile` lets the current company upload/delete its logo. Admin company access management can upload/delete logos for selected companies.
 - Logo APIs accept Supabase bearer sessions and the app's legacy `x-user-id` requester header, so existing localStorage login sessions can still upload after the migration is applied.
+- The upload API prepares the existing `property-images` storage bucket before upload. If production upload fails while dev works, first confirm the production Supabase storage bucket policy and service-role env match the deployed project.
 
 ## Realty Import Setup
 

@@ -1918,7 +1918,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     background: #ffffff;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .locationMasterHeader {
@@ -2602,6 +2602,8 @@
 }
 
 .locationListControlBar {
+    position: relative;
+    z-index: 5;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -2694,6 +2696,14 @@
     color: #6b7684;
     font-size: 11px;
     line-height: 1.45;
+}
+
+.locationMemoText {
+    width: 220px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .locationImportanceBadge,
@@ -4228,6 +4238,11 @@
 
 .columnPicker {
     position: relative;
+    z-index: 20;
+}
+
+.columnPicker[open] {
+    z-index: 80;
 }
 
 .columnPicker summary {
@@ -4262,8 +4277,10 @@
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
-    z-index: 10;
+    z-index: 100;
     width: 180px;
+    max-height: min(440px, calc(100vh - 180px));
+    overflow-y: auto;
     display: grid;
     gap: 6px;
     padding: 10px;
@@ -9393,7 +9410,8 @@
     .columnPickerPanel {
         left: 0;
         right: auto;
-        width: 100%;
+        width: min(100%, calc(100vw - 32px));
+        max-height: 360px;
     }
 
     .tableFilterBar {

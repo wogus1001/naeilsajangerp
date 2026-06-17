@@ -173,7 +173,12 @@
     padding: 0 12px;
     font-size: 13px;
     font-weight: 700;
+    white-space: nowrap;
     cursor: pointer;
+}
+
+.actionButton {
+    min-width: 76px;
 }
 
 .secondaryButton {
@@ -215,7 +220,7 @@
 .modalBackdrop {
     position: fixed;
     inset: 0;
-    z-index: 50;
+    z-index: 2000;
     display: flex;
     align-items: center;
     justify-content: center;

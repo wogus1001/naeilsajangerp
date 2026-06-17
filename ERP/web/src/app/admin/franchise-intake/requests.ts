@@ -43,8 +43,28 @@ export async function promoteAdminLeadRegistration(request: LeadPromotionRequest
     if (!response.ok) throw new Error(readApiError(payload));
 }
 
+export async function promoteAdminMatchingRequest(request: LeadPromotionRequest): Promise<void> {
+    const response = await fetch('/api/admin/franchise-intake/matching-requests/promote', {
+        method: 'POST',
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(request)
+    });
+    const payload = await readPayload(response);
+    if (!response.ok) throw new Error(readApiError(payload));
+}
+
 export async function syncAdminProperty(request: Pick<PromotionRequest, 'propertyId' | 'requesterId'>): Promise<void> {
     const response = await fetch('/api/admin/franchise-intake/properties/update-promoted', {
+        method: 'POST',
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(request)
+    });
+    const payload = await readPayload(response);
+    if (!response.ok) throw new Error(readApiError(payload));
+}
+
+export async function syncAdminMatchingRequest(request: Pick<LeadPromotionRequest, 'leadId' | 'requesterId'>): Promise<void> {
+    const response = await fetch('/api/admin/franchise-intake/matching-requests/update-promoted', {
         method: 'POST',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(request)
