@@ -80,3 +80,16 @@ test('mergeFranchiseLocationData preserves unrelated existing JSON fields', () =
     assert.equal(merged.cost.deposit, 3000);
     assert.equal(merged.cost.premium, 4000);
 });
+
+test('normalizeFranchiseLocationMasterData keeps candidate location attachments', () => {
+    const normalized = normalizeFranchiseLocationMasterData({
+        fileAttachments: [
+            { name: '현장사진.png', size: '2048', type: 'image/png' }
+        ]
+    });
+
+    assert.deepEqual(normalized.fileNames, ['현장사진.png']);
+    assert.deepEqual(normalized.fileAttachments, [
+        { name: '현장사진.png', size: 2048, type: 'image/png' }
+    ]);
+});

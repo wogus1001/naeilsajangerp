@@ -12,6 +12,9 @@ export type FranchiseLeadStatus = typeof FRANCHISE_LEAD_STATUSES[number];
 
 export const DEFAULT_FRANCHISE_LEAD_STATUS: FranchiseLeadStatus = '문의접수';
 
+export const FRANCHISE_MATCHING_REQUEST_SOURCE = '프랜차이즈 매칭 요청';
+export const FRANCHISE_LEAD_REGISTRATION_SOURCE = '가맹 희망자 등록';
+
 export const FRANCHISE_LEAD_SOURCES = [
     '네이버폼',
     '랜딩페이지',
@@ -22,6 +25,8 @@ export const FRANCHISE_LEAD_SOURCES = [
     '전화문의',
     '고객DB',
     '명함DB',
+    FRANCHISE_LEAD_REGISTRATION_SOURCE,
+    FRANCHISE_MATCHING_REQUEST_SOURCE,
     '기타'
 ] as const;
 

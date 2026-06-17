@@ -1,3 +1,9 @@
+import type { FranchiseFileAttachment } from './franchise-file-attachments';
+import {
+    normalizeFranchiseFileAttachments,
+    normalizeFranchiseFileNames
+} from './franchise-file-attachments';
+
 export const LOCATION_DEVELOPMENT_STAGES = ['개발중', '물건화 완료'] as const;
 export const LOCATION_IMPORTANCE_LEVELS = ['높음', '보통', '낮음'] as const;
 export const SITE_CONDITION_AVAILABILITY = ['미확인', '있음', '없음'] as const;
@@ -41,6 +47,8 @@ export type LocationLeaseCondition = {
 export type FranchiseLocationMasterData = {
     readonly developmentStage: LocationDevelopmentStage;
     readonly importance: LocationImportanceLevel;
+    readonly fileNames: readonly string[];
+    readonly fileAttachments: readonly FranchiseFileAttachment[];
     readonly siteCondition: LocationSiteCondition;
     readonly landlord: LocationLandlordInfo;
     readonly cost: LocationAcquisitionCost;
@@ -57,6 +65,8 @@ const EMPTY_SITE_CONDITION_ITEM: SiteConditionItem = {
 export const EMPTY_LOCATION_MASTER_DATA: FranchiseLocationMasterData = {
     developmentStage: '개발중',
     importance: '보통',
+    fileNames: [],
+    fileAttachments: [],
     siteCondition: {
         exclusiveAreaPyeong: null,
         exclusiveAreaMemo: '',
@@ -169,9 +179,12 @@ function normalizeLease(value: unknown): LocationLeaseCondition {
 
 export function normalizeFranchiseLocationMasterData(value: unknown): FranchiseLocationMasterData {
     const source = isRecord(value) ? value : {};
+    const fileAttachments = normalizeFranchiseFileAttachments(source.fileAttachments);
     return {
         developmentStage: toLocationDevelopmentStage(source.developmentStage),
         importance: toLocationImportanceLevel(source.importance),
+        fileNames: normalizeFranchiseFileNames(source.fileNames, fileAttachments),
+        fileAttachments,
         siteCondition: normalizeSiteCondition(source.siteCondition),
         landlord: normalizeLandlord(source.landlord),
         cost: normalizeCost(source.cost),

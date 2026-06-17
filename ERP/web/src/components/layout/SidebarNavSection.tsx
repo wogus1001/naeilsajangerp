@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Briefcase, ChevronDown, ChevronRight, Contact, FileText, LayoutDashboard, MapPin, Store, Target, Users } from 'lucide-react';
+import { Briefcase, ChevronDown, ChevronRight, Contact, FileText, LayoutDashboard, ListChecks, MapPin, Store, Target, Users } from 'lucide-react';
 import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 import type { SidebarLinkIcon, SidebarMenuSection, SidebarSectionKey } from './SidebarMenuConfig';
 import styles from './Sidebar.module.css';
@@ -18,6 +18,8 @@ function renderSectionIcon(key: SidebarSectionKey) {
     switch (key) {
         case 'dashboard':
             return <LayoutDashboard size={18} />;
+        case 'franchiseWork':
+            return <Briefcase size={18} />;
         case 'consulting':
             return <Briefcase size={18} />;
         case 'customers':
@@ -37,6 +39,10 @@ function renderLinkIcon(icon: SidebarLinkIcon | undefined) {
             return <MapPin size={14} />;
         case 'store':
             return <Store size={14} />;
+        case 'users':
+            return <Users size={14} />;
+        case 'list':
+            return <ListChecks size={14} />;
         default:
             return null;
     }
@@ -55,6 +61,24 @@ export function SidebarNavSection({
 
     const visibleItems = section.items.filter(item => isFeatureEnabled(item.featureKey));
     if (visibleItems.length === 0) return null;
+
+    if (section.direct) {
+        const item = visibleItems[0];
+        return (
+            <div className={styles.navGroup}>
+                <Link
+                    href={item.url}
+                    className={`${styles.navGroupTitle} ${pathname === item.url ? styles.active : ''}`}
+                    title={!isSidebarOpen ? section.collapsedTitle : undefined}
+                >
+                    <div className={styles.navGroupLabel}>
+                        {renderSectionIcon(section.key)}
+                        {isSidebarOpen && <span>{section.title}</span>}
+                    </div>
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.navGroup}>

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    FRANCHISE_LEAD_SOURCES,
+    FRANCHISE_LEAD_REGISTRATION_SOURCE,
+    FRANCHISE_MATCHING_REQUEST_SOURCE,
     getFranchiseLeadGradeLabel,
     getFranchiseLeadStageLabel,
     normalizeLeadStage,
@@ -27,4 +30,14 @@ test('normalizeLeadStage keeps raw intake below candidate pipeline', () => {
     assert.equal(normalizeLeadStage('raw_intake'), 'raw_intake');
     assert.equal(normalizeLeadStage('후보자'), 'candidate');
     assert.equal(getFranchiseLeadStageLabel('raw_intake'), '1차 유입 DB');
+});
+
+test('franchise matching request is a first-class lead source', () => {
+    assert.equal(FRANCHISE_MATCHING_REQUEST_SOURCE, '프랜차이즈 매칭 요청');
+    assert.ok(FRANCHISE_LEAD_SOURCES.includes(FRANCHISE_MATCHING_REQUEST_SOURCE));
+});
+
+test('franchise lead registration is a first-class lead source', () => {
+    assert.equal(FRANCHISE_LEAD_REGISTRATION_SOURCE, '가맹 희망자 등록');
+    assert.ok(FRANCHISE_LEAD_SOURCES.includes(FRANCHISE_LEAD_REGISTRATION_SOURCE));
 });

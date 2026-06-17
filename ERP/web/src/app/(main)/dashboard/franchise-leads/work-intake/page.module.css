@@ -1,0 +1,296 @@
+.page {
+    width: 100%;
+    max-width: 1280px;
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 24px;
+    color: #191f28;
+}
+
+.header,
+.toolbar,
+.panel {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.header {
+    display: block;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.titleRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.iconBox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    color: #3182f6;
+    background: #e8f3ff;
+}
+
+.header h1 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    line-height: 1.35;
+}
+
+.header p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 14px;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    margin-bottom: 16px;
+}
+
+.tab,
+.activeTab {
+    min-height: 38px;
+    border: none;
+    border-radius: 6px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tab {
+    color: #4e5968;
+    background: transparent;
+}
+
+.activeTab {
+    color: #ffffff;
+    background: #3182f6;
+}
+
+.panel {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    min-width: 920px;
+    border-collapse: collapse;
+}
+
+.table th,
+.table td {
+    border-bottom: 1px solid #e5e8eb;
+    padding: 14px;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+.table th {
+    color: #4e5968;
+    background: #f9fafb;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.table strong,
+.table span,
+.table small {
+    display: block;
+}
+
+.table small {
+    margin-top: 4px;
+    color: #8b95a1;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.doneBadge,
+.waitBadge {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.doneBadge {
+    color: #047857;
+    background: #ecfdf5;
+}
+
+.waitBadge {
+    color: #6b7684;
+    background: #f2f4f6;
+}
+
+.actionButton,
+.secondaryButton,
+.primaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.actionButton {
+    border: 1px solid #e5e8eb;
+    color: #333d4b;
+    background: #ffffff;
+}
+
+.secondaryButton {
+    border: 1px solid #e5e8eb;
+    color: #333d4b;
+    background: #ffffff;
+}
+
+.primaryButton {
+    border: none;
+    color: #ffffff;
+    background: #3182f6;
+}
+
+.secondaryButton:disabled,
+.primaryButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.message {
+    margin: 0 0 16px;
+    padding: 12px;
+    border-radius: 8px;
+    color: #2563eb;
+    background: #e8f3ff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.emptyCell {
+    height: 120px;
+    text-align: center !important;
+    color: #8b95a1;
+}
+
+.modalBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(25, 31, 40, 0.42);
+}
+
+.modal {
+    width: min(640px, 100%);
+    box-sizing: border-box;
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 20px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+}
+
+.modal h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+.modal p {
+    margin: 0 0 16px;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.editGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.editGrid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.editGrid input,
+.editGrid textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #191f28;
+    background: #ffffff;
+    font: inherit;
+    font-weight: 400;
+}
+
+.editGrid input {
+    height: 40px;
+    padding: 0 12px;
+}
+
+.editGrid textarea {
+    min-height: 96px;
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+.fullField {
+    grid-column: 1 / -1;
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+@media (max-width: 720px) {
+    .page {
+        padding: 12px;
+    }
+
+    .toolbar {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .editGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .modalActions {
+        flex-direction: column-reverse;
+    }
+}

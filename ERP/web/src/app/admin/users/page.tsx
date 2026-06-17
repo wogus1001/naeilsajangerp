@@ -74,7 +74,7 @@ export default function AdminUsersPage() {
         showConfirm(`${user.name || user.id || '사용자'}님의 가입을 승인하시겠습니까?`, async () => {
             try {
                 const requesterId = getCurrentRequesterId();
-                await approveAdminUser(requesterId, user.uuid);
+                await approveAdminUser(requesterId, user.uuid, user.id);
                 showAlert('승인되었습니다.');
                 fetchUsers();
             } catch (e) {
@@ -92,7 +92,7 @@ export default function AdminUsersPage() {
             setUpdatingRoleUserId(user.uuid);
             try {
                 const requesterId = getCurrentRequesterId();
-                await updateAdminUserRole(requesterId, user.uuid, role);
+                await updateAdminUserRole(requesterId, user.uuid, role, user.id);
                 showAlert('직급이 변경되었습니다.');
                 await fetchUsers();
             } catch (error) {

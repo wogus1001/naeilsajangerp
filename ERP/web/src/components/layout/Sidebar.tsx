@@ -19,6 +19,7 @@ interface SidebarProps {
 const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), companyName }: SidebarProps) => {
     const pathname = usePathname();
     const [isDashboardOpen, setIsDashboardOpen] = useState(true);
+    const [isFranchiseWorkOpen, setIsFranchiseWorkOpen] = useState(true);
     const [isConsultingOpen, setIsConsultingOpen] = useState(true);
     const [isCustomersOpen, setIsCustomersOpen] = useState(true);
     const [isBusinessCardsOpen, setIsBusinessCardsOpen] = useState(true);
@@ -64,6 +65,8 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
         switch (key) {
             case 'dashboard':
                 return isDashboardOpen;
+            case 'franchiseWork':
+                return isFranchiseWorkOpen;
             case 'consulting':
                 return isConsultingOpen;
             case 'customers':
@@ -79,6 +82,9 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
         switch (key) {
             case 'dashboard':
                 setIsDashboardOpen(prev => !prev);
+                return;
+            case 'franchiseWork':
+                setIsFranchiseWorkOpen(prev => !prev);
                 return;
             case 'consulting':
                 setIsConsultingOpen(prev => !prev);

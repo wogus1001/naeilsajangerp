@@ -50,6 +50,10 @@ const Header = ({ user, onLogout }: HeaderProps) => {
         // Dashboard
         if (path === '/dashboard') return { category: '대시보드', title: '요약' };
         if (path === '/dashboard/franchise-leads') return { category: '대시보드', title: '모객 DB' };
+        if (path === '/dashboard/franchise-leads/matching-request') return { category: '업무', title: '프랜차이즈 매칭 요청' };
+        if (path === '/dashboard/franchise-leads/property-registration') return { category: '업무', title: '물건 등록' };
+        if (path === '/dashboard/franchise-leads/lead-registration') return { category: '업무', title: '가맹 희망자 등록' };
+        if (path === '/dashboard/franchise-leads/work-intake') return { category: '업무', title: '업무 목록' };
         if (path === '/dashboard/franchise-leads/market-insights') return { category: '대시보드', title: '출점 후보지' };
         if (path === '/dashboard/franchise-operations') return { category: '대시보드', title: '가맹 운영' };
 
@@ -76,6 +80,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
         if (path.startsWith('/contracts/')) return { category: '계약', title: '계약 상세' };
 
         // Admin
+        if (path === '/admin/franchise-intake') return { category: '관리자', title: '프랜차이즈 인입 관리' };
         if (path.startsWith('/admin')) return { category: '관리자', title: '회원 관리' };
 
         // Staff Management
