@@ -19,6 +19,7 @@ import {
     type AdminUserRow
 } from './adminUsersRequests';
 import { adminUsersStyles as styles } from './adminUsersStyles';
+import { getRequesterId, getStoredUser } from '@/utils/userUtils';
 
 export default function AdminUsersPage() {
     const router = useRouter();
@@ -46,23 +47,15 @@ export default function AdminUsersPage() {
     };
 
     useEffect(() => {
-        // Auth check
-        const userStr = localStorage.getItem('user');
-        if (!userStr || JSON.parse(userStr).role !== 'admin') {
+        const user = getStoredUser();
+        if (user?.role !== 'admin') {
             router.push('/dashboard');
             return;
         }
         fetchUsers();
     }, []);
 
-    const getCurrentRequesterId = () => {
-        const userStr = localStorage.getItem('user');
-        const parsed: unknown = userStr ? JSON.parse(userStr) : {};
-        const currentUser = typeof parsed === 'object' && parsed !== null && 'user' in parsed
-            ? (parsed as { readonly user?: { readonly uid?: string; readonly id?: string } }).user
-            : parsed as { readonly uid?: string; readonly id?: string };
-        return currentUser?.uid || currentUser?.id || '';
-    };
+    const getCurrentRequesterId = () => getRequesterId(getStoredUser());
 
     const fetchUsers = async () => {
         setIsLoading(true);
@@ -149,7 +142,6 @@ export default function AdminUsersPage() {
                 const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token;
 
-                console.log('[DEBUG-CLIENT] Reset Password Token:', token ? 'Token exists' : 'Token missing');
                 if (!token) {
                     showAlert('로그인 세션이 만료된 것 같습니다. 새로고침 후 다시 시도해주세요.');
                     setResetLoading(false);
