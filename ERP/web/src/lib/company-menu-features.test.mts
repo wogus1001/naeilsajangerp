@@ -28,12 +28,11 @@ test('Given a saved company dashboard mode When normalizing Then only A and B ar
     assert.equal(normalizeCompanyDashboardMode('staff'), 'a');
 });
 
-test('Given default company menu flags When reading franchise intake features Then matching request and property registration are enabled separately', () => {
+test('Given default company menu flags When reading franchise intake features Then visible intake menus are enabled separately', () => {
     const flags = getDefaultCompanyMenuFlags();
 
     assert.equal(flags.franchiseMatchingRequest, true);
     assert.equal(flags.franchisePropertyRegistration, true);
-    assert.equal(flags.franchiseLeadRegistration, true);
     assert.equal(flags.franchiseWorkIntake, true);
     assert.equal(flags.propertyRegister, true);
 });

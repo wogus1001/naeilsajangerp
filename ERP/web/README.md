@@ -140,10 +140,10 @@ The existing 점포개발 업무 route `/properties/register` remains the origin
 Franchise-specific intake uses separate protected routes:
 
 - `/dashboard/franchise-leads/property-registration`: 공인중개사용 물건 등록. It stores into `properties` with `operation_type='물건등록'` and `data.sourceType='franchise_property_registration'`.
-- `/dashboard/franchise-leads/lead-registration`: internal 가맹 희망자 등록. It stores review-ready requests in `franchise_lead_registration_requests` and does not immediately create `franchise_leads`.
+- `/dashboard/franchise-leads/lead-registration`: internal 가맹 희망자 등록. It stores review-ready requests in `franchise_lead_registration_requests` and does not immediately create `franchise_leads`. The route and DB remain for future use, but the staff/admin menu tabs are hidden as of 2026-06-17.
 - `/dashboard/franchise-leads/matching-request`: 예비 창업자 프랜차이즈 매칭 요청. It stores into `franchise_leads` with `source='프랜차이즈 매칭 요청'`.
-- `/dashboard/franchise-leads/work-intake`: staff-facing list tabs for 물건 등록, 가맹 희망자 등록, and 프랜차이즈 매칭 요청 intake records.
-- `/admin/franchise-intake`: admin review tabs for `물건 등록 리스트`, `가맹 희망자 등록`, and `프랜차이즈 매칭요청`.
+- `/dashboard/franchise-leads/work-intake`: staff-facing list tabs for 물건 등록 and 프랜차이즈 매칭 요청 intake records.
+- `/admin/franchise-intake`: admin review tabs for `물건 등록 리스트` and `프랜차이즈 매칭요청`.
 
 The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/leads/promote` to create a real franchise lead from a pending lead-registration request. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target.
 

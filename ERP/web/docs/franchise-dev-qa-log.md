@@ -346,11 +346,11 @@
 
 - 기존 `/properties/register` 점포 신규등록은 원본 화면으로 복구했다. 로그인 세션에서 본문이 `점포 신규등록`, `물건 개요`, 기존 업종 대/중/소분류 흐름을 보여주고, 새 `물건 등록` 본문은 섞이지 않음을 확인했다.
 - 새 `/dashboard/franchise-leads/property-registration`은 프랜차이즈 인입용 물건 등록 전용 화면으로 분리했다. 본문에 `물건 등록`, `입점 희망 조건`, `임대 조건`, `임대인 지원 내용`, `사진 및 자료`가 표시되고, 1440px와 390px 모두 page overflow 0건이었다.
-- 새 `/dashboard/franchise-leads/lead-registration`은 가맹 희망자 등록을 별도 인입 DB(`franchise_lead_registration_requests`)에 저장한다. 이 탭은 모객 DB의 가맹 희망자 목록과 즉시 연동하지 않고, 관리자 확인 후 밀어넣는 운영 흐름으로 둔다.
+- 새 `/dashboard/franchise-leads/lead-registration`은 가맹 희망자 등록을 별도 인입 DB(`franchise_lead_registration_requests`)에 저장한다. route와 DB는 보존하지만 현재 운영 메뉴, 업무 목록 탭, 어드민 인입 탭에서는 숨김 처리했다.
 - `/dashboard/franchise-leads/matching-request`는 확장된 예비 창업자/희망 업종/예산/보유 물건/내부 메모 컬럼을 유지한다. `희망 업종` 셀렉트는 새 물건 등록과 같은 업종 옵션 소스를 사용하며, 기본 fallback 기준 `요식업`, `카페`, `음식점`, `서비스업`, `유통업`, `부동산업` 등이 표시됨을 확인했다.
-- `/dashboard/franchise-leads/work-intake`는 `업무` 상위 메뉴 아래 `업무 목록`으로 노출하며, 물건 등록/가맹 희망자 등록/프랜차이즈 매칭 요청을 탭 목록으로 확인한다.
-- `/admin/franchise-intake`는 `전체 회사` 선택, `물건 등록 리스트`, `가맹 희망자 등록`, `프랜차이즈 매칭요청` 탭을 표시한다. 관리자 물건 리스트는 새 물건 등록에서 저장한 `operation_type='물건등록'` 건을 대상으로 한다.
-- 이미 밀어넣은 물건/가맹 희망자 원본을 수정하면 연결된 후보지/모객 DB를 즉시 덮어쓰지 않고 admin 목록에서 `수정` 상태로 표시한다. 관리자가 `업데이트`를 눌러야 promoted target에 반영된다.
+- `/dashboard/franchise-leads/work-intake`는 `업무` 상위 메뉴 아래 `업무 목록`으로 노출하며, 물건 등록/프랜차이즈 매칭 요청을 탭 목록으로 확인한다.
+- `/admin/franchise-intake`는 `전체 회사` 선택, `물건 등록 리스트`, `프랜차이즈 매칭요청` 탭을 표시한다. 관리자 물건 리스트는 새 물건 등록에서 저장한 `operation_type='물건등록'` 건을 대상으로 한다.
+- 이미 밀어넣은 물건 원본을 수정하면 연결된 후보지를 즉시 덮어쓰지 않고 admin 목록에서 `수정` 상태로 표시한다. 관리자가 `업데이트`를 눌러야 promoted target에 반영된다.
 - 업종 옵션은 `franchise_brands`의 `industry/businessType/categoryMajor/categoryMiddle/categorySmall`와 `custom_categories(category_type='industry_detail')`를 병합하고, 데이터가 없으면 기본 옵션으로 fallback 한다.
 - 검증: `npx tsx --test src/lib/franchise-industry-options.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-property-promotion.test.mts src/lib/franchise-matching-request.test.mts src/lib/franchise-leads.test.mts src/lib/company-menu-features.test.mts` 17건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, Browserslist/baseline-browser-mapping 경고만 출력했다.
 - 브라우저 QA: `admin / 1234` 로그인 세션에서 기존 점포 신규등록, 새 물건 등록, 매칭 요청, 관리자 인입 페이지를 확인했다. 새 화면의 390px 모바일 overflow는 0건이었다.
