@@ -43,11 +43,11 @@ export async function fetchAdminUsers(requesterId: string): Promise<readonly Adm
     return await response.json() as readonly AdminUserRow[];
 }
 
-export async function approveAdminUser(requesterId: string, userId: string): Promise<void> {
+export async function approveAdminUser(requesterId: string, userId: string, email?: string | null): Promise<void> {
     const response = await fetch(usersUrl(requesterId), {
         method: 'PUT',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ id: userId, status: 'active' })
+        body: JSON.stringify({ id: userId, email, status: 'active' })
     });
     if (!response.ok) throw new Error(await readError(response, '승인 처리 실패'));
 }
@@ -55,12 +55,13 @@ export async function approveAdminUser(requesterId: string, userId: string): Pro
 export async function updateAdminUserRole(
     requesterId: string,
     userId: string,
-    role: AssignableAdminUserRole
+    role: AssignableAdminUserRole,
+    email?: string | null
 ): Promise<void> {
     const response = await fetch(usersUrl(requesterId), {
         method: 'PUT',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ id: userId, role })
+        body: JSON.stringify({ id: userId, email, role })
     });
     if (!response.ok) throw new Error(await readError(response, '직급 변경 실패'));
 }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Building, ShieldCheck, Settings, ChevronRight } from 'lucide-react';
+import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus } from 'lucide-react';
 import Link from 'next/link';
 import { AlertModal } from '@/components/common/AlertModal';
 import { CompanyAccessManager } from '@/components/admin/company-access/CompanyAccessManager';
@@ -167,6 +167,19 @@ export default function AdminDashboardPage() {
                         <div style={styles.menuTexts}>
                             <span style={styles.menuTitle}>시스템 설정</span>
                             <span style={styles.menuDesc}>전체 공지사항, 기능 On/Off 제어</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
+                <Link href="/admin/franchise-intake" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#3182f6' }}>
+                            <GitBranchPlus size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>프랜차이즈 인입 관리</span>
+                            <span style={styles.menuDesc}>물건 등록, 매칭 요청, 출점 후보지 반영</span>
                         </div>
                     </div>
                     <ChevronRight size={20} color="#adb5bd" />

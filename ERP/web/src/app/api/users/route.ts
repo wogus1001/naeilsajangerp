@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeAdminAssignableUserRole } from '@/lib/user-role-policy';
 import {
+    buildUserUpdateLookup,
     getErrorMessage,
     getRequesterProfile,
     getStringField,
     requireAdminRequester,
-    UUID_REGEX,
-    type ProfileIdRow,
     type RequesterProfileRow,
     type UserListProfileRow
 } from './userRouteHelpers';
 
 export const dynamic = 'force-dynamic';
 export { DELETE } from './deleteUserRoute';
+
+type TargetProfileRow = RequesterProfileRow & { readonly status: string | null };
 
 export async function GET(request: Request) {
     try {
@@ -120,6 +121,7 @@ export async function PUT(request: Request) {
     try {
         const body = await request.json();
         const id = getStringField(body, 'id');
+        const email = getStringField(body, 'email');
         const status = getStringField(body, 'status');
         const rawRole = getStringField(body, 'role');
         const role = normalizeAdminAssignableUserRole(rawRole);
@@ -136,43 +138,41 @@ export async function PUT(request: Request) {
         const adminCheck = await requireAdminRequester(supabaseAdmin, request);
         if ('error' in adminCheck) return adminCheck.error;
 
-        let targetUuid = id;
-        const isUuid = UUID_REGEX.test(id);
+        const lookup = buildUserUpdateLookup({ id, email });
+        let targetProfile: TargetProfileRow | null = null;
 
-        if (!isUuid) {
-            let emailToSearch = id;
-            if (!id.includes('@')) {
-                emailToSearch = `${id}@example.com`;
-            }
-
-            const { data: profile } = await supabaseAdmin
+        for (const candidateId of lookup.ids) {
+            const { data } = await supabaseAdmin
                 .from('profiles')
-                .select('id')
-                .eq('email', emailToSearch)
-                .single<ProfileIdRow>();
-
-            if (!profile) {
-                const { data: exactProfile } = await supabaseAdmin
-                    .from('profiles')
-                    .select('id')
-                    .eq('email', id)
-                    .single<ProfileIdRow>();
-                if (!exactProfile) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-                targetUuid = exactProfile.id;
-            } else {
-                targetUuid = profile.id;
+                .select('id, role, status, company_id')
+                .eq('id', candidateId)
+                .maybeSingle<TargetProfileRow>();
+            if (data) {
+                targetProfile = data;
+                break;
             }
         }
 
-        const { data: targetProfile, error: targetError } = await supabaseAdmin
-            .from('profiles')
-            .select('id, role, status, company_id')
-            .eq('id', targetUuid)
-            .single<RequesterProfileRow & { readonly status: string | null }>();
+        if (!targetProfile) {
+            for (const candidateEmail of lookup.emails) {
+                const { data } = await supabaseAdmin
+                    .from('profiles')
+                    .select('id, role, status, company_id')
+                    .eq('email', candidateEmail)
+                    .limit(1)
+                    .maybeSingle<TargetProfileRow>();
+                if (data) {
+                    targetProfile = data;
+                    break;
+                }
+            }
+        }
 
-        if (targetError || !targetProfile) {
+        if (!targetProfile) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+
+        const targetUuid = targetProfile.id;
 
         if (role && adminCheck.profile.id === targetUuid) {
             return NextResponse.json({ error: '본인 관리자 권한은 직접 낮출 수 없습니다.' }, { status: 400 });

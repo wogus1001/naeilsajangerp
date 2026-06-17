@@ -41,9 +41,13 @@ function parseFlagMap(value: unknown): CompanyMenuFlagMap | null {
         }
     }
 
-    return {
-        dashboard: flags.dashboard !== false,
-        franchiseLeads: flags.franchiseLeads !== false,
+        return {
+            dashboard: flags.dashboard !== false,
+            franchiseLeads: flags.franchiseLeads !== false,
+            franchiseWorkIntake: flags.franchiseWorkIntake !== false,
+            franchiseMatchingRequest: flags.franchiseMatchingRequest !== false,
+            franchisePropertyRegistration: flags.franchisePropertyRegistration !== false,
+        franchiseLeadRegistration: flags.franchiseLeadRegistration !== false,
         marketInsights: flags.marketInsights !== false,
         franchiseOperations: flags.franchiseOperations !== false,
         properties: flags.properties !== false,
