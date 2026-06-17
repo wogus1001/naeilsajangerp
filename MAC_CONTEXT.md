@@ -109,10 +109,9 @@ npm run build
 - 상세 규칙과 ledger 형식은 `ERP/web/docs/release-management.md`를 따른다.
 
 ## 최근 배포 이력 기준점
-- `dev` 최신 기능 커밋: `056b731` `feat(franchise): finalize alerts and OAuth policy`
-- `main` 최신 확인 커밋: `9817b10` `feat(franchise): connect insights and disclosure email`
-- 2026-06-16 dev Vercel deployment success 확인 완료. dev 도메인 `https://naeilsajang-dev.vercel.app`는 Vercel Authentication 보호로 public curl 기준 401이 정상이다.
-- 2026-06-16 production Vercel READY 확인 완료. 단, production Gmail 발송은 Vercel production env의 `GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` 설정 전까지 `configReady: false`가 정상 상태다. production `https://naeilsajang.vercel.app/privacy`는 main 배포 전까지 404다.
+- `dev` 최신 확인 커밋: `e11de81` `feat(franchise): connect insights and disclosure email`
+- `main` 최신 기능 커밋: `23e8d54` `feat(franchise): finalize alerts and OAuth policy`
+- 2026-06-16 production Vercel deployment success 확인 완료. `https://naeilsajang.vercel.app/privacy`와 `/landing` 모두 HTTP 200이다. 단, production Gmail 발송은 Vercel production env의 `GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` 설정 전까지 `configReady: false`가 정상 상태다.
 
 ## 최근 중요 작업 요약
 - 2026-06-09 Meta Lead Ads 개발 HOLD
@@ -145,7 +144,7 @@ npm run build
     - 2026-06-16 모객 DB 추가 개편 완료: 가맹 희망자 목록에 `정보공개서` 컬럼과 정보공개서 필요순/최근 발송순/계약 가능일 빠른순 정렬을 추가했다. 이후 모객 DB 내부 `요약 대시보드`의 A/B 전환은 제거하고 기존 모객 흐름 분석형 화면만 유지한다. 정보공개서 `미발송` 보조문구 `발송 필요`는 제거했고, 상태/담당자 select 폭을 줄였다.
     - 2026-06-16 인앱 알림 MVP 완료: `ERP/web/supabase_franchise_notifications_migration.sql`, `/api/franchise-notifications`, 헤더 알림 벨을 추가했다. 정보공개서 미발송/실패/D-3/D-1/계약 가능, 연락 지연/오늘 연락, HOT 리드 후속 일정 미지정을 담당자 알림으로 만든다. v1은 인앱만 발송하고, 향후 알림톡 고도화를 위해 `delivery_channel`, `kakao_template_key`, `data`를 남겼다. 알림 개별 `읽음` 버튼과 `tab=db&leadId=...` 상세 딥링크를 추가했다.
     - 2026-06-16 어드민 회원 관리 보강 진행: `/admin/users`에서 사용자별 직급/권한을 관리자, 팀장/매니저, 담당자로 변경할 수 있게 했다. 본인 관리자 권한 하향과 마지막 관리자 제거는 API에서 차단한다.
-    - 2026-06-16 Google OAuth 검증 준비 완료: `/privacy` 공개 개인정보처리방침 페이지와 `/landing` 푸터 링크를 추가했다. dev 배포는 완료됐지만 production OAuth 제출 전에는 main 배포 후 `https://naeilsajang.vercel.app/privacy` 200 확인과 비공개 YouTube 데모 영상 준비가 필요하다.
+    - 2026-06-16 Google OAuth 검증 준비 완료: `/privacy` 공개 개인정보처리방침 페이지와 `/landing` 푸터 링크를 추가했고 main 배포 후 production 200을 확인했다. Google OAuth 제출 전에는 비공개 YouTube 데모 영상 준비가 필요하다.
   - 2순위: 본사 운영관리
     - `가맹점/예정점 마스터`, `오픈 준비 프로젝트`, `SV 방문/점검`, `이슈/CS 티켓`, `공지/매뉴얼 배포`를 본사 직원용으로 추가
     - 1차 범위는 본사 사용자 전용이며 가맹점주 포털은 제외

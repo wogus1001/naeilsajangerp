@@ -328,13 +328,12 @@
 - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
 - 로컬 브라우저 QA: `http://127.0.0.1:3000/privacy` 1440px/390px 렌더를 확인했고, `http://127.0.0.1:3000/landing`은 200 응답과 푸터의 개인정보처리방침 링크 포함을 확인했다.
 
-## 2026-06-16 dev 배포 QA
+## 2026-06-16 main 배포 QA
 
-- `codex/franchise-next-alerts-20260616` 작업을 `my_project_dev_deploy`의 `dev` 브랜치에 cherry-pick하고 `origin/dev`로 push했다.
-- dev 반영 마지막 커밋은 `056b731 feat(franchise): finalize alerts and OAuth policy`이며, GitHub Vercel status는 `success`, 설명은 `Deployment has completed`로 확인했다.
-- dev 도메인 `https://naeilsajang-dev.vercel.app`는 Vercel Authentication 보호로 외부 curl이 401을 반환한다. 이는 기존 dev preview 보호 정책과 같은 동작이다.
-- production 도메인 `https://naeilsajang.vercel.app/privacy`는 main 배포 전이라 404를 반환한다. Google OAuth production 제출에는 main 배포 후 다시 확인해야 한다.
-- dev worktree 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 `npx tsx --test ...`, `npm run build` 통과.
+- `my_project_main_release`에서 `23e8d54 feat(franchise): finalize alerts and OAuth policy`까지 반영하고 `origin/main`으로 push했다.
+- GitHub Vercel status는 `success`, 설명은 `Deployment has completed`로 확인했다.
+- production URL `https://naeilsajang.vercel.app/privacy`와 `https://naeilsajang.vercel.app/landing` 모두 HTTP 200을 반환했다. `/privacy` 본문에는 `gmail.send`, `Gmail 수신함`, `naeilsajang@gmail.com`, `개인정보처리방침` 문구가 포함됐고, `/landing`에는 `/privacy` 링크가 포함됐다.
+- main release 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 `npx tsx --test ...`, `npm run build` 통과.
 
 ## 2026-06-17 알림 읽음 항목 숨김 QA
 

@@ -1,31 +1,23 @@
 "use client";
 
-export type AdminUserRole = 'admin' | 'manager' | 'sub_manager' | 'staff';
-export type AssignableAdminUserRole = 'manager' | 'sub_manager';
+import {
+    ADMIN_ASSIGNABLE_USER_ROLES,
+    getUserRoleLabel,
+    normalizeAdminAssignableUserRole,
+    normalizeUserRole,
+    type AdminAssignableUserRole,
+    type UserRole
+} from '@/lib/user-role-policy';
 
-const ALL_ROLE_OPTIONS: ReadonlyArray<{ readonly value: AdminUserRole; readonly label: string }> = [
-    { value: 'admin', label: '관리자' },
-    { value: 'manager', label: '팀장' },
-    { value: 'sub_manager', label: '매니저' },
-    { value: 'staff', label: '담당자' }
-] as const;
-
-const ASSIGNABLE_ROLE_OPTIONS: ReadonlyArray<{ readonly value: AssignableAdminUserRole; readonly label: string }> = [
-    { value: 'manager', label: '팀장' },
-    { value: 'sub_manager', label: '매니저' }
-] as const;
+export type AdminUserRole = UserRole;
+export type AssignableAdminUserRole = AdminAssignableUserRole;
 
 export function normalizeAdminUserRole(value: string | null | undefined): AdminUserRole | null {
-    return ALL_ROLE_OPTIONS.find(option => option.value === value)?.value ?? null;
-}
-
-function normalizeAssignableAdminUserRole(value: string | null | undefined): AssignableAdminUserRole | null {
-    return ASSIGNABLE_ROLE_OPTIONS.find(option => option.value === value)?.value ?? null;
+    return normalizeUserRole(value);
 }
 
 export function getAdminUserRoleLabel(value: AdminUserRole | string | null | undefined): string {
-    const normalizedRole = normalizeAdminUserRole(value);
-    return ALL_ROLE_OPTIONS.find(option => option.value === normalizedRole)?.label ?? '사용자';
+    return getUserRoleLabel(value);
 }
 
 type AdminUserRoleSelectProps = {
@@ -37,7 +29,7 @@ type AdminUserRoleSelectProps = {
 
 export function AdminUserRoleSelect({ role, userName, isUpdating, onChange }: AdminUserRoleSelectProps) {
     const normalizedRole = normalizeAdminUserRole(role);
-    const assignableRole = normalizeAssignableAdminUserRole(normalizedRole);
+    const assignableRole = normalizeAdminAssignableUserRole(normalizedRole);
     const selectedValue = assignableRole ?? '';
     const shouldShowReadonlyRole = Boolean(normalizedRole && !assignableRole);
 
@@ -53,7 +45,7 @@ export function AdminUserRoleSelect({ role, userName, isUpdating, onChange }: Ad
                 value={selectedValue}
                 disabled={isUpdating}
                 onChange={event => {
-                    const nextRole = normalizeAssignableAdminUserRole(event.target.value);
+                    const nextRole = normalizeAdminAssignableUserRole(event.target.value);
                     if (nextRole) onChange(nextRole);
                 }}
                 style={{
@@ -70,9 +62,9 @@ export function AdminUserRoleSelect({ role, userName, isUpdating, onChange }: Ad
                 }}
             >
                 {!assignableRole && <option value="" disabled>직급 변경</option>}
-                {ASSIGNABLE_ROLE_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+                {ADMIN_ASSIGNABLE_USER_ROLES.map(roleOption => (
+                    <option key={roleOption} value={roleOption}>
+                        {getUserRoleLabel(roleOption)}
                     </option>
                 ))}
             </select>

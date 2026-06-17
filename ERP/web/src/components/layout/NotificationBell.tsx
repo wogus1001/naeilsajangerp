@@ -74,8 +74,12 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
     const openNotification = async (notification: HeaderNotification) => {
         if (!notification.readAt) {
-            await markHeaderNotificationRead(user, notification.id);
-            await refreshNotifications();
+            try {
+                await markHeaderNotificationRead(user, notification.id);
+                await refreshNotifications();
+            } catch (error) {
+                console.error('Failed to mark notification as read:', error);
+            }
         }
         if (notification.actionUrl) {
             window.location.href = notification.actionUrl;
@@ -88,14 +92,20 @@ export function NotificationBell({ user }: NotificationBellProps) {
         try {
             await markHeaderNotificationRead(user, notification.id);
             await refreshNotifications();
+        } catch (error) {
+            console.error('Failed to mark notification as read:', error);
         } finally {
             setMarkingNotificationId(null);
         }
     };
 
     const markAllRead = async () => {
-        await markAllHeaderNotificationsRead(user);
-        await refreshNotifications();
+        try {
+            await markAllHeaderNotificationsRead(user);
+            await refreshNotifications();
+        } catch (error) {
+            console.error('Failed to mark all notifications as read:', error);
+        }
     };
 
     return (

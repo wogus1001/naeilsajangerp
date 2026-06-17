@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server';
+import {
+    formatNoticeRows,
+    type NoticeAuthor,
+    type NoticeRow
+} from '@/lib/notices';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Service Role Client
@@ -10,13 +15,9 @@ export async function GET(request: Request, context: any) {
         const params = await context.params;
         const id = params.id;
 
-        // Fetch notice with author info
         const { data: notice, error } = await supabaseAdmin
             .from('notices')
-            .select(`
-                *,
-                author:profiles!author_id(name, role)
-            `)
+            .select('*')
             .eq('id', id)
             .single();
 
@@ -27,20 +28,42 @@ export async function GET(request: Request, context: any) {
         // Increment views (Non-blocking or simple await)
         await supabaseAdmin.from('notices').update({ views: (notice.views || 0) + 1 }).eq('id', id);
 
-        // Transform
-        const formatted = {
-            ...notice,
-            createdAt: new Date(notice.created_at).toLocaleDateString().replace(/-/g, '.'),
-            authorName: notice.author?.name || '관리자',
-            authorRole: notice.author?.role || 'admin',
-            isPinned: notice.is_pinned
-        };
+        const rows: NoticeRow[] = [notice];
+        const authors = await fetchNoticeAuthors(rows);
+        const formatted = formatNoticeRows(rows, authors)[0];
 
         return NextResponse.json(formatted);
     } catch (error) {
         console.error('Fetch notice detail error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+}
+
+async function fetchNoticeAuthors(rows: readonly NoticeRow[]): Promise<Map<string, NoticeAuthor>> {
+    const authorIds = [...new Set(rows.flatMap(row => row.author_id ? [row.author_id] : []))];
+    const authors = new Map<string, NoticeAuthor>();
+    if (authorIds.length === 0) return authors;
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id,name,role')
+        .in('id', authorIds);
+
+    if (error) {
+        console.warn('Fetch notice author warning:', error);
+        return authors;
+    }
+
+    for (const author of data || []) {
+        if (typeof author.id !== 'string') continue;
+        authors.set(author.id, {
+            name: typeof author.name === 'string' ? author.name : null,
+            role: typeof author.role === 'string' ? author.role : null
+        });
+    }
+
+    return authors;
 }
 
 export async function DELETE(request: Request, context: any) {

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
     fetchHeaderNotifications,
     filterUnreadHeaderNotifications,
+    markHeaderNotificationRead,
     type HeaderNotification
 } from './notificationRequests.js';
 
@@ -57,4 +58,23 @@ test('fetchHeaderNotifications returns only unread notifications to the header',
         ['notification-unread']
     );
     assert.equal(result.unreadCount, 1);
+});
+
+test('markHeaderNotificationRead throws when the API rejects the update', async t => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    globalThis.fetch = async () => new Response(JSON.stringify({
+        error: { message: 'Forbidden' }
+    }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 403
+    });
+
+    await assert.rejects(
+        () => markHeaderNotificationRead({ id: 'profile-1' }, 'notification-1'),
+        /Failed to mark notification as read/
+    );
 });

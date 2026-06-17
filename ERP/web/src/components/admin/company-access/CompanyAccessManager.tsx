@@ -5,6 +5,7 @@ import {
     DEFAULT_COMPANY_DASHBOARD_MODE,
     type CompanyDashboardMode
 } from '@/lib/company-menu-features';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId } from '@/utils/userUtils';
 import { CompanyDashboardModeSetting } from './CompanyDashboardModeSetting';
 import { parseCompanyAccessResponse } from './companyAccessParse';
@@ -110,7 +111,10 @@ export function CompanyAccessManager() {
         if (companyId) params.set('companyId', companyId);
 
         try {
-            const response = await fetch(`/api/admin/company-access?${params.toString()}`, { cache: 'no-store' });
+            const response = await fetch(`/api/admin/company-access?${params.toString()}`, {
+                cache: 'no-store',
+                headers: await getApiAuthHeaders()
+            });
             const payload = parseCompanyAccessResponse(await response.json());
             if (!response.ok || !payload?.data) {
                 setMessage(payload?.message || payload?.error || '회사 메뉴 설정을 불러오지 못했습니다.');
@@ -166,7 +170,7 @@ export function CompanyAccessManager() {
         try {
             const response = await fetch(`/api/admin/company-access?${params.toString()}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     companyId: selectedCompanyId,
                     dashboardMode,
