@@ -3,38 +3,12 @@
     color: #191f28;
 }
 
-.header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-    padding: 20px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #ffffff;
-}
-
-.header h1 {
-    margin: 8px 0;
-    font-size: 28px;
-    line-height: 1.35;
-}
-
-.header p,
 .panelTitleRow p {
     margin: 0;
     color: #6b7684;
     font-size: 14px;
 }
 
-.eyebrow {
-    color: #3182f6;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.secondaryLink,
 .primaryButton {
     display: inline-flex;
     align-items: center;
@@ -45,15 +19,6 @@
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
-}
-
-.secondaryLink {
-    flex: 0 0 auto;
-    padding: 0 14px;
-    border: 1px solid #e5e8eb;
-    color: #333d4b;
-    background: #ffffff;
-    white-space: nowrap;
 }
 
 .form {
@@ -213,6 +178,10 @@
 .actions {
     display: flex;
     justify-content: flex-end;
+    margin-top: 2px;
+    padding: 12px 0 4px;
+    border-top: 1px solid #e5e8eb;
+    background: transparent;
 }
 
 .primaryButton {
@@ -235,11 +204,6 @@
 }
 
 @media (max-width: 640px) {
-    .header {
-        flex-direction: column;
-    }
-
-    .secondaryLink,
     .primaryButton {
         width: 100%;
     }

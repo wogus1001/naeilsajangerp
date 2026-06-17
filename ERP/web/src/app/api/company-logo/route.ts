@@ -10,6 +10,7 @@ import {
     validateCompanyLogoFile
 } from '@/lib/company-logo';
 import {
+    ensureCompanyLogoBucket,
     fetchLatestStoredCompanyLogo,
     getCompanyLogoPublicUrl,
     removeStoredCompanyLogos,
@@ -167,6 +168,12 @@ export async function POST(request: Request) {
             return fail(500, 'INTERNAL_ERROR', '회사 정보를 확인하지 못했습니다.');
         }
         if (!currentCompany) return fail(404, 'NOT_FOUND', '회사를 찾을 수 없습니다.');
+
+        const bucketError = await ensureCompanyLogoBucket(supabaseAdmin, LOGO_BUCKET);
+        if (bucketError) {
+            console.error('Company logo bucket prepare error:', bucketError);
+            return fail(500, 'INTERNAL_ERROR', '로고 저장소를 준비하지 못했습니다.');
+        }
 
         const storagePath = buildCompanyLogoStoragePath(targetCompanyId, fileValue.name, fileValue.type, randomUUID());
         const uploadBuffer = Buffer.from(await fileValue.arrayBuffer());

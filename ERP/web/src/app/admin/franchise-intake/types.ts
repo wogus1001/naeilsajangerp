@@ -64,6 +64,10 @@ export type AdminMatchingRequest = {
     readonly nextAction: string;
     readonly memo: string;
     readonly createdAt: string;
+    readonly updatedAt: string;
+    readonly promotedLeadId: string;
+    readonly promotedAt: string;
+    readonly syncStatus: 'synced' | 'stale';
 };
 
 export type AdminLeadRegistrationRequest = {

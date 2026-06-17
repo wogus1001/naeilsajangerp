@@ -144,8 +144,8 @@ export default function FranchiseWorkIntakePage() {
                     onCloseAction={() => setEditTarget(null)}
                     onSavedAction={() => {
                         setEditTarget(null);
-                        setMessage('수정 내용을 저장했습니다.');
                         void loadData();
+                        setMessage('수정 내용을 저장했습니다.');
                     }}
                     onErrorAction={setMessage}
                 />

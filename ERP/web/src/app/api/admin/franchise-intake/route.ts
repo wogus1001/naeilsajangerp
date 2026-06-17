@@ -62,6 +62,7 @@ type LeadRow = {
     readonly memo: string | null;
     readonly next_contact_at: string | null;
     readonly created_at: string | null;
+    readonly updated_at: string | null;
     readonly data: Record<string, unknown> | null;
 };
 
@@ -115,6 +116,7 @@ function toPropertyView(row: PropertyRow, companies: ReadonlyMap<string, string>
 
 function toLeadView(row: LeadRow, managerNames: ReadonlyMap<string, string>) {
     const data = row.data || {};
+    const promotedAt = readDataString(data, 'matchingRequestPromotedAt');
     return {
         id: row.id,
         companyId: row.company_id || '',
@@ -152,7 +154,11 @@ function toLeadView(row: LeadRow, managerNames: ReadonlyMap<string, string>) {
         recommendedProperties: readDataString(data, 'recommendedProperties'),
         nextAction: readDataString(data, 'nextAction'),
         memo: row.memo || '',
-        createdAt: row.created_at || ''
+        createdAt: row.created_at || '',
+        updatedAt: row.updated_at || '',
+        promotedLeadId: readDataString(data, 'matchingRequestPromotedLeadId'),
+        promotedAt,
+        syncStatus: promotedAt && isNewer(row.updated_at, promotedAt) ? 'stale' : 'synced'
     };
 }
 
@@ -206,7 +212,7 @@ export async function GET(request: Request) {
             .not('source_property_id', 'is', null);
         let leadQuery = supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, created_at, data')
+            .select('id, company_id, manager_id, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, created_at, updated_at, data')
             .eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE);
         let leadRegistrationQuery = supabaseAdmin
             .from('franchise_lead_registration_requests')
