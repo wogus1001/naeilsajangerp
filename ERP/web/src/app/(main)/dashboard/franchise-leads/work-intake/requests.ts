@@ -1,121 +1,80 @@
+import {
+    buildLeadRegistrationPayload,
+    type LeadRegistrationForm
+} from '@/lib/franchise-lead-registration';
+import {
+    buildMatchingRequestPayload,
+    type MatchingRequestForm
+} from '@/lib/franchise-matching-request';
+import {
+    buildPropertyRegistrationPayload,
+    type PropertyRegistrationForm
+} from '@/lib/franchise-property-registration';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError } from '@/utils/apiResponse';
 import type { WorkIntakeEditTarget } from './types';
 
-type EditFormState = {
-    readonly name: string;
-    readonly mobile: string;
-    readonly email: string;
-    readonly status: string;
-    readonly desiredRegion: string;
-    readonly desiredBrand: string;
-    readonly desiredCategory: string;
-    readonly budgetMin: string;
-    readonly budgetMax: string;
-    readonly totalBudget: string;
-    readonly deposit: string;
-    readonly monthlyRent: string;
-    readonly address: string;
-    readonly ownedPropertyStatus: string;
-    readonly matchPriority: string;
-    readonly urgency: string;
-    readonly memo: string;
-};
+export type WorkIntakeEditForm =
+    | { readonly kind: 'properties'; readonly value: PropertyRegistrationForm }
+    | { readonly kind: 'leadRegistrations'; readonly value: LeadRegistrationForm }
+    | { readonly kind: 'matchingRequests'; readonly value: MatchingRequestForm };
 
-export type { EditFormState };
-
-function toManwon(won: number | null): string {
-    if (won === null) return '';
-    return String(Math.round(won / 10000));
-}
-
-export function buildInitialEditForm(target: WorkIntakeEditTarget): EditFormState {
+export function buildInitialEditForm(target: WorkIntakeEditTarget): WorkIntakeEditForm {
     if (target.kind === 'properties') {
-        return {
-            name: target.item.name,
-            mobile: '',
-            email: '',
-            status: target.item.status,
-            desiredRegion: target.item.region,
-            desiredBrand: target.item.desiredBrand,
-            desiredCategory: target.item.desiredCategory,
-            budgetMin: '',
-            budgetMax: '',
-            totalBudget: '',
-            deposit: target.item.deposit,
-            monthlyRent: target.item.monthlyRent,
-            address: target.item.address,
-            ownedPropertyStatus: '',
-            matchPriority: '',
-            urgency: '',
-            memo: ''
-        };
+        return { kind: 'properties', value: target.item.form };
     }
     if (target.kind === 'leadRegistrations') {
+        return { kind: 'leadRegistrations', value: target.item.form };
+    }
+    return { kind: 'matchingRequests', value: target.item.form };
+}
+
+export function buildWorkIntakeEditRequestBody(
+    target: WorkIntakeEditTarget,
+    form: WorkIntakeEditForm,
+    requesterId: string
+): Record<string, unknown> {
+    if (target.kind === 'properties' && form.kind === 'properties') {
+        return buildPropertyRegistrationPayload(form.value, {
+            requesterId,
+            companyName: target.item.companyName
+        });
+    }
+
+    if (target.kind === 'leadRegistrations' && form.kind === 'leadRegistrations') {
+        return buildLeadRegistrationPayload(form.value, {
+            requesterId,
+            companyName: ''
+        });
+    }
+
+    if (target.kind === 'matchingRequests' && form.kind === 'matchingRequests') {
         return {
-            name: target.item.name,
-            mobile: target.item.mobile,
-            email: '',
-            status: target.item.status,
-            desiredRegion: target.item.desiredRegion,
-            desiredBrand: target.item.interestedBrand,
-            desiredCategory: '',
-            budgetMin: toManwon(target.item.budgetMin),
-            budgetMax: toManwon(target.item.budgetMax),
-            totalBudget: '',
-            deposit: '',
-            monthlyRent: '',
-            address: '',
-            ownedPropertyStatus: '',
-            matchPriority: '',
-            urgency: '',
-            memo: target.item.memo
+            id: target.item.id,
+            ...buildMatchingRequestPayload(form.value, {
+                requesterId,
+                companyName: ''
+            })
         };
     }
-    return {
-        name: target.item.name,
-        mobile: target.item.mobile,
-        email: target.item.email,
-        status: '',
-        desiredRegion: target.item.desiredRegion,
-        desiredBrand: target.item.interestedBrand,
-        desiredCategory: target.item.desiredCategory,
-        budgetMin: '',
-        budgetMax: '',
-        totalBudget: target.item.totalBudget,
-        deposit: '',
-        monthlyRent: '',
-        address: '',
-        ownedPropertyStatus: target.item.ownedPropertyStatus,
-        matchPriority: target.item.matchPriority,
-        urgency: target.item.urgency,
-        memo: target.item.memo
-    };
+
+    return { requesterId };
 }
 
 async function readPayload(response: Response): Promise<unknown> {
     return await response.json();
 }
 
-export async function saveWorkIntakeEdit(target: WorkIntakeEditTarget, form: EditFormState, requesterId: string): Promise<void> {
+export async function saveWorkIntakeEdit(
+    target: WorkIntakeEditTarget,
+    form: WorkIntakeEditForm,
+    requesterId: string
+): Promise<void> {
     if (target.kind === 'properties') {
         const response = await fetch(`/api/properties?id=${encodeURIComponent(target.item.id)}`, {
             method: 'PUT',
             headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-                requesterId,
-                name: form.name,
-                status: form.status,
-                address: form.address,
-                operationType: '물건등록',
-                region: form.desiredRegion,
-                desiredBrand: form.desiredBrand,
-                brand: form.desiredBrand,
-                desiredCategory: form.desiredCategory,
-                category: form.desiredCategory,
-                deposit: form.deposit,
-                monthlyRent: form.monthlyRent
-            })
+            body: JSON.stringify(buildWorkIntakeEditRequestBody(target, form, requesterId))
         });
         const payload = await readPayload(response);
         if (!response.ok) throw new Error(readApiError(payload));
@@ -126,17 +85,7 @@ export async function saveWorkIntakeEdit(target: WorkIntakeEditTarget, form: Edi
         const response = await fetch(`/api/franchise-lead-registration-requests/${encodeURIComponent(target.item.id)}`, {
             method: 'PUT',
             headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-                requesterId,
-                name: form.name,
-                mobile: form.mobile,
-                status: form.status,
-                desiredRegion: form.desiredRegion,
-                budgetMin: form.budgetMin,
-                budgetMax: form.budgetMax,
-                interestedBrand: form.desiredBrand,
-                memo: form.memo
-            })
+            body: JSON.stringify(buildWorkIntakeEditRequestBody(target, form, requesterId))
         });
         const payload = await readPayload(response);
         if (!response.ok) throw new Error(readApiError(payload));
@@ -146,21 +95,7 @@ export async function saveWorkIntakeEdit(target: WorkIntakeEditTarget, form: Edi
     const response = await fetch('/api/franchise-leads', {
         method: 'PUT',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-            requesterId,
-            id: target.item.id,
-            name: form.name,
-            mobile: form.mobile,
-            desiredRegion: form.desiredRegion,
-            interestedBrand: form.desiredBrand,
-            memo: form.memo,
-            email: form.email,
-            desiredCategory: form.desiredCategory,
-            totalBudget: form.totalBudget,
-            ownedPropertyStatus: form.ownedPropertyStatus,
-            matchPriority: form.matchPriority,
-            urgency: form.urgency
-        })
+        body: JSON.stringify(buildWorkIntakeEditRequestBody(target, form, requesterId))
     });
     const payload = await readPayload(response);
     if (!response.ok) throw new Error(readApiError(payload));

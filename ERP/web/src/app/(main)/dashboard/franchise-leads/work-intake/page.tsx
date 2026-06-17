@@ -62,7 +62,7 @@ export default function FranchiseWorkIntakePage() {
             if (!response.ok) throw new Error(readApiError(payload));
             setData(unwrapApiData<WorkIntakeData>(payload));
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : '업무 목록을 불러오지 못했습니다.');
+            setMessage(error instanceof Error ? error.message : '진행현황을 불러오지 못했습니다.');
         } finally {
             setIsLoading(false);
         }
@@ -78,18 +78,18 @@ export default function FranchiseWorkIntakePage() {
                 <div className={styles.titleRow}>
                     <div className={styles.iconBox}><ListChecks size={20} /></div>
                     <div>
-                        <h1>업무 목록</h1>
-                        <p>물건 등록과 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.</p>
+                        <h1>진행현황</h1>
+                        <p>입점 요청과 예비 창업자 등록 입력 건을 탭으로 확인합니다.</p>
                     </div>
                 </div>
             </section>
 
             <section className={styles.toolbar}>
                 <button className={activeTab === 'properties' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('properties')}>
-                    물건 등록 {data.properties.length}
+                    입점 요청 {data.properties.length}
                 </button>
                 <button className={activeTab === 'matchingRequests' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('matchingRequests')}>
-                    프랜차이즈 매칭 요청 {data.matchingRequests.length}
+                    예비 창업자 등록 {data.matchingRequests.length}
                 </button>
             </section>
 
@@ -110,7 +110,7 @@ export default function FranchiseWorkIntakePage() {
                                     <td><button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'properties', item })}>수정</button></td>
                                 </tr>
                             ))}
-                            {data.properties.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 물건이 없습니다.</td></tr>}
+                            {data.properties.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 입점 요청이 없습니다.</td></tr>}
                         </tbody>
                     </table>
                 </section>
@@ -131,7 +131,7 @@ export default function FranchiseWorkIntakePage() {
                                     <td><button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'matchingRequests', item })}>수정</button></td>
                                 </tr>
                             ))}
-                            {data.matchingRequests.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 매칭 요청이 없습니다.</td></tr>}
+                            {data.matchingRequests.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 예비 창업자 정보가 없습니다.</td></tr>}
                         </tbody>
                     </table>
                 </section>

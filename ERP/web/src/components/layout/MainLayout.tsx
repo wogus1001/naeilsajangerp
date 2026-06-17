@@ -1,12 +1,18 @@
 "use client";
 
 import React from 'react';
-import { Megaphone, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
-import { getStoredCompanyName, setAdminCompanyScope } from '@/utils/userUtils';
+import {
+    COMPANY_LOGO_CHANGE_EVENT,
+    getStoredCompanyLogoUrl,
+    getStoredCompanyName,
+    setAdminCompanyScope,
+    shouldReportAuthCheckFailure
+} from '@/utils/userUtils';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { AnnouncementBanner } from './AnnouncementBanner';
 import { useResponsiveSidebar } from './useResponsiveSidebar';
 import { CompanyMenuDisabledNotice } from './CompanyMenuDisabledNotice';
 import { MaintenanceScreen } from './MaintenanceScreen';
@@ -24,6 +30,7 @@ type AuthUser = {
     name?: string;
     role?: string;
     companyName?: string;
+    companyLogoUrl?: string | null;
     companyId?: string;
     status?: string;
 };
@@ -51,6 +58,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const pathname = usePathname();
     const { flags: menuFlags, blockedFeature } = useCompanyMenuFeatures(authUser, pathname);
     const sidebarCompanyName = getStoredCompanyName(authUser) || authUser?.companyName || '';
+    const sidebarCompanyLogoUrl = getStoredCompanyLogoUrl(authUser) || authUser?.companyLogoUrl || '';
 
     React.useEffect(() => {
         let cancelled = false;
@@ -132,13 +140,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             });
 
             if (!meRes.ok) {
-                console.error(`[AuthCheck] /api/auth/me failed with status: ${meRes.status}`);
-
-                // 401/403: 유효하지 않은 토큰 → 강제 로그아웃 처리
-                if (meRes.status === 401 || meRes.status === 403) {
+                if (!shouldReportAuthCheckFailure(meRes.status)) {
                     await supabase.auth.signOut();
                     localStorage.removeItem('user');
                     setAdminCompanyScope(null);
+                } else {
+                    console.error(`[AuthCheck] /api/auth/me failed with status: ${meRes.status}`);
                 }
 
                 return null;
@@ -194,6 +201,19 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         };
     }, [router]);
 
+    React.useEffect(() => {
+        const handleCompanyLogoChange = (event: Event) => {
+            if (!(event instanceof CustomEvent)) return;
+            const nextLogoUrl = typeof event.detail?.logoUrl === 'string' ? event.detail.logoUrl : '';
+            setAuthUser(prev => prev ? { ...prev, companyLogoUrl: nextLogoUrl } : prev);
+        };
+
+        window.addEventListener(COMPANY_LOGO_CHANGE_EVENT, handleCompanyLogoChange);
+        return () => {
+            window.removeEventListener(COMPANY_LOGO_CHANGE_EVENT, handleCompanyLogoChange);
+        };
+    }, []);
+
     const handleDismissBanner = () => {
         if (announcement?.message) {
             localStorage.setItem('dismissed_banner_msg', announcement.message);
@@ -225,14 +245,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         router.replace('/login');
     };
 
-    const getBannerColor = (level?: string) => {
-        switch (level) {
-            case 'error': return '#fa5252'; // Red
-            case 'warning': return '#fd7e14'; // Orange
-            default: return '#1971c2'; // Blue
-        }
-    };
-
     if (!isAuthReady) {
         return null;
     }
@@ -245,31 +257,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     return (
         <div className={`${styles.container} global-layout-container`}>
             {announcement && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '40px',
-                    backgroundColor: getBannerColor(announcement.level),
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 9999,
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    padding: '0 16px'
-                }}>
-                    <Megaphone size={16} style={{ marginRight: '8px' }} />
-                    <span style={{ marginRight: '16px' }}>[공지] {announcement.message}</span>
-                    <button
-                        onClick={handleDismissBanner}
-                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                    >
-                        <X size={16} />
-                    </button>
-                </div>
+                <AnnouncementBanner message={announcement.message || ''} level={announcement.level} onDismiss={handleDismissBanner} />
             )}
 
             <Sidebar
@@ -277,6 +265,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
                 menuFlags={menuFlags}
                 companyName={sidebarCompanyName}
+                companyLogoUrl={sidebarCompanyLogoUrl}
             />
 
             <div

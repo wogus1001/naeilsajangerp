@@ -48,14 +48,14 @@ const Header = ({ user, onLogout }: HeaderProps) => {
 
     const getBreadcrumbInfo = (path: string) => {
         // Dashboard
-        if (path === '/dashboard') return { category: '대시보드', title: '요약' };
-        if (path === '/dashboard/franchise-leads') return { category: '대시보드', title: '모객 DB' };
-        if (path === '/dashboard/franchise-leads/matching-request') return { category: '업무', title: '프랜차이즈 매칭 요청' };
-        if (path === '/dashboard/franchise-leads/property-registration') return { category: '업무', title: '물건 등록' };
+        if (path === '/dashboard') return { category: '메인', title: '대시보드' };
+        if (path === '/dashboard/franchise-leads') return { category: '프랜차이즈', title: '모객 DB' };
+        if (path === '/dashboard/franchise-leads/matching-request') return { category: '업무', title: '예비 창업자 등록' };
+        if (path === '/dashboard/franchise-leads/property-registration') return { category: '업무', title: '입점 요청' };
         if (path === '/dashboard/franchise-leads/lead-registration') return { category: '업무', title: '가맹 희망자 등록' };
-        if (path === '/dashboard/franchise-leads/work-intake') return { category: '업무', title: '업무 목록' };
-        if (path === '/dashboard/franchise-leads/market-insights') return { category: '대시보드', title: '출점 후보지' };
-        if (path === '/dashboard/franchise-operations') return { category: '대시보드', title: '가맹 운영' };
+        if (path === '/dashboard/franchise-leads/work-intake') return { category: '업무', title: '진행현황' };
+        if (path === '/dashboard/franchise-leads/market-insights') return { category: '프랜차이즈', title: '출점 후보지' };
+        if (path === '/dashboard/franchise-operations') return { category: '프랜차이즈', title: '가맹 운영' };
 
         // Consulting
         if (path === '/properties') return { category: '점포개발 업무', title: '점포 목록' };

@@ -11,6 +11,7 @@ import {
     FRANCHISE_LEAD_SOURCES,
     FRANCHISE_LEAD_STATUSES,
     getFranchiseLeadGradeLabel,
+    getFranchiseLeadSourceLabel,
     normalizeLeadStatus
 } from '@/lib/franchise-leads';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
@@ -206,7 +207,7 @@ export default function FranchiseLeadRegistrationPage() {
                                 <option value="">미지정</option>
                                 {FRANCHISE_LEAD_SOURCES
                                     .filter(source => source !== FRANCHISE_LEAD_REGISTRATION_SOURCE)
-                                    .map(source => <option key={source} value={source}>{source}</option>)}
+                                    .map(source => <option key={source} value={source}>{getFranchiseLeadSourceLabel(source)}</option>)}
                             </select>
                         </label>
                         <div className={styles.formField}>

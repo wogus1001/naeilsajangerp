@@ -114,7 +114,7 @@ export default function AdminFranchiseIntakePage() {
             <section className={styles.header}>
                 <div>
                     <h1>프랜차이즈 인입 관리</h1>
-                    <p>물건 등록 DB와 프랜차이즈 매칭 요청을 회사별로 확인합니다.</p>
+                    <p>입점 요청 DB와 예비 창업자 등록 건을 회사별로 확인합니다.</p>
                 </div>
             </section>
 
@@ -130,10 +130,10 @@ export default function AdminFranchiseIntakePage() {
                 </label>
                 <div className={styles.tabs}>
                     <button className={activeTab === 'properties' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('properties')}>
-                        물건 등록 리스트 {data.properties.length}
+                        입점 요청 리스트 {data.properties.length}
                     </button>
                     <button className={activeTab === 'matchingRequests' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('matchingRequests')}>
-                        프랜차이즈 매칭요청 {data.matchingRequests.length}
+                        예비 창업자 등록 {data.matchingRequests.length}
                     </button>
                 </div>
             </section>

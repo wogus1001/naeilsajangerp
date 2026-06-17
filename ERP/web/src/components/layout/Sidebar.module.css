@@ -19,21 +19,6 @@
     overflow: visible;
 }
 
-.logo {
-    height: 64px;
-    display: flex;
-    align-items: center;
-    padding: 0 24px;
-    gap: 12px;
-    border-bottom: 1px solid transparent;
-    /* Optional */
-}
-
-.sidebar.collapsed .logo {
-    padding: 0;
-    justify-content: center;
-}
-
 /* Floating Toggle Button */
 .toggleBtn {
     position: absolute;
@@ -91,44 +76,6 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-}
-
-.logoIcon {
-    width: 32px;
-    height: 32px;
-    background: #f0f0f0;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.gridIcon {
-    width: 16px;
-    height: 16px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2px;
-}
-
-.gridIcon::before,
-.gridIcon::after,
-.gridIcon>div::before,
-.gridIcon>div::after {
-    content: '';
-    background: #333;
-    border-radius: 1px;
-}
-
-.logoText {
-    font-weight: 700;
-    font-size: 18px;
-    color: #000;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
 }
 
 .searchWrapper {

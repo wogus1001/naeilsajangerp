@@ -14,6 +14,7 @@ import {
     YAxis
 } from 'recharts';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { getFranchiseLeadSourceLabel } from '@/lib/franchise-leads';
 import type { LeadTrendMode } from './utils';
 import type { LeadDashboardTypeBProps } from './LeadDashboardTypes';
 
@@ -40,7 +41,10 @@ export function LeadDashboardTypeB({
     const [trendMode, setTrendMode] = React.useState<LeadTrendMode>('daily');
     const maxStageCount = Math.max(1, ...stageData.map(item => item.count));
     const mutableStageData = [...stageData];
-    const mutableSourceChartData = [...sourceChartData];
+    const mutableSourceChartData = sourceChartData.map(item => ({
+        ...item,
+        source: getFranchiseLeadSourceLabel(item.source)
+    }));
     const mutableManagerChartData = [...managerChartData];
     const mutableTrendData = [...trendSeriesData[trendMode]];
     const trendModeConfig = TREND_MODE_CONFIG[trendMode];

@@ -130,6 +130,8 @@ SearchAPI/SerpApi are optional POC providers for Naver SERP, Naver place-style r
 
 Franchise location screens are split by operating intent:
 
+- Global navigation shows `/dashboard` as a top-level `대시보드` item. The franchise workspace is grouped under `프랜차이즈`.
+- `프랜차이즈` contains `모객 DB`, `출점 후보지`, and `가맹 운영`.
 - `/dashboard/franchise-leads/market-insights`: site planning for future openings and lead-linked regional demand.
 - `/dashboard/franchise-operations`: current franchise/direct-store operations and store status management.
 
@@ -139,17 +141,28 @@ The existing 점포개발 업무 route `/properties/register` remains the origin
 
 Franchise-specific intake uses separate protected routes:
 
-- `/dashboard/franchise-leads/property-registration`: 공인중개사용 물건 등록. It stores into `properties` with `operation_type='물건등록'` and `data.sourceType='franchise_property_registration'`.
+- `/dashboard/franchise-leads/property-registration`: 공인중개사용 입점 요청. It stores into `properties` with `operation_type='물건등록'` and `data.sourceType='franchise_property_registration'`.
 - `/dashboard/franchise-leads/lead-registration`: internal 가맹 희망자 등록. It stores review-ready requests in `franchise_lead_registration_requests` and does not immediately create `franchise_leads`. The route and DB remain for future use, but the staff/admin menu tabs are hidden as of 2026-06-17.
-- `/dashboard/franchise-leads/matching-request`: 예비 창업자 프랜차이즈 매칭 요청. It stores into `franchise_leads` with `source='프랜차이즈 매칭 요청'`.
-- `/dashboard/franchise-leads/work-intake`: staff-facing list tabs for 물건 등록 and 프랜차이즈 매칭 요청 intake records.
-- `/admin/franchise-intake`: admin review tabs for `물건 등록 리스트` and `프랜차이즈 매칭요청`.
+- `/dashboard/franchise-leads/matching-request`: 예비 창업자 등록. It stores into `franchise_leads` with `source='프랜차이즈 매칭 요청'` for existing-data compatibility.
+- `/dashboard/franchise-leads/work-intake`: staff-facing `진행현황` tabs for 입점 요청 and 예비 창업자 등록 intake records.
+- `/admin/franchise-intake`: admin review tabs for `입점 요청 리스트` and `예비 창업자 등록`.
 
 The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/leads/promote` to create a real franchise lead from a pending lead-registration request. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target.
 
 Apply `supabase_franchise_lead_registration_requests_migration.sql` before enabling the lead-registration intake screen. Apply `supabase_franchise_property_promotion_migration.sql` so each company can promote the same source property only once through the `franchise_locations(company_id, source_property_id)` unique index.
 
 Admin user approval depends on UUID lookup through `/api/users`. Keep the full UUID regex format `8-4-4-4-12`; otherwise a valid profile UUID can be misread as a legacy short login id and approval fails with `User not found`.
+
+## Company Logo Setup
+
+Company logos are stored as metadata on `companies` and files under the existing Supabase Storage `property-images/company-logos/<company_id>/...` path.
+
+- Apply `supabase_company_logo_migration.sql` before enabling uploads in production.
+- Supported files: PNG, JPG, WebP.
+- Size policy: 1MB per file, recommended 512x512px square image.
+- Runtime display: the sidebar uses a fixed 40x40 logo box with a bordered white background and slight scale/contrast compensation; profile/admin previews use 64x64.
+- `/profile` lets the current company upload/delete its logo. Admin company access management can upload/delete logos for selected companies.
+- Logo APIs accept Supabase bearer sessions and the app's legacy `x-user-id` requester header, so existing localStorage login sessions can still upload after the migration is applied.
 
 ## Realty Import Setup
 
@@ -242,9 +255,9 @@ Run `supabase_franchise_contract_checklist_migration.sql` before enabling the pe
 
 The candidate detail panel reads and saves the common seven-step checklist through `/api/franchise-lead-contract-checklist`. The checklist is an operational confirmation layer for headquarters staff; it does not replace the disclosure delivery record, and the 14-day contract lock continues to use `franchise_lead_disclosure_deliveries.sent_at`.
 
-The lead DB table can show checklist progress through `/api/franchise-lead-contract-checklist/summaries`. In the 모객 DB workspace, the `계약 점주` tab fixes the list to `계약완료` leads and switches to a checklist-only review surface for pre-opening follow-up.
+The lead DB table can show checklist progress through `/api/franchise-lead-contract-checklist/summaries`. In the 모객 DB workspace, the `계약 완료` tab fixes the list to `계약완료` leads and switches to a checklist-only review surface for pre-opening follow-up.
 
-Checklist rows are scoped by both `lead_id` and `company_id`. The migration adds a composite lead/company foreign key and RLS checks so a checklist row cannot be attached to a lead from another company. The `계약 점주` tab opens a checklist-only panel; the full generic lead detail panel remains in the standard DB workflow.
+Checklist rows are scoped by both `lead_id` and `company_id`. The migration adds a composite lead/company foreign key and RLS checks so a checklist row cannot be attached to a lead from another company. The `계약 완료` tab opens a checklist-only panel; the full generic lead detail panel remains in the standard DB workflow.
 
 ## Franchise Brand Monitoring Setup
 

@@ -1,3 +1,7 @@
+import type { LeadRegistrationForm } from '@/lib/franchise-lead-registration';
+import type { MatchingRequestForm } from '@/lib/franchise-matching-request';
+import type { PropertyRegistrationForm } from '@/lib/franchise-property-registration';
+
 export type WorkIntakeTab = 'properties' | 'leadRegistrations' | 'matchingRequests';
 
 export type WorkIntakeKind = WorkIntakeTab;
@@ -14,6 +18,7 @@ export type PropertyItem = {
     readonly deposit: string;
     readonly monthlyRent: string;
     readonly createdAt: string;
+    readonly form: PropertyRegistrationForm;
 };
 
 export type LeadRegistrationItem = {
@@ -33,6 +38,7 @@ export type LeadRegistrationItem = {
     readonly promotedAt: string;
     readonly promotedLeadId: string;
     readonly createdAt: string;
+    readonly form: LeadRegistrationForm;
 };
 
 export type MatchingRequestItem = {
@@ -50,6 +56,7 @@ export type MatchingRequestItem = {
     readonly urgency: string;
     readonly memo: string;
     readonly createdAt: string;
+    readonly form: MatchingRequestForm;
 };
 
 export type WorkIntakeData = {

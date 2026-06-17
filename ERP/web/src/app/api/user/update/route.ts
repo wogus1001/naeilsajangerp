@@ -128,12 +128,24 @@ export async function PUT(request: Request) {
             await supabaseAdmin.from('profiles').update(updates).eq('id', userId);
         }
 
-        // Return updated object
-        const { data: finalProfile } = await supabaseAdmin
+        let finalProfileResult = await supabaseAdmin
             .from('profiles')
-            .select(`*, company:companies(name)`)
+            .select(`*, company:companies(name, logo_url)`)
             .eq('id', userId)
             .single();
+
+        if (finalProfileResult.error) {
+            finalProfileResult = await supabaseAdmin
+                .from('profiles')
+                .select(`*, company:companies(name)`)
+                .eq('id', userId)
+                .single();
+        }
+
+        const finalProfile = finalProfileResult.data;
+        if (!finalProfile) {
+            return NextResponse.json({ error: '사용자 정보를 다시 불러오지 못했습니다.' }, { status: 500 });
+        }
 
         return NextResponse.json({
             user: {
@@ -143,6 +155,7 @@ export async function PUT(request: Request) {
                 role: finalProfile.role,
                 status: finalProfile.status,
                 companyName: finalProfile.company?.name || '',
+                companyLogoUrl: finalProfile.company?.logo_url || '',
                 companyId: finalProfile.company_id
             }
         });

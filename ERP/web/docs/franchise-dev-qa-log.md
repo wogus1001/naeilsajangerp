@@ -342,18 +342,36 @@
 - 검증: `npx tsx --test src/components/layout/notificationRequests.test.mts src/lib/franchise-notifications.test.mts src/components/franchise/leads/leadDetailDeepLink.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
 - 로컬 브라우저 QA: Playwright 컨텍스트에 Supabase 로그인 세션이 없어 `/dashboard/franchise-leads` 접근 시 `/login` 리다이렉트까지만 확인했다. 로그인 세션에서는 읽음 클릭 후 헤더 목록에서 해당 알림이 사라지는지 운영 화면에서 추가 확인한다.
 
-## 2026-06-17 물건 등록/매칭 요청 QA
+## 2026-06-17 입점 요청/예비 창업자 등록 QA
 
-- 기존 `/properties/register` 점포 신규등록은 원본 화면으로 복구했다. 로그인 세션에서 본문이 `점포 신규등록`, `물건 개요`, 기존 업종 대/중/소분류 흐름을 보여주고, 새 `물건 등록` 본문은 섞이지 않음을 확인했다.
-- 새 `/dashboard/franchise-leads/property-registration`은 프랜차이즈 인입용 물건 등록 전용 화면으로 분리했다. 본문에 `물건 등록`, `입점 희망 조건`, `임대 조건`, `임대인 지원 내용`, `사진 및 자료`가 표시되고, 1440px와 390px 모두 page overflow 0건이었다.
+- 기존 `/properties/register` 점포 신규등록은 원본 화면으로 복구했다. 로그인 세션에서 본문이 `점포 신규등록`, `물건 개요`, 기존 업종 대/중/소분류 흐름을 보여주고, 새 `입점 요청` 본문은 섞이지 않음을 확인했다.
+- 새 `/dashboard/franchise-leads/property-registration`은 프랜차이즈 인입용 입점 요청 전용 화면으로 분리했다. 본문에 `입점 요청`, `입점 희망 조건`, `임대 조건`, `임대인 지원 내용`, `사진 및 자료`가 표시되고, 1440px와 390px 모두 page overflow 0건이었다.
 - 새 `/dashboard/franchise-leads/lead-registration`은 가맹 희망자 등록을 별도 인입 DB(`franchise_lead_registration_requests`)에 저장한다. route와 DB는 보존하지만 현재 운영 메뉴, 업무 목록 탭, 어드민 인입 탭에서는 숨김 처리했다.
 - `/dashboard/franchise-leads/matching-request`는 확장된 예비 창업자/희망 업종/예산/보유 물건/내부 메모 컬럼을 유지한다. `희망 업종` 셀렉트는 새 물건 등록과 같은 업종 옵션 소스를 사용하며, 기본 fallback 기준 `요식업`, `카페`, `음식점`, `서비스업`, `유통업`, `부동산업` 등이 표시됨을 확인했다.
-- `/dashboard/franchise-leads/work-intake`는 `업무` 상위 메뉴 아래 `업무 목록`으로 노출하며, 물건 등록/프랜차이즈 매칭 요청을 탭 목록으로 확인한다.
-- `/admin/franchise-intake`는 `전체 회사` 선택, `물건 등록 리스트`, `프랜차이즈 매칭요청` 탭을 표시한다. 관리자 물건 리스트는 새 물건 등록에서 저장한 `operation_type='물건등록'` 건을 대상으로 한다.
+- `/dashboard/franchise-leads/work-intake`는 `업무` 상위 메뉴 아래 `진행현황`으로 노출하며, 입점 요청/예비 창업자 등록을 탭 목록으로 확인한다.
+- `/admin/franchise-intake`는 `전체 회사` 선택, `입점 요청 리스트`, `예비 창업자 등록` 탭을 표시한다. 관리자 입점 요청 리스트는 새 입점 요청에서 저장한 `operation_type='물건등록'` 건을 대상으로 한다.
 - 이미 밀어넣은 물건 원본을 수정하면 연결된 후보지를 즉시 덮어쓰지 않고 admin 목록에서 `수정` 상태로 표시한다. 관리자가 `업데이트`를 눌러야 promoted target에 반영된다.
 - 업종 옵션은 `franchise_brands`의 `industry/businessType/categoryMajor/categoryMiddle/categorySmall`와 `custom_categories(category_type='industry_detail')`를 병합하고, 데이터가 없으면 기본 옵션으로 fallback 한다.
 - 검증: `npx tsx --test src/lib/franchise-industry-options.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-property-promotion.test.mts src/lib/franchise-matching-request.test.mts src/lib/franchise-leads.test.mts src/lib/company-menu-features.test.mts` 17건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, Browserslist/baseline-browser-mapping 경고만 출력했다.
 - 브라우저 QA: `admin / 1234` 로그인 세션에서 기존 점포 신규등록, 새 물건 등록, 매칭 요청, 관리자 인입 페이지를 확인했다. 새 화면의 390px 모바일 overflow는 0건이었다.
+
+## 2026-06-17 회사 로고 관리 QA
+
+- `supabase_company_logo_migration.sql`을 추가해 `companies`에 `logo_url`, `logo_path`, 파일명/용량/MIME/변경시각 컬럼을 둔다. 파일은 기존 `property-images` 버킷의 `company-logos/<company_id>/...` 경로에 저장한다.
+- `/api/company-logo`는 로그인 사용자 기준으로 회사 스코프를 확인한다. 일반 사용자는 자기 회사만 수정할 수 있고, admin은 선택 회사 `companyId`를 지정해 수정할 수 있다.
+- `/profile`에는 회사 로고 관리 블록을 추가했다. 어드민 회사별 메뉴 관리의 선택 회사 정보 패널에서도 같은 로고 관리 컴포넌트를 사용한다.
+- 로고 정책은 PNG/JPG/WebP, 1MB 이하, 권장 512x512px 정사각형이다. 사이드바는 40x40 박스 안에 테두리/흰 배경/확대 보정으로 표시한다.
+- 로고 migration 적용 전 DB에서는 `logo_url` 조회가 실패할 수 있어 `/api/auth/me`, 프로필 저장 응답, 어드민 회사 목록 조회가 회사명-only 조회로 fallback 된다. 미로그인/만료 토큰 401/403은 예상 가능한 인증 실패로 처리하고 Next 개발 오버레이가 뜨지 않도록 오류 로그 대상에서 제외했다.
+- 회사 로고 API는 Supabase bearer 인증과 legacy `x-user-id` requester 인증을 모두 허용한다. 프로필/어드민 로고 컴포넌트는 기존 localStorage 로그인 세션에서도 `x-user-id`를 붙여 조회/등록/삭제 요청을 보낸다.
+- 검증: `npx tsx --test src/utils/userUtils.test.mts src/lib/company-logo.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: `admin / 1234` 로그인 후 `/profile`에서 회사 로고 관리 블록, 정책 문구, `로고 등록` 버튼을 확인했다. `/admin` 회사별 메뉴 관리 선택 회사 패널에서도 같은 로고 관리 블록이 표시됐다. 390px 모바일 폭 기준 `/profile`, `/admin` 모두 page overflow 0건이고 `[AuthCheck] /api/auth/me failed` 오버레이는 표시되지 않았다.
+- 추가 브라우저 QA: 조회 회사를 `민티아`로 변경한 뒤 사이드바 로고 이미지가 약 42.6px 정사각형으로 표시되고, `/api/company-logo?companyId=...`는 legacy `x-user-id` 헤더 기준 HTTP 200으로 로고 URL/파일명/크기를 반환했다. 파일 없는 POST는 401이 아니라 `로고 파일이 필요합니다.` 400 검증 오류로 진입해 업로드 인증 경로가 통과함을 확인했다.
+
+## 2026-06-17 모객 DB 표시 문구 QA
+
+- 모객 DB 내부 상단 `요약 대시보드 / 기존 모객 흐름 분석` 설명 박스를 제거했다.
+- 저장 호환성 때문에 DB source 값 `프랜차이즈 매칭 요청`은 유지하되, 화면 필터/차트/상세/테이블 배지는 `예비 창업자 등록`으로 표시한다.
+- 브라우저 QA: `/dashboard/franchise-leads`에서 `요약 대시보드`, `기존 모객 흐름 분석`, `프랜차이즈 매칭 요청` 문구가 보이지 않고 `계약 완료`, `예비 창업자 등록`이 표시됨을 확인했다. 1440px와 390px 모두 page overflow 0건이었다.
 
 ## 2026-06-17 출점 후보지 첨부 연동 QA
 
@@ -369,6 +387,14 @@
 - 수정: UUID 정규식을 `8-4-4-4-12`로 바로잡고, 승인/직급 변경 요청은 `uuid`와 표시 이메일을 함께 보내도록 보강했다. PUT 라우트는 UUID 후보를 먼저 찾고, 없으면 이메일 후보로 fallback 한다.
 - 검증: `npx tsx --test src/app/api/users/userRouteHelpers.test.mts` 6건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과.
 - 브라우저 QA: `http://localhost:3000/admin/users`에서 기존 로그인 세션으로 `remax@naver.com` 승인을 실행했다. `승인되었습니다.` 알림이 표시됐고 행 상태가 `활성`으로 변경됐다. Supabase profile 조회에서도 `remax@naver.com` status가 `active`임을 확인했다.
+
+## 2026-06-17 글로벌 메뉴 구조 QA
+
+- `/dashboard`는 기존 `대시보드 > 요약` 하위 메뉴에서 상위 단독 메뉴 `대시보드`로 정리했다.
+- 기존 `대시보드` 묶음은 `프랜차이즈`로 변경하고, 하위에 `모객 DB`, `출점 후보지`, `가맹 운영`만 배치했다.
+- 헤더 breadcrumb와 회사별 메뉴 관리의 카테고리도 같은 구조로 맞췄다.
+- 검증: `npx tsx --test src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: `admin / 1234` 로그인 후 `/dashboard`에서 사이드바가 상위 단독 `대시보드`와 `프랜차이즈` 묶음으로 표시되는지 확인했다. `/dashboard/franchise-leads`는 `프랜차이즈 > 모객 DB`, `/dashboard/franchise-leads/market-insights`는 `프랜차이즈 > 출점 후보지` breadcrumb로 표시됐고, 1440px/390px 모두 문서 기준 가로 overflow 0건이었다.
 
 ## 다음 QA 체크리스트
 

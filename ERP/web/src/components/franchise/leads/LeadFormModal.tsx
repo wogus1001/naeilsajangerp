@@ -10,7 +10,8 @@ import {
     FRANCHISE_LEAD_GRADES,
     FRANCHISE_LEAD_SOURCES,
     FRANCHISE_LEAD_STATUSES,
-    getFranchiseLeadGradeLabel
+    getFranchiseLeadGradeLabel,
+    getFranchiseLeadSourceLabel
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 
@@ -83,7 +84,7 @@ export function LeadFormModal({
                         <select value={form.source} onChange={(event) => onFormChangeAction(prev => ({ ...prev, source: event.target.value }))}>
                             <option value="">미지정</option>
                             {FRANCHISE_LEAD_SOURCES.map(source => (
-                                <option key={source} value={source}>{source}</option>
+                                <option key={source} value={source}>{getFranchiseLeadSourceLabel(source)}</option>
                             ))}
                         </select>
                     </label>

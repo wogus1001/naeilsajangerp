@@ -29,6 +29,10 @@ type CompanyRow = {
     readonly status: string | null;
     readonly owner_id: string | null;
     readonly created_at: string | null;
+    readonly logo_url?: string | null;
+    readonly logo_file_name?: string | null;
+    readonly logo_file_size?: number | null;
+    readonly logo_updated_at?: string | null;
 };
 
 type ProfileRow = {
@@ -51,6 +55,10 @@ type AdminCompanySummary = {
     readonly activeUserCount: number;
     readonly pendingUserCount: number;
     readonly managerNames: readonly string[];
+    readonly logoUrl: string | null;
+    readonly logoFileName: string | null;
+    readonly logoFileSize: number | null;
+    readonly logoUpdatedAt: string | null;
 };
 
 type AdminCompanyAccessResponse = {
@@ -111,7 +119,11 @@ function summarizeCompanies(
             userCount: companyProfiles.length,
             activeUserCount: activeProfiles.length,
             pendingUserCount: pendingProfiles.length,
-            managerNames
+            managerNames,
+            logoUrl: company.logo_url ?? null,
+            logoFileName: company.logo_file_name ?? null,
+            logoFileSize: company.logo_file_size ?? null,
+            logoUpdatedAt: company.logo_updated_at ?? null
         };
     });
 }
@@ -122,12 +134,21 @@ async function buildAccessResponse(request: Request, selectedCompanyId: string |
     if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
     if (!isAdmin(requester)) return fail(403, 'FORBIDDEN', 'Admin access required');
 
-    const { data: companies, error: companyError } = await supabaseAdmin
+    let companyResult = await supabaseAdmin
         .from('companies')
-        .select('id, name, business_number, status, owner_id, created_at')
+        .select('id, name, business_number, status, owner_id, created_at, logo_url, logo_file_name, logo_file_size, logo_updated_at')
         .order('created_at', { ascending: false })
         .returns<CompanyRow[]>();
 
+    if (companyResult.error) {
+        companyResult = await supabaseAdmin
+            .from('companies')
+            .select('id, name, business_number, status, owner_id, created_at')
+            .order('created_at', { ascending: false })
+            .returns<CompanyRow[]>();
+    }
+
+    const { data: companies, error: companyError } = companyResult;
     if (companyError) {
         console.error('Admin company list error:', companyError);
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch companies');

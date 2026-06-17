@@ -20,6 +20,16 @@ function readNumber(record: Record<string, unknown>, key: string): number | null
     return typeof value === 'number' ? value : null;
 }
 
+function readNullableString(record: Record<string, unknown>, key: string): string | null {
+    const value = record[key];
+    return typeof value === 'string' ? value : null;
+}
+
+function readNullableNumber(record: Record<string, unknown>, key: string): number | null {
+    const value = record[key];
+    return typeof value === 'number' ? value : null;
+}
+
 function parseStringArray(value: unknown): readonly string[] | null {
     if (!Array.isArray(value)) return null;
     const names: string[] = [];
@@ -42,11 +52,29 @@ function parseCompany(value: unknown): AdminCompanySummary | null {
     const activeUserCount = readNumber(value, 'activeUserCount');
     const pendingUserCount = readNumber(value, 'pendingUserCount');
     const managerNames = parseStringArray(value.managerNames);
+    const logoUrl = readNullableString(value, 'logoUrl');
+    const logoFileName = readNullableString(value, 'logoFileName');
+    const logoFileSize = readNullableNumber(value, 'logoFileSize');
+    const logoUpdatedAt = readNullableString(value, 'logoUpdatedAt');
 
     if (!id || !name || !businessNumber || !status || createdAt === null) return null;
     if (userCount === null || activeUserCount === null || pendingUserCount === null || !managerNames) return null;
 
-    return { id, name, businessNumber, status, createdAt, userCount, activeUserCount, pendingUserCount, managerNames };
+    return {
+        id,
+        name,
+        businessNumber,
+        status,
+        createdAt,
+        userCount,
+        activeUserCount,
+        pendingUserCount,
+        managerNames,
+        logoUrl,
+        logoFileName,
+        logoFileSize,
+        logoUpdatedAt
+    };
 }
 
 function parseFeature(value: unknown): AdminCompanyFeature | null {

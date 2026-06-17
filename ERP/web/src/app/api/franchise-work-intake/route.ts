@@ -1,7 +1,23 @@
 import { getRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import {
+    LEAD_REGISTRATION_INITIAL_FORM,
+    type LeadRegistrationForm
+} from '@/lib/franchise-lead-registration';
 import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead-registration-table';
-import { FRANCHISE_MATCHING_REQUEST_SOURCE } from '@/lib/franchise-leads';
+import { FRANCHISE_MATCHING_REQUEST_SOURCE, normalizeLeadStatus } from '@/lib/franchise-leads';
+import {
+    MATCHING_REQUEST_INITIAL_FORM,
+    type MatchingRequestForm
+} from '@/lib/franchise-matching-request';
+import {
+    PROPERTY_REGISTRATION_INITIAL_FORM,
+    type PropertyRegistrationForm
+} from '@/lib/franchise-property-registration';
+import {
+    normalizeFranchiseFileAttachments,
+    normalizeFranchiseFileNames
+} from '@/lib/franchise-file-attachments';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -54,66 +70,215 @@ function readDataString(data: Record<string, unknown> | null, key: string): stri
     return typeof value === 'string' ? value : '';
 }
 
+function readText(data: Record<string, unknown> | null, key: string): string {
+    const value = data?.[key];
+    if (value === null || value === undefined) return '';
+    return String(value);
+}
+
+function readBoolean(data: Record<string, unknown> | null, key: string, fallback = false): boolean {
+    const value = data?.[key];
+    return typeof value === 'boolean' ? value : fallback;
+}
+
+function toManwonInput(value: number | null): string {
+    if (value === null) return '';
+    return String(Math.round(value / 10_000));
+}
+
+function toDatetimeInput(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offsetMs = date.getTimezoneOffset() * 60_000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 function displayName(profile: ProfileRow): string {
     return profile.name || profile.email || '이름 없음';
 }
 
+function toPropertyForm(row: PropertyRow): PropertyRegistrationForm {
+    const data = row.data || {};
+    const fileAttachments = normalizeFranchiseFileAttachments(data.fileAttachments);
+    const fileNames = normalizeFranchiseFileNames(data.fileNames, fileAttachments);
+
+    return {
+        ...PROPERTY_REGISTRATION_INITIAL_FORM,
+        desiredBrand: readText(data, 'desiredBrand'),
+        desiredBusinessType: readText(data, 'desiredBusinessType'),
+        desiredCategory: readText(data, 'desiredCategory'),
+        matchPriority: readText(data, 'matchPriority') || PROPERTY_REGISTRATION_INITIAL_FORM.matchPriority,
+        propertyName: readText(data, 'propertyName') || row.name || '',
+        propertyAddress: readText(data, 'propertyAddress') || row.address || '',
+        propertyRegion: readText(data, 'propertyRegion') || readText(data, 'region'),
+        roadAddress: readText(data, 'roadAddress'),
+        jibunAddress: readText(data, 'jibunAddress'),
+        zoneNo: readText(data, 'zoneNo'),
+        detailAddress: readText(data, 'detailAddress'),
+        privateArea: readText(data, 'privateAreaInput') || readText(data, 'privateArea'),
+        privateAreaUnit: readText(data, 'privateAreaUnit') || PROPERTY_REGISTRATION_INITIAL_FORM.privateAreaUnit,
+        supplyArea: readText(data, 'supplyArea'),
+        floor: readText(data, 'floor'),
+        totalFloors: readText(data, 'totalFloors'),
+        parkingAvailable: readText(data, 'parkingAvailable') || PROPERTY_REGISTRATION_INITIAL_FORM.parkingAvailable,
+        currentStatus: row.status || readText(data, 'currentStatus') || PROPERTY_REGISTRATION_INITIAL_FORM.currentStatus,
+        fileNames,
+        fileAttachments,
+        deposit: readText(data, 'deposit'),
+        monthlyRent: readText(data, 'monthlyRent'),
+        maintenanceFee: readText(data, 'maintenanceFee'),
+        premium: readText(data, 'premium'),
+        vatIncluded: readText(data, 'vatIncluded') || PROPERTY_REGISTRATION_INITIAL_FORM.vatIncluded,
+        leaseAvailableDate: readText(data, 'leaseAvailableDate'),
+        contractPeriod: readText(data, 'contractPeriod'),
+        negotiable: readText(data, 'negotiable') || PROPERTY_REGISTRATION_INITIAL_FORM.negotiable,
+        rentFreeAvailable: readText(data, 'rentFreeAvailable') || PROPERTY_REGISTRATION_INITIAL_FORM.rentFreeAvailable,
+        rentFreePeriod: readText(data, 'rentFreePeriod'),
+        interiorSupportAvailable: readText(data, 'interiorSupportAvailable') || PROPERTY_REGISTRATION_INITIAL_FORM.interiorSupportAvailable,
+        simpleInstallSupportAvailable: readText(data, 'simpleInstallSupportAvailable') || PROPERTY_REGISTRATION_INITIAL_FORM.simpleInstallSupportAvailable,
+        facilityWorkNegotiable: readText(data, 'facilityWorkNegotiable') || PROPERTY_REGISTRATION_INITIAL_FORM.facilityWorkNegotiable,
+        landlordSupportMemo: readText(data, 'landlordSupportMemo'),
+        consultationMemo: readText(data, 'consultationMemo'),
+        riskMemo: readText(data, 'riskMemo'),
+        nextAction: readText(data, 'nextAction') || PROPERTY_REGISTRATION_INITIAL_FORM.nextAction,
+        nextContactAt: readText(data, 'nextContactAt')
+    };
+}
+
+function toLeadRegistrationForm(row: LeadLikeRow): LeadRegistrationForm {
+    const data = row.data || {};
+    return {
+        ...LEAD_REGISTRATION_INITIAL_FORM,
+        name: row.name || '',
+        mobile: row.mobile || '',
+        source: readText(data, 'registrationSource') || row.source || '',
+        status: normalizeLeadStatus(row.status),
+        grade: row.grade || '',
+        desiredRegion: row.desired_region || '',
+        budgetMin: toManwonInput(row.budget_min),
+        budgetMax: toManwonInput(row.budget_max),
+        interestedBrand: row.interested_brand || '',
+        managerId: row.manager_id || '',
+        nextContactAt: toDatetimeInput(row.next_contact_at),
+        memo: row.memo || ''
+    };
+}
+
+function toMatchingRequestForm(row: LeadLikeRow): MatchingRequestForm {
+    const data = row.data || {};
+    const desiredBrand = readText(data, 'desiredBrand') || row.interested_brand || '';
+    return {
+        ...MATCHING_REQUEST_INITIAL_FORM,
+        name: row.name || '',
+        mobile: row.mobile || '',
+        email: readText(data, 'email'),
+        residence: readText(data, 'residence'),
+        currentJob: readText(data, 'currentJob'),
+        startupExperience: readText(data, 'startupExperience') || MATCHING_REQUEST_INITIAL_FORM.startupExperience,
+        decisionMaker: readText(data, 'decisionMaker') || MATCHING_REQUEST_INITIAL_FORM.decisionMaker,
+        startupTiming: readText(data, 'startupTiming'),
+        desiredCategory: readText(data, 'desiredCategory'),
+        desiredBrand,
+        brandUnknown: readBoolean(data, 'brandUnknown', row.interested_brand === '브랜드 미정'),
+        brandPreference: readText(data, 'brandPreference') || MATCHING_REQUEST_INITIAL_FORM.brandPreference,
+        totalBudget: readText(data, 'totalBudget'),
+        ownCapital: readText(data, 'ownCapital'),
+        loanPreference: readText(data, 'loanPreference') || MATCHING_REQUEST_INITIAL_FORM.loanPreference,
+        desiredDeposit: readText(data, 'desiredDeposit'),
+        desiredRent: readText(data, 'desiredRent'),
+        desiredPremium: readText(data, 'desiredPremium'),
+        desiredSize: readText(data, 'desiredSize'),
+        desiredFloor: readText(data, 'desiredFloor'),
+        desiredRegion: row.desired_region || readText(data, 'desiredRegion'),
+        excludedRegion: readText(data, 'excludedRegion'),
+        ownedPropertyStatus: readText(data, 'ownedPropertyStatus'),
+        ownedPropertyName: readText(data, 'ownedPropertyName'),
+        ownedPropertyAddress: readText(data, 'ownedPropertyAddress'),
+        ownedPropertyAddressDetail: readText(data, 'ownedPropertyAddressDetail'),
+        ownedArea: readText(data, 'ownedArea'),
+        ownedFloor: readText(data, 'ownedFloor'),
+        ownedDeposit: readText(data, 'ownedDeposit'),
+        ownedRent: readText(data, 'ownedRent'),
+        ownedMaintenance: readText(data, 'ownedMaintenance'),
+        ownedPremium: readText(data, 'ownedPremium'),
+        ownedCurrentStatus: readText(data, 'ownedCurrentStatus'),
+        ownerAgreement: readText(data, 'ownerAgreement') || MATCHING_REQUEST_INITIAL_FORM.ownerAgreement,
+        ownedDescription: readText(data, 'ownedDescription'),
+        matchPriority: readText(data, 'matchPriority') || MATCHING_REQUEST_INITIAL_FORM.matchPriority,
+        proposalRange: readText(data, 'proposalRange') || MATCHING_REQUEST_INITIAL_FORM.proposalRange,
+        urgency: readText(data, 'urgency') || MATCHING_REQUEST_INITIAL_FORM.urgency,
+        extraRequest: readText(data, 'extraRequest'),
+        summaryNote: readText(data, 'summaryNote'),
+        riskMemo: readText(data, 'riskMemo'),
+        recommendedBrands: readText(data, 'recommendedBrands'),
+        recommendedProperties: readText(data, 'recommendedProperties'),
+        nextAction: readText(data, 'nextAction') || MATCHING_REQUEST_INITIAL_FORM.nextAction
+    };
+}
+
 function toPropertyView(row: PropertyRow, companies: ReadonlyMap<string, string>) {
     const companyId = row.company_id || '';
+    const form = toPropertyForm(row);
     return {
         id: row.id,
         companyId,
         companyName: companies.get(companyId) || '회사명 없음',
-        name: row.name || readDataString(row.data, 'name') || '이름 없는 물건',
-        status: row.status || '',
-        address: row.address || '',
-        region: readDataString(row.data, 'region'),
-        desiredBrand: readDataString(row.data, 'desiredBrand'),
-        desiredCategory: readDataString(row.data, 'desiredCategory'),
-        deposit: readDataString(row.data, 'deposit'),
-        monthlyRent: readDataString(row.data, 'monthlyRent'),
-        createdAt: row.created_at || ''
+        name: row.name || form.propertyName || '이름 없는 물건',
+        status: row.status || form.currentStatus,
+        address: row.address || form.propertyAddress,
+        region: form.propertyRegion,
+        desiredBrand: form.desiredBrand,
+        desiredCategory: form.desiredCategory,
+        deposit: form.deposit,
+        monthlyRent: form.monthlyRent,
+        createdAt: row.created_at || '',
+        form
     };
 }
 
 function toLeadRegistrationView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>) {
+    const form = toLeadRegistrationForm(row);
     return {
         id: row.id,
         managerName: row.manager_id ? managerNames.get(row.manager_id) || '' : '',
-        name: row.name || '이름 없음',
-        mobile: row.mobile || '',
+        name: form.name || '이름 없음',
+        mobile: form.mobile,
         source: row.source || '',
-        status: row.status || '',
-        grade: row.grade || '',
-        desiredRegion: row.desired_region || '',
+        status: form.status,
+        grade: form.grade,
+        desiredRegion: form.desiredRegion,
         budgetMin: row.budget_min,
         budgetMax: row.budget_max,
-        interestedBrand: row.interested_brand || '',
-        memo: row.memo || '',
+        interestedBrand: form.interestedBrand,
+        memo: form.memo,
         nextContactAt: row.next_contact_at || '',
         promotedAt: row.promoted_at || '',
         promotedLeadId: row.promoted_lead_id || '',
-        createdAt: row.created_at || ''
+        createdAt: row.created_at || '',
+        form
     };
 }
 
 function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>) {
     const data = row.data || {};
+    const form = toMatchingRequestForm(row);
     return {
         id: row.id,
         managerName: row.manager_id ? managerNames.get(row.manager_id) || '' : '',
-        name: row.name || '이름 없음',
-        mobile: row.mobile || '',
-        email: readDataString(data, 'email'),
-        desiredRegion: row.desired_region || '',
-        desiredCategory: readDataString(data, 'desiredCategory'),
-        interestedBrand: row.interested_brand || '',
-        totalBudget: readDataString(data, 'totalBudget'),
-        ownedPropertyStatus: readDataString(data, 'ownedPropertyStatus'),
-        matchPriority: readDataString(data, 'matchPriority'),
-        urgency: readDataString(data, 'urgency'),
+        name: form.name || '이름 없음',
+        mobile: form.mobile,
+        email: form.email,
+        desiredRegion: form.desiredRegion,
+        desiredCategory: form.desiredCategory,
+        interestedBrand: row.interested_brand || form.desiredBrand,
+        totalBudget: form.totalBudget,
+        ownedPropertyStatus: form.ownedPropertyStatus,
+        matchPriority: form.matchPriority,
+        urgency: form.urgency,
         memo: row.memo || '',
-        createdAt: row.created_at || ''
+        createdAt: row.created_at || '',
+        form
     };
 }
 

@@ -10,6 +10,8 @@ export type StoredUser = {
     managerName?: string;
     companyName?: string;
     company_name?: string;
+    companyLogoUrl?: string | null;
+    company_logo_url?: string | null;
     companyId?: string;
     company_id?: string;
     [key: string]: unknown;
@@ -18,10 +20,16 @@ export type StoredUser = {
 export type AdminCompanyScope = {
     readonly id: string;
     readonly name: string;
+    readonly logoUrl?: string | null;
 };
 
 const ADMIN_COMPANY_SCOPE_KEY = 'admin_selected_company_scope';
 export const ADMIN_COMPANY_SCOPE_CHANGE_EVENT = 'admin-company-scope-change';
+export const COMPANY_LOGO_CHANGE_EVENT = 'company-logo-change';
+
+export const shouldReportAuthCheckFailure = (status: number): boolean => {
+    return status !== 401 && status !== 403;
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -33,7 +41,11 @@ function parseAdminCompanyScope(value: unknown): AdminCompanyScope | null {
     const id = value.id.trim();
     const name = value.name.trim();
     if (!id || !name) return null;
-    return { id, name };
+    return {
+        id,
+        name,
+        logoUrl: typeof value.logoUrl === 'string' ? value.logoUrl : null
+    };
 }
 
 export const isAdminStoredUser = (sourceUser?: StoredUser): boolean => {
@@ -89,6 +101,14 @@ export const getStoredCompanyName = (sourceUser?: StoredUser): string => {
     const adminScope = isAdminStoredUser(user) ? getAdminCompanyScope() : null;
     if (adminScope?.name) return adminScope.name;
     return user.companyName || user.company_name || '';
+};
+
+export const getStoredCompanyLogoUrl = (sourceUser?: StoredUser): string => {
+    const user = sourceUser || getStoredUser();
+    if (!user) return '';
+    const adminScope = isAdminStoredUser(user) ? getAdminCompanyScope() : null;
+    if (adminScope?.logoUrl) return adminScope.logoUrl;
+    return user.companyLogoUrl || user.company_logo_url || '';
 };
 
 export const getStoredCompanyId = (sourceUser?: StoredUser): string => {

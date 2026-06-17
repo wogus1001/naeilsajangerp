@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Search, X } from 'lucide-react';
+import { getFranchiseLeadSourceLabel } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
@@ -97,7 +98,7 @@ export function LeadToolbar({
                     onChange={(event) => onSourceFilterChangeAction(event.target.value)}
                 >
                     {sourceOptions.map(source => (
-                        <option key={source} value={source}>{source === '전체' ? '전체 유입' : source}</option>
+                        <option key={source} value={source}>{source === '전체' ? '전체 유입' : getFranchiseLeadSourceLabel(source)}</option>
                     ))}
                 </select>
                 <select
