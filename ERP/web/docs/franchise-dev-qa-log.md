@@ -389,6 +389,17 @@
 - 검증: `npx tsx --test src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
 - 브라우저 QA: `admin / 1234` 로그인 후 `/dashboard`에서 사이드바가 상위 단독 `대시보드`와 `프랜차이즈` 묶음으로 표시되는지 확인했다. `/dashboard/franchise-leads`는 `프랜차이즈 > 모객 DB`, `/dashboard/franchise-leads/market-insights`는 `프랜차이즈 > 출점 후보지` breadcrumb로 표시됐고, 1440px/390px 모두 문서 기준 가로 overflow 0건이었다.
 
+## 2026-06-17 인입 관리/로고 배포 전 QA
+
+- `/dashboard/franchise-leads/matching-request` 상단의 중복 `예비 창업자 등록` 제목 카드를 제거했다. 폼 내부 `예비 창업자 정보` legend는 유지했고, 1440px/390px Playwright 확인에서 heading 0건, legend 1건, page overflow 0건을 확인했다.
+- `/admin/franchise-intake`의 예비 창업자 등록 탭에 `밀어넣기`, `반영 완료`, `수정`, `업데이트` 상태를 추가했다. 밀어넣기는 `/api/admin/franchise-intake/matching-requests/promote`를 통해 회사별 1차 유입 `franchise_leads`를 만들고, 매칭 요청 전용 필드는 메모/snapshot에 보존한다. 원본 수정 후에는 `/api/admin/franchise-intake/matching-requests/update-promoted`를 눌러야 대상 모객 DB에 반영된다.
+- 브라우저 QA 중 밀어넣기 성공 메시지가 데이터 재조회에 의해 사라지는 문제를 확인해, 재조회 후 성공 메시지가 유지되도록 수정했다. 390px에서는 어드민 사이드바가 모달 버튼 클릭을 가로막지 않도록 모달 레이어를 사이드바보다 위로 올렸다.
+- 실서버 회사 로고 업로드 실패 대응으로 `/api/company-logo`가 업로드 전 기존 `property-images` storage bucket 준비를 시도하도록 보강했다. dev에서 업로드가 되고 production에서만 실패하면 production Supabase storage policy/env를 우선 확인한다.
+- 출점 후보지 목록의 `종합메모`는 내용 자체를 요약하지 않고 한 줄만 노출한 뒤 말줄임 처리한다. 컬럼 선택 dropdown은 긴 목록이 잘리지 않도록 레이어 높이/스크롤을 조정했다.
+- 등록/수정 폼 QA를 위해 로컬 앱 devDependency에 `playwright`를 명시했다.
+- 검증: `git diff --check`, `npx tsx --test src/lib/franchise-matching-request-promotion.test.mts src/lib/franchise-property-promotion.test.mts src/lib/company-logo.test.mts` 12건, `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npm run build` 통과.
+- 브라우저 QA: Playwright mock 세션으로 1440px/390px에서 `/dashboard/franchise-leads/matching-request`의 상단 중복 제목 미노출과 `예비 창업자 정보` legend 유지, `/admin/franchise-intake`의 예비 창업자 등록 탭 `밀어넣기 -> 모객 DB 등록 -> 성공 메시지` 흐름, POST payload(`leadId`, `targetCompanyId`, `managerId`, `requesterId`)와 page overflow 0건을 확인했다.
+
 ## 다음 QA 체크리스트
 
 ### P0

@@ -1,13 +1,16 @@
 import {
     buildLeadRegistrationPayload,
+    LEAD_REGISTRATION_INITIAL_FORM,
     type LeadRegistrationForm
 } from '@/lib/franchise-lead-registration';
 import {
     buildMatchingRequestPayload,
+    MATCHING_REQUEST_INITIAL_FORM,
     type MatchingRequestForm
 } from '@/lib/franchise-matching-request';
 import {
     buildPropertyRegistrationPayload,
+    PROPERTY_REGISTRATION_INITIAL_FORM,
     type PropertyRegistrationForm
 } from '@/lib/franchise-property-registration';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -21,12 +24,12 @@ export type WorkIntakeEditForm =
 
 export function buildInitialEditForm(target: WorkIntakeEditTarget): WorkIntakeEditForm {
     if (target.kind === 'properties') {
-        return { kind: 'properties', value: target.item.form };
+        return { kind: 'properties', value: { ...PROPERTY_REGISTRATION_INITIAL_FORM, ...target.item.form } };
     }
     if (target.kind === 'leadRegistrations') {
-        return { kind: 'leadRegistrations', value: target.item.form };
+        return { kind: 'leadRegistrations', value: { ...LEAD_REGISTRATION_INITIAL_FORM, ...target.item.form } };
     }
-    return { kind: 'matchingRequests', value: target.item.form };
+    return { kind: 'matchingRequests', value: { ...MATCHING_REQUEST_INITIAL_FORM, ...target.item.form } };
 }
 
 export function buildWorkIntakeEditRequestBody(

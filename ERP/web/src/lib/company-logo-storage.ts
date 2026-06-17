@@ -12,6 +12,7 @@ export type StoredCompanyLogo = {
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 type MetadataRecord = Readonly<Record<string, unknown>>;
+type StorageErrorRecord = Readonly<Record<string, unknown>>;
 
 function dateValue(value: string | null | undefined): number {
     if (!value) return 0;
@@ -37,6 +38,51 @@ function readMetadataString(metadata: unknown, key: string): string | null {
 
 function isVisibleLogoFile(fileName: string | null | undefined): fileName is string {
     return Boolean(fileName && !fileName.startsWith('.') && fileName !== 'placeholder');
+}
+
+function isStorageErrorRecord(value: unknown): value is StorageErrorRecord {
+    return typeof value === 'object' && value !== null;
+}
+
+function readStorageErrorText(error: unknown): string {
+    if (!isStorageErrorRecord(error)) return '';
+    return ['message', 'error', 'name', 'statusCode', 'status']
+        .map(key => {
+            const value = error[key];
+            return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+        })
+        .join(' ');
+}
+
+function isMissingBucketError(error: unknown): boolean {
+    const text = readStorageErrorText(error);
+    return /\b404\b|not found|does not exist|bucket not found|no such bucket/i.test(text);
+}
+
+function isBucketAlreadyExistsError(error: unknown): boolean {
+    return /already exists/i.test(readStorageErrorText(error));
+}
+
+export async function ensureCompanyLogoBucket(
+    supabaseAdmin: SupabaseAdminClient,
+    bucket: string
+): Promise<Error | null> {
+    const bucketOptions = { public: true };
+    const { data: existingBucket, error: getBucketError } = await supabaseAdmin.storage.getBucket(bucket);
+
+    if (existingBucket) {
+        if (existingBucket.public === true) return null;
+        const { error: updateError } = await supabaseAdmin.storage.updateBucket(bucket, bucketOptions);
+        return updateError;
+    }
+    if (getBucketError && !isMissingBucketError(getBucketError)) return getBucketError;
+
+    const { error: createError } = await supabaseAdmin.storage.createBucket(bucket, bucketOptions);
+    if (!createError) return null;
+    if (!isBucketAlreadyExistsError(createError)) return createError;
+
+    const { error: updateError } = await supabaseAdmin.storage.updateBucket(bucket, bucketOptions);
+    return updateError;
 }
 
 export function getCompanyLogoPublicUrl(

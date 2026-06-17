@@ -298,7 +298,11 @@ export function LocationMasterList({
                                 maintenanceFee: formatLocationMoney(data.lease.maintenanceFee),
                                 facility: <small>{getFacilitySummary(location)}</small>,
                                 landlord: <small>{data.landlord.tendency || '-'}</small>,
-                                memo: <small>{location.memo || '-'}</small>,
+                                memo: (
+                                    <small className={styles.locationMemoText} title={location.memo || '-'}>
+                                        {location.memo || '-'}
+                                    </small>
+                                ),
                                 manager: getManagerDisplayName(location, managerOptions),
                                 createdAt: formatDate(location.createdAt),
                                 actions: (

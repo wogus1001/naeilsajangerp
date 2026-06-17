@@ -41,7 +41,6 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
             <section className={styles.modal}>
                 <div className={styles.modalHeader}>
                     <h2>{titleFor(target)}</h2>
-                    <p>저장 후 이미 밀어넣은 건은 어드민에서 `수정` 상태로 표시되고, 업데이트를 눌러야 대상 DB에 반영됩니다.</p>
                 </div>
                 <div className={styles.modalBody}>
                     <WorkIntakeEditFields form={form} onChangeAction={setForm} />

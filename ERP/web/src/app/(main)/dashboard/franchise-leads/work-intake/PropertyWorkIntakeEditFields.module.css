@@ -1,0 +1,89 @@
+.addressRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 88px;
+    gap: 8px;
+}
+
+.addressRow input {
+    cursor: pointer;
+}
+
+.addressButton {
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #333d4b;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.addressButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.areaInputGroup {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px;
+}
+
+.areaInputGroup input {
+    border-radius: 8px 0 0 8px;
+}
+
+.areaUnitSwitch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.areaUnitSwitch button {
+    border: 1px solid #e5e8eb;
+    border-left: 0;
+    color: #4e5968;
+    background: #f9fafb;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.areaUnitSwitch button:last-child {
+    border-radius: 0 8px 8px 0;
+}
+
+.areaUnitSwitch .activeUnit {
+    border-color: #3182f6;
+    color: #ffffff;
+    background: #3182f6;
+}
+
+.helpText {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+    .addressRow,
+    .areaInputGroup {
+        grid-template-columns: 1fr;
+    }
+
+    .addressButton {
+        min-height: 44px;
+    }
+
+    .areaInputGroup input {
+        border-radius: 8px;
+    }
+
+    .areaUnitSwitch button {
+        border-left: 1px solid #e5e8eb;
+    }
+
+    .areaUnitSwitch button:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+}

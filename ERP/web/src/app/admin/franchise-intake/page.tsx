@@ -3,19 +3,17 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { getRequesterId, getStoredUser } from '@/utils/userUtils';
-import { fetchAdminFranchiseIntake, promoteAdminProperty } from './requests';
+import { fetchAdminFranchiseIntake, promoteAdminMatchingRequest, promoteAdminProperty } from './requests';
 import { IntakePropertiesTable } from './IntakePropertiesTable';
 import { MatchingRequestsTable } from './MatchingRequestsTable';
-import type { AdminFranchiseIntakeData, AdminIntakeProperty } from './types';
+import type { AdminFranchiseIntakeData, AdminIntakeProperty, AdminMatchingRequest } from './types';
 import styles from './page.module.css';
 
 type IntakeTab = 'properties' | 'matchingRequests';
 
-type PromotionModalState = {
-    readonly property: AdminIntakeProperty;
-    readonly targetCompanyId: string;
-    readonly managerId: string;
-};
+type PromotionModalState =
+    | { readonly kind: 'property'; readonly property: AdminIntakeProperty; readonly targetCompanyId: string; readonly managerId: string }
+    | { readonly kind: 'matchingRequest'; readonly request: AdminMatchingRequest; readonly targetCompanyId: string; readonly managerId: string };
 
 const EMPTY_DATA: AdminFranchiseIntakeData = {
     companies: [],
@@ -73,9 +71,19 @@ export default function AdminFranchiseIntakePage() {
 
     const openPromotionModal = (property: AdminIntakeProperty) => {
         setModal({
+            kind: 'property',
             property,
             targetCompanyId: property.companyId || selectedCompanyId,
             managerId: property.managerId
+        });
+    };
+
+    const openMatchingRequestPromotionModal = (request: AdminMatchingRequest) => {
+        setModal({
+            kind: 'matchingRequest',
+            request,
+            targetCompanyId: request.companyId || selectedCompanyId,
+            managerId: request.managerId
         });
     };
 
@@ -89,17 +97,27 @@ export default function AdminFranchiseIntakePage() {
         setIsPromoting(true);
         setMessage('');
         try {
-            await promoteAdminProperty({
-                propertyId: modal.property.id,
-                targetCompanyId: modal.targetCompanyId,
-                managerId: modal.managerId || undefined,
-                requesterId
-            });
+            if (modal.kind === 'property') {
+                await promoteAdminProperty({
+                    propertyId: modal.property.id,
+                    targetCompanyId: modal.targetCompanyId,
+                    managerId: modal.managerId || undefined,
+                    requesterId
+                });
+            } else {
+                await promoteAdminMatchingRequest({
+                    leadId: modal.request.id,
+                    targetCompanyId: modal.targetCompanyId,
+                    managerId: modal.managerId || undefined,
+                    requesterId
+                });
+            }
+            const successMessage = modal.kind === 'property' ? '출점 후보지로 반영했습니다.' : '모객 DB 1차 유입으로 반영했습니다.';
             setModal(null);
-            setMessage('출점 후보지로 반영했습니다.');
             await loadData(selectedCompanyId);
+            setMessage(successMessage);
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : '출점 후보지 반영에 실패했습니다.');
+            setMessage(error instanceof Error ? error.message : '반영에 실패했습니다.');
         } finally {
             setIsPromoting(false);
         }
@@ -150,14 +168,24 @@ export default function AdminFranchiseIntakePage() {
                 />
             )}
             {activeTab === 'matchingRequests' && (
-                <MatchingRequestsTable requests={data.matchingRequests} />
+                <MatchingRequestsTable
+                    requests={data.matchingRequests}
+                    requesterId={requesterId}
+                    onPromoteAction={openMatchingRequestPromotionModal}
+                    onSyncedAction={handleSynced}
+                    onErrorAction={setMessage}
+                />
             )}
 
             {modal && (
                 <div className={styles.modalBackdrop}>
                     <section className={styles.modal}>
-                        <h2>출점 후보지로 밀어넣기</h2>
-                        <p>{modal.property.name} 물건을 선택한 회사의 출점 후보지로 등록합니다.</p>
+                        <h2>{modal.kind === 'property' ? '출점 후보지로 밀어넣기' : '모객 DB로 밀어넣기'}</h2>
+                        <p>
+                            {modal.kind === 'property'
+                                ? `${modal.property.name} 물건을 선택한 회사의 출점 후보지로 등록합니다.`
+                                : `${modal.request.name} 예비 창업자 정보를 선택한 회사의 1차 유입 DB로 등록합니다.`}
+                        </p>
                         <label>
                             <span>대상 회사 DB</span>
                             <select
@@ -176,7 +204,9 @@ export default function AdminFranchiseIntakePage() {
                         </label>
                         <div className={styles.modalActions}>
                             <button className={styles.secondaryButton} onClick={() => setModal(null)} disabled={isPromoting}>취소</button>
-                            <button className={styles.primaryButton} onClick={confirmPromotion} disabled={isPromoting}>{isPromoting ? '반영 중' : '후보지 등록'}</button>
+                            <button className={styles.primaryButton} onClick={confirmPromotion} disabled={isPromoting}>
+                                {isPromoting ? '반영 중' : modal.kind === 'property' ? '후보지 등록' : '모객 DB 등록'}
+                            </button>
                         </div>
                     </section>
                 </div>
