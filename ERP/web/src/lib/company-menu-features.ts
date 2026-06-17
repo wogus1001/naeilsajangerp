@@ -4,7 +4,6 @@ export type CompanyMenuFeatureKey =
     | 'franchiseWorkIntake'
     | 'franchiseMatchingRequest'
     | 'franchisePropertyRegistration'
-    | 'franchiseLeadRegistration'
     | 'marketInsights'
     | 'franchiseOperations'
     | 'properties'
@@ -86,17 +85,10 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         routePrefixes: ['/dashboard/franchise-leads/property-registration']
     },
     {
-        key: 'franchiseLeadRegistration',
-        category: '업무',
-        title: '가맹 희망자 등록',
-        description: '가맹 희망자 접수 DB를 어드민 검수 전 단계로 등록합니다.',
-        routePrefixes: ['/dashboard/franchise-leads/lead-registration']
-    },
-    {
         key: 'franchiseWorkIntake',
         category: '업무',
         title: '업무 목록',
-        description: '물건 등록, 가맹 희망자 등록, 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.',
+        description: '물건 등록과 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.',
         routePrefixes: ['/dashboard/franchise-leads/work-intake']
     },
     {
@@ -206,7 +198,6 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
         franchiseWorkIntake: true,
         franchiseMatchingRequest: true,
         franchisePropertyRegistration: true,
-        franchiseLeadRegistration: true,
         marketInsights: true,
         franchiseOperations: true,
         properties: true,
