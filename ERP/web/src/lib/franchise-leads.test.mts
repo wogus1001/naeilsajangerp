@@ -5,6 +5,7 @@ import {
     FRANCHISE_LEAD_REGISTRATION_SOURCE,
     FRANCHISE_MATCHING_REQUEST_SOURCE,
     getFranchiseLeadGradeLabel,
+    getFranchiseLeadSourceLabel,
     getFranchiseLeadStageLabel,
     normalizeLeadStage,
     normalizeLeadGrade
@@ -35,6 +36,7 @@ test('normalizeLeadStage keeps raw intake below candidate pipeline', () => {
 test('franchise matching request is a first-class lead source', () => {
     assert.equal(FRANCHISE_MATCHING_REQUEST_SOURCE, '프랜차이즈 매칭 요청');
     assert.ok(FRANCHISE_LEAD_SOURCES.includes(FRANCHISE_MATCHING_REQUEST_SOURCE));
+    assert.equal(getFranchiseLeadSourceLabel(FRANCHISE_MATCHING_REQUEST_SOURCE), '예비 창업자 등록');
 });
 
 test('franchise lead registration is a first-class lead source', () => {

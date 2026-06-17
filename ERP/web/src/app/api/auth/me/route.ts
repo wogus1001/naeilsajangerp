@@ -9,7 +9,7 @@ type ProfileRow = {
     company_id: string | null;
     status: string | null;
     email: string | null;
-    company: { name: string | null } | null;
+    company: { name: string | null; logo_url?: string | null } | null;
 };
 
 function toLegacyLoginId(email: string | null, fallback: string): string {
@@ -48,12 +48,21 @@ export async function GET(request: Request) {
         }
 
         const supabaseAdmin = getSupabaseAdmin();
-        const { data: profile, error: profileError } = await supabaseAdmin
+        let profileResult = await supabaseAdmin
             .from('profiles')
-            .select('id, name, role, company_id, status, email, company:companies!company_id(name)')
+            .select('id, name, role, company_id, status, email, company:companies!company_id(name, logo_url)')
             .eq('id', userData.user.id)
             .single<ProfileRow>();
 
+        if (profileResult.error) {
+            profileResult = await supabaseAdmin
+                .from('profiles')
+                .select('id, name, role, company_id, status, email, company:companies!company_id(name)')
+                .eq('id', userData.user.id)
+                .single<ProfileRow>();
+        }
+
+        const { data: profile, error: profileError } = profileResult;
         if (profileError || !profile) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -72,6 +81,7 @@ export async function GET(request: Request) {
             name: profile.name || '',
             role: profile.role || 'staff',
             companyName: profile.company?.name || '',
+            companyLogoUrl: profile.company?.logo_url || '',
             companyId: profile.company_id || null,
             status: profile.status || 'active'
         };

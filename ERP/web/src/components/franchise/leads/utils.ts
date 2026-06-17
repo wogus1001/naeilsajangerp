@@ -1,6 +1,7 @@
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
-    FRANCHISE_LEAD_STATUSES
+    FRANCHISE_LEAD_STATUSES,
+    getFranchiseLeadSourceLabel
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import {
@@ -297,7 +298,7 @@ export function isMetaLeadSource(lead: FranchiseLead) {
 }
 
 export function getLeadSourceTitle(lead: FranchiseLead) {
-    return isMetaLeadSource(lead) ? 'Meta Lead Ads' : lead.source || '유입 미지정';
+    return isMetaLeadSource(lead) ? 'Meta Lead Ads' : getFranchiseLeadSourceLabel(lead.source);
 }
 
 export function getLeadSourceBadgeLabel(lead: FranchiseLead) {

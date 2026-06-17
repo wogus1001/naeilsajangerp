@@ -100,7 +100,7 @@ export function AdminCompanySelector({ user }: AdminCompanySelectorProps) {
         setSelectedCompanyId(nextCompanyId);
 
         const nextCompany = findCompany(companies, nextCompanyId);
-        setAdminCompanyScope(nextCompany ? { id: nextCompany.id, name: nextCompany.name } : null);
+        setAdminCompanyScope(nextCompany ? { id: nextCompany.id, name: nextCompany.name, logoUrl: nextCompany.logoUrl } : null);
         window.location.reload();
     };
 

@@ -46,7 +46,7 @@ test('buildFranchisePropertyPromotionDraft maps common property fields to franch
 test('buildFranchisePropertyPromotionDraft keeps property-only fields in memo and snapshot', () => {
     const draft = buildFranchisePropertyPromotionDraft(property, 'company-1');
 
-    assert.match(draft.memo, /^\[물건 등록 원본 정보\]/);
+    assert.match(draft.memo, /^\[입점 요청 원본 정보\]/);
     assert.match(draft.memo, /- 상세 주소: 2층/);
     assert.match(draft.memo, /- 면적: 34/);
     assert.match(draft.memo, /- 특징 메모: 대로변/);

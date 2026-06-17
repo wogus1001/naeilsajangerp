@@ -31,7 +31,7 @@ export function LeadWorkspaceTabs({ activeTab, onTabChange }: LeadWorkspaceTabsP
                 className={activeTab === 'contractOwners' ? styles.workspaceTabActive : styles.workspaceTab}
                 onClick={() => onTabChange('contractOwners')}
             >
-                계약 점주
+                계약 완료
             </button>
         </nav>
     );

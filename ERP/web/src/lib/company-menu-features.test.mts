@@ -7,6 +7,7 @@ import {
     isCompanyDashboardMode,
     normalizeCompanyDashboardMode
 } from './company-menu-features.js';
+import { SIDEBAR_SECTIONS } from '../components/layout/SidebarMenuConfig.js';
 
 test('Given no saved company dashboard mode When normalizing Then A type is the default', () => {
     assert.equal(DEFAULT_COMPANY_DASHBOARD_MODE, 'a');
@@ -14,10 +15,35 @@ test('Given no saved company dashboard mode When normalizing Then A type is the 
     assert.equal(normalizeCompanyDashboardMode(''), 'a');
 });
 
-test('Given work intake path When resolving company menu feature Then 업무 목록 owns the route', () => {
+test('Given work intake path When resolving company menu feature Then 진행현황 owns the route', () => {
     const feature = getCompanyMenuFeatureForPath('/dashboard/franchise-leads/work-intake');
 
     assert.equal(feature?.key, 'franchiseWorkIntake');
+    assert.equal(feature?.title, '진행현황');
+});
+
+test('Given dashboard and franchise paths When resolving company menu feature Then labels match the sidebar structure', () => {
+    const dashboard = getCompanyMenuFeatureForPath('/dashboard');
+    const franchiseLeads = getCompanyMenuFeatureForPath('/dashboard/franchise-leads');
+    const marketInsights = getCompanyMenuFeatureForPath('/dashboard/franchise-leads/market-insights');
+    const franchiseOperations = getCompanyMenuFeatureForPath('/dashboard/franchise-operations');
+
+    assert.equal(dashboard?.category, '대시보드');
+    assert.equal(dashboard?.title, '대시보드');
+    assert.equal(franchiseLeads?.category, '프랜차이즈');
+    assert.equal(marketInsights?.category, '프랜차이즈');
+    assert.equal(franchiseOperations?.category, '프랜차이즈');
+});
+
+test('Given sidebar sections When reading navigation Then dashboard is top-level and franchise owns the three franchise links', () => {
+    const dashboardSection = SIDEBAR_SECTIONS[0];
+    const franchiseSection = SIDEBAR_SECTIONS[1];
+
+    assert.equal(dashboardSection?.key, 'dashboard');
+    assert.equal(dashboardSection?.direct, true);
+    assert.deepEqual(dashboardSection?.items.map(item => item.title), ['대시보드']);
+    assert.equal(franchiseSection?.key, 'franchise');
+    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영']);
 });
 
 test('Given a saved company dashboard mode When normalizing Then only A and B are accepted', () => {

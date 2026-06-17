@@ -1,8 +1,13 @@
 import { createClient } from '@/utils/supabase/client';
+import { getRequesterId } from '@/utils/userUtils';
 
 export async function getApiAuthHeaders(baseHeaders: HeadersInit = {}): Promise<Headers> {
     const headers = new Headers(baseHeaders);
     if (typeof window === 'undefined') return headers;
+
+    const requesterId = getRequesterId();
+    if (requesterId) headers.set('x-user-id', requesterId);
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return headers;
 
     try {

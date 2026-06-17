@@ -112,7 +112,7 @@ function buildMemo(property: FranchisePropertyPromotionRow): string {
         lines.push(`- ${FRANCHISE_PROPERTY_PROMOTION_LABELS[key] || key}: ${formatted}`);
     }
 
-    return lines.length > 0 ? `[물건 등록 원본 정보]\n${lines.join('\n')}` : '';
+    return lines.length > 0 ? `[입점 요청 원본 정보]\n${lines.join('\n')}` : '';
 }
 
 function buildAttachmentData(data: Record<string, unknown>): {
@@ -180,7 +180,7 @@ export function buildFranchisePropertyPromotionDraft(
         .filter(Boolean)
         .join(' ');
     const region = explicitRegion || splitRegion || normalizeRegion(address);
-    const name = cleanString(property.name) || readDataString(data, ['propertyName', '물건명']) || '물건 등록 후보지';
+    const name = cleanString(property.name) || readDataString(data, ['propertyName', '물건명']) || '입점 요청 후보지';
 
     return {
         company_id: targetCompanyId,

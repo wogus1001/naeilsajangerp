@@ -59,13 +59,13 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     {
         key: 'dashboard',
         category: '대시보드',
-        title: '요약',
+        title: '대시보드',
         description: '전체 현황과 주요 업무 흐름 요약을 보여줍니다.',
         routePrefixes: ['/dashboard']
     },
     {
         key: 'franchiseLeads',
-        category: '대시보드',
+        category: '프랜차이즈',
         title: '모객 DB',
         description: '가맹 희망자 유입, 상담, 계약 전환 흐름을 관리합니다.',
         routePrefixes: ['/dashboard/franchise-leads']
@@ -73,34 +73,34 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     {
         key: 'franchiseMatchingRequest',
         category: '업무',
-        title: '프랜차이즈 매칭 요청',
-        description: '프랜차이즈 매칭 문의를 모객 DB로 등록합니다.',
+        title: '예비 창업자 등록',
+        description: '예비 창업자 정보를 모객 DB로 등록합니다.',
         routePrefixes: ['/dashboard/franchise-leads/matching-request']
     },
     {
         key: 'franchisePropertyRegistration',
         category: '업무',
-        title: '물건 등록',
-        description: '프랜차이즈 매칭용 물건 정보를 별도로 등록합니다.',
+        title: '입점 요청',
+        description: '프랜차이즈 입점 요청 정보를 별도로 등록합니다.',
         routePrefixes: ['/dashboard/franchise-leads/property-registration']
     },
     {
         key: 'franchiseWorkIntake',
         category: '업무',
-        title: '업무 목록',
-        description: '물건 등록과 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.',
+        title: '진행현황',
+        description: '입점 요청과 예비 창업자 등록 입력 건을 탭으로 확인합니다.',
         routePrefixes: ['/dashboard/franchise-leads/work-intake']
     },
     {
         key: 'marketInsights',
-        category: '대시보드',
+        category: '프랜차이즈',
         title: '출점 후보지',
         description: '후보지, 외부 상가, 상권 검토 데이터를 관리합니다.',
         routePrefixes: ['/dashboard/franchise-leads/market-insights']
     },
     {
         key: 'franchiseOperations',
-        category: '대시보드',
+        category: '프랜차이즈',
         title: '가맹 운영',
         description: '오픈 준비와 운영 전환 업무를 확인합니다.',
         routePrefixes: ['/dashboard/franchise-operations']

@@ -8,17 +8,20 @@ import { getDefaultCompanyMenuFlags, isCompanyMenuEnabled, type CompanyMenuFeatu
 import { SIDEBAR_MENU_ITEMS, SIDEBAR_SECTIONS, type SidebarSectionKey } from './SidebarMenuConfig';
 import { SidebarNavSection } from './SidebarNavSection';
 import styles from './Sidebar.module.css';
+import logoStyles from './SidebarLogo.module.css';
 
 interface SidebarProps {
     isOpen: boolean;
     onToggle: () => void;
     menuFlags?: CompanyMenuFlagMap;
     companyName?: string;
+    companyLogoUrl?: string | null;
 }
 
-const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), companyName }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), companyName, companyLogoUrl }: SidebarProps) => {
     const pathname = usePathname();
     const [isDashboardOpen, setIsDashboardOpen] = useState(true);
+    const [isFranchiseOpen, setIsFranchiseOpen] = useState(true);
     const [isFranchiseWorkOpen, setIsFranchiseWorkOpen] = useState(true);
     const [isConsultingOpen, setIsConsultingOpen] = useState(true);
     const [isCustomersOpen, setIsCustomersOpen] = useState(true);
@@ -65,6 +68,8 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
         switch (key) {
             case 'dashboard':
                 return isDashboardOpen;
+            case 'franchise':
+                return isFranchiseOpen;
             case 'franchiseWork':
                 return isFranchiseWorkOpen;
             case 'consulting':
@@ -82,6 +87,9 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
         switch (key) {
             case 'dashboard':
                 setIsDashboardOpen(prev => !prev);
+                return;
+            case 'franchise':
+                setIsFranchiseOpen(prev => !prev);
                 return;
             case 'franchiseWork':
                 setIsFranchiseWorkOpen(prev => !prev);
@@ -133,11 +141,15 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
 
             {/* Content Container - hidden when closed */}
             <div className={styles.contentContainer} style={{ opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }}>
-                <Link href="/dashboard" className={styles.logo} style={{ textDecoration: 'none' }}>
-                    <div className={styles.logoIcon}>
-                        <div className={styles.gridIcon} />
+                <Link href="/dashboard" className={logoStyles.logo} style={{ textDecoration: 'none' }}>
+                    <div className={logoStyles.logoIcon}>
+                        {companyLogoUrl ? (
+                            <img className={logoStyles.companyLogoImage} src={companyLogoUrl} alt={`${displayCompanyName} 로고`} />
+                        ) : (
+                            <div className={logoStyles.gridIcon} />
+                        )}
                     </div>
-                    <span className={styles.logoText} title={displayCompanyName}>
+                    <span className={logoStyles.logoText} title={displayCompanyName}>
                         {displayCompanyName} {process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production' && '(DEV)'}
                     </span>
                 </Link>
