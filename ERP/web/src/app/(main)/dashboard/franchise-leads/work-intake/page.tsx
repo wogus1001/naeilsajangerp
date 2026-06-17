@@ -29,13 +29,6 @@ function formatManwon(value: string): string {
     return `${new Intl.NumberFormat('ko-KR').format(parsed)}만원`;
 }
 
-function formatBudget(min: number | null, max: number | null): string {
-    const minText = min === null ? '' : `${new Intl.NumberFormat('ko-KR').format(Math.round(min / 10000))}만원`;
-    const maxText = max === null ? '' : `${new Intl.NumberFormat('ko-KR').format(Math.round(max / 10000))}만원`;
-    if (minText && maxText) return `${minText} ~ ${maxText}`;
-    return minText || maxText || '-';
-}
-
 function joinParts(parts: readonly string[]): string {
     return parts.map(part => part.trim()).filter(Boolean).join(' / ') || '-';
 }
@@ -86,7 +79,7 @@ export default function FranchiseWorkIntakePage() {
                     <div className={styles.iconBox}><ListChecks size={20} /></div>
                     <div>
                         <h1>업무 목록</h1>
-                        <p>물건 등록, 가맹 희망자 등록, 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.</p>
+                        <p>물건 등록과 프랜차이즈 매칭 요청 입력 건을 탭으로 확인합니다.</p>
                     </div>
                 </div>
             </section>
@@ -94,9 +87,6 @@ export default function FranchiseWorkIntakePage() {
             <section className={styles.toolbar}>
                 <button className={activeTab === 'properties' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('properties')}>
                     물건 등록 {data.properties.length}
-                </button>
-                <button className={activeTab === 'leadRegistrations' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('leadRegistrations')}>
-                    가맹 희망자 등록 {data.leadRegistrationRequests.length}
                 </button>
                 <button className={activeTab === 'matchingRequests' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('matchingRequests')}>
                     프랜차이즈 매칭 요청 {data.matchingRequests.length}
@@ -121,27 +111,6 @@ export default function FranchiseWorkIntakePage() {
                                 </tr>
                             ))}
                             {data.properties.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 물건이 없습니다.</td></tr>}
-                        </tbody>
-                    </table>
-                </section>
-            )}
-
-            {activeTab === 'leadRegistrations' && (
-                <section className={styles.panel}>
-                    <table className={styles.table}>
-                        <thead><tr><th>가맹 희망자</th><th>희망 조건</th><th>상태</th><th>담당/등록일</th><th>반영</th><th>관리</th></tr></thead>
-                        <tbody>
-                            {data.leadRegistrationRequests.map(item => (
-                                <tr key={item.id}>
-                                    <td><strong>{item.name}</strong><small>{item.mobile || '-'}</small><small>{item.memo || '-'}</small></td>
-                                    <td><span>{joinParts([item.desiredRegion, item.interestedBrand])}</span><small>예산 {formatBudget(item.budgetMin, item.budgetMax)}</small></td>
-                                    <td><span>{joinParts([item.source, item.status])}</span><small>{item.grade || '등급 미지정'}</small></td>
-                                    <td><span>{item.managerName || '-'}</span><small>{formatDate(item.createdAt)}</small></td>
-                                    <td>{item.promotedLeadId ? <span className={styles.doneBadge}>반영 완료</span> : <span className={styles.waitBadge}>대기</span>}</td>
-                                    <td><button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'leadRegistrations', item })}>수정</button></td>
-                                </tr>
-                            ))}
-                            {data.leadRegistrationRequests.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 가맹 희망자 접수가 없습니다.</td></tr>}
                         </tbody>
                     </table>
                 </section>

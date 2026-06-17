@@ -44,7 +44,6 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         items: [
             { title: '업무 목록', url: '/dashboard/franchise-leads/work-intake', category: '업무', featureKey: 'franchiseWorkIntake', icon: 'list' },
             { title: '물건 등록', url: '/dashboard/franchise-leads/property-registration', category: '업무', featureKey: 'franchisePropertyRegistration', icon: 'store' },
-            { title: '가맹 희망자 등록', url: '/dashboard/franchise-leads/lead-registration', category: '업무', featureKey: 'franchiseLeadRegistration', icon: 'users' },
             { title: '프랜차이즈 매칭 요청', url: '/dashboard/franchise-leads/matching-request', category: '업무', featureKey: 'franchiseMatchingRequest', icon: 'target' }
         ]
     },
