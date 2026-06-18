@@ -454,3 +454,18 @@ source_context: "ERP/web/src/components/franchise/market-insights/MarketInsightO
 ```
 
 Market insight pages should avoid redundant top summary card rows and decorative header pills or icons when the section content already communicates the workflow.
+
+## 2026-06-18T00:03:27.247Z — use-sub-agents-for-development-work
+
+```omd-meta
+id: pref_mqiqlbww_a90719fe
+timestamp: 2026-06-18T00:03:27.247Z
+scope: workflow.development
+signal: user-statement
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "project workflow"
+```
+
+Use sub-agents for development work when it can improve speed, parallel review, or verification efficiency.

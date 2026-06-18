@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 type Payload = {
     readonly propertyId: string;
     readonly requesterId: string | null;
+    readonly targetCompanyId: string | null;
 };
 
 type LocationRow = {
@@ -34,7 +35,11 @@ function parsePayload(value: unknown): Payload | null {
     if (!isRecord(value)) return null;
     const propertyId = readString(value, 'propertyId');
     if (!propertyId) return null;
-    return { propertyId, requesterId: readString(value, 'requesterId') };
+    return {
+        propertyId,
+        requesterId: readString(value, 'requesterId'),
+        targetCompanyId: readString(value, 'targetCompanyId')
+    };
 }
 
 export async function POST(request: Request) {
@@ -55,10 +60,20 @@ export async function POST(request: Request) {
         if (propertyError) throw propertyError;
         if (!property) return fail(404, 'NOT_FOUND', 'Property not found');
 
-        const { data: location, error: locationError } = await supabaseAdmin
+        let locationQuery = supabaseAdmin
             .from('franchise_locations')
             .select('id, company_id, manager_id')
-            .eq('source_property_id', property.id)
+            .eq('source_property_id', property.id);
+
+        if (payload.targetCompanyId) {
+            locationQuery = locationQuery.eq('company_id', payload.targetCompanyId);
+        } else if (property.company_id) {
+            locationQuery = locationQuery.eq('company_id', property.company_id);
+        }
+
+        const { data: location, error: locationError } = await locationQuery
+            .order('updated_at', { ascending: false })
+            .limit(1)
             .maybeSingle<LocationRow>();
         if (locationError) throw locationError;
         if (!location) return fail(404, 'NOT_FOUND', 'Promoted location not found');

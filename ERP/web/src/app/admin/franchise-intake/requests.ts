@@ -1,6 +1,12 @@
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
-import type { AdminFranchiseIntakeData, LeadPromotionRequest, PromotionRequest } from './types';
+import type {
+    AdminFranchiseIntakeData,
+    LeadPromotionRequest,
+    LeadSyncRequest,
+    PromotionRequest,
+    PropertySyncRequest
+} from './types';
 
 async function readPayload(response: Response): Promise<unknown> {
     return await response.json();
@@ -53,7 +59,7 @@ export async function promoteAdminMatchingRequest(request: LeadPromotionRequest)
     if (!response.ok) throw new Error(readApiError(payload));
 }
 
-export async function syncAdminProperty(request: Pick<PromotionRequest, 'propertyId' | 'requesterId'>): Promise<void> {
+export async function syncAdminProperty(request: PropertySyncRequest): Promise<void> {
     const response = await fetch('/api/admin/franchise-intake/properties/update-promoted', {
         method: 'POST',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
@@ -63,7 +69,7 @@ export async function syncAdminProperty(request: Pick<PromotionRequest, 'propert
     if (!response.ok) throw new Error(readApiError(payload));
 }
 
-export async function syncAdminMatchingRequest(request: Pick<LeadPromotionRequest, 'leadId' | 'requesterId'>): Promise<void> {
+export async function syncAdminMatchingRequest(request: LeadSyncRequest): Promise<void> {
     const response = await fetch('/api/admin/franchise-intake/matching-requests/update-promoted', {
         method: 'POST',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
@@ -73,7 +79,7 @@ export async function syncAdminMatchingRequest(request: Pick<LeadPromotionReques
     if (!response.ok) throw new Error(readApiError(payload));
 }
 
-export async function syncAdminLeadRegistration(request: Pick<LeadPromotionRequest, 'leadId' | 'requesterId'>): Promise<void> {
+export async function syncAdminLeadRegistration(request: LeadSyncRequest): Promise<void> {
     const response = await fetch('/api/admin/franchise-intake/leads/update-promoted', {
         method: 'POST',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),

@@ -6,8 +6,13 @@ export const LEAD_NEXT_ACTIONS = [
     '추가 상담',
     '자료 발송',
     '방문 상담',
+    '브랜드 제안',
+    '물건 제안',
+    '예산 재확인',
+    '대출 상담 연결',
     '계약 조건 확인',
-    '보류 확인'
+    '보류 확인',
+    '보류'
 ] as const;
 
 export const LEAD_CONSULTATION_RESULTS = [
@@ -110,7 +115,7 @@ function toLocalDateStamp(date: Date) {
 }
 
 function assertNever(value: never): never {
-    throw new Error(`Unhandled lead work queue: ${value}`);
+    throw new Error(`Unhandled lead workflow value: ${value}`);
 }
 
 function createScheduledContactDate(now: Date, days: number, hour: number, minute: number) {
@@ -148,9 +153,14 @@ function getLeadSuggestedPresetKey(workflow: Pick<LeadWorkflowDraft, 'nextAction
         case '추가 상담':
         case '자료 발송':
         case '방문 상담':
+        case '브랜드 제안':
+        case '물건 제안':
+        case '예산 재확인':
             return 'tomorrow_morning';
+        case '대출 상담 연결':
         case '계약 조건 확인':
             return 'three_days_later';
+        case '보류':
         case '보류 확인':
             return 'week_later';
         case '미정':

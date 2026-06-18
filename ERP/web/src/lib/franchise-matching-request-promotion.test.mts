@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     buildFranchiseMatchingRequestPromotionDraft,
-    buildMatchingRequestSourcePromotionData
+    shouldUseSourceLeadForSameCompanyPromotion
 } from './franchise-matching-request-promotion.js';
+import {
+    buildMatchingRequestSourcePromotionData,
+    findMatchingRequestPromotion
+} from './franchise-matching-request-promotion-links.js';
 import { FRANCHISE_MATCHING_REQUEST_SOURCE, FRANCHISE_MATCHING_REQUEST_SOURCE_LABEL } from './franchise-leads.js';
 
 const source = {
@@ -61,6 +65,7 @@ test('buildFranchiseMatchingRequestPromotionDraft maps compatible fields to lead
     assert.equal(draft.data.leadStage, 'raw_intake');
     assert.equal(draft.data.sourceType, 'franchise_matching_request_promoted');
     assert.equal(draft.data.matchingRequestId, 'matching-1');
+    assert.equal(Object.prototype.hasOwnProperty.call(draft.data, 'activityLog'), false);
 });
 
 test('buildFranchiseMatchingRequestPromotionDraft keeps request-only fields in memo and snapshot', () => {
@@ -107,4 +112,32 @@ test('buildMatchingRequestSourcePromotionData stores promoted lead tracking fiel
     assert.equal(data.matchingRequestPromotedCompanyId, 'company-2');
     assert.equal(data.matchingRequestPromotedManagerId, '');
     assert.equal(data.matchingRequestPromotionStatus, 'promoted');
+});
+
+test('Given multiple target companies When storing matching promotions Then each target keeps its own promoted lead link', () => {
+    const first = buildMatchingRequestSourcePromotionData({ sourceType: 'franchise_matching_request' }, {
+        promotedAt: '2026-06-17T02:00:00.000Z',
+        promotedBy: 'admin-1',
+        promotedLeadId: 'lead-1',
+        targetCompanyId: 'company-1',
+        targetManagerId: 'manager-1'
+    });
+    const second = buildMatchingRequestSourcePromotionData(first, {
+        promotedAt: '2026-06-17T03:00:00.000Z',
+        promotedBy: 'admin-2',
+        promotedLeadId: 'lead-2',
+        targetCompanyId: 'company-2',
+        targetManagerId: null
+    });
+
+    assert.equal(findMatchingRequestPromotion(second, 'company-1')?.promotedLeadId, 'lead-1');
+    assert.equal(findMatchingRequestPromotion(second, 'company-2')?.promotedLeadId, 'lead-2');
+    assert.equal(findMatchingRequestPromotion(second, null)?.promotedLeadId, 'lead-2');
+    assert.equal(second.matchingRequestPromotedLeadId, 'lead-2');
+    assert.equal(second.matchingRequestPromotedCompanyId, 'company-2');
+});
+
+test('Given target company is the request company When promoting Then the source lead should be reused', () => {
+    assert.equal(shouldUseSourceLeadForSameCompanyPromotion(source, 'source-company'), true);
+    assert.equal(shouldUseSourceLeadForSameCompanyPromotion(source, 'target-company'), false);
 });

@@ -143,11 +143,17 @@
     font-weight: 700;
 }
 
-.fileSummary {
+.fileSummary,
+.fileError {
     margin: 8px 0 0;
     color: #6b7684;
     font-size: 12px;
     font-weight: 400;
+}
+
+.fileError {
+    color: #f04452;
+    font-weight: 700;
 }
 
 .modalActions {

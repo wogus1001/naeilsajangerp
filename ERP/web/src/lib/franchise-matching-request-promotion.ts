@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     FRANCHISE_MATCHING_REQUEST_SOURCE_LABEL,
@@ -42,14 +41,6 @@ export type FranchiseMatchingRequestPromotionDraft = {
     readonly memo: string;
     readonly next_contact_at: string | null;
     readonly data: Record<string, unknown>;
-};
-
-type SourcePromotionContext = {
-    readonly promotedAt: string;
-    readonly promotedBy: string;
-    readonly promotedLeadId: string;
-    readonly targetCompanyId: string;
-    readonly targetManagerId: string | null;
 };
 
 const MEMO_LABELS: Record<string, string> = {
@@ -156,10 +147,6 @@ function buildSnapshot(source: FranchiseMatchingRequestPromotionRow): Record<str
     };
 }
 
-function readActivityLog(data: Record<string, unknown>): readonly unknown[] {
-    return Array.isArray(data.activityLog) ? data.activityLog : [];
-}
-
 export function buildFranchiseMatchingRequestPromotionDraft(
     source: FranchiseMatchingRequestPromotionRow,
     targetCompanyId: string,
@@ -190,29 +177,14 @@ export function buildFranchiseMatchingRequestPromotionDraft(
             matchingRequestId: source.id,
             matchingRequestSourceCompanyId: source.company_id,
             matchingRequestSourceSnapshot: buildSnapshot(source),
-            intakePromotedAt: promotedAt,
-            activityLog: [{
-                id: randomUUID(),
-                type: '메모',
-                content: '어드민 인입 관리에서 예비 창업자 등록을 모객 DB로 밀어넣기',
-                createdAt: promotedAt,
-                createdBy: 'admin'
-            }, ...readActivityLog(data)]
+            intakePromotedAt: promotedAt
         }
     };
 }
 
-export function buildMatchingRequestSourcePromotionData(
-    existingData: Record<string, unknown>,
-    context: SourcePromotionContext
-): Record<string, unknown> {
-    return {
-        ...existingData,
-        matchingRequestPromotedAt: context.promotedAt,
-        matchingRequestPromotedBy: context.promotedBy,
-        matchingRequestPromotedLeadId: context.promotedLeadId,
-        matchingRequestPromotedCompanyId: context.targetCompanyId,
-        matchingRequestPromotedManagerId: context.targetManagerId || '',
-        matchingRequestPromotionStatus: 'promoted'
-    };
+export function shouldUseSourceLeadForSameCompanyPromotion(
+    source: FranchiseMatchingRequestPromotionRow,
+    targetCompanyId: string
+): boolean {
+    return Boolean(source.company_id && source.company_id === targetCompanyId);
 }

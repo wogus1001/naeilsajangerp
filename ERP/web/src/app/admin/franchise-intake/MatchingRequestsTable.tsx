@@ -39,6 +39,10 @@ function joinParts(parts: readonly string[]): string {
 }
 
 function isPromoted(request: AdminMatchingRequest): boolean {
+    return Boolean(request.promotedLeadId || request.promotedAt || request.promotionCount > 0);
+}
+
+function isTargetPromoted(request: AdminMatchingRequest): boolean {
     return Boolean(request.promotedLeadId || request.promotedAt);
 }
 
@@ -55,7 +59,11 @@ export function MatchingRequestsTable({
         if (!requesterId) return;
         setSyncingId(request.id);
         try {
-            await syncAdminMatchingRequest({ leadId: request.id, requesterId });
+            await syncAdminMatchingRequest({
+                leadId: request.id,
+                requesterId,
+                targetCompanyId: request.promotedCompanyId || undefined
+            });
             onSyncedAction();
         } catch (error) {
             onErrorAction(error instanceof Error ? error.message : '모객 DB 업데이트에 실패했습니다.');
@@ -84,7 +92,8 @@ export function MatchingRequestsTable({
                 <tbody>
                     {requests.map(request => {
                         const promoted = isPromoted(request);
-                        const stale = promoted && request.syncStatus === 'stale';
+                        const targetPromoted = isTargetPromoted(request);
+                        const stale = targetPromoted && request.syncStatus === 'stale';
                         return (
                             <tr key={request.id}>
                                 <td>
@@ -135,7 +144,8 @@ export function MatchingRequestsTable({
                                 </td>
                                 <td>
                                     {stale && <span className={styles.staleBadge}>수정</span>}
-                                    {!stale && promoted && <span className={styles.doneBadge}>반영 완료</span>}
+                                    {!stale && targetPromoted && <span className={styles.doneBadge}>반영 완료</span>}
+                                    {!stale && !targetPromoted && promoted && <span className={styles.doneBadge}>{request.promotionCount}곳 반영</span>}
                                     {!promoted && <span className={styles.waitBadge}>대기</span>}
                                 </td>
                                 <td>
@@ -144,8 +154,8 @@ export function MatchingRequestsTable({
                                             {syncingId === request.id ? '업데이트 중' : '업데이트'}
                                         </button>
                                     ) : (
-                                        <button className={styles.actionButton} onClick={() => onPromoteAction(request)} disabled={promoted}>
-                                            밀어넣기 <ArrowRight size={14} />
+                                        <button className={styles.actionButton} onClick={() => onPromoteAction(request)}>
+                                            {promoted ? '추가 밀어넣기' : '밀어넣기'} <ArrowRight size={14} />
                                         </button>
                                     )}
                                 </td>
