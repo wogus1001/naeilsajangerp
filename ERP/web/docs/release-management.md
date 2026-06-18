@@ -45,11 +45,20 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
-- 2026-06-16 기준 최근 실서버 기능 커밋: `23e8d54 feat(franchise): finalize alerts and OAuth policy`
-- 이 커밋은 인앱 알림, 알림 상세 딥링크, 모객 DB 정보공개서 컬럼/정렬, 회사별 대시보드 타입, 팀장/매니저 직급 분리, 공개 개인정보처리방침 `/privacy`, 랜딩 정책 링크를 포함한다.
-- production Gmail 발송은 Vercel production 환경변수 설정 전까지 `configReady: false`가 정상 상태다.
+- 2026-06-18 기준 최근 실서버 기능 커밋: `377aeab feat(franchise): refine intake promotion workflow`
+- 이 커밋은 인입 관리 밀어넣기 매핑 보강, 예비 창업자 등록 다중 회사 반영/업데이트, 입점 요청 첨부 수정, 자동 상담 이력 제거를 포함한다.
+- production Gmail 발송과 회사 로고 업로드는 각 환경의 Vercel env와 Supabase storage policy가 맞아야 한다.
 
 ## Release Ledger
+
+2026-06-18
+- 작업 브랜치: `codex/franchise-next-alerts-20260616`
+- 기능 커밋: `5d62845 feat(franchise): refine intake promotion workflow`
+- dev 반영: `e449ad2 feat(franchise): refine intake promotion workflow`
+- main 반영: `377aeab feat(franchise): refine intake promotion workflow`
+- 배포 URL: `https://naeilsajang-dev.vercel.app` (`dev` preview READY, Vercel Authentication 보호), `https://naeilsajang.vercel.app` (`main` production READY)
+- 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-property-promotion.test.mts src/lib/franchise-matching-request-promotion.test.mts src/lib/franchise-lead-registration.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-admin-intake-view.test.mts src/lib/franchise-lead-workflow.test.mts`, `npm run build`, Vercel inspect preview/production READY, production `/landing` and `/privacy` HTTP 200, protected dev `/landing` authenticated fetch 200
+- 남은 이슈: 별도 SQL 추가 없음. production 회사 로고 업로드 실패가 재발하면 Supabase `property-images` bucket policy와 service-role env를 먼저 확인한다.
 
 2026-06-16
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
