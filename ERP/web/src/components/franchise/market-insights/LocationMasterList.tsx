@@ -2,13 +2,25 @@
 
 import React from 'react';
 import { ExternalLink, MessageSquare } from 'lucide-react';
+import { ExportActions } from '@/components/franchise/ExportActions';
 import {
     buildNaverMapSearchUrl,
     formatLocationMoney,
     getAcquisitionCostTotal,
     normalizeFranchiseLocationMasterData
 } from '@/lib/franchise-location-master';
+import {
+    buildLocationExportColumns,
+    buildLocationExportRows
+} from '@/components/franchise/franchiseDbExport';
+import { formatManagerDisplayName } from '@/lib/franchise-manager-display';
 import { normalizeRegion } from '@/lib/franchise-market-insights';
+import {
+    buildDatedExportFilename,
+    downloadTableAsXlsx,
+    openPrintableTable,
+    type TableExportPayload
+} from '@/utils/tableExport';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import type { FranchiseLocation, LocationManagerOption } from './locationMasterTypes';
 import type { FranchiseLocationMessageSummary } from './locationMessageTypes';
@@ -100,7 +112,7 @@ function getManagerDisplayName(
     const matchedManager = managerOptions.find(
         manager => manager.id === location.managerId || manager.displayId === location.managerId
     );
-    return location.managerName || matchedManager?.name || '담당자 미확인';
+    return matchedManager ? formatManagerDisplayName(matchedManager) : location.managerName || '담당자 미확인';
 }
 
 function sortLocationItems(
@@ -214,6 +226,31 @@ export function LocationMasterList({
             return [...prev, key];
         });
     };
+    const buildExportPayload = (): TableExportPayload => {
+        const columns = buildLocationExportColumns(visibleColumns);
+        const rows = buildLocationExportRows(
+            sortedLocations,
+            columns,
+            location => getManagerDisplayName(location, managerOptions)
+        );
+        return {
+            title: '출점 후보지',
+            filename: buildDatedExportFilename('출점후보지'),
+            sheetName: '출점 후보지',
+            columns,
+            rows,
+            filterSummary: `현재 필터/정렬 기준 ${sortedLocations.length.toLocaleString()}건`
+        };
+    };
+
+    const runExportAction = async (action: (payload: TableExportPayload) => void | Promise<void>) => {
+        try {
+            await action(buildExportPayload());
+        } catch (error) {
+            console.error('Failed to export franchise locations:', error);
+            window.alert(error instanceof Error ? error.message : '출점 후보지 추출에 실패했습니다.');
+        }
+    };
 
     return (
         <div className={styles.locationListShell}>
@@ -246,6 +283,12 @@ export function LocationMasterList({
                         ))}
                     </div>
                 </details>
+                <ExportActions
+                    rowCount={sortedLocations.length}
+                    onExcelAction={() => runExportAction(downloadTableAsXlsx)}
+                    onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
+                    onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
+                />
             </div>
 
             <div className={styles.locationTableWrap}>

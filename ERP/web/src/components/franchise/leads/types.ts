@@ -10,6 +10,7 @@ export type FranchiseLead = {
     readonly id: string;
     readonly companyId?: string;
     readonly managerId?: string;
+    readonly createdBy?: string;
     readonly name: string;
     readonly mobile: string;
     readonly mobileNormalized?: string;

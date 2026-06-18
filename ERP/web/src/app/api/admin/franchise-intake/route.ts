@@ -133,7 +133,7 @@ export async function GET(request: Request) {
                 toAdminIntakePropertyView(row, companyNames, locationsByPropertyId.get(row.id) || [], selectedCompanyId)
             )),
             leadRegistrationRequests: leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationRequestView(row, managerNames)),
-            matchingRequests: (leads || []).map(row => toAdminMatchingRequestView(row, managerNames, selectedCompanyId))
+            matchingRequests: (leads || []).map(row => toAdminMatchingRequestView(row, managerNames, companyNames, selectedCompanyId))
         });
     } catch (error) {
         console.error('Admin franchise intake GET error:', error);

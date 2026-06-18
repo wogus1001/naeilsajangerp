@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { UserCheck, Shield, Users as UsersIcon, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getUserRoleLabel } from '@/lib/user-role-policy';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser, type StoredUser } from '@/utils/userUtils';
 
 type StaffRow = {
@@ -85,7 +87,8 @@ export default function StaffManagementPage() {
                 companyId: companyId || '',
                 requesterId: requesterId || ''
             });
-            const res = await fetch(`/api/company/staff?${params.toString()}`);
+            const headers = await getApiAuthHeaders();
+            const res = await fetch(`/api/company/staff?${params.toString()}`, { headers });
             if (res.ok) {
                 const data = await res.json();
                 setStaffList(parseStaffRows(data));
@@ -105,7 +108,7 @@ export default function StaffManagementPage() {
         }
 
         let confirmMsg = '';
-        if (action === 'approve') confirmMsg = '이 직원의 가입을 승인하시겠습니까?';
+        if (action === 'approve') confirmMsg = '이 가입 요청을 승인하시겠습니까?';
         else if (action === 'promote') confirmMsg = '이 직원에게 팀장 권한을 부여하시겠습니까?';
         else if (action === 'demote') confirmMsg = '정말로 팀장 권한을 내려놓고 직원으로 변경하시겠습니까?';
 
@@ -117,9 +120,10 @@ export default function StaffManagementPage() {
                     return;
                 }
 
+                const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
                 const res = await fetch('/api/company/staff', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify({
                         targetUserId,
                         action,
@@ -153,9 +157,10 @@ export default function StaffManagementPage() {
     if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
     if (!user) return <div style={{ padding: 40 }}>로그인 정보를 확인할 수 없습니다.</div>;
 
-    const pendingStaff = staffList.filter(u => u.status === 'pending_approval' && u.role === 'staff');
+    const pendingStaff = staffList.filter(u => u.status === 'pending_approval' && (u.role === 'staff' || u.role === 'partner_vendor'));
     const managers = staffList.filter(u => u.role === 'manager' && u.status === 'active');
     const activeStaff = staffList.filter(u => u.role === 'staff' && u.status === 'active');
+    const activePartners = staffList.filter(u => u.role === 'partner_vendor' && u.status === 'active');
 
     return (
         <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto' }}>
@@ -170,7 +175,7 @@ export default function StaffManagementPage() {
             {pendingStaff.length > 0 && (
                 <div style={{ marginBottom: '40px', background: '#fff9db', padding: '24px', borderRadius: '12px', border: '1px solid #ffe066' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#e67700' }}>
-                        <AlertCircle size={20} /> 승인 대기 중인 직원 ({pendingStaff.length})
+                        <AlertCircle size={20} /> 승인 대기 중인 가입 요청 ({pendingStaff.length})
                     </h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {pendingStaff.map(staff => (
@@ -178,6 +183,9 @@ export default function StaffManagementPage() {
                                 <div>
                                     <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{staff.name}</span>
                                     <span style={{ color: '#868e96', fontSize: '14px' }}>({staff.id})</span>
+                                    <span style={{ marginLeft: '8px', color: '#1971c2', fontSize: '12px', fontWeight: 700 }}>
+                                        {getUserRoleLabel(staff.role)}
+                                    </span>
                                 </div>
                                 <button
                                     onClick={() => handleAction(staff.id, 'approve')}
@@ -269,6 +277,31 @@ export default function StaffManagementPage() {
                             ))
                         )}
                     </div>
+                </div>
+            </div>
+            <div style={{ marginTop: '24px', background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <UserCheck size={20} color="#0ca678" /> 협력업체 ({activePartners.length})
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {activePartners.length === 0 ? (
+                        <div style={{ color: '#adb5bd', fontSize: '14px', textAlign: 'center', padding: '20px' }}>등록된 협력업체가 없습니다.</div>
+                    ) : (
+                        activePartners.map(partner => (
+                            <div key={partner.id} style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#0ca678', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                        P
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>{partner.name}</div>
+                                        <div style={{ fontSize: '12px', color: '#868e96' }}>{partner.email || partner.id}</div>
+                                    </div>
+                                </div>
+                                <span style={{ fontSize: '12px', color: '#0ca678', fontWeight: 700 }}>협력업체</span>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
             <ConfirmModal

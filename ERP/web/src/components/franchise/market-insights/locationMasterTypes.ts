@@ -61,6 +61,7 @@ export type LocationManagerOption = {
     readonly id: string;
     readonly displayId: string;
     readonly name: string;
+    readonly role?: string;
 };
 
 export type LocationFormState = Omit<

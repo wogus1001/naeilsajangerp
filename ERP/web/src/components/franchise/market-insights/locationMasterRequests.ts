@@ -1,4 +1,5 @@
 import type { FranchiseBrand } from '@/lib/franchise-brands';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import type {
     FranchiseLead,
@@ -59,7 +60,8 @@ function toLocationManagerOption(source: unknown): LocationManagerOption | null 
     return {
         id,
         displayId,
-        name: getStringField(source, 'name') || '이름 미등록'
+        name: getStringField(source, 'name') || '이름 미등록',
+        role
     };
 }
 
@@ -76,7 +78,8 @@ export async function fetchLocationManagers({
     const params = new URLSearchParams({ requesterId: userId });
     params.set('company', companyName);
 
-    const response = await fetch(`/api/users?${params.toString()}`, { cache: 'no-store' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/users?${params.toString()}`, { cache: 'no-store', headers });
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(readApiError(payload));
     if (!Array.isArray(payload)) return [];
@@ -94,9 +97,10 @@ export async function fetchMarketInsightData({
         leadParams.set('company', companyName);
         locationParams.set('company', companyName);
     }
+    const headers = await getApiAuthHeaders();
     const [leadResponse, locationResponse] = await Promise.all([
-        fetch(`/api/franchise-leads?${leadParams.toString()}`, { cache: 'no-store' }),
-        fetch(`/api/franchise-locations?${locationParams.toString()}`, { cache: 'no-store' })
+        fetch(`/api/franchise-leads?${leadParams.toString()}`, { cache: 'no-store', headers }),
+        fetch(`/api/franchise-locations?${locationParams.toString()}`, { cache: 'no-store', headers })
     ]);
     const [leadPayload, locationPayload]: readonly unknown[] = await Promise.all([
         leadResponse.json(),
@@ -116,9 +120,10 @@ export async function saveBrandMaster({
     form
 }: SaveBrandMasterParams): Promise<void> {
     if (!form.brand.trim()) return;
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     await fetch('/api/franchise-brands', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
             requesterId: userId,
             companyName,
@@ -139,9 +144,10 @@ export async function saveFranchiseLocationRequest({
     form,
     region
 }: SaveFranchiseLocationParams): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations', {
         method: form.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
             ...form,
             requesterId: userId,
@@ -158,7 +164,8 @@ export async function deleteFranchiseLocationRequest({
     locationId
 }: DeleteFranchiseLocationParams): Promise<void> {
     const params = new URLSearchParams({ id: locationId, requesterId: userId });
-    const response = await fetch(`/api/franchise-locations?${params.toString()}`, { method: 'DELETE' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations?${params.toString()}`, { method: 'DELETE', headers });
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(readApiError(payload));
 }
@@ -168,9 +175,10 @@ export async function scanLocationCompetitorsRequest({
     locationId,
     query
 }: ScanLocationCompetitorsParams): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations/competitors', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ requesterId: userId, locationId, query, radius: 700 })
     });
     const payload: unknown = await response.json().catch(() => ({}));

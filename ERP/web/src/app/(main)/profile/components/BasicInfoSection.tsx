@@ -3,6 +3,7 @@
 import React from 'react';
 import { AlertCircle, CheckCircle, Shield, User } from 'lucide-react';
 import { CompanyLogoManager } from '@/components/company/CompanyLogoManager';
+import { getUserRoleLabel } from '@/lib/user-role-policy';
 import styles from '../page.module.css';
 import type { IdCheckMessage, ProfileFormData, ProfileUser } from './profileTypes';
 
@@ -99,7 +100,7 @@ export function BasicInfoSection({
                             boxShadow: '0 2px 5px rgba(0,0,0,0.03)'
                         }}>
                             <Shield size={14} fill={user.role === 'manager' ? '#1971c2' : 'none'} />
-                            {user.role === 'manager' ? '팀장 (Manager)' : '직원 (Staff)'}
+                            {getUserRoleLabel(user.role)}
                         </span>
                     </div>
                 </div>

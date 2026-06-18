@@ -1,3 +1,4 @@
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import type {
     FranchiseLocationMessage,
@@ -35,7 +36,8 @@ export async function fetchLocationMessages({
     locationId
 }: LocationMessageListParams): Promise<LocationMessagesResponse> {
     const params = new URLSearchParams({ requesterId: userId, locationId });
-    const response = await fetch(`/api/franchise-locations/messages?${params.toString()}`, { cache: 'no-store' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations/messages?${params.toString()}`, { cache: 'no-store', headers });
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<LocationMessagesResponse>(payload);
@@ -51,7 +53,8 @@ export async function fetchLocationMessageSummaries({
         summary: 'true',
         locationIds: Array.from(new Set(locationIds)).join(',')
     });
-    const response = await fetch(`/api/franchise-locations/messages?${params.toString()}`, { cache: 'no-store' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations/messages?${params.toString()}`, { cache: 'no-store', headers });
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<LocationMessageSummariesResponse>(payload).summaries || [];
@@ -63,9 +66,10 @@ export async function createLocationMessage({
     body,
     kind
 }: CreateLocationMessageParams): Promise<LocationMessagesResponse & { readonly message: FranchiseLocationMessage }> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ requesterId: userId, locationId, body, kind })
     });
     const payload: unknown = await response.json().catch(() => ({}));
@@ -78,9 +82,10 @@ export async function updateLocationRequestStatus({
     messageId,
     requestStatus
 }: UpdateLocationRequestStatusParams): Promise<LocationMessagesResponse & { readonly message: FranchiseLocationMessage }> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations/messages', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ requesterId: userId, messageId, requestStatus })
     });
     const payload: unknown = await response.json().catch(() => ({}));

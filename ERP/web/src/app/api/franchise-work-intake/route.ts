@@ -6,6 +6,8 @@ import {
 } from '@/lib/franchise-lead-registration';
 import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead-registration-table';
 import { FRANCHISE_MATCHING_REQUEST_SOURCE, normalizeLeadStatus } from '@/lib/franchise-leads';
+import { isPartnerVendorRole } from '@/lib/franchise-location-access';
+import { formatManagerDisplayName } from '@/lib/franchise-manager-display';
 import {
     MATCHING_REQUEST_INITIAL_FORM,
     type MatchingRequestForm
@@ -32,6 +34,7 @@ type ProfileRow = {
     readonly company_id: string | null;
     readonly name: string | null;
     readonly email: string | null;
+    readonly role: string | null;
 };
 
 type PropertyRow = {
@@ -48,6 +51,7 @@ type LeadLikeRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly manager_id: string | null;
+    readonly created_by?: string | null;
     readonly name: string | null;
     readonly mobile: string | null;
     readonly source: string | null;
@@ -95,7 +99,11 @@ function toDatetimeInput(value: string | null | undefined): string {
 }
 
 function displayName(profile: ProfileRow): string {
-    return profile.name || profile.email || '이름 없음';
+    return formatManagerDisplayName({
+        id: profile.id,
+        name: profile.name || profile.email || '이름 없음',
+        role: profile.role
+    });
 }
 
 function toPropertyForm(row: PropertyRow): PropertyRegistrationForm {
@@ -312,37 +320,45 @@ export async function GET(request: Request) {
         const companyNames = new Map(companyRows.map(company => [company.id, company.name || '회사명 없음']));
         const { data: profiles, error: profileError } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email')
+            .select('id, company_id, name, email, role')
             .in('company_id', companyIds)
             .returns<ProfileRow[]>();
         if (profileError) throw profileError;
         const managerNames = new Map((profiles || []).map(profile => [profile.id, displayName(profile)]));
+
+        let propertyQuery = supabaseAdmin.from('properties')
+            .select('id, company_id, name, status, address, created_at, data')
+            .eq('operation_type', '물건등록')
+            .in('company_id', companyIds)
+            .order('created_at', { ascending: false })
+            .limit(200);
+
+        let leadRegistrationQuery = supabaseAdmin.from('franchise_lead_registration_requests')
+            .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, promoted_lead_id, promoted_at, created_at, data')
+            .in('company_id', companyIds)
+            .order('created_at', { ascending: false })
+            .limit(200);
+
+        let matchingRequestQuery = supabaseAdmin.from('franchise_leads')
+            .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, created_at, data')
+            .eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE)
+            .in('company_id', companyIds)
+            .order('created_at', { ascending: false })
+            .limit(200);
+        if (isPartnerVendorRole(requester.role)) {
+            propertyQuery = propertyQuery.eq('manager_id', requester.id);
+            leadRegistrationQuery = leadRegistrationQuery.eq('created_by', requester.id);
+            matchingRequestQuery = matchingRequestQuery.eq('created_by', requester.id);
+        }
 
         const [
             { data: properties, error: propertyError },
             { data: leadRegistrations, error: leadRegistrationError },
             { data: matchingRequests, error: matchingError }
         ] = await Promise.all([
-            supabaseAdmin.from('properties')
-                .select('id, company_id, name, status, address, created_at, data')
-                .eq('operation_type', '물건등록')
-                .in('company_id', companyIds)
-                .order('created_at', { ascending: false })
-                .limit(200)
-                .returns<PropertyRow[]>(),
-            supabaseAdmin.from('franchise_lead_registration_requests')
-                .select('id, company_id, manager_id, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, promoted_lead_id, promoted_at, created_at, data')
-                .in('company_id', companyIds)
-                .order('created_at', { ascending: false })
-                .limit(200)
-                .returns<LeadLikeRow[]>(),
-            supabaseAdmin.from('franchise_leads')
-                .select('id, company_id, manager_id, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, created_at, data')
-                .eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE)
-                .in('company_id', companyIds)
-                .order('created_at', { ascending: false })
-                .limit(200)
-                .returns<LeadLikeRow[]>()
+            propertyQuery.returns<PropertyRow[]>(),
+            leadRegistrationQuery.returns<LeadLikeRow[]>(),
+            matchingRequestQuery.returns<LeadLikeRow[]>()
         ]);
 
         if (propertyError) throw propertyError;

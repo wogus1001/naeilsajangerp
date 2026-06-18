@@ -1,5 +1,4 @@
 import {
-    canAccessCompanyResource,
     getRequesterProfile,
     isAdmin,
     resolveCompanyIdByName,
@@ -7,6 +6,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail } from '@/lib/api-response';
+import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
     mergeOpeningProjectTasks,
@@ -21,6 +21,7 @@ export type FranchiseLocationRow = {
     id: string;
     company_id: string | null;
     manager_id: string | null;
+    created_by: string | null;
     status: string | null;
 };
 
@@ -148,8 +149,7 @@ export async function getOpeningProjectRequester(
     body?: JsonRecord
 ) {
     const supabaseAdmin = getSupabaseAdmin();
-    const fallback = body ? requesterFallback(body) : null;
-    const requester = await getRequesterProfile(supabaseAdmin, request, fallback);
+    const requester = await getRequesterProfile(supabaseAdmin, request, body ? requesterFallback(body) : null);
     return { supabaseAdmin, requester };
 }
 
@@ -177,13 +177,13 @@ export async function fetchOpeningReadyLocation(
 ) {
     const { data, error } = await supabaseAdmin
         .from('franchise_locations')
-        .select('id, company_id, manager_id, status')
+        .select('id, company_id, manager_id, created_by, status')
         .eq('id', locationId)
         .single();
 
     const location = data as FranchiseLocationRow | null;
     if (error || !location) return { error: fail(404, 'NOT_FOUND', 'Franchise location not found') };
-    if (!canAccessCompanyResource(requester, location)) {
+    if (!canAccessFranchiseLocation(requester, location)) {
         return { error: fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied') };
     }
     if (!location.company_id) return { error: fail(400, 'VALIDATION_ERROR', 'Company scope is required') };

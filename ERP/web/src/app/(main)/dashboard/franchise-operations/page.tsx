@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
+import { ExportActions } from '@/components/franchise/ExportActions';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
@@ -9,10 +10,40 @@ import { ManualPromotedPropertyPanel } from '@/components/franchise/operations/M
 import { OpeningProjectPanel } from '@/components/franchise/operations/OpeningProjectPanel';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
+import {
+    buildOperationExportColumns,
+    buildOperationExportRows
+} from '@/components/franchise/franchiseDbExport';
+import {
+    buildDatedExportFilename,
+    downloadTableAsXlsx,
+    openPrintableTable,
+    type TableExportPayload
+} from '@/utils/tableExport';
 import styles from '../franchise-leads/page.module.css';
 
 export default function FranchiseOperationsPage() {
     const controller = useFranchiseOperationsController();
+    const buildExportPayload = (): TableExportPayload => {
+        const columns = buildOperationExportColumns();
+        return {
+            title: '가맹 운영',
+            filename: buildDatedExportFilename('가맹운영'),
+            sheetName: '가맹 운영',
+            columns,
+            rows: buildOperationExportRows(controller.operationalLocations),
+            filterSummary: `운영 가맹점 ${controller.operationalLocations.length.toLocaleString()}건`
+        };
+    };
+
+    const runExportAction = async (action: (payload: TableExportPayload) => void | Promise<void>) => {
+        try {
+            await action(buildExportPayload());
+        } catch (error) {
+            console.error('Failed to export franchise operations:', error);
+            window.alert(error instanceof Error ? error.message : '가맹 운영 추출에 실패했습니다.');
+        }
+    };
 
     return (
         <div className={styles.pageShell}>
@@ -53,10 +84,19 @@ export default function FranchiseOperationsPage() {
                                 <h3>가맹점 마스터</h3>
                                 <p>운영중/오픈준비/휴점 매장을 관리합니다. 예정지 관리는 모객DB의 출점 후보지에서 분리해 다룹니다.</p>
                             </div>
-                            <button className={styles.secondaryButton} onClick={controller.resetLocationForm}>
-                                <Plus size={14} />
-                                새 가맹점
-                            </button>
+                            <div className={styles.locationMasterHeaderActions}>
+                                <ExportActions
+                                    rowCount={controller.operationalLocations.length}
+                                    disabled={controller.isLoading}
+                                    onExcelAction={() => runExportAction(downloadTableAsXlsx)}
+                                    onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
+                                    onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
+                                />
+                                <button className={styles.secondaryButton} onClick={controller.resetLocationForm}>
+                                    <Plus size={14} />
+                                    새 가맹점
+                                </button>
+                            </div>
                         </div>
                         <div className={styles.locationMasterGrid}>
                             <FranchiseLocationForm

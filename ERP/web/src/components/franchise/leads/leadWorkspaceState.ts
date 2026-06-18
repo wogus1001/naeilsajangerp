@@ -35,6 +35,15 @@ export function resolveLeadWorkspaceTransition({
         };
     }
 
+    if (nextTab === 'db' && currentTab !== 'db') {
+        return {
+            workspaceTab: nextTab,
+            statusFilter: currentTab === 'contractOwners' ? '전체' : currentStatusFilter,
+            leadDbLayer: 'raw_intake',
+            viewMode: 'table'
+        };
+    }
+
     if (currentTab === 'contractOwners') {
         return {
             workspaceTab: nextTab,

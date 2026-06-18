@@ -6,13 +6,22 @@ import {
 } from '@/lib/signup-approval-policy';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
+function normalizePhone(value: unknown): string {
+    return String(value ?? '').replace(/\D/g, '');
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { id, password, name, companyName, role: requestedRole } = body; // id here is treated as email/loginId
+        const { id, password, name, companyName, phone, role: requestedRole } = body; // id here is treated as email/loginId
 
-        if (!id || !password || !name || !companyName) {
+        if (!id || !password || !name || !companyName || !phone) {
             return NextResponse.json({ error: '필수 정보를 모두 입력해주세요.' }, { status: 400 });
+        }
+
+        const phoneNormalized = normalizePhone(phone);
+        if (phoneNormalized.length < 10 || phoneNormalized.length > 11) {
+            return NextResponse.json({ error: '휴대폰 번호를 정확히 입력해주세요.' }, { status: 400 });
         }
 
         if (password.length < 6) {
@@ -139,7 +148,7 @@ export async function POST(request: Request) {
             email: email,
             password: password,
             email_confirm: true, // Auto confirm since we are using admin
-            user_metadata: { name: name }
+            user_metadata: { name: name, phone: String(phone).trim(), phone_normalized: phoneNormalized }
         });
 
         if (authError) {
@@ -169,7 +178,9 @@ export async function POST(request: Request) {
                 company_id: companyId,
                 role: finalRole,
                 status: finalStatus,
-                name: name
+                name: name,
+                phone: String(phone).trim(),
+                phone_normalized: phoneNormalized
             })
             .eq('id', userId);
 

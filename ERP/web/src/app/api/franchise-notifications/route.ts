@@ -1,5 +1,6 @@
 import { getAuthenticatedRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { isPartnerVendorRole } from '@/lib/franchise-location-access';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import {
     FRANCHISE_NOTIFICATION_SOURCE_TYPES,
@@ -17,6 +18,7 @@ type LeadNotificationRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
     readonly name: string | null;
     readonly status: string | null;
     readonly grade: string | null;
@@ -92,19 +94,22 @@ async function readBody(request: Request): Promise<NotificationUpdateBody> {
 async function fetchNotificationLeads(
     companyId: string | null,
     requesterId: string,
-    requesterIsAdmin: boolean
+    requesterIsAdmin: boolean,
+    requesterRole: string | null | undefined
 ): Promise<readonly NotificationLead[]> {
     const supabaseAdmin = getSupabaseAdmin();
     let query = supabaseAdmin
         .from('franchise_leads')
-        .select('id, company_id, manager_id, name, status, grade, next_contact_at')
+        .select('id, company_id, manager_id, created_by, name, status, grade, next_contact_at')
         .neq('status', '보류/이탈')
         .limit(500);
 
     if (companyId) {
         query = query.eq('company_id', companyId);
     }
-    if (!requesterIsAdmin) {
+    if (isPartnerVendorRole(requesterRole)) {
+        query = query.eq('created_by', requesterId);
+    } else if (!requesterIsAdmin) {
         query = query.eq('manager_id', requesterId);
     }
 
@@ -172,7 +177,7 @@ export async function GET(request: Request) {
         const limit = parseLimit(searchParams.get('limit'));
 
         const requesterIsAdmin = isAdmin(requester);
-        const leads = await fetchNotificationLeads(companyId, requester.id, requesterIsAdmin);
+        const leads = await fetchNotificationLeads(companyId, requester.id, requesterIsAdmin, requester.role);
         await syncAutomaticNotifications(buildAutomaticFranchiseNotifications(leads), {
             companyId,
             requesterId: requester.id,
