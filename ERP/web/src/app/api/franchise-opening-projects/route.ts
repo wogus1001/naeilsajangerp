@@ -1,5 +1,6 @@
-import { canAccessCompanyResource, canAccessCompanyScope } from '@/lib/api-auth';
+import { canAccessCompanyScope, type RequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import {
     buildOpeningProjectPayload,
     buildOpeningProjectUpdates,
@@ -15,6 +16,13 @@ import {
 } from '@/lib/franchise-opening-project-api';
 
 export const dynamic = 'force-dynamic';
+
+type ProjectLocationAccessRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly manager_id: string | null;
+    readonly created_by: string | null;
+};
 
 function getErrorCode(error: unknown) {
     if (!error || typeof error !== 'object' || !('code' in error)) return '';
@@ -46,6 +54,40 @@ function handleOpeningProjectError(error: unknown, action: string) {
     return fail(500, 'INTERNAL_ERROR', `Failed to ${action.toLowerCase()} opening project${action === 'GET' ? 's' : ''}`);
 }
 
+async function filterProjectsByLocationAccess(
+    supabaseAdmin: Awaited<ReturnType<typeof getOpeningProjectRequester>>['supabaseAdmin'],
+    requester: RequesterProfile,
+    projects: readonly OpeningProjectRow[]
+): Promise<OpeningProjectRow[]> {
+    const locationIds = Array.from(new Set(projects.map(project => project.location_id).filter(Boolean)));
+    if (locationIds.length === 0) return [];
+
+    const { data, error } = await supabaseAdmin
+        .from('franchise_locations')
+        .select('id, company_id, manager_id, created_by')
+        .in('id', locationIds);
+    if (error) throw error;
+
+    const locationMap = new Map(
+        ((data || []) as ProjectLocationAccessRow[]).map(location => [location.id, location])
+    );
+    return projects.filter(project => canAccessFranchiseLocation(requester, locationMap.get(project.location_id)));
+}
+
+async function canAccessOpeningProject(
+    supabaseAdmin: Awaited<ReturnType<typeof getOpeningProjectRequester>>['supabaseAdmin'],
+    requester: RequesterProfile,
+    project: Pick<OpeningProjectRow, 'location_id'>
+): Promise<boolean> {
+    const { data, error } = await supabaseAdmin
+        .from('franchise_locations')
+        .select('id, company_id, manager_id, created_by')
+        .eq('id', project.location_id)
+        .maybeSingle();
+    if (error) throw error;
+    return canAccessFranchiseLocation(requester, data as ProjectLocationAccessRow | null);
+}
+
 export async function GET(request: Request) {
     try {
         const { supabaseAdmin, requester } = await getOpeningProjectRequester(request);
@@ -61,7 +103,7 @@ export async function GET(request: Request) {
                 .single();
             const project = data as OpeningProjectRow | null;
             if (error || !project) return fail(404, 'NOT_FOUND', 'Opening project not found');
-            if (!canAccessCompanyResource(requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+            if (!await canAccessOpeningProject(supabaseAdmin, requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
             return ok({ project: transformOpeningProject(project) });
         }
 
@@ -80,7 +122,8 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) throw error;
-        return ok({ projects: ((data || []) as OpeningProjectRow[]).map(transformOpeningProject) });
+        const accessibleProjects = await filterProjectsByLocationAccess(supabaseAdmin, requester, (data || []) as OpeningProjectRow[]);
+        return ok({ projects: accessibleProjects.map(transformOpeningProject) });
     } catch (error) {
         return handleOpeningProjectError(error, 'GET');
     }
@@ -138,7 +181,7 @@ export async function PUT(request: Request) {
             .single();
         const project = existing as OpeningProjectRow | null;
         if (fetchError || !project) return fail(404, 'NOT_FOUND', 'Opening project not found');
-        if (!canAccessCompanyResource(requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        if (!await canAccessOpeningProject(supabaseAdmin, requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
 
         const { data: updated, error } = await supabaseAdmin
             .from('franchise_opening_projects')
@@ -163,12 +206,12 @@ export async function DELETE(request: Request) {
 
         const { data: existing, error: fetchError } = await supabaseAdmin
             .from('franchise_opening_projects')
-            .select('id, company_id, manager_id')
+            .select('id, company_id, location_id, manager_id')
             .eq('id', id)
             .single();
-        const project = existing as Pick<OpeningProjectRow, 'id' | 'company_id' | 'manager_id'> | null;
+        const project = existing as Pick<OpeningProjectRow, 'id' | 'company_id' | 'location_id' | 'manager_id'> | null;
         if (fetchError || !project) return fail(404, 'NOT_FOUND', 'Opening project not found');
-        if (!canAccessCompanyResource(requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
+        if (!await canAccessOpeningProject(supabaseAdmin, requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
 
         const { error } = await supabaseAdmin.from('franchise_opening_projects').delete().eq('id', id);
         if (error) throw error;

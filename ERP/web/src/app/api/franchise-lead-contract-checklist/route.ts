@@ -1,5 +1,6 @@
-import { canAccessCompanyResource, canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
+import { canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     buildLeadContractChecklistUpsert,
     mergeLeadContractChecklistSteps,
@@ -18,6 +19,7 @@ type LeadAccessRow = {
     readonly id: string;
     readonly company_id: string;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -72,7 +74,8 @@ function readLeadRow(value: unknown): LeadAccessRow | null {
     return {
         id,
         company_id: companyId,
-        manager_id: cleanString(value.manager_id)
+        manager_id: cleanString(value.manager_id),
+        created_by: cleanString(value.created_by)
     };
 }
 
@@ -128,7 +131,7 @@ async function fetchLead(
 ) {
     const { data, error } = await supabaseAdmin
         .from('franchise_leads')
-        .select('id, company_id, manager_id')
+        .select('id, company_id, manager_id, created_by')
         .eq('id', leadId)
         .single();
     return { lead: readLeadRow(data), error };
@@ -186,7 +189,7 @@ export async function GET(request: Request) {
 
         const { lead, error: leadError } = await fetchLead(supabaseAdmin, leadId);
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
-        if (!canAccessCompanyResource(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        if (!canAccessFranchiseLead(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
 
         const savedSteps = await fetchChecklistSteps(supabaseAdmin, lead.id, lead.company_id);
         return ok(buildChecklistResponse(savedSteps));
@@ -209,7 +212,7 @@ export async function PUT(request: Request) {
 
         const { lead, error: leadError } = await fetchLead(supabaseAdmin, leadId);
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
-        if (!canAccessCompanyResource(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        if (!canAccessFranchiseLead(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         if (!canAccessCompanyScope(requester, lead.company_id)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied');
 
         const { data: existingData, error: existingError } = await supabaseAdmin

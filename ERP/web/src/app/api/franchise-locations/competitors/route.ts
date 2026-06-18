@@ -1,5 +1,6 @@
-import { getRequesterProfile, canAccessCompanyResource } from '@/lib/api-auth';
+import { getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import { normalizeSearchText, stripHtml } from '@/lib/franchise-market-monitoring';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -870,13 +871,9 @@ export async function POST(request: Request) {
             return fail(400, 'VALIDATION_ERROR', 'KAKAO_REST_API_KEY is required for competitor scan');
         }
 
-        const requesterProfile = await getRequesterProfile(
-            supabaseAdmin,
-            request,
-            body.requesterId || body.userId || null
-        );
+        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         }
 
         const { data: location, error: locationError } = await supabaseAdmin
@@ -888,7 +885,7 @@ export async function POST(request: Request) {
         if (locationError || !location) {
             return fail(404, 'NOT_FOUND', 'Franchise location not found');
         }
-        if (!canAccessCompanyResource(requesterProfile, location)) {
+        if (!canAccessFranchiseLocation(requesterProfile, location)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 

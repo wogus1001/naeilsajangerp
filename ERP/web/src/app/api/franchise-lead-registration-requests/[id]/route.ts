@@ -1,9 +1,9 @@
 import {
-    canAccessCompanyResource,
     getRequesterProfile,
     resolveUserUuid
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead-registration-table';
 import { DEFAULT_FRANCHISE_LEAD_STATUS, normalizeLeadPhone } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
@@ -18,6 +18,7 @@ type RequestRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly manager_id: string | null;
+    readonly created_by?: string | null;
     readonly data: Record<string, unknown> | null;
 };
 
@@ -94,15 +95,16 @@ export async function PUT(request: Request, context: RouteContext) {
 
         const { data: existing, error: fetchError } = await supabaseAdmin
             .from('franchise_lead_registration_requests')
-            .select('id, company_id, manager_id, data')
+            .select('id, company_id, manager_id, created_by, data')
             .eq('id', params.id)
             .maybeSingle<RequestRow>();
 
         if (fetchError && !isMissingLeadRegistrationRequestTableError(fetchError)) throw fetchError;
         const row = existing || await fetchFallbackRow(params.id);
         if (!row) return fail(404, 'NOT_FOUND', 'Lead registration request not found');
-        if (!canAccessCompanyResource(requester, row)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
         const targetTable = existing ? 'franchise_lead_registration_requests' : 'franchise_leads';
+        const hasAccess = canAccessFranchiseLead(requester, row);
+        if (!hasAccess) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
 
         const managerValidation = await validateManager(body, row.company_id);
         if (managerValidation?.error) return managerValidation.error;
@@ -129,7 +131,7 @@ async function fetchFallbackRow(id: string): Promise<RequestRow | null> {
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
         .from('franchise_leads')
-        .select('id, company_id, manager_id, data')
+        .select('id, company_id, manager_id, created_by, data')
         .eq('id', id)
         .eq('data->>sourceType', 'franchise_lead_registration')
         .maybeSingle<RequestRow>();

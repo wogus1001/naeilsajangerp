@@ -1,4 +1,4 @@
-export type SignupApprovalRole = 'manager' | 'staff';
+export type SignupApprovalRole = 'manager' | 'staff' | 'partner_vendor';
 export type SignupApprovalStatus = 'pending_approval';
 export type SignupApprovalOwner = 'admin' | 'manager';
 
@@ -21,6 +21,7 @@ type SignupApprovalInput = {
 };
 
 export function normalizeSignupRole(value: unknown): SignupApprovalRole {
+    if (value === 'partner_vendor') return 'partner_vendor';
     return value === 'manager' ? 'manager' : 'staff';
 }
 
@@ -40,7 +41,17 @@ export function resolveSignupApprovalPolicy(input: SignupApprovalInput): SignupA
     if (requestedRole === 'manager') {
         return {
             kind: 'reject',
-            error: '이미 등록된 회사의 추가 팀장 권한은 관리자에게 요청해주세요. 직원으로 가입하면 팀장 승인 후 이용할 수 있습니다.'
+            error: '이미 등록된 회사의 추가 팀장 권한은 관리자에게 요청해주세요. 브랜드 임직원 또는 협력업체로 가입하면 팀장 승인 후 이용할 수 있습니다.'
+        };
+    }
+
+    if (requestedRole === 'partner_vendor') {
+        return {
+            kind: 'allow',
+            role: 'partner_vendor',
+            status: 'pending_approval',
+            approvalOwner: 'manager',
+            message: '협력업체 가입 요청이 완료되었습니다. 팀장 승인 후 로그인이 가능합니다.'
         };
     }
 

@@ -424,6 +424,18 @@ npm run build
 - 밀어넣기 자체는 target lead 상담 이력을 자동 생성하지 않는다. 상세 상담 이력에는 담당자가 직접 남긴 기록만 표시한다.
 - 검증: franchise property/matching/lead registration/admin intake view/workflow 테스트, `tsc`, `lint`, `build`, `git diff --check`, Playwright mock 상담 이력 QA 통과.
 
+## 2026-06-18 회원가입 휴대폰/협력업체 권한 격리
+- 신규 회원가입은 휴대폰 번호를 필수로 받고 `profiles.phone`, `profiles.phone_normalized`에 저장한다. 기존 회사 가입자는 `브랜드 임직원` 또는 `협력업체`를 선택하고, 신규 회사 가입은 기존처럼 팀장 가입 요청만 가능하다.
+- 역할 키는 `partner_vendor`, 화면 표기는 `협력업체`다. 회사 직원 관리에서 팀장은 담당자와 협력업체 승인 대기 요청을 승인할 수 있고, 협력업체는 팀장 승격/강등 대상에서 제외한다.
+- 출점 후보지는 `franchise_locations.created_by`로 등록자를 저장한다. 브랜드 임직원은 같은 회사 후보지를 모두 볼 수 있고, 협력업체는 본인이 등록한 후보지만 조회/수정/삭제할 수 있다. 후보지 기록, 경쟁스캔, 오픈 준비 프로젝트도 같은 후보지 접근 규칙을 따른다.
+- 적용 필요 SQL: `ERP/web/supabase_partner_vendor_access_migration.sql`. SQL 적용은 사용자가 Supabase SQL Editor에서 직접 진행한다.
+
+## 2026-06-18 프랜차이즈 DB export
+- 모객 DB, 출점 후보지, 가맹 운영에 `엑셀`, `PDF 저장`, `인쇄` 버튼을 추가했다.
+- 모객 DB는 export 시 `limit=all`로 현재 검색/필터/정렬 전체 결과를 다시 조회하고, 표시 컬럼에서 액션 컬럼은 제외한다.
+- 출점 후보지는 현재 후보지 필터/정렬/표시 컬럼을 반영하되, 종합메모는 파일/인쇄에서 전체 텍스트로 내보낸다. 가맹 운영은 운영 가맹점 고정 컬럼으로 내보낸다.
+- PDF는 즉시 파일 생성이 아니라 브라우저 인쇄 대화상자에서 `PDF로 저장`을 선택하는 방식이다. 새 SQL은 없다.
+
 ## 새 Codex 세션 시작 체크리스트
 1. 이 문서 읽기
 2. `git worktree list`

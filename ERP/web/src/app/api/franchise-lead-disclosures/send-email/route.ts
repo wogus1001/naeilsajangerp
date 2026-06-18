@@ -1,9 +1,9 @@
 import {
-    canAccessCompanyResource,
     canAccessCompanyScope,
     getRequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     fetchActiveGmailConnection,
     resolveUsableGmailConnection
@@ -29,6 +29,7 @@ type LeadRow = {
     readonly id: string;
     readonly company_id: string;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
     readonly name: string | null;
     readonly mobile: string | null;
 };
@@ -103,12 +104,12 @@ export async function POST(request: Request) {
 
         const { data: lead, error: leadError } = await supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id, name, mobile')
+            .select('id, company_id, manager_id, created_by, name, mobile')
             .eq('id', leadId)
             .single();
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
         const leadRow = lead as LeadRow;
-        if (!canAccessCompanyResource(requester, leadRow)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        if (!canAccessFranchiseLead(requester, leadRow)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         if (!canAccessCompanyScope(requester, leadRow.company_id)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied');
 
         const { data: document, error: documentError } = await supabaseAdmin

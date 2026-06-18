@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { canAccessCompanyResource, type RequesterProfile } from '@/lib/api-auth';
+import type { RequesterProfile } from '@/lib/api-auth';
+import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 
 export const LOCATION_MESSAGE_KINDS = ['note', 'request'] as const;
 export const LOCATION_REQUEST_STATUSES = ['open', 'done'] as const;
@@ -34,6 +35,7 @@ type LocationAccessRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
 };
 
 type LocationAccessResult =
@@ -101,7 +103,7 @@ export async function fetchAccessibleLocationRow(
 ): Promise<LocationAccessResult> {
     const { data, error } = await supabaseAdmin
         .from('franchise_locations')
-        .select('id, company_id, manager_id')
+        .select('id, company_id, manager_id, created_by')
         .eq('id', locationId)
         .maybeSingle();
 
@@ -112,7 +114,7 @@ export async function fetchAccessibleLocationRow(
 
     const row = data as LocationAccessRow | null;
     if (!row) return { row: null, status: 404 };
-    if (!canAccessCompanyResource(requester, row)) return { row: null, status: 403 };
+    if (!canAccessFranchiseLocation(requester, row)) return { row: null, status: 403 };
 
     return { row, status: 200 };
 }

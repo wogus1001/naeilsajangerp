@@ -4,6 +4,7 @@ import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { FileCheck2, Link2, MapPinned, Users } from 'lucide-react';
 import { buildMarketInsights } from '@/lib/franchise-market-insights';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 
 type DisclosureSummary = {
@@ -136,9 +137,10 @@ async function loadKpiMetrics({
         locationParams.set('company', companyName);
     }
 
+    const headers = await getApiAuthHeaders();
     const [leadResponse, locationResponse] = await Promise.all([
-        fetch(`/api/franchise-leads?${leadParams.toString()}`, { cache: 'no-store', signal }),
-        fetch(`/api/franchise-locations?${locationParams.toString()}`, { cache: 'no-store', signal })
+        fetch(`/api/franchise-leads?${leadParams.toString()}`, { cache: 'no-store', signal, headers }),
+        fetch(`/api/franchise-locations?${locationParams.toString()}`, { cache: 'no-store', signal, headers })
     ]);
     const [leadPayload, locationPayload]: readonly unknown[] = await Promise.all([
         leadResponse.json(),

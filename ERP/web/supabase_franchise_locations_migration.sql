@@ -18,10 +18,41 @@ create table if not exists public.franchise_locations (
   opened_at date,
   source_property_id text references public.properties(id) on delete set null,
   memo text,
+  created_by uuid references public.profiles(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   data jsonb default '{}'::jsonb
 );
+
+alter table public.franchise_locations
+  add column if not exists created_by uuid references public.profiles(id) on delete set null;
+
+create or replace function public.can_access_franchise_location(
+  target_company_id uuid,
+  target_created_by uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and (
+        p.role = 'admin'
+        or (
+          p.company_id = target_company_id
+          and (
+            p.role in ('manager', 'sub_manager', 'staff')
+            or (p.role = 'partner_vendor' and target_created_by = auth.uid())
+          )
+        )
+      )
+  );
+$$;
 
 alter table public.franchise_locations enable row level security;
 
@@ -31,17 +62,17 @@ drop policy if exists "Company members can update franchise_locations" on public
 drop policy if exists "Company members can delete franchise_locations" on public.franchise_locations;
 
 create policy "Company members can view franchise_locations" on public.franchise_locations
-  for select using (company_id = get_my_company_id());
+  for select using (public.can_access_franchise_location(company_id, created_by));
 
 create policy "Company members can insert franchise_locations" on public.franchise_locations
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (public.can_access_franchise_location(company_id, created_by));
 
 create policy "Company members can update franchise_locations" on public.franchise_locations
-  for update using (company_id = get_my_company_id())
-  with check (company_id = get_my_company_id());
+  for update using (public.can_access_franchise_location(company_id, created_by))
+  with check (public.can_access_franchise_location(company_id, created_by));
 
 create policy "Company members can delete franchise_locations" on public.franchise_locations
-  for delete using (company_id = get_my_company_id());
+  for delete using (public.can_access_franchise_location(company_id, created_by));
 
 create index if not exists idx_franchise_locations_company_updated
   on public.franchise_locations (company_id, updated_at desc);
@@ -51,3 +82,6 @@ create index if not exists idx_franchise_locations_company_type_status
 
 create index if not exists idx_franchise_locations_company_region
   on public.franchise_locations (company_id, region);
+
+create index if not exists idx_franchise_locations_company_creator_updated
+  on public.franchise_locations (company_id, created_by, updated_at desc);

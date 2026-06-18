@@ -38,17 +38,35 @@ test('resolveLeadWorkspaceTransition clears contract-complete filter when leavin
     );
 });
 
-test('resolveLeadWorkspaceTransition preserves existing filters for normal workspace changes', () => {
+test('resolveLeadWorkspaceTransition opens raw intake by default when entering DB workspace', () => {
     assert.deepEqual(
         resolveLeadWorkspaceTransition({
             currentTab: 'dashboard',
             nextTab: 'db',
+            currentStatusFilter: '전체',
+            currentLeadDbLayer: 'candidate',
+            currentViewMode: 'pipeline'
+        }),
+        {
+            workspaceTab: 'db',
+            statusFilter: '전체',
+            leadDbLayer: 'raw_intake',
+            viewMode: 'table'
+        }
+    );
+});
+
+test('resolveLeadWorkspaceTransition preserves existing filters for normal workspace changes', () => {
+    assert.deepEqual(
+        resolveLeadWorkspaceTransition({
+            currentTab: 'db',
+            nextTab: 'dashboard',
             currentStatusFilter: '상담중',
             currentLeadDbLayer: 'candidate',
             currentViewMode: 'tasks'
         }),
         {
-            workspaceTab: 'db',
+            workspaceTab: 'dashboard',
             statusFilter: '상담중',
             leadDbLayer: 'candidate',
             viewMode: 'tasks'

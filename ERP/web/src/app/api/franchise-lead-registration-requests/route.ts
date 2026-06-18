@@ -5,6 +5,7 @@ import {
     resolveUserUuid
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead-registration-table';
 import { DEFAULT_FRANCHISE_LEAD_STATUS, normalizeLeadPhone } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
@@ -15,6 +16,7 @@ type RequestRow = {
     readonly id: string;
     readonly company_id: string;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
     readonly name: string;
     readonly mobile: string | null;
     readonly mobile_normalized: string | null;
@@ -39,8 +41,10 @@ type ManagerRow = {
 };
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type RequesterProfile = NonNullable<Awaited<ReturnType<typeof getRequesterProfile>>>;
 
 type LegacyLeadRow = RequestRow & {
+    readonly created_by: string | null;
     readonly promoted_lead_id?: null;
     readonly promoted_at?: null;
 };
@@ -137,10 +141,12 @@ async function saveLegacyPendingRequest(
     supabaseAdmin: SupabaseAdminClient,
     payload: Record<string, unknown>,
     mobileNormalized: string,
-    nowIso: string
+    nowIso: string,
+    requester: RequesterProfile
 ) {
     const legacyPayload = {
         ...payload,
+        created_by: requester.id,
         data: {
             ...isRecord(payload['data']) ? payload['data'] : {},
             sourceType: 'franchise_lead_registration',
@@ -159,6 +165,9 @@ async function saveLegacyPendingRequest(
             .maybeSingle<LegacyLeadRow>();
         if (existingError) throw existingError;
         if (existing) {
+            if (!canAccessFranchiseLead(requester, existing)) {
+                return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
+            }
             if (existing.data?.['sourceType'] !== 'franchise_lead_registration' || existing.data?.['adminIntakeStatus'] === 'promoted') {
                 return fail(409, 'VALIDATION_ERROR', '같은 연락처의 가맹 희망자가 이미 모객 DB에 있습니다.');
             }
@@ -212,6 +221,7 @@ export async function POST(request: Request) {
         const payload = {
             company_id: companyId,
             manager_id: managerId,
+            created_by: requester.id,
             name,
             mobile,
             mobile_normalized: mobileNormalized || null,
@@ -238,11 +248,14 @@ export async function POST(request: Request) {
                 .maybeSingle<RequestRow>();
             if (existingError) {
                 if (isMissingLeadRegistrationRequestTableError(existingError)) {
-                    return saveLegacyPendingRequest(supabaseAdmin, payload, mobileNormalized, nowIso);
+                    return saveLegacyPendingRequest(supabaseAdmin, payload, mobileNormalized, nowIso, requester);
                 }
                 throw existingError;
             }
             if (existing) {
+                if (!canAccessFranchiseLead(requester, existing)) {
+                    return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
+                }
                 const { data: updated, error: updateError } = await supabaseAdmin
                     .from('franchise_lead_registration_requests')
                     .update(payload)
@@ -261,7 +274,7 @@ export async function POST(request: Request) {
             .single<RequestRow>();
         if (error) {
             if (isMissingLeadRegistrationRequestTableError(error)) {
-                return saveLegacyPendingRequest(supabaseAdmin, payload, mobileNormalized, nowIso);
+                return saveLegacyPendingRequest(supabaseAdmin, payload, mobileNormalized, nowIso, requester);
             }
             throw error;
         }

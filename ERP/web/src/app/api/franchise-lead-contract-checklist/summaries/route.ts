@@ -1,5 +1,6 @@
-import { canAccessCompanyResource, getRequesterProfile } from '@/lib/api-auth';
+import { getRequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     buildLeadContractChecklistSummaryMap,
     filterLeadContractChecklistRowsByLeadCompany,
@@ -15,6 +16,7 @@ type LeadAccessRow = {
     readonly id: string;
     readonly company_id: string;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -43,7 +45,8 @@ function readLeadRow(value: unknown): LeadAccessRow | null {
     return {
         id,
         company_id: companyId,
-        manager_id: cleanString(value.manager_id) || null
+        manager_id: cleanString(value.manager_id) || null,
+        created_by: cleanString(value.created_by) || null
     };
 }
 
@@ -100,7 +103,7 @@ export async function GET(request: Request) {
 
         const { data: leadData, error: leadError } = await supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id')
+            .select('id, company_id, manager_id, created_by')
             .in('id', leadIds);
         if (leadError) throw leadError;
 
@@ -108,7 +111,7 @@ export async function GET(request: Request) {
         if (leads.length !== leadIds.length) {
             return fail(404, 'NOT_FOUND', 'Some franchise leads were not found');
         }
-        if (leads.some(lead => !canAccessCompanyResource(requester, lead))) {
+        if (leads.some(lead => !canAccessFranchiseLead(requester, lead))) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 

@@ -19,6 +19,13 @@ function formatDate(value: string): string {
     return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
+function formatPromotionTargets(names: readonly string[]): string {
+    const visibleNames = names.map(name => name.trim()).filter(Boolean);
+    if (visibleNames.length === 0) return '';
+    if (visibleNames.length <= 2) return visibleNames.join(', ');
+    return `${visibleNames.slice(0, 2).join(', ')} 외 ${visibleNames.length - 2}곳`;
+}
+
 export function IntakePropertiesTable({
     properties,
     requesterId,
@@ -56,17 +63,19 @@ export function IntakePropertiesTable({
                         const promoted = property.promotionCount > 0;
                         const targetPromoted = Boolean(property.promotedLocationId);
                         const stale = targetPromoted && property.syncStatus === 'stale';
+                        const promotionTargets = formatPromotionTargets(property.promotedCompanyNames);
                         return (
                             <tr key={property.id}>
                                 <td><strong>{property.name}</strong><small>{property.companyName}</small><small>{property.operationType || '-'}</small></td>
                                 <td><span>{property.region || '-'}</span><small>{property.address || '-'}</small></td>
                                 <td>{property.status || '-'}</td>
                                 <td>{formatDate(property.createdAt)}</td>
-                                <td>
+                                <td className={styles.promotionCell}>
                                     {stale && <span className={styles.staleBadge}>수정</span>}
                                     {!stale && targetPromoted && <span className={styles.doneBadge}>반영 완료</span>}
                                     {!stale && !targetPromoted && promoted && <span className={styles.doneBadge}>{property.promotionCount}곳 반영</span>}
                                     {!promoted && <span className={styles.waitBadge}>대기</span>}
+                                    {promotionTargets && <small className={styles.promotionTargets}>{promotionTargets}</small>}
                                 </td>
                                 <td>
                                     {stale ? (

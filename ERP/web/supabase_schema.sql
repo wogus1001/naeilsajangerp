@@ -18,7 +18,9 @@ create table if not exists public.profiles (
   company_id uuid references public.companies(id),
   email text,
   name text,
-  role text default 'staff', -- admin, manager, staff
+  phone text,
+  phone_normalized text,
+  role text default 'staff', -- admin, manager, sub_manager, staff, partner_vendor
   status text default 'pending', -- active, pending
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -31,6 +33,68 @@ language sql
 security definer
 as $$
   select company_id from public.profiles where id = auth.uid();
+$$;
+
+create or replace function get_my_role()
+returns text
+language sql
+security definer
+as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+create or replace function public.can_access_franchise_location(
+  target_company_id uuid,
+  target_created_by uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and (
+        p.role = 'admin'
+        or (
+          p.company_id = target_company_id
+          and (
+            p.role in ('manager', 'sub_manager', 'staff')
+            or (p.role = 'partner_vendor' and target_created_by = auth.uid())
+          )
+        )
+      )
+  );
+$$;
+
+create or replace function public.can_access_franchise_lead(
+  target_company_id uuid,
+  target_created_by uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and (
+        p.role = 'admin'
+        or (
+          p.company_id = target_company_id
+          and (
+            p.role in ('manager', 'sub_manager', 'staff')
+            or (p.role = 'partner_vendor' and target_created_by = auth.uid())
+          )
+        )
+      )
+  );
 $$;
 
 -- 4. ENABLE RLS
@@ -49,7 +113,46 @@ create policy "Users can view members of same company" on public.profiles
 
 -- Profiles: Users can update their own profile
 create policy "Users can update own profile" on public.profiles
-  for update using (id = auth.uid());
+  for update using (id = auth.uid())
+  with check (id = auth.uid());
+
+create or replace function public.prevent_profile_privilege_self_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null and coalesce(auth.role(), '') <> 'service_role' then
+    if new.id <> auth.uid() then
+      raise exception 'profiles row update is not allowed';
+    end if;
+
+    if new.role is distinct from old.role
+      or new.status is distinct from old.status
+      or new.company_id is distinct from old.company_id
+      or new.email is distinct from old.email then
+      raise exception 'profile role, status, company, and email are managed by administrators';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_profile_privilege_self_update on public.profiles;
+create trigger prevent_profile_privilege_self_update
+before update on public.profiles
+for each row execute function public.prevent_profile_privilege_self_update();
+
+create index if not exists idx_profiles_company_phone_normalized
+  on public.profiles (company_id, phone_normalized)
+  where phone_normalized is not null and phone_normalized <> '';
+
+revoke select (phone, phone_normalized) on public.profiles from anon, authenticated;
+
+create index if not exists idx_profiles_company_role_status
+  on public.profiles (company_id, role, status);
 
 -- 6. AUTH TRIGGER (Auto-create profile)
 -- Note: This trigger handles new user signups via Supabase Auth
@@ -59,8 +162,15 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, name, role)
-  values (new.id, new.email, new.raw_user_meta_data->>'name', 'staff');
+  insert into public.profiles (id, email, name, phone, phone_normalized, role)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'name',
+    new.raw_user_meta_data->>'phone',
+    regexp_replace(coalesce(new.raw_user_meta_data->>'phone_normalized', new.raw_user_meta_data->>'phone', ''), '\D', '', 'g'),
+    'staff'
+  );
   return new;
 end;
 $$;
@@ -297,6 +407,7 @@ create table if not exists public.franchise_leads (
   id uuid default uuid_generate_v4() primary key,
   company_id uuid references public.companies(id) on delete cascade not null,
   manager_id uuid references public.profiles(id),
+  created_by uuid references public.profiles(id) on delete set null,
   name text not null,
   mobile text,
   mobile_normalized text,
@@ -318,16 +429,17 @@ create table if not exists public.franchise_leads (
 alter table public.franchise_leads enable row level security;
 
 create policy "Company members can view franchise_leads" on public.franchise_leads
-  for select using (company_id = get_my_company_id());
+  for select using (public.can_access_franchise_lead(company_id, created_by));
 
 create policy "Company members can insert franchise_leads" on public.franchise_leads
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (public.can_access_franchise_lead(company_id, created_by));
 
 create policy "Company members can update franchise_leads" on public.franchise_leads
-  for update using (company_id = get_my_company_id());
+  for update using (public.can_access_franchise_lead(company_id, created_by))
+  with check (public.can_access_franchise_lead(company_id, created_by));
 
 create policy "Company members can delete franchise_leads" on public.franchise_leads
-  for delete using (company_id = get_my_company_id());
+  for delete using (public.can_access_franchise_lead(company_id, created_by));
 
 create index if not exists idx_franchise_leads_company_created
   on public.franchise_leads (company_id, created_at desc);
@@ -337,6 +449,9 @@ create index if not exists idx_franchise_leads_company_status
 
 create index if not exists idx_franchise_leads_company_manager
   on public.franchise_leads (company_id, manager_id);
+
+create index if not exists idx_franchise_leads_company_creator_updated
+  on public.franchise_leads (company_id, created_by, updated_at desc);
 
 create unique index if not exists idx_franchise_leads_company_mobile_unique
   on public.franchise_leads (company_id, mobile_normalized)
@@ -349,6 +464,7 @@ create table if not exists public.franchise_lead_registration_requests (
   id uuid default uuid_generate_v4() primary key,
   company_id uuid references public.companies(id) on delete cascade not null,
   manager_id uuid references public.profiles(id) on delete set null,
+  created_by uuid references public.profiles(id) on delete set null,
   name text not null,
   mobile text,
   mobile_normalized text,
@@ -372,25 +488,29 @@ alter table public.franchise_lead_registration_requests enable row level securit
 
 create policy "Company members can view franchise_lead_registration_requests"
   on public.franchise_lead_registration_requests
-  for select using (company_id = get_my_company_id());
+  for select using (public.can_access_franchise_lead(company_id, created_by));
 
 create policy "Company members can insert franchise_lead_registration_requests"
   on public.franchise_lead_registration_requests
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (public.can_access_franchise_lead(company_id, created_by));
 
 create policy "Company members can update franchise_lead_registration_requests"
   on public.franchise_lead_registration_requests
-  for update using (company_id = get_my_company_id());
+  for update using (public.can_access_franchise_lead(company_id, created_by))
+  with check (public.can_access_franchise_lead(company_id, created_by));
 
 create policy "Company members can delete franchise_lead_registration_requests"
   on public.franchise_lead_registration_requests
-  for delete using (company_id = get_my_company_id());
+  for delete using (public.can_access_franchise_lead(company_id, created_by));
 
 create index if not exists idx_franchise_lead_registration_requests_company_created
   on public.franchise_lead_registration_requests (company_id, created_at desc);
 
 create index if not exists idx_franchise_lead_registration_requests_company_manager
   on public.franchise_lead_registration_requests (company_id, manager_id);
+
+create index if not exists idx_franchise_lead_registration_requests_company_creator_created
+  on public.franchise_lead_registration_requests (company_id, created_by, created_at desc);
 
 create index if not exists idx_franchise_lead_registration_requests_promoted
   on public.franchise_lead_registration_requests (company_id, promoted_at);
@@ -415,6 +535,7 @@ create table if not exists public.franchise_locations (
   opened_at date,
   source_property_id text references public.properties(id) on delete set null,
   memo text,
+  created_by uuid references public.profiles(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   data jsonb default '{}'::jsonb
@@ -423,17 +544,17 @@ create table if not exists public.franchise_locations (
 alter table public.franchise_locations enable row level security;
 
 create policy "Company members can view franchise_locations" on public.franchise_locations
-  for select using (company_id = get_my_company_id());
+  for select using (public.can_access_franchise_location(company_id, created_by));
 
 create policy "Company members can insert franchise_locations" on public.franchise_locations
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (public.can_access_franchise_location(company_id, created_by));
 
 create policy "Company members can update franchise_locations" on public.franchise_locations
-  for update using (company_id = get_my_company_id())
-  with check (company_id = get_my_company_id());
+  for update using (public.can_access_franchise_location(company_id, created_by))
+  with check (public.can_access_franchise_location(company_id, created_by));
 
 create policy "Company members can delete franchise_locations" on public.franchise_locations
-  for delete using (company_id = get_my_company_id());
+  for delete using (public.can_access_franchise_location(company_id, created_by));
 
 create index if not exists idx_franchise_locations_company_updated
   on public.franchise_locations (company_id, updated_at desc);
@@ -443,6 +564,9 @@ create index if not exists idx_franchise_locations_company_type_status
 
 create index if not exists idx_franchise_locations_company_region
   on public.franchise_locations (company_id, region);
+
+create index if not exists idx_franchise_locations_company_creator_updated
+  on public.franchise_locations (company_id, created_by, updated_at desc);
 
 create unique index if not exists idx_franchise_locations_company_source_property_unique
   on public.franchise_locations (company_id, source_property_id)
@@ -466,17 +590,57 @@ create table if not exists public.franchise_opening_projects (
 alter table public.franchise_opening_projects enable row level security;
 
 create policy "Company members can view franchise_opening_projects" on public.franchise_opening_projects
-  for select using (company_id = get_my_company_id());
+  for select using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can insert franchise_opening_projects" on public.franchise_opening_projects
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can update franchise_opening_projects" on public.franchise_opening_projects
-  for update using (company_id = get_my_company_id())
-  with check (company_id = get_my_company_id());
+  for update using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can delete franchise_opening_projects" on public.franchise_opening_projects
-  for delete using (company_id = get_my_company_id());
+  for delete using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create unique index if not exists idx_franchise_opening_projects_company_location
   on public.franchise_opening_projects (company_id, location_id);
@@ -512,14 +676,46 @@ create table if not exists public.franchise_location_messages (
 alter table public.franchise_location_messages enable row level security;
 
 create policy "Company members can view franchise_location_messages" on public.franchise_location_messages
-  for select using (company_id = get_my_company_id());
+  for select using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can insert franchise_location_messages" on public.franchise_location_messages
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can update franchise_location_messages" on public.franchise_location_messages
-  for update using (company_id = get_my_company_id())
-  with check (company_id = get_my_company_id());
+  for update using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create index if not exists idx_franchise_location_messages_company_created
   on public.franchise_location_messages (company_id, created_at desc);

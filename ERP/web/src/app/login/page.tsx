@@ -126,7 +126,7 @@ export default function LoginPage() {
                 // Fetch additional profile info from 'profiles' table
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('*')
+                    .select('id, name, role, status, company_id')
                     .eq('id', data.user.id)
                     .single();
 

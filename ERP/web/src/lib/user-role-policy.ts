@@ -1,5 +1,5 @@
-export const USER_ROLES = ['admin', 'manager', 'sub_manager', 'staff'] as const;
-export const ADMIN_ASSIGNABLE_USER_ROLES = ['manager', 'sub_manager'] as const;
+export const USER_ROLES = ['admin', 'manager', 'sub_manager', 'staff', 'partner_vendor'] as const;
+export const ADMIN_ASSIGNABLE_USER_ROLES = ['manager', 'sub_manager', 'partner_vendor'] as const;
 
 export type UserRole = typeof USER_ROLES[number];
 export type AdminAssignableUserRole = typeof ADMIN_ASSIGNABLE_USER_ROLES[number];
@@ -23,6 +23,8 @@ export function getUserRoleLabel(value: UserRole | string | null | undefined): s
             return '매니저';
         case 'staff':
             return '담당자';
+        case 'partner_vendor':
+            return '협력업체';
         default:
             return '사용자';
     }
