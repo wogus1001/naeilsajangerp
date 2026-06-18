@@ -45,11 +45,21 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
-- 2026-06-18 기준 최근 실서버 기능 커밋: `377aeab feat(franchise): refine intake promotion workflow`
-- 이 커밋은 인입 관리 밀어넣기 매핑 보강, 예비 창업자 등록 다중 회사 반영/업데이트, 입점 요청 첨부 수정, 자동 상담 이력 제거를 포함한다.
+- 2026-06-18 배포 요청 기준 최신 릴리즈 소스 커밋: `efced6e feat(franchise): add partner access and DB exports`
+- 이 릴리즈는 회원가입 휴대폰 필수화, 협력업체 역할/승인/권한 격리, 모객 DB/출점 후보지/가맹 운영 엑셀·PDF·인쇄 지원을 포함한다.
 - production Gmail 발송과 회사 로고 업로드는 각 환경의 Vercel env와 Supabase storage policy가 맞아야 한다.
+- 협력업체 권한 격리는 `supabase_partner_vendor_access_migration.sql`을 운영 DB에 직접 적용해야 완전히 활성화된다.
 
 ## Release Ledger
+
+2026-06-18
+- 작업 브랜치: `codex/franchise-next-alerts-20260616`
+- 기능 커밋: `efced6e feat(franchise): add partner access and DB exports`
+- dev 반영: 배포 요청 기준 `dev` HEAD로 체리픽 반영
+- main 반영: 배포 요청 기준 `main` HEAD로 체리픽 반영
+- 배포 URL: `https://naeilsajang-dev.vercel.app`, `https://naeilsajang.vercel.app`
+- 검증: `npx tsx --test src/components/franchise/franchiseDbExport.test.mts src/lib/user-role-policy.test.mts src/lib/signup-approval-policy.test.mts src/lib/franchise-location-access.test.mts src/lib/franchise-lead-access.test.mts src/lib/franchise-manager-display.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts`, `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과
+- 남은 이슈: `supabase_partner_vendor_access_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 협력업체 권한 격리 schema/RLS가 완전히 활성화된다.
 
 2026-06-18
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
