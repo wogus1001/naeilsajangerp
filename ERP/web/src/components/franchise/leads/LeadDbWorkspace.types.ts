@@ -31,6 +31,7 @@ export type LeadDbWorkspaceProps = {
     readonly contractChecklistRefreshKey?: number;
     readonly pageSize: typeof PAGE_SIZE_OPTIONS[number];
     readonly visibleLayerLeadCount: number;
+    readonly exportLeads: readonly FranchiseLead[];
     readonly paginatedLeads: readonly FranchiseLead[];
     readonly selectedLeadIds: readonly string[];
     readonly allVisibleSelected: boolean;
@@ -48,6 +49,7 @@ export type LeadDbWorkspaceProps = {
     readonly totalPages: number;
     readonly renderManagerOptions: (selectedManagerId?: string) => ReactNode;
     readonly getManagerName: (managerId?: string) => string;
+    readonly onLoadExportLeadsAction?: () => Promise<readonly FranchiseLead[]>;
     readonly onLeadDbLayerChangeAction: (layer: LeadDbLayer) => void;
     readonly onViewModeChangeAction: (mode: LeadViewMode) => void;
     readonly onPageSizeChangeAction: (pageSize: typeof PAGE_SIZE_OPTIONS[number]) => void;

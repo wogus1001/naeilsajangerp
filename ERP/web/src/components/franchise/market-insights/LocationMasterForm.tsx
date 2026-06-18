@@ -1,6 +1,7 @@
 import KakaoAddressSearch, { type KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
+import { formatManagerDisplayName } from '@/lib/franchise-manager-display';
 import {
     LOCATION_DEVELOPMENT_STAGES,
     LOCATION_IMPORTANCE_LEVELS,
@@ -117,7 +118,7 @@ export function LocationMasterForm({
                             {!hasSelectedManager && form.managerId ? <option value={form.managerId}>담당자 재선택 필요</option> : null}
                             {managerOptions.map(manager => (
                                 <option key={manager.id} value={manager.id}>
-                                    {manager.name}
+                                    {formatManagerDisplayName(manager)}
                                 </option>
                             ))}
                         </select>

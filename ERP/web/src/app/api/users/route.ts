@@ -131,7 +131,7 @@ export async function PUT(request: Request) {
         }
 
         if (rawRole && !role) {
-            return NextResponse.json({ error: '관리자 화면에서는 팀장 또는 매니저 직급만 지정할 수 있습니다.' }, { status: 400 });
+            return NextResponse.json({ error: '관리자 화면에서는 팀장, 매니저, 협력업체 직급만 지정할 수 있습니다.' }, { status: 400 });
         }
 
         const supabaseAdmin = await getSupabaseAdmin();

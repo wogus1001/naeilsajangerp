@@ -8,6 +8,7 @@ import {
     updateLeadLocationLink
 } from '@/lib/franchise-lead-location-links';
 import type { LeadLocationLink, LeadLocationLinkStatus, LeadLocationTargetType } from '@/lib/franchise-lead-location-links';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import { createActivityId } from './utils';
 import type { ExternalPropertyListing, FranchiseLead, FranchiseLocation, LeadActivity } from './types';
@@ -51,20 +52,21 @@ export function useLeadLocationLinks({
         listingParams.set('limit', '500');
 
         setIsLocationMatchLoading(true);
-        Promise.allSettled([
-            fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
-                .then(async response => {
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(readApiError(payload));
-                    return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
-                }),
-            fetch(`/api/realty/listings?${listingParams.toString()}`, { cache: 'no-store', signal: controller.signal })
-                .then(async response => {
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(readApiError(payload));
-                    return unwrapApiData<{ listings?: ExternalPropertyListing[] }>(payload);
-                })
-        ])
+        void getApiAuthHeaders()
+            .then(headers => Promise.allSettled([
+                fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', signal: controller.signal, headers })
+                    .then(async response => {
+                        const payload = await response.json();
+                        if (!response.ok) throw new Error(readApiError(payload));
+                        return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
+                    }),
+                fetch(`/api/realty/listings?${listingParams.toString()}`, { cache: 'no-store', signal: controller.signal })
+                    .then(async response => {
+                        const payload = await response.json();
+                        if (!response.ok) throw new Error(readApiError(payload));
+                        return unwrapApiData<{ listings?: ExternalPropertyListing[] }>(payload);
+                    })
+            ]))
             .then(([locationResult, listingResult]) => {
                 if (locationResult.status === 'fulfilled') {
                     setFranchiseLocations(locationResult.value.locations || []);

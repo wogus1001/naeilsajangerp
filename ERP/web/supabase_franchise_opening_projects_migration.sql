@@ -22,17 +22,57 @@ drop policy if exists "Company members can update franchise_opening_projects" on
 drop policy if exists "Company members can delete franchise_opening_projects" on public.franchise_opening_projects;
 
 create policy "Company members can view franchise_opening_projects" on public.franchise_opening_projects
-  for select using (company_id = get_my_company_id());
+  for select using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can insert franchise_opening_projects" on public.franchise_opening_projects
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can update franchise_opening_projects" on public.franchise_opening_projects
-  for update using (company_id = get_my_company_id())
-  with check (company_id = get_my_company_id());
+  for update using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can delete franchise_opening_projects" on public.franchise_opening_projects
-  for delete using (company_id = get_my_company_id());
+  for delete using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_opening_projects.location_id
+        and fl.company_id = franchise_opening_projects.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create unique index if not exists idx_franchise_opening_projects_company_location
   on public.franchise_opening_projects (company_id, location_id);

@@ -36,6 +36,21 @@ test('existing company staff signup waits for manager approval', () => {
     });
 });
 
+test('existing company partner vendor signup waits for manager approval', () => {
+    const policy = resolveSignupApprovalPolicy({
+        companyExists: true,
+        requestedRole: 'partner_vendor'
+    });
+
+    assert.deepEqual(policy, {
+        kind: 'allow',
+        role: 'partner_vendor',
+        status: 'pending_approval',
+        approvalOwner: 'manager',
+        message: '협력업체 가입 요청이 완료되었습니다. 팀장 승인 후 로그인이 가능합니다.'
+    });
+});
+
 test('existing company cannot request another manager from public signup', () => {
     const policy = resolveSignupApprovalPolicy({
         companyExists: true,
@@ -52,12 +67,17 @@ test('unknown signup role falls back to staff', () => {
     assert.equal(normalizeSignupRole('owner'), 'staff');
     assert.equal(normalizeSignupRole(null), 'staff');
     assert.equal(normalizeSignupRole('manager'), 'manager');
+    assert.equal(normalizeSignupRole('partner_vendor'), 'partner_vendor');
 });
 
 test('pending login message separates admin and manager approval owners', () => {
     assert.equal(
         getPendingApprovalLoginMessage('manager'),
         '관리자 승인 대기 중입니다. 승인 후 로그인이 가능합니다.'
+    );
+    assert.equal(
+        getPendingApprovalLoginMessage('partner_vendor'),
+        '팀장 승인 대기 중입니다. 승인 후 로그인이 가능합니다.'
     );
     assert.equal(
         getPendingApprovalLoginMessage('staff'),

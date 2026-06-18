@@ -409,6 +409,27 @@
 - 검증: `npx tsx --test src/lib/franchise-property-promotion.test.mts src/lib/franchise-matching-request-promotion.test.mts src/lib/franchise-lead-registration.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-admin-intake-view.test.mts src/lib/franchise-lead-workflow.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
 - 브라우저 QA: Playwright mock 세션으로 `/dashboard/franchise-leads` 대상 lead 상세를 열어 밀어넣기 자동 상담 이력이 표시되지 않고 빈 상담 이력 상태가 유지되는 것을 확인했다.
 
+## 2026-06-18 회원가입 휴대폰/협력업체 권한 QA
+
+- 회원가입 API는 신규 가입 시 휴대폰 번호를 필수로 받고 `profiles.phone`, `profiles.phone_normalized` 저장값을 함께 업데이트한다. `/signup` 기존 회사 가입은 `브랜드 임직원`과 `협력업체`를 선택할 수 있고, 신규 회사 가입은 기존처럼 팀장 승인 요청만 허용한다.
+- `partner_vendor` 역할을 화면에서는 `협력업체`로 표시한다. 회사 직원 관리에서 팀장은 담당자와 협력업체 승인 대기 요청을 승인할 수 있고, 팀장 승격/강등 대상은 내부 담당자/팀장으로 유지했다.
+- 출점 후보지에는 `created_by`를 저장한다. 브랜드 임직원은 같은 회사 후보지를 모두 볼 수 있고, 협력업체는 같은 회사 안에서도 본인이 등록한 후보지만 조회/수정/삭제할 수 있도록 `/api/franchise-locations`, 후보지 기록, 경쟁스캔, 오픈 준비 프로젝트 접근 헬퍼를 통일했다.
+- 모객 DB도 `created_by` 기준 접근을 추가했다. 브랜드 임직원은 같은 회사 모객 DB를 모두 볼 수 있고, 협력업체는 같은 회사 안에서도 본인이 작성한 모객 DB만 조회/수정/삭제할 수 있다. 정보공개서 발송/이력, Gmail 발송, 계약 체크리스트, 알림, 진행현황의 매칭 요청 목록도 같은 접근 규칙을 사용한다.
+- 진행현황의 입점 요청/예비 창업자/매칭 요청 목록도 협력업체에게는 본인 작성 건만 보이게 했다. 예비 창업자 등록 요청 테이블은 `created_by`를 추가하고 같은 RLS 규칙을 적용한다.
+- 담당자 표시에서는 `partner_vendor` 사용자를 `협력업체-이름` 형식으로 노출한다.
+- 서브에이전트 코드리뷰에서 발견된 `franchise_opening_projects` 레거시 `requesterId` fallback 회귀를 수정해 가맹 운영 API가 기존 클라이언트 요청 방식도 계속 허용하게 했다.
+- 신규 SQL: `supabase_partner_vendor_access_migration.sql`. 이 SQL은 `profiles` 휴대폰 컬럼, `franchise_locations.created_by`, 후보지/기록/오픈프로젝트 RLS를 추가한다. 실제 Supabase 적용은 사용자가 직접 진행해야 한다.
+- 검증: `npx tsx --test src/lib/user-role-policy.test.mts src/lib/signup-approval-policy.test.mts src/lib/franchise-location-access.test.mts src/lib/franchise-lead-access.test.mts src/lib/franchise-manager-display.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: 기존 로컬 dev 서버 `http://localhost:3000/signup`에서 회사 검색 API를 mock 처리해 1440px/390px 모두 휴대폰 필수 입력, 기존 회사 선택 후 `브랜드 임직원`/`협력업체` 가입 유형, 협력업체 승인 안내 문구, 가로 overflow 0건을 확인했다. 실계정 role matrix와 RLS 차단은 `supabase_partner_vendor_access_migration.sql` 적용 후 운영 DB에서 재확인한다.
+
+## 2026-06-18 프랜차이즈 DB export QA
+
+- 모객 DB, 출점 후보지, 가맹 운영 목록 상단에 `엑셀`, `PDF`, `인쇄` 버튼 묶음을 추가했다. 엑셀은 현재 필터/정렬 전체 결과를 `.xlsx`로 저장하고, PDF/인쇄는 공통 전용 인쇄 화면에서 브라우저 `PDF로 저장` 또는 인쇄를 사용한다.
+- 모객 DB export는 `1차 유입 DB`/`가맹 희망자` 선택 탭, 표시 컬럼, 검색/상태/유입/담당자/날짜/희망지역/예산 필터, 정렬을 반영한다. 화면 페이지네이션이 있어도 export 시 `limit=all` 조회로 필터 전체 결과를 다시 구성한다.
+- 출점 후보지 export는 후보지 필터, 정렬, 표시 컬럼을 반영하고, 화면에서 한 줄 말줄임 처리되는 종합메모는 파일/인쇄용 일반 텍스트로 내보낸다. 가맹 운영 export는 운영 가맹점 기준 고정 컬럼으로 내보낸다.
+- 검증: `npx tsx --test src/components/franchise/franchiseDbExport.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: 로컬 서버 `http://localhost:3000`의 보호 라우트 HEAD 응답은 200을 확인했다. 로그인 세션 없는 Playwright 보호 화면 렌더는 Supabase auth 세션 검증/로그아웃 흐름에 막혀 export 버튼 실클릭까지는 제한됐다. 실제 담당자 계정 세션에서 1440px/390px 버튼 배치, 엑셀 다운로드, PDF/인쇄 팝업은 후속 live QA로 재확인한다.
+
 ## 다음 QA 체크리스트
 
 ### P0

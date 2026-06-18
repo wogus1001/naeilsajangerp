@@ -1,8 +1,9 @@
-import { getRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 
 type StaffAction = 'approve' | 'promote' | 'demote';
+const APPROVABLE_ROLES = new Set(['staff', 'partner_vendor']);
 
 type ProfileRow = {
     readonly id: string;
@@ -41,10 +42,10 @@ export async function GET(request: Request) {
         }
 
         const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request);
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
 
         if (!requester) {
-            return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
+            return NextResponse.json({ error: 'authenticated session is required' }, { status: 401 });
         }
 
         if (!isAdmin(requester) && requester.role !== 'manager') {
@@ -100,14 +101,13 @@ export async function PUT(request: Request) {
         const body = await request.json();
         const targetUserId = getStringField(body, 'targetUserId');
         const action = getStringField(body, 'action');
-        const requesterId = getStringField(body, 'requesterId');
 
         if (!targetUserId || !isStaffAction(action)) {
             return NextResponse.json({ error: 'Invalid staff action request' }, { status: 400 });
         }
 
         const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request, requesterId);
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
 
         if (!requester || requester.role !== 'manager') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -135,11 +135,11 @@ export async function PUT(request: Request) {
             .eq('status', 'active');
 
         if (action === 'approve') {
-            if (targetUser.role !== 'staff') {
-                return NextResponse.json({ error: '팀장은 직원 가입 요청만 승인할 수 있습니다.' }, { status: 403 });
+            if (!APPROVABLE_ROLES.has(targetUser.role || '')) {
+                return NextResponse.json({ error: '팀장은 담당자 또는 협력업체 가입 요청만 승인할 수 있습니다.' }, { status: 403 });
             }
             if (targetUser.status !== 'pending_approval') {
-                return NextResponse.json({ error: '승인 대기 상태의 직원만 승인할 수 있습니다.' }, { status: 400 });
+                return NextResponse.json({ error: '승인 대기 상태의 가입 요청만 승인할 수 있습니다.' }, { status: 400 });
             }
             await supabaseAdmin.from('profiles').update({ status: 'active' }).eq('id', targetUserId);
         }

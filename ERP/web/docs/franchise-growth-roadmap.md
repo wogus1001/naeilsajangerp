@@ -268,6 +268,8 @@
 
 - 모객 DB 핵심 플로우는 2026-06-11 로그인 세션 QA를 통과했다.
   - `1차 유입 DB -> 후보자` 승격, 업무 큐 `전체 업무/연락 지연/오늘 연락/무응답`, 후보자 상세 업무 필드 저장, 출점 후보지/외부 상가 DB 연결/메모/삭제/중복 방지를 확인했다.
+- 2026-06-18 회원가입/권한 1차 고도화로 휴대폰 필수 가입, 협력업체(`partner_vendor`) 역할, 팀장 승인, 모객 DB/출점 후보지/가맹 운영 created-by 격리를 추가했다. 남은 P0 회귀는 실제 dev/prod Supabase에 `supabase_partner_vendor_access_migration.sql` 적용 후 실계정으로 브랜드 임직원/협력업체 A/협력업체 B 간 모객 DB와 후보지 조회·수정·삭제 범위를 확인하는 것이다.
+- 2026-06-18 모객 DB, 출점 후보지, 가맹 운영에 현재 필터/정렬 기준 엑셀·PDF·인쇄 export를 추가했다. PDF는 브라우저 인쇄 화면에서 `PDF로 저장`하는 방식이며, 별도 SQL은 필요 없다.
 - 2026-06-11 안정화 QA에서 기존 단계값 없는 리드 유지, `연락 완료` 처리, 후보지 연결 상태/메모 reload 유지를 추가 확인했다.
 - 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)는 2026-06-11 `admin` requester와 실제 `.xlsx` fixture로 통과했다. runner 생성 리드는 `raw_intake` 저장 후 `candidate` 승격과 cleanup까지 확인했다.
 - 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.

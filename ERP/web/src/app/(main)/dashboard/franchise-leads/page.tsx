@@ -32,6 +32,7 @@ import {
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
+import { formatManagerDisplayName, formatManagerOptionLabel } from '@/lib/franchise-manager-display';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import {
     EMPTY_FORM, ENABLE_LEAD_CUSTOMER_DB_LINKING,
@@ -45,6 +46,7 @@ import {
     LEAD_TABLE_COLUMNS_STORAGE_KEY,
     normalizeLeadTableColumnKeys
 } from '@/components/franchise/leads/leadTableConfig';
+import { filterLeadTableLeads, sortLeadTableLeads } from '@/components/franchise/leads/leadTableFilters';
 import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
 import {
     resolveLeadWorkspaceTransition,
@@ -72,6 +74,7 @@ import {
     formatFullDateTime,
     formatDate,
     isContactActionDue,
+    isRawIntakeLead,
     parseBudgetInputToWon,
     toDatetimeLocalValue,
     toRangeOption,
@@ -121,7 +124,7 @@ export default function FranchiseLeadsPage() {
     const [managerFilter, setManagerFilter] = React.useState('전체');
     const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('최근 30일');
     const [workspaceTab, setWorkspaceTab] = React.useState<LeadWorkspaceTab>('dashboard');
-    const [leadDbLayer, setLeadDbLayer] = React.useState<LeadDbLayer>('candidate');
+    const [leadDbLayer, setLeadDbLayer] = React.useState<LeadDbLayer>('raw_intake');
     const [viewMode, setViewMode] = React.useState<LeadViewMode>('table');
     const [taskQueueFilter, setTaskQueueFilter] = React.useState<LeadWorkQueueKey>('all');
     const [pageSize, setPageSize] = React.useState<typeof PAGE_SIZE_OPTIONS[number]>(50);
@@ -286,6 +289,48 @@ export default function FranchiseLeadsPage() {
         }
     }, [companyName, createdFrom, createdTo, managerFilter, searchTerm, sourceFilter, statusFilter, userId]);
 
+    const fetchLeadExportRows = React.useCallback(async (): Promise<readonly FranchiseLead[]> => {
+        if (!userId) return [];
+
+        const params = new URLSearchParams({
+            requesterId: userId,
+            limit: 'all'
+        });
+
+        if (companyName) params.set('company', companyName);
+        if (searchTerm.trim()) params.set('search', searchTerm.trim());
+        if (statusFilter !== '전체') params.set('status', statusFilter);
+        if (sourceFilter !== '전체') params.set('source', sourceFilter);
+        if (managerFilter !== '전체') params.set('managerId', managerFilter);
+        if (createdFrom) params.set('createdFrom', createdFrom);
+        if (createdTo) params.set('createdTo', createdTo);
+
+        const response = await fetch(`/api/franchise-leads?${params.toString()}`, { cache: 'no-store' });
+        const payload = await response.json();
+
+        if (!response.ok) {
+            throw new Error(readApiError(payload));
+        }
+
+        const data = unwrapApiData<LeadListResponse>(payload);
+        const sourceLeads = leadDbLayer === 'raw_intake'
+            ? (data.leads || []).filter(isRawIntakeLead)
+            : (data.leads || []).filter(lead => !isRawIntakeLead(lead));
+        return sortLeadTableLeads(filterLeadTableLeads(sourceLeads, tableFilters), tableSort);
+    }, [
+        companyName,
+        createdFrom,
+        createdTo,
+        leadDbLayer,
+        managerFilter,
+        searchTerm,
+        sourceFilter,
+        statusFilter,
+        tableFilters,
+        tableSort,
+        userId
+    ]);
+
     React.useEffect(() => {
         if (!userId) return;
         const timer = window.setTimeout(() => {
@@ -353,7 +398,7 @@ export default function FranchiseLeadsPage() {
                 const nextOptions = (users || [])
                     .filter(manager => manager.id || manager.uuid)
                     .map(manager => {
-                        const label = manager.name || manager.id || manager.uuid || '담당자 미상';
+                        const label = formatManagerDisplayName(manager);
                         if (manager.id) nextMap[manager.id] = label;
                         if (manager.uuid) nextMap[manager.uuid] = label;
                         return manager;
@@ -577,7 +622,7 @@ export default function FranchiseLeadsPage() {
                 const value = getManagerOptionValue(manager);
                 return (
                     <option key={value} value={value}>
-                        {manager.name || manager.id}{manager.companyName && user?.role === 'admin' ? ` · ${manager.companyName}` : ''}
+                        {formatManagerOptionLabel(manager, user?.role === 'admin')}
                     </option>
                 );
             })}
@@ -1234,6 +1279,7 @@ export default function FranchiseLeadsPage() {
                     contractChecklistRefreshKey={contractChecklistRefreshKey}
                     pageSize={pageSize}
                     visibleLayerLeadCount={visibleLayerLeads.length}
+                    exportLeads={visibleLayerLeads}
                     paginatedLeads={paginatedLeads}
                     selectedLeadIds={selectedLeadIds}
                     allVisibleSelected={allVisibleSelected}
@@ -1251,6 +1297,7 @@ export default function FranchiseLeadsPage() {
                     totalPages={totalPages}
                     renderManagerOptions={renderManagerOptions}
                     getManagerName={getManagerName}
+                    onLoadExportLeadsAction={fetchLeadExportRows}
                     onLeadDbLayerChangeAction={setLeadDbLayer}
                     onViewModeChangeAction={setViewMode}
                     onPageSizeChangeAction={setPageSize}

@@ -29,14 +29,46 @@ drop policy if exists "Company members can insert franchise_location_messages" o
 drop policy if exists "Company members can update franchise_location_messages" on public.franchise_location_messages;
 
 create policy "Company members can view franchise_location_messages" on public.franchise_location_messages
-  for select using (company_id = get_my_company_id());
+  for select using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can insert franchise_location_messages" on public.franchise_location_messages
-  for insert with check (company_id = get_my_company_id());
+  for insert with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create policy "Company members can update franchise_location_messages" on public.franchise_location_messages
-  for update using (company_id = get_my_company_id())
-  with check (company_id = get_my_company_id());
+  for update using (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.franchise_locations fl
+      where fl.id = franchise_location_messages.location_id
+        and fl.company_id = franchise_location_messages.company_id
+        and public.can_access_franchise_location(fl.company_id, fl.created_by)
+    )
+  );
 
 create index if not exists idx_franchise_location_messages_company_created
   on public.franchise_location_messages (company_id, created_at desc);

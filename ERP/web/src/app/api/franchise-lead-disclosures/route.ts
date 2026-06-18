@@ -1,4 +1,4 @@
-import { canAccessCompanyResource, canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
+import { canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
     getDisclosureEligibility,
@@ -9,6 +9,7 @@ import {
     transformLeadDisclosureDelivery,
     type DisclosureDeliveryRow
 } from '@/lib/franchise-lead-disclosure-records';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,7 @@ type LeadRow = {
     readonly id: string;
     readonly company_id: string;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
     readonly name: string | null;
     readonly mobile: string | null;
 };
@@ -105,7 +107,7 @@ async function fetchLead(
 ) {
     const { data, error } = await supabaseAdmin
         .from('franchise_leads')
-        .select('id, company_id, manager_id, name, mobile')
+        .select('id, company_id, manager_id, created_by, name, mobile')
         .eq('id', leadId)
         .single();
     return { lead: data as LeadRow | null, error };
@@ -148,7 +150,7 @@ export async function GET(request: Request) {
 
         const { lead, error: leadError } = await fetchLead(supabaseAdmin, leadId);
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
-        if (!canAccessCompanyResource(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        if (!canAccessFranchiseLead(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
 
         const deliveries = await fetchDeliveries(supabaseAdmin, leadId);
         return ok({
@@ -172,7 +174,7 @@ export async function POST(request: Request) {
 
         const { lead, error: leadError } = await fetchLead(supabaseAdmin, leadId);
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
-        if (!canAccessCompanyResource(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        if (!canAccessFranchiseLead(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         if (!canAccessCompanyScope(requester, lead.company_id)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied');
 
         const documentId = cleanString(getFirst(body, ['documentId', 'document_id']));

@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
-    canAccessCompanyResource,
     canAccessCompanyScope,
     getRequesterProfile,
     isAdmin,
@@ -17,6 +16,10 @@ import {
     normalizeLeadStage,
     normalizeLeadStatus
 } from '@/lib/franchise-leads';
+import {
+    canAccessFranchiseLead,
+    shouldRestrictFranchiseLeadListToCreator
+} from '@/lib/franchise-lead-access';
 import {
     canEnterContractStatus,
     getContractLockMessage,
@@ -35,6 +38,7 @@ type FranchiseLeadRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly manager_id: string | null;
+    readonly created_by: string | null;
     readonly name: string | null;
     readonly mobile: string | null;
     readonly mobile_normalized: string | null;
@@ -56,6 +60,7 @@ type LeadAccessTarget = {
     readonly id: string;
     readonly company_id: string | null;
     readonly manager_id: string | null;
+    readonly created_by?: string | null;
 };
 type TransformedLead = NonNullable<ReturnType<typeof transformLead>>;
 
@@ -82,6 +87,8 @@ const CONTROL_FIELDS = new Set([
     'companyId',
     'managerId',
     'manager_id',
+    'createdBy',
+    'created_by',
     'name',
     'mobile',
     'mobileNormalized',
@@ -173,6 +180,7 @@ function transformLead(row: FranchiseLeadRow | null | undefined) {
         id: row.id,
         companyId: row.company_id,
         managerId: row.manager_id,
+        createdBy: row.created_by,
         name: row.name || '',
         mobile: row.mobile || '',
         mobileNormalized: row.mobile_normalized || normalizeLeadPhone(row.mobile),
@@ -353,7 +361,7 @@ function buildDataPayload(body: Record<string, unknown>, existingData: Record<st
     };
 }
 
-function buildInsertPayload(body: Record<string, unknown>, companyId: string, managerUuid: string) {
+function buildInsertPayload(body: Record<string, unknown>, companyId: string, managerUuid: string, requesterId: string) {
     const name = cleanString(getFirst(body, ['name', '이름', '성명']));
     const mobile = cleanString(getFirst(body, ['mobile', '연락처', '휴대폰', '전화번호'])) || '';
 
@@ -366,6 +374,7 @@ function buildInsertPayload(body: Record<string, unknown>, companyId: string, ma
             id: randomUUID(),
             company_id: companyId,
             manager_id: managerUuid,
+            created_by: requesterId,
             name,
             mobile,
             mobile_normalized: normalizeLeadPhone(mobile),
@@ -499,7 +508,7 @@ export async function GET(request: Request) {
                 return fail(404, 'NOT_FOUND', 'Franchise lead not found');
             }
 
-            if (!canAccessCompanyResource(requesterProfile, lead)) {
+            if (!canAccessFranchiseLead(requesterProfile, lead as FranchiseLeadRow)) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
             }
 
@@ -524,7 +533,7 @@ export async function GET(request: Request) {
         const createdFrom = searchParams.get('createdFrom');
         const createdTo = searchParams.get('createdTo');
 
-        let rows: any[] = [];
+        let rows: FranchiseLeadRow[] = [];
         const PAGE_SIZE = 1000;
         let page = 0;
         let hasMore = true;
@@ -542,6 +551,9 @@ export async function GET(request: Request) {
             }
             if (scope.scopeMode === 'owner') {
                 query = query.eq('manager_id', requesterProfile.id);
+            }
+            if (shouldRestrictFranchiseLeadListToCreator(requesterProfile)) {
+                query = query.eq('created_by', requesterProfile.id);
             }
             if (scope.scopeMode === 'admin' && scope.companyId) {
                 query = query.eq('company_id', scope.companyId);
@@ -569,7 +581,7 @@ export async function GET(request: Request) {
             if (error) throw error;
 
             if (data && data.length > 0) {
-                rows = rows.concat(data);
+                rows = rows.concat((data || []) as FranchiseLeadRow[]);
                 if (data.length < PAGE_SIZE) hasMore = false;
                 page++;
             } else {
@@ -622,7 +634,7 @@ export async function POST(request: Request) {
         const scope = await resolveMutationScope(supabaseAdmin, requesterProfile, body);
         if (scope.error) return scope.error;
 
-        const insert = buildInsertPayload(body, scope.companyId, scope.managerUuid);
+        const insert = buildInsertPayload(body, scope.companyId, scope.managerUuid, requesterProfile.id);
         if (insert.error) return insert.error;
 
         const mobileNormalized = insert.payload.mobile_normalized;
@@ -635,6 +647,9 @@ export async function POST(request: Request) {
                 .maybeSingle();
 
             if (existing) {
+                if (!canAccessFranchiseLead(requesterProfile, existing as FranchiseLeadRow)) {
+                    return fail(409, 'VALIDATION_ERROR', 'A lead with the same mobile already exists');
+                }
                 const updates = {
                     ...buildUpdatePayload(body, existing.data || {}),
                     manager_id: scope.managerUuid
@@ -698,7 +713,7 @@ export async function PUT(request: Request) {
             return fail(404, 'NOT_FOUND', 'Franchise lead not found');
         }
 
-        if (!canAccessCompanyResource(requesterProfile, existing)) {
+        if (!canAccessFranchiseLead(requesterProfile, existing as FranchiseLeadRow)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 
@@ -811,12 +826,12 @@ export async function DELETE(request: Request) {
 
         const { data: targets, error: targetError } = await supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id')
+            .select('id, company_id, manager_id, created_by')
             .in('id', ids);
 
         if (targetError) throw targetError;
 
-        const forbidden = (targets || []).some((target: LeadAccessTarget) => !canAccessCompanyResource(requesterProfile, target));
+        const forbidden = (targets || []).some((target: LeadAccessTarget) => !canAccessFranchiseLead(requesterProfile, target));
         if (forbidden) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
         }

@@ -20,6 +20,10 @@ function toLegacyLoginId(email: string | null, fallback: string): string {
     return email;
 }
 
+function getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
+}
+
 export async function GET(request: Request) {
     try {
         const authHeader = request.headers.get('authorization') || '';
@@ -87,10 +91,10 @@ export async function GET(request: Request) {
         };
 
         return NextResponse.json({ user: normalizedUser });
-    } catch (error: any) {
+    } catch (error) {
         console.error('Auth me error:', error);
         return NextResponse.json(
-            { error: 'Internal Server Error', details: error?.message || 'Unknown error' },
+            { error: 'Internal Server Error', details: getErrorMessage(error) },
             { status: 500 }
         );
     }

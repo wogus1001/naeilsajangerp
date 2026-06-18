@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getRequesterProfile } from '@/lib/api-auth';
+import { getAuthenticatedRequesterProfile, type RequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import {
     LOCATION_MESSAGE_SELECT,
     buildLocationMessageSummary,
@@ -69,7 +70,7 @@ async function buildMessagesPayload(supabaseAdmin: ReturnType<typeof getSupabase
 
 async function handleSummary(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
-    const requester = await getRequesterProfile(supabaseAdmin, request);
+    const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
     if (!requester) return fail(401, 'AUTH_REQUIRED', 'Requester is required');
 
     const { searchParams } = new URL(request.url);
@@ -83,7 +84,7 @@ async function handleSummary(request: Request) {
 
     const { data: locations, error: locationError } = await supabaseAdmin
         .from('franchise_locations')
-        .select('id, company_id, manager_id')
+        .select('id, company_id, manager_id, created_by')
         .in('id', locationIds);
 
     if (locationError) {
@@ -111,12 +112,8 @@ async function handleSummary(request: Request) {
     return ok({ summaries: accessibleIds.map(locationId => buildLocationMessageSummary(locationId, rows)) });
 }
 
-function canAccessLocation(requester: NonNullable<Awaited<ReturnType<typeof getRequesterProfile>>>, location: LocationAccessRow): boolean {
-    return Boolean(location) && (
-        requester.role === 'admin'
-        || (requester.company_id !== null && requester.company_id === location.company_id)
-        || requester.id === location.manager_id
-    );
+function canAccessLocation(requester: RequesterProfile, location: LocationAccessRow): boolean {
+    return canAccessFranchiseLocation(requester, location);
 }
 
 export async function GET(request: Request) {
@@ -124,7 +121,7 @@ export async function GET(request: Request) {
     if (searchParams.get('summary') === 'true') return handleSummary(request);
 
     const supabaseAdmin = getSupabaseAdmin();
-    const requester = await getRequesterProfile(supabaseAdmin, request);
+    const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
     if (!requester) return fail(401, 'AUTH_REQUIRED', 'Requester is required');
 
     const locationId = cleanMessageString(searchParams.get('locationId'));
@@ -145,7 +142,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     const body = await readRequestBody(request);
     const supabaseAdmin = getSupabaseAdmin();
-    const requester = await getRequesterProfile(supabaseAdmin, request, getStringField(body, 'requesterId') || getStringField(body, 'userId'));
+    const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
     if (!requester) return fail(401, 'AUTH_REQUIRED', 'Requester is required');
 
     const locationId = getStringField(body, 'locationId');
@@ -189,7 +186,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     const body = await readRequestBody(request);
     const supabaseAdmin = getSupabaseAdmin();
-    const requester = await getRequesterProfile(supabaseAdmin, request, getStringField(body, 'requesterId') || getStringField(body, 'userId'));
+    const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
     if (!requester) return fail(401, 'AUTH_REQUIRED', 'Requester is required');
 
     const messageId = getStringField(body, 'messageId') || getStringField(body, 'id');

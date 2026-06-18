@@ -4,6 +4,17 @@ import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     FRANCHISE_LEAD_STATUSES
 } from '@/lib/franchise-leads';
+import { ExportActions } from '@/components/franchise/ExportActions';
+import {
+    buildLeadExportColumns,
+    buildLeadExportRows
+} from '@/components/franchise/franchiseDbExport';
+import {
+    buildDatedExportFilename,
+    downloadTableAsXlsx,
+    openPrintableTable,
+    type TableExportPayload
+} from '@/utils/tableExport';
 import {
     LEAD_DB_LAYER_OPTIONS,
     VIEW_OPTIONS
@@ -49,6 +60,7 @@ export function LeadDbWorkspace({
     contractChecklistRefreshKey = 0,
     pageSize,
     visibleLayerLeadCount,
+    exportLeads,
     paginatedLeads,
     selectedLeadIds,
     allVisibleSelected,
@@ -66,6 +78,7 @@ export function LeadDbWorkspace({
     totalPages,
     renderManagerOptions,
     getManagerName,
+    onLoadExportLeadsAction,
     onLeadDbLayerChangeAction,
     onViewModeChangeAction,
     onPageSizeChangeAction,
@@ -102,6 +115,31 @@ export function LeadDbWorkspace({
         leadIds: isContractOwnersWorkspace && leadDbLayer === 'candidate' ? paginatedLeads.map(lead => lead.id) : [],
         refreshKey: contractChecklistRefreshKey
     });
+    const exportTitle = leadDbLayer === 'raw_intake' ? '모객 DB - 1차 유입 DB' : '모객 DB - 가맹 희망자';
+    const exportFilePrefix = leadDbLayer === 'raw_intake' ? '모객DB_1차유입' : '모객DB_가맹희망자';
+
+    const buildExportPayload = async (): Promise<TableExportPayload> => {
+        const leadsForExport = onLoadExportLeadsAction ? await onLoadExportLeadsAction() : exportLeads;
+        const columns = buildLeadExportColumns(visibleTableColumns);
+        const rows = buildLeadExportRows(leadsForExport, columns, getManagerName);
+        return {
+            title: exportTitle,
+            filename: buildDatedExportFilename(exportFilePrefix),
+            sheetName: leadDbLayer === 'raw_intake' ? '1차 유입 DB' : '가맹 희망자',
+            columns,
+            rows,
+            filterSummary: `현재 필터/정렬 기준 ${rows.length.toLocaleString()}건`
+        };
+    };
+
+    const runExportAction = async (action: (payload: TableExportPayload) => void | Promise<void>) => {
+        try {
+            await action(await buildExportPayload());
+        } catch (error) {
+            console.error('Failed to export franchise leads:', error);
+            window.alert(error instanceof Error ? error.message : '모객 DB 추출에 실패했습니다.');
+        }
+    };
 
     return (
         <section className={styles.tablePanel}>
@@ -128,6 +166,16 @@ export function LeadDbWorkspace({
                     <p>{getTableDescription(leadDbLayer, effectiveViewMode, listPolicyText, isContractOwnersWorkspace)}</p>
                 </div>
                 <div className={styles.tableHeaderActions}>
+                    {!isContractOwnersWorkspace && effectiveViewMode === 'table' && (
+                        <ExportActions
+                            rowCount={visibleLayerLeadCount}
+                            allowEmptyExport={Boolean(onLoadExportLeadsAction)}
+                            disabled={isLoading}
+                            onExcelAction={() => runExportAction(downloadTableAsXlsx)}
+                            onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
+                            onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
+                        />
+                    )}
                     {!isContractOwnersWorkspace && <div className={styles.viewTabs} aria-label="모객 DB 보기 전환">
                         {VIEW_OPTIONS.filter(option => leadDbLayer === 'candidate' || option.mode === 'table').map(option => (
                             <button

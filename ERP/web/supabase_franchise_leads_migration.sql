@@ -7,6 +7,7 @@ create table if not exists public.franchise_leads (
   id uuid default uuid_generate_v4() primary key,
   company_id uuid references public.companies(id) on delete cascade not null,
   manager_id uuid references public.profiles(id),
+  created_by uuid references public.profiles(id) on delete set null,
   name text not null,
   mobile text,
   mobile_normalized text,
@@ -27,6 +28,33 @@ create table if not exists public.franchise_leads (
 
 alter table public.franchise_leads enable row level security;
 
+create or replace function public.can_access_franchise_lead(
+  target_company_id uuid,
+  target_created_by uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and (
+        p.role = 'admin'
+        or (
+          p.company_id = target_company_id
+          and (
+            p.role in ('manager', 'sub_manager', 'staff')
+            or (p.role = 'partner_vendor' and target_created_by = auth.uid())
+          )
+        )
+      )
+  );
+$$;
+
 do $$
 begin
   if not exists (
@@ -35,8 +63,8 @@ begin
       and tablename = 'franchise_leads'
       and policyname = 'Company members can view franchise_leads'
   ) then
-    create policy "Company members can view franchise_leads" on public.franchise_leads
-      for select using (company_id = get_my_company_id());
+create policy "Company members can view franchise_leads" on public.franchise_leads
+    for select using (public.can_access_franchise_lead(company_id, created_by));
   end if;
 
   if not exists (
@@ -45,8 +73,8 @@ begin
       and tablename = 'franchise_leads'
       and policyname = 'Company members can insert franchise_leads'
   ) then
-    create policy "Company members can insert franchise_leads" on public.franchise_leads
-      for insert with check (company_id = get_my_company_id());
+create policy "Company members can insert franchise_leads" on public.franchise_leads
+    for insert with check (public.can_access_franchise_lead(company_id, created_by));
   end if;
 
   if not exists (
@@ -55,8 +83,9 @@ begin
       and tablename = 'franchise_leads'
       and policyname = 'Company members can update franchise_leads'
   ) then
-    create policy "Company members can update franchise_leads" on public.franchise_leads
-      for update using (company_id = get_my_company_id());
+create policy "Company members can update franchise_leads" on public.franchise_leads
+    for update using (public.can_access_franchise_lead(company_id, created_by))
+    with check (public.can_access_franchise_lead(company_id, created_by));
   end if;
 
   if not exists (
@@ -65,8 +94,8 @@ begin
       and tablename = 'franchise_leads'
       and policyname = 'Company members can delete franchise_leads'
   ) then
-    create policy "Company members can delete franchise_leads" on public.franchise_leads
-      for delete using (company_id = get_my_company_id());
+create policy "Company members can delete franchise_leads" on public.franchise_leads
+    for delete using (public.can_access_franchise_lead(company_id, created_by));
   end if;
 end $$;
 
@@ -78,6 +107,9 @@ create index if not exists idx_franchise_leads_company_status
 
 create index if not exists idx_franchise_leads_company_manager
   on public.franchise_leads (company_id, manager_id);
+
+create index if not exists idx_franchise_leads_company_creator_updated
+  on public.franchise_leads (company_id, created_by, updated_at desc);
 
 create unique index if not exists idx_franchise_leads_company_mobile_unique
   on public.franchise_leads (company_id, mobile_normalized)

@@ -25,6 +25,7 @@ export type AdminIntakeProperty = {
     readonly promotedLocationId: string;
     readonly promotedCompanyId: string;
     readonly promotedCompanyIds: readonly string[];
+    readonly promotedCompanyNames: readonly string[];
     readonly promotionCount: number;
     readonly syncStatus: 'synced' | 'stale';
 };
@@ -71,6 +72,7 @@ export type AdminMatchingRequest = {
     readonly promotedLeadId: string;
     readonly promotedCompanyId: string;
     readonly promotedCompanyIds: readonly string[];
+    readonly promotedCompanyNames: readonly string[];
     readonly promotionCount: number;
     readonly promotedAt: string;
     readonly syncStatus: 'synced' | 'stale';

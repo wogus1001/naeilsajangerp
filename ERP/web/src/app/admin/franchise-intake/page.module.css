@@ -151,6 +151,18 @@
     background: #ecfdf5;
 }
 
+.promotionCell {
+    min-width: 116px;
+}
+
+.promotionTargets {
+    max-width: 140px;
+    overflow: hidden;
+    color: #6b7684 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .staleBadge {
     color: #c2410c;
     background: #fff7ed;

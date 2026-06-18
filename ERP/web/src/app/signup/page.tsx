@@ -28,6 +28,7 @@ export default function SignupPage() {
     const [hasSearched, setHasSearched] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [isNewCompanyRequest, setIsNewCompanyRequest] = useState(false);
+    const [signupRole, setSignupRole] = useState<'staff' | 'partner_vendor'>('staff');
 
     // Alert Modal State
     const [alertConfig, setAlertConfig] = useState<{
@@ -64,7 +65,9 @@ export default function SignupPage() {
         const id = getInputValue('id');
         const password = getInputValue('password');
         const name = getInputValue('name');
+        const phone = getInputValue('phone');
         const companyName = getInputValue('companyName');
+        const phoneNormalized = phone.replace(/\D/g, '');
 
         if (password.length < 6) {
             showAlert('비밀번호는 최소 6자 이상이어야 합니다.', 'error');
@@ -80,11 +83,17 @@ export default function SignupPage() {
             return;
         }
 
+        if (phoneNormalized.length < 10 || phoneNormalized.length > 11) {
+            showAlert('휴대폰 번호를 정확히 입력해주세요.', 'error');
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const res = await fetch('/api/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, password, name, companyName, role: isNewCompanyRequest ? 'manager' : 'staff' }),
+                body: JSON.stringify({ id, password, name, phone, companyName, role: isNewCompanyRequest ? 'manager' : signupRole }),
             });
 
             const data = await res.json();
@@ -143,6 +152,7 @@ export default function SignupPage() {
         }
         setSelectedCompany(company);
         setIsNewCompanyRequest(false);
+        setSignupRole('staff');
         setShowSearchModal(false);
     };
 
@@ -159,19 +169,22 @@ export default function SignupPage() {
         }
         setSelectedCompany(null);
         setIsNewCompanyRequest(true);
+        setSignupRole('staff');
         setShowSearchModal(false);
     };
 
     const approvalTitle = isNewCompanyRequest
         ? '신규 회사 팀장 가입 요청'
         : selectedCompany
-            ? '기존 회사 직원 가입 요청'
+            ? signupRole === 'partner_vendor' ? '기존 회사 협력업체 가입 요청' : '기존 회사 브랜드 임직원 가입 요청'
             : '회사 선택 후 승인 방식이 정해집니다.';
 
     const approvalDescription = isNewCompanyRequest
         ? '아직 등록되지 않은 회사는 최초 가입자가 팀장 권한으로 접수되며, 관리자 승인 후 로그인할 수 있습니다.'
         : selectedCompany
-            ? '이미 등록된 회사의 추가 계정은 직원으로 접수되며, 소속 회사 팀장 승인 후 로그인할 수 있습니다.'
+            ? signupRole === 'partner_vendor'
+                ? '협력업체 계정은 소속 회사 팀장 승인 후 로그인할 수 있습니다.'
+                : '이미 등록된 회사의 추가 계정은 브랜드 임직원으로 접수되며, 소속 회사 팀장 승인 후 로그인할 수 있습니다.'
             : '회사 찾기에서 기존 회사를 선택하거나 신규 회사명을 등록해주세요.';
 
     return (
@@ -223,6 +236,19 @@ export default function SignupPage() {
                     </div>
 
                     <div className={styles.inputGroup}>
+                        <label htmlFor="phone" className={styles.label}>휴대폰 번호</label>
+                        <input
+                            type="tel"
+                            id="phone"
+                            placeholder="010-0000-0000"
+                            className={styles.input}
+                            required
+                            inputMode="numeric"
+                            autoComplete="tel"
+                        />
+                    </div>
+
+                    <div className={styles.inputGroup}>
                         <label htmlFor="companyName" className={styles.label}>회사명</label>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <input
@@ -253,6 +279,46 @@ export default function SignupPage() {
                             </button>
                         </div>
                     </div>
+
+                    {selectedCompany && !isNewCompanyRequest && (
+                        <div className={styles.inputGroup}>
+                            <label className={styles.label}>가입 유형</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setSignupRole('staff')}
+                                    aria-pressed={signupRole === 'staff'}
+                                    style={{
+                                        height: '44px',
+                                        borderRadius: '8px',
+                                        border: signupRole === 'staff' ? '1px solid #3182f6' : '1px solid #dee2e6',
+                                        backgroundColor: signupRole === 'staff' ? '#eff6ff' : '#ffffff',
+                                        color: signupRole === 'staff' ? '#1d4ed8' : '#343a40',
+                                        fontWeight: 700,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    브랜드 임직원
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSignupRole('partner_vendor')}
+                                    aria-pressed={signupRole === 'partner_vendor'}
+                                    style={{
+                                        height: '44px',
+                                        borderRadius: '8px',
+                                        border: signupRole === 'partner_vendor' ? '1px solid #3182f6' : '1px solid #dee2e6',
+                                        backgroundColor: signupRole === 'partner_vendor' ? '#eff6ff' : '#ffffff',
+                                        color: signupRole === 'partner_vendor' ? '#1d4ed8' : '#343a40',
+                                        fontWeight: 700,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    협력업체
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <div className={styles.inputGroup} style={{ marginBottom: '20px' }}>
                         <label className={styles.label}>가입 승인 방식</label>

@@ -82,6 +82,13 @@ function isNewer(sourceAt: string | null, syncedAt: string): boolean {
     return Number.isFinite(sourceTime) && Number.isFinite(syncedTime) && sourceTime > syncedTime;
 }
 
+function toPromotedCompanyNames(
+    companyIds: readonly string[],
+    companies: ReadonlyMap<string, string>
+): readonly string[] {
+    return companyIds.map(companyId => companies.get(companyId) || '회사명 없음');
+}
+
 export function toAdminIntakePropertyView(
     row: FranchiseAdminIntakePropertyRow,
     companies: ReadonlyMap<string, string>,
@@ -111,6 +118,7 @@ export function toAdminIntakePropertyView(
         promotedLocationId: selectedLocation?.id || '',
         promotedCompanyId: selectedLocation?.company_id || '',
         promotedCompanyIds,
+        promotedCompanyNames: toPromotedCompanyNames(promotedCompanyIds, companies),
         promotionCount: promotedCompanyIds.length,
         syncStatus: selectedLocation && isNewer(row.updated_at, syncedAt) ? 'stale' : 'synced'
     };
@@ -119,6 +127,7 @@ export function toAdminIntakePropertyView(
 export function toAdminMatchingRequestView(
     row: FranchiseAdminIntakeMatchingRequestRow,
     managerNames: ReadonlyMap<string, string>,
+    companies: ReadonlyMap<string, string>,
     selectedCompanyId: string
 ) {
     const data = row.data || {};
@@ -128,7 +137,7 @@ export function toAdminMatchingRequestView(
     const promotedLeadId = selectedPromotion?.promotedLeadId || '';
     const promotedCompanyId = selectedPromotion?.targetCompanyId || '';
     const promotedCompanyIds = promotions.length > 0
-        ? promotions.map(promotion => promotion.targetCompanyId)
+        ? [...new Set(promotions.map(promotion => promotion.targetCompanyId).filter(Boolean))]
         : promotedCompanyId ? [promotedCompanyId] : [];
     return {
         id: row.id,
@@ -172,6 +181,7 @@ export function toAdminMatchingRequestView(
         promotedLeadId,
         promotedCompanyId,
         promotedCompanyIds,
+        promotedCompanyNames: toPromotedCompanyNames(promotedCompanyIds, companies),
         promotionCount: promotedCompanyIds.length,
         promotedAt,
         syncStatus: promotedAt && isNewer(row.updated_at, promotedAt) ? 'stale' : 'synced'

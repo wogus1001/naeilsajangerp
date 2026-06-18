@@ -1,4 +1,5 @@
 import type { ManualPromotedLocationDraft, ManualPromotedOperationProperty } from '@/lib/manual-promoted-operations';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import { getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 import type { OpeningProjectTask } from '@/lib/franchise-opening-projects';
@@ -87,7 +88,8 @@ export function readStoredUser(): AuthUser {
 export async function fetchFranchiseLocations(scope: RequestScope): Promise<FranchiseLocation[]> {
     const params = new URLSearchParams({ requesterId: scope.userId });
     if (scope.companyName) params.set('company', scope.companyName);
-    const response = await fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', headers });
     const payload = await readResponsePayload(response);
     const data = unwrapApiData<{ locations: FranchiseLocation[] }>(payload);
     return data.locations || [];
@@ -96,7 +98,8 @@ export async function fetchFranchiseLocations(scope: RequestScope): Promise<Fran
 export async function fetchOpeningProjects(scope: RequestScope): Promise<FranchiseOpeningProject[]> {
     const params = new URLSearchParams({ requesterId: scope.userId });
     if (scope.companyName) params.set('company', scope.companyName);
-    const response = await fetch(`/api/franchise-opening-projects?${params.toString()}`, { cache: 'no-store' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-opening-projects?${params.toString()}`, { cache: 'no-store', headers });
     const payload = await readResponsePayload(response);
     const data = unwrapApiData<{ projects: FranchiseOpeningProject[] }>(payload);
     return data.projects || [];
@@ -112,9 +115,10 @@ export async function fetchManualPromotedProperties(scope: RequestScope): Promis
 
 export async function saveBrandMaster({ userId, companyName, form }: SaveBrandMasterParams): Promise<void> {
     if (!form.brand.trim()) return;
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-brands', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
             requesterId: userId,
             companyName,
@@ -131,18 +135,20 @@ export async function saveBrandMaster({ userId, companyName, form }: SaveBrandMa
 }
 
 export async function saveFranchiseLocation({ userId, companyName, form }: SaveLocationParams): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations', {
         method: form.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ...form, requesterId: userId, companyName })
     });
     await readResponsePayload(response);
 }
 
 export async function saveOpeningProject({ userId, companyName, draft }: SaveOpeningProjectParams): Promise<FranchiseOpeningProject> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-opening-projects', {
         method: draft.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ...draft, requesterId: userId, companyName })
     });
     const payload = await readResponsePayload(response);
@@ -154,9 +160,10 @@ export async function updateOpeningProjectTasks({
     projectId,
     tasks
 }: UpdateOpeningProjectTaskParams): Promise<FranchiseOpeningProject> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-opening-projects', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ id: projectId, requesterId: userId, tasks })
     });
     const payload = await readResponsePayload(response);
@@ -165,7 +172,8 @@ export async function updateOpeningProjectTasks({
 
 export async function deleteOpeningProject({ userId, projectId }: DeleteOpeningProjectParams): Promise<void> {
     const params = new URLSearchParams({ id: projectId, requesterId: userId });
-    const response = await fetch(`/api/franchise-opening-projects?${params.toString()}`, { method: 'DELETE' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-opening-projects?${params.toString()}`, { method: 'DELETE', headers });
     await readResponsePayload(response);
 }
 
@@ -174,9 +182,10 @@ export async function createManualPromotedLocation({
     companyName,
     draft
 }: CreateManualPromotedLocationParams): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ...draft, requesterId: userId, companyName })
     });
     await readResponsePayload(response);
@@ -187,9 +196,10 @@ export async function updateFranchiseLocationStatus({
     locationId,
     status
 }: UpdateLocationStatusParams): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ id: locationId, requesterId: userId, status })
     });
     await readResponsePayload(response);
@@ -197,7 +207,8 @@ export async function updateFranchiseLocationStatus({
 
 export async function deleteFranchiseLocation({ userId, locationId }: DeleteLocationParams): Promise<void> {
     const params = new URLSearchParams({ id: locationId, requesterId: userId });
-    const response = await fetch(`/api/franchise-locations?${params.toString()}`, { method: 'DELETE' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations?${params.toString()}`, { method: 'DELETE', headers });
     await readResponsePayload(response);
 }
 
@@ -206,9 +217,10 @@ export async function scanFranchiseLocationCompetitors({
     locationId,
     query
 }: ScanLocationCompetitorsParams): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
     const response = await fetch('/api/franchise-locations/competitors', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ requesterId: userId, locationId, query, radius: 700 })
     });
     await readResponsePayload(response);

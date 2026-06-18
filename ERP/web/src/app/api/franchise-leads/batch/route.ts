@@ -8,6 +8,7 @@ import {
     resolveUserUuid
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     normalizeLeadGrade,
@@ -28,6 +29,9 @@ type ProfileSummary = {
 };
 type FranchiseLeadRow = {
     readonly id: string;
+    readonly company_id: string | null;
+    readonly manager_id: string | null;
+    readonly created_by: string | null;
     readonly mobile_normalized: string | null;
     readonly data: Record<string, unknown> | null;
 };
@@ -188,7 +192,7 @@ function resolveRowManager(row: BatchRow, managerMap: Map<string, { uuid: string
     return found || { uuid: fallbackUuid, displayId: fallbackUuid };
 }
 
-function buildPayload(row: BatchRow, companyId: string, managerUuid: string) {
+function buildPayload(row: BatchRow, companyId: string, managerUuid: string, creatorId: string) {
     const name = cleanString(getCell(row, NAME_KEYS));
     const mobile = cleanString(getCell(row, MOBILE_KEYS));
     const budget = parseBudgetRange(row);
@@ -201,6 +205,7 @@ function buildPayload(row: BatchRow, companyId: string, managerUuid: string) {
         payload: {
             company_id: companyId,
             manager_id: managerUuid,
+            created_by: creatorId,
             name,
             mobile,
             mobile_normalized: normalizeLeadPhone(mobile),
@@ -274,7 +279,7 @@ export async function POST(request: Request) {
 
         for (const [index, row] of rows.entries()) {
             const manager = resolveRowManager(row, managerMap, scope.managerUuid);
-            const built = buildPayload(row, scope.companyId, manager.uuid);
+            const built = buildPayload(row, scope.companyId, manager.uuid, requesterProfile.id);
 
             if (built.error) {
                 skipped++;
@@ -294,10 +299,16 @@ export async function POST(request: Request) {
             const existing = normalizedPhone ? existingByPhone.get(normalizedPhone) : null;
 
             if (existing) {
+                if (!canAccessFranchiseLead(requesterProfile, existing)) {
+                    skipped++;
+                    errors.push({ row: index + 2, reason: '해당 연락처의 기존 모객 DB에 접근할 권한이 없습니다.', data: row });
+                    continue;
+                }
                 const { error } = await supabaseAdmin
                     .from('franchise_leads')
                     .update({
                         ...rowPayload,
+                        created_by: existing.created_by,
                         data: {
                             ...(existing.data || {}),
                             ...rowPayload.data,

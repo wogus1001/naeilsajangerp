@@ -1,160 +1,46 @@
-import { randomUUID } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { mergeFranchiseLocationData } from '@/lib/franchise-location-master';
 import {
-    canAccessCompanyResource,
     canAccessCompanyScope,
-    getRequesterProfile,
+    getAuthenticatedRequesterProfile,
     isAdmin,
+    type RequesterProfile,
     resolveCompanyIdByName,
     resolveUserUuid
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import {
+    canAccessFranchiseLocation,
+    shouldRestrictFranchiseLocationListToCreator
+} from '@/lib/franchise-location-access';
+import {
+    buildInsertPayload,
+    buildUpdatePayload,
+    cleanString,
+    getFirst,
+    hasAny,
+    isRecord,
+    type LocationRequestBody
+} from '@/lib/franchise-location-api-payload';
+import {
+    fetchLocationManagerNameMap,
+    transformLocation,
+    type ManagerReferenceRow
+} from '@/lib/franchise-location-api-response';
 
 export const dynamic = 'force-dynamic';
 
-const LOCATION_TYPES = ['직영점', '가맹점', '예정점'];
-const LOCATION_STATUSES = ['운영중', '오픈준비', '검토중', '휴점', '폐점'];
-const CONTROL_FIELDS = new Set([
-    'id',
-    'requesterId',
-    'userId',
-    'companyName',
-    'companyId',
-    'managerId',
-    'manager_id',
-    'name',
-    'locationType',
-    'location_type',
-    'brand',
-    'status',
-    'region',
-    'address',
-    'latitude',
-    'lat',
-    'longitude',
-    'lng',
-    'openedAt',
-    'opened_at',
-    'sourcePropertyId',
-    'source_property_id',
-    'memo'
-]);
-
-type ManagerReferenceRow = {
-    readonly manager_id?: string | null;
-};
-
-type ManagerProfileRow = {
-    readonly id: string;
-    readonly name: string | null;
-};
-
-function getFirst(body: Record<string, any>, keys: string[]) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(body, key)) return body[key];
-    }
-    return undefined;
+async function readLocationRequestBody(request: Request) {
+    const parsed: unknown = await request.json().catch(() => null);
+    if (!isRecord(parsed)) return { body: null, error: fail(400, 'VALIDATION_ERROR', 'Invalid request body') };
+    return { body: parsed, error: null };
 }
 
-function hasAny(body: Record<string, any>, keys: string[]) {
-    return keys.some(key => Object.prototype.hasOwnProperty.call(body, key));
-}
-
-function cleanString(value: unknown): string | null {
-    if (value === null || value === undefined) return null;
-    const normalized = String(value).trim();
-    return normalized.length > 0 ? normalized : null;
-}
-
-function parseNullableNumber(value: unknown): number | null {
-    if (value === null || value === undefined || value === '') return null;
-    const parsed = Number(String(value).trim().replace(/,/g, ''));
-    return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseNullableDate(value: unknown): string | null {
-    const raw = cleanString(value);
-    if (!raw) return null;
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString().slice(0, 10);
-}
-
-function normalizeLocationType(value: unknown) {
-    const raw = cleanString(value) || '예정점';
-    const matched = LOCATION_TYPES.find(type => type === raw || raw.includes(type.replace('점', '')));
-    return matched || '예정점';
-}
-
-function normalizeLocationStatus(value: unknown) {
-    const raw = cleanString(value) || '검토중';
-    const matched = LOCATION_STATUSES.find(status => status === raw || raw.includes(status.replace('중', '')));
-    return matched || '검토중';
-}
-
-function normalizeRegion(value: unknown) {
-    const raw = cleanString(value);
-    if (!raw) return '';
-    return raw.replace(/\s+/g, ' ');
-}
-
-function getManagerDisplayName(profile: ManagerProfileRow): string {
-    const name = cleanString(profile.name);
-    if (name) return name;
-    return '이름 미등록';
-}
-
-async function fetchManagerNameMap(
+async function resolveCompanyScope(
     supabaseAdmin: SupabaseClient,
-    rows: readonly ManagerReferenceRow[]
-): Promise<ReadonlyMap<string, string>> {
-    const managerIds = Array.from(new Set(
-        rows.map(row => cleanString(row.manager_id)).filter((managerId): managerId is string => Boolean(managerId))
-    ));
-    if (managerIds.length === 0) return new Map<string, string>();
-
-    const { data, error } = await supabaseAdmin
-        .from('profiles')
-        .select('id, name')
-        .in('id', managerIds)
-        .returns<ManagerProfileRow[]>();
-
-    if (error) {
-        console.warn('Failed to fetch franchise location manager names:', error);
-        return new Map<string, string>();
-    }
-
-    return new Map((data || []).map(profile => [profile.id, getManagerDisplayName(profile)]));
-}
-
-function transformLocation(row: any, managerNames: ReadonlyMap<string, string> = new Map()) {
-    if (!row) return null;
-    const data = row.data || {};
-    const managerId = cleanString(row.manager_id);
-    return {
-        ...data,
-        id: row.id,
-        companyId: row.company_id,
-        managerId,
-        managerName: managerId ? managerNames.get(managerId) || '' : '',
-        name: row.name || '',
-        locationType: row.location_type || '예정점',
-        brand: row.brand || '',
-        status: row.status || '검토중',
-        region: row.region || '',
-        address: row.address || '',
-        latitude: row.latitude,
-        longitude: row.longitude,
-        openedAt: row.opened_at,
-        sourcePropertyId: row.source_property_id,
-        memo: row.memo || '',
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-    };
-}
-
-async function resolveCompanyScope(supabaseAdmin: any, requesterProfile: any, companyName: string | null) {
+    requesterProfile: RequesterProfile,
+    companyName: string | null
+) {
     const requestedCompanyId = companyName ? await resolveCompanyIdByName(supabaseAdmin, companyName) : null;
     if (companyName && !requestedCompanyId) return { companyId: '__none__' };
     if (isAdmin(requesterProfile)) return { companyId: requestedCompanyId };
@@ -167,7 +53,11 @@ async function resolveCompanyScope(supabaseAdmin: any, requesterProfile: any, co
     return { companyId: null, managerId: requesterProfile.id };
 }
 
-async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, body: Record<string, any>) {
+async function resolveMutationScope(
+    supabaseAdmin: SupabaseClient,
+    requesterProfile: RequesterProfile,
+    body: LocationRequestBody
+) {
     const companyName = cleanString(body.companyName);
     const requestedCompanyId = cleanString(body.companyId);
     const resolvedCompanyId = requestedCompanyId || (companyName ? await resolveCompanyIdByName(supabaseAdmin, companyName) : null);
@@ -180,7 +70,7 @@ async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, b
         return { error: fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied') };
     }
 
-    const rawManager = getFirst(body, ['managerId', 'manager_id']);
+    const rawManager = cleanString(getFirst(body, ['managerId', 'manager_id']));
     const managerUuid = rawManager
         ? await resolveUserUuid(supabaseAdmin, rawManager)
         : isAdmin(requesterProfile)
@@ -201,69 +91,6 @@ async function resolveMutationScope(supabaseAdmin: any, requesterProfile: any, b
     return { companyId, managerUuid: managerUuid || null };
 }
 
-function buildDataPayload(body: Record<string, any>, existingData: Record<string, any> = {}) {
-    const extras: Record<string, any> = {};
-    Object.entries(body).forEach(([key, value]) => {
-        if (!CONTROL_FIELDS.has(key)) extras[key] = value;
-    });
-
-    return mergeFranchiseLocationData(existingData, {
-        ...extras,
-        ...(body.companyName !== undefined ? { companyName: body.companyName } : {}),
-        ...(body.managerId !== undefined ? { managerId: body.managerId } : {})
-    });
-}
-
-function buildInsertPayload(body: Record<string, any>, companyId: string, managerUuid: string | null) {
-    const name = cleanString(getFirst(body, ['name', '위치명', '매장명']));
-    if (!name) {
-        return { error: fail(400, 'VALIDATION_ERROR', 'Location name is required') };
-    }
-
-    return {
-        payload: {
-            id: randomUUID(),
-            company_id: companyId,
-            manager_id: managerUuid,
-            name,
-            location_type: normalizeLocationType(getFirst(body, ['locationType', 'location_type', '구분'])),
-            brand: cleanString(getFirst(body, ['brand', '브랜드'])) || '',
-            status: normalizeLocationStatus(getFirst(body, ['status', '상태'])),
-            region: normalizeRegion(getFirst(body, ['region', '지역'])),
-            address: cleanString(getFirst(body, ['address', '주소'])) || '',
-            latitude: parseNullableNumber(getFirst(body, ['latitude', 'lat', '위도'])),
-            longitude: parseNullableNumber(getFirst(body, ['longitude', 'lng', '경도'])),
-            opened_at: parseNullableDate(getFirst(body, ['openedAt', 'opened_at', '오픈일'])),
-            source_property_id: cleanString(getFirst(body, ['sourcePropertyId', 'source_property_id'])),
-            memo: cleanString(getFirst(body, ['memo', '메모'])) || '',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            data: buildDataPayload(body)
-        }
-    };
-}
-
-function buildUpdatePayload(body: Record<string, any>, existingData: Record<string, any> = {}) {
-    const updates: Record<string, any> = {
-        updated_at: new Date().toISOString(),
-        data: buildDataPayload(body, existingData)
-    };
-
-    if (hasAny(body, ['name', '위치명', '매장명'])) updates.name = cleanString(getFirst(body, ['name', '위치명', '매장명'])) || '';
-    if (hasAny(body, ['locationType', 'location_type', '구분'])) updates.location_type = normalizeLocationType(getFirst(body, ['locationType', 'location_type', '구분']));
-    if (hasAny(body, ['brand', '브랜드'])) updates.brand = cleanString(getFirst(body, ['brand', '브랜드'])) || '';
-    if (hasAny(body, ['status', '상태'])) updates.status = normalizeLocationStatus(getFirst(body, ['status', '상태']));
-    if (hasAny(body, ['region', '지역'])) updates.region = normalizeRegion(getFirst(body, ['region', '지역']));
-    if (hasAny(body, ['address', '주소'])) updates.address = cleanString(getFirst(body, ['address', '주소'])) || '';
-    if (hasAny(body, ['latitude', 'lat', '위도'])) updates.latitude = parseNullableNumber(getFirst(body, ['latitude', 'lat', '위도']));
-    if (hasAny(body, ['longitude', 'lng', '경도'])) updates.longitude = parseNullableNumber(getFirst(body, ['longitude', 'lng', '경도']));
-    if (hasAny(body, ['openedAt', 'opened_at', '오픈일'])) updates.opened_at = parseNullableDate(getFirst(body, ['openedAt', 'opened_at', '오픈일']));
-    if (hasAny(body, ['sourcePropertyId', 'source_property_id'])) updates.source_property_id = cleanString(getFirst(body, ['sourcePropertyId', 'source_property_id']));
-    if (hasAny(body, ['memo', '메모'])) updates.memo = cleanString(getFirst(body, ['memo', '메모'])) || '';
-
-    return updates;
-}
-
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
@@ -271,9 +98,9 @@ export async function GET(request: Request) {
         const id = searchParams.get('id');
         const company = searchParams.get('company');
 
-        const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
+        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         }
 
         if (id) {
@@ -284,11 +111,11 @@ export async function GET(request: Request) {
                 .single();
 
             if (error || !location) return fail(404, 'NOT_FOUND', 'Franchise location not found');
-            if (!canAccessCompanyResource(requesterProfile, location)) {
+            if (!canAccessFranchiseLocation(requesterProfile, location)) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
             }
 
-            const managerNames = await fetchManagerNameMap(supabaseAdmin, [location]);
+            const managerNames = await fetchLocationManagerNameMap(supabaseAdmin, [location]);
             return ok({ location: transformLocation(location, managerNames) });
         }
 
@@ -304,10 +131,11 @@ export async function GET(request: Request) {
 
         if (scope.companyId) query = query.eq('company_id', scope.companyId);
         if (scope.managerId) query = query.eq('manager_id', scope.managerId);
+        if (shouldRestrictFranchiseLocationListToCreator(requesterProfile)) query = query.eq('created_by', requesterProfile.id);
 
         const { data, error } = await query;
         if (error) throw error;
-        const managerNames = await fetchManagerNameMap(supabaseAdmin, data || []);
+        const managerNames = await fetchLocationManagerNameMap(supabaseAdmin, data || []);
 
         return ok({ locations: (data || []).map(row => transformLocation(row, managerNames)).filter(Boolean) });
     } catch (error) {
@@ -319,21 +147,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const body = await request.json();
+        const { body, error: bodyError } = await readLocationRequestBody(request);
+        if (bodyError) return bodyError;
+        if (!body) return fail(400, 'VALIDATION_ERROR', 'Invalid request body');
 
-        const requesterProfile = await getRequesterProfile(
-            supabaseAdmin,
-            request,
-            body.requesterId || body.userId || body.managerId || null
-        );
+        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         }
 
         const scope = await resolveMutationScope(supabaseAdmin, requesterProfile, body);
         if (scope.error) return scope.error;
 
-        const insert = buildInsertPayload(body, scope.companyId, scope.managerUuid);
+        const insert = buildInsertPayload(body, scope.companyId, scope.managerUuid, requesterProfile.id);
         if (insert.error) return insert.error;
 
         const { data: inserted, error } = await supabaseAdmin
@@ -343,7 +169,7 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
-        const managerNames = await fetchManagerNameMap(supabaseAdmin, [inserted]);
+        const managerNames = await fetchLocationManagerNameMap(supabaseAdmin, [inserted]);
         return ok({ location: transformLocation(inserted, managerNames) }, 201);
     } catch (error) {
         console.error('Franchise locations POST error:', error);
@@ -354,15 +180,13 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const body = await request.json();
+        const { body, error: bodyError } = await readLocationRequestBody(request);
+        if (bodyError) return bodyError;
+        if (!body) return fail(400, 'VALIDATION_ERROR', 'Invalid request body');
 
-        const requesterProfile = await getRequesterProfile(
-            supabaseAdmin,
-            request,
-            body.requesterId || body.userId || body.managerId || null
-        );
+        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         }
         if (!body.id) {
             return fail(400, 'VALIDATION_ERROR', 'ID required');
@@ -375,7 +199,7 @@ export async function PUT(request: Request) {
             .single();
 
         if (fetchError || !existing) return fail(404, 'NOT_FOUND', 'Franchise location not found');
-        if (!canAccessCompanyResource(requesterProfile, existing)) {
+        if (!canAccessFranchiseLocation(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
 
@@ -397,7 +221,7 @@ export async function PUT(request: Request) {
             .single();
 
         if (error) throw error;
-        const managerNames = await fetchManagerNameMap(supabaseAdmin, [updated]);
+        const managerNames = await fetchLocationManagerNameMap(supabaseAdmin, [updated]);
         return ok({ location: transformLocation(updated, managerNames) });
     } catch (error) {
         console.error('Franchise locations PUT error:', error);
@@ -412,19 +236,19 @@ export async function DELETE(request: Request) {
         const id = searchParams.get('id');
         if (!id) return fail(400, 'VALIDATION_ERROR', 'ID required');
 
-        const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
+        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         }
 
         const { data: target, error: targetError } = await supabaseAdmin
             .from('franchise_locations')
-            .select('id, company_id, manager_id')
+            .select('id, company_id, manager_id, created_by')
             .eq('id', id)
             .single();
 
         if (targetError || !target) return fail(404, 'NOT_FOUND', 'Franchise location not found');
-        if (!canAccessCompanyResource(requesterProfile, target)) {
+        if (!canAccessFranchiseLocation(requesterProfile, target)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
         }
 

@@ -39,7 +39,7 @@ npm run start -- -p 3000
 - `docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크.
 - `docs/fdam-reference.md`: FDAM ERP 레퍼런스 분석.
 - `docs/documentation-agent.md`: Docs Steward 권한, 금지 범위, 보고 형식.
-- `handoff.md`: 단일 작성자 규칙 때문에 Codex는 수정하지 않고 읽기 참고만 한다.
+- `handoff.md`: 단일 작성자 규칙 때문에 Codex는 읽거나 수정하지 않는다.
 
 ## Version Control Workflow
 
@@ -61,12 +61,21 @@ supabase_franchise_contract_checklist_migration.sql
 supabase_franchise_market_monitoring_migration.sql
 supabase_franchise_lead_registration_requests_migration.sql
 supabase_franchise_property_promotion_migration.sql
+supabase_partner_vendor_access_migration.sql
 supabase_company_menu_features_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+## Signup And Partner Vendor Setup
+
+Run `supabase_partner_vendor_access_migration.sql` after the franchise location, location messages, and opening projects migrations.
+
+New signup requires a mobile phone number and stores both the original `profiles.phone` value and the digits-only `profiles.phone_normalized` value. Existing-company signup can request either `브랜드 임직원` or `협력업체`; both wait for the company team lead to approve. New-company signup stays team-lead-only and waits for admin approval.
+
+`partner_vendor` is displayed as `협력업체`. Brand employees (`팀장`, `매니저`, `담당자`) can view all opening candidates for their company. 협력업체 users can view, update, and delete only the franchise locations they created through `franchise_locations.created_by`; other 협력업체 records in the same brand company are hidden from them.
 
 ## Admin Company Access Setup
 
@@ -96,7 +105,7 @@ Use `/api/integrations/meta/webhook` as the Meta Webhook callback path. Vercel r
 
 ## Franchise Location Insights Setup
 
-Run `supabase_franchise_locations_migration.sql` before enabling the location master and market insights screen. Run `supabase_franchise_location_messages_migration.sql` before enabling per-location records and request notes.
+Run `supabase_franchise_locations_migration.sql` before enabling the location master and market insights screen. Run `supabase_franchise_location_messages_migration.sql` before enabling per-location records and request notes. Run `supabase_partner_vendor_access_migration.sql` after those files to add candidate creator ownership and 협력업체 visibility rules.
 
 Optional environment variables for Kakao Local address search and competitor scans:
 
@@ -250,6 +259,12 @@ The header bell uses `/api/franchise-notifications` to create and read 담당자
 
 The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
 
+## Franchise Partner Vendor Access Setup
+
+Run `supabase_partner_vendor_access_migration.sql` before enabling 협력업체 accounts in production. The migration adds signup phone storage, the `partner_vendor` role support, `created_by` tracking for franchise leads and locations, and RLS helpers for lead/location/opening-project access.
+
+Access rule: headquarters brand employees can see the company franchise leads, opening candidates, and opening operations; 협력업체 users can see only the leads and opening candidates they created. Opening operations inherit the linked opening-candidate access rule. Server APIs enforce the same rule even when they use the service role.
+
 ## Franchise Contract Checklist Setup
 
 Run `supabase_franchise_contract_checklist_migration.sql` before enabling the per-lead pre-contract checklist.
@@ -282,3 +297,4 @@ The official Naver API MVP is used for blog/news/local search and DataLab trends
 - SearchAPI is the current preferred SERP provider for Naver place-style review/ad POC, but provider quota exhaustion must be treated separately from "no Naver data."
 - Current P0 is to prevent SearchAPI 429/monthly quota failures from overwriting previously successful Naver review/ad values and to split UI labels into quota exceeded, provider missing, and no result states.
 - Google Places enrichment intentionally uses Text Search rating/review counts only; Place Details review bodies are not requested by default.
+- Franchise list exports are available on 모객 DB, 출점 후보지, and 가맹 운영. Excel downloads use the current filters, sort, and visible table columns where applicable; PDF and print open the shared browser print view so operators can save as PDF from the print dialog. No extra SQL is required.

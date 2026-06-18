@@ -2625,6 +2625,10 @@
     white-space: nowrap;
 }
 
+.locationListControlBar .exportActions {
+    margin-left: auto;
+}
+
 .locationSortControl {
     display: inline-flex;
     align-items: center;
@@ -4210,6 +4214,41 @@
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.exportActions {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.exportActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.exportActions button:hover:not(:disabled) {
+    border-color: #b7c3d0;
+    background: #f8fafc;
+}
+
+.exportActions button:disabled {
+    color: #b0b8c1;
+    background: #f9fafb;
+    cursor: not-allowed;
 }
 
 .pageSizeControl {
@@ -8835,6 +8874,11 @@
     .locationMasterHeaderActions {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    .locationListControlBar .exportActions {
+        width: 100%;
+        margin-left: 0;
     }
 
     .locationModeTabs {
