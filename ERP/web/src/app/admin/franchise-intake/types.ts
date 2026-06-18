@@ -23,6 +23,9 @@ export type AdminIntakeProperty = {
     readonly createdAt: string;
     readonly updatedAt: string;
     readonly promotedLocationId: string;
+    readonly promotedCompanyId: string;
+    readonly promotedCompanyIds: readonly string[];
+    readonly promotionCount: number;
     readonly syncStatus: 'synced' | 'stale';
 };
 
@@ -66,6 +69,9 @@ export type AdminMatchingRequest = {
     readonly createdAt: string;
     readonly updatedAt: string;
     readonly promotedLeadId: string;
+    readonly promotedCompanyId: string;
+    readonly promotedCompanyIds: readonly string[];
+    readonly promotionCount: number;
     readonly promotedAt: string;
     readonly syncStatus: 'synced' | 'stale';
 };
@@ -116,4 +122,16 @@ export type LeadPromotionRequest = {
     readonly targetCompanyId: string;
     readonly managerId?: string;
     readonly requesterId: string;
+};
+
+export type LeadSyncRequest = {
+    readonly leadId: string;
+    readonly requesterId: string;
+    readonly targetCompanyId?: string;
+};
+
+export type PropertySyncRequest = {
+    readonly propertyId: string;
+    readonly requesterId: string;
+    readonly targetCompanyId?: string;
 };

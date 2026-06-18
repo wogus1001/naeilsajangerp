@@ -6,6 +6,8 @@ import { useFranchiseIndustryOptionGroups } from '@/components/franchise/useFran
 import { getFranchiseIndustryCategoriesForBusinessType } from '@/lib/franchise-industry-options';
 import {
     buildPropertyRegistrationSections,
+    updatePropertyRegistrationAttachments,
+    type PropertyRegistrationFileAttachment,
     type PropertyRegistrationField,
     type PropertyRegistrationFieldKey,
     type PropertyRegistrationForm
@@ -18,6 +20,7 @@ import {
     readPropertyAreaUnit,
     type PropertyAreaUnit
 } from '@/lib/franchise-property-registration-format';
+import { PropertyRegistrationFileInput } from '../property-registration/PropertyRegistrationFileInput';
 import propertyStyles from './PropertyWorkIntakeEditFields.module.css';
 import styles from './WorkIntakeEditModal.module.css';
 
@@ -153,6 +156,7 @@ function renderPropertyField(
 }
 
 export function PropertyWorkIntakeEditFields({ value, onChangeAction }: PropertyWorkIntakeEditFieldsProps) {
+    const [fileError, setFileError] = React.useState('');
     const optionGroups = useFranchiseIndustryOptionGroups();
     const industryOptions = React.useMemo(
         () => getFranchiseIndustryCategoriesForBusinessType(optionGroups, value.desiredBusinessType),
@@ -184,6 +188,10 @@ export function PropertyWorkIntakeEditFields({ value, onChangeAction }: Property
             privateAreaUnit: unit
         });
     };
+    const updateAttachments = (attachments: readonly PropertyRegistrationFileAttachment[]) => {
+        onChangeAction(updatePropertyRegistrationAttachments(value, attachments));
+        setFileError('');
+    };
 
     return (
         <>
@@ -197,7 +205,12 @@ export function PropertyWorkIntakeEditFields({ value, onChangeAction }: Property
             ))}
             <section className={styles.section}>
                 <h3 className={styles.sectionTitle}>사진 및 자료</h3>
-                <p className={styles.fileSummary}>등록 파일 {Math.max(value.fileNames.length, value.fileAttachments.length).toLocaleString('ko-KR')}건</p>
+                <PropertyRegistrationFileInput
+                    attachments={value.fileAttachments}
+                    onChange={updateAttachments}
+                    onError={setFileError}
+                />
+                {fileError && <p className={styles.fileError}>{fileError}</p>}
             </section>
         </>
     );

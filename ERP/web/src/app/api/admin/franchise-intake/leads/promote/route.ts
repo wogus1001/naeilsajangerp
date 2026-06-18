@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { buildLeadRegistrationPromotionData } from '@/lib/franchise-lead-registration';
@@ -132,8 +131,6 @@ export async function POST(request: Request) {
         const nextData = buildLeadRegistrationPromotionData(lead.data || {}, {
             promotedAt: nowIso,
             promotedBy: requester.id,
-            promotedByName: requester.id,
-            activityId: randomUUID(),
             requestId: lead.id
         });
 

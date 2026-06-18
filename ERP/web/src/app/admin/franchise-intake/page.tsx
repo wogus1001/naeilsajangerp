@@ -70,19 +70,39 @@ export default function AdminFranchiseIntakePage() {
     };
 
     const openPromotionModal = (property: AdminIntakeProperty) => {
+        const promotedCompanyIds = new Set(property.promotedCompanyIds);
+        const defaultCompanyId = (
+            selectedCompanyId && !promotedCompanyIds.has(selectedCompanyId)
+                ? selectedCompanyId
+                : ''
+        ) || (
+            property.companyId && !promotedCompanyIds.has(property.companyId)
+                ? property.companyId
+                : ''
+        ) || data.companies.find(company => !promotedCompanyIds.has(company.id))?.id || property.companyId || selectedCompanyId;
         setModal({
             kind: 'property',
             property,
-            targetCompanyId: property.companyId || selectedCompanyId,
+            targetCompanyId: defaultCompanyId,
             managerId: property.managerId
         });
     };
 
     const openMatchingRequestPromotionModal = (request: AdminMatchingRequest) => {
+        const promotedCompanyIds = new Set(request.promotedCompanyIds);
+        const defaultCompanyId = (
+            selectedCompanyId && !promotedCompanyIds.has(selectedCompanyId)
+                ? selectedCompanyId
+                : ''
+        ) || (
+            request.companyId && !promotedCompanyIds.has(request.companyId)
+                ? request.companyId
+                : ''
+        ) || data.companies.find(company => !promotedCompanyIds.has(company.id))?.id || request.companyId || selectedCompanyId;
         setModal({
             kind: 'matchingRequest',
             request,
-            targetCompanyId: request.companyId || selectedCompanyId,
+            targetCompanyId: defaultCompanyId,
             managerId: request.managerId
         });
     };

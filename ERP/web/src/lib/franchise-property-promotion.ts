@@ -1,9 +1,15 @@
 import { normalizeRegion } from './franchise-market-insights';
 import type { FranchiseFileAttachment } from './franchise-file-attachments';
+import type { FranchiseLocationDataEnvelope } from './franchise-location-master';
 import {
     normalizeFranchiseFileAttachments,
     normalizeFranchiseFileNames
 } from './franchise-file-attachments';
+import {
+    buildLocationMasterData,
+    buildPropertyIntakeDetails,
+    type FranchisePropertyIntakeDetails
+} from './franchise-property-promotion-master-data';
 import {
     FRANCHISE_PROPERTY_PROMOTION_HEAVY_KEYS,
     FRANCHISE_PROPERTY_PROMOTION_LABELS,
@@ -43,9 +49,11 @@ export type FranchisePropertyPromotionDraft = {
     readonly opened_at: null;
     readonly source_property_id: string;
     readonly memo: string;
-    readonly data: {
+    readonly data: FranchiseLocationDataEnvelope & {
         readonly sourceType: 'property-registration';
+        readonly addressDetail: string;
         readonly sourcePropertySnapshot: Record<string, unknown>;
+        readonly propertyIntakeDetails: FranchisePropertyIntakeDetails;
         readonly fileNames?: readonly string[];
         readonly fileAttachments?: readonly FranchiseFileAttachment[];
     };
@@ -98,10 +106,18 @@ function formatMemoValue(value: unknown): string {
 
 function buildMemo(property: FranchisePropertyPromotionRow): string {
     const lines: string[] = [];
-    if (cleanString(property.status)) lines.push(`- 물건 상태: ${cleanString(property.status)}`);
-    if (cleanString(property.operation_type)) lines.push(`- 운영 구분: ${cleanString(property.operation_type)}`);
-
     const data = property.data || {};
+    const summaryRows: readonly [string, string][] = [
+        ['업태', readDataString(data, ['categoryMajor', 'desiredBusinessType', 'businessType'])],
+        ['업종', readDataString(data, ['categoryMiddle', 'desiredCategory', 'category', 'industry'])],
+        ['우선순위', readDataString(data, ['matchPriority'])],
+        ['상담 메모', readDataString(data, ['consultationMemo'])]
+    ];
+
+    for (const [label, value] of summaryRows) {
+        if (value) lines.push(`- ${label}: ${value}`);
+    }
+
     for (const [key, value] of Object.entries(data)) {
         if (
             FRANCHISE_PROPERTY_PROMOTION_MAPPED_KEYS.has(key) ||
@@ -112,7 +128,7 @@ function buildMemo(property: FranchisePropertyPromotionRow): string {
         lines.push(`- ${FRANCHISE_PROPERTY_PROMOTION_LABELS[key] || key}: ${formatted}`);
     }
 
-    return lines.length > 0 ? `[입점 요청 원본 정보]\n${lines.join('\n')}` : '';
+    return lines.join('\n');
 }
 
 function buildAttachmentData(data: Record<string, unknown>): {
@@ -143,6 +159,7 @@ function buildSnapshot(
         categoryMajor: data.categoryMajor || data.desiredBusinessType || null,
         categoryMiddle: data.categoryMiddle || data.desiredCategory || null,
         desiredCategory: data.desiredCategory || null,
+        detailAddress: data.detailAddress || null,
         privateArea: data.privateArea || null,
         supplyArea: data.supplyArea || null,
         deposit: data.deposit || null,
@@ -173,6 +190,11 @@ export function buildFranchisePropertyPromotionDraft(
     selectedManagerId?: string | null
 ): FranchisePropertyPromotionDraft {
     const data = property.data || {};
+    const promotionData: Record<string, unknown> = {
+        ...data,
+        currentStatus: data.currentStatus || property.status || '',
+        operationType: data.operationType || property.operation_type || ''
+    };
     const attachmentData = buildAttachmentData(data);
     const address = cleanString(property.address) || readDataString(data, ['propertyAddress', '물건 주소']);
     const explicitRegion = readDataString(data, ['region', '지역']);
@@ -181,6 +203,8 @@ export function buildFranchisePropertyPromotionDraft(
         .join(' ');
     const region = explicitRegion || splitRegion || normalizeRegion(address);
     const name = cleanString(property.name) || readDataString(data, ['propertyName', '물건명']) || '입점 요청 후보지';
+    const locationMasterData = buildLocationMasterData(promotionData);
+    const addressDetail = readDataString(data, ['detailAddress', 'addressDetail', '상세 주소']);
 
     return {
         company_id: targetCompanyId,
@@ -198,7 +222,10 @@ export function buildFranchisePropertyPromotionDraft(
         memo: buildMemo(property),
         data: {
             sourceType: 'property-registration',
+            addressDetail,
             sourcePropertySnapshot: buildSnapshot(property, region, attachmentData),
+            ...locationMasterData,
+            propertyIntakeDetails: buildPropertyIntakeDetails(promotionData),
             ...attachmentData
         }
     };

@@ -7,6 +7,7 @@ import {
     PROPERTY_REGISTRATION_INITIAL_FORM,
     buildPropertyRegistrationSections,
     buildPropertyRegistrationPayload,
+    updatePropertyRegistrationAttachments,
     type PropertyRegistrationFileAttachment,
     type PropertyRegistrationFieldKey,
     type PropertyRegistrationForm as PropertyRegistrationFormState
@@ -78,11 +79,7 @@ export function PropertyRegistrationForm() {
     };
 
     const updateAttachments = (attachments: readonly PropertyRegistrationFileAttachment[]) => {
-        setForm(prev => ({
-            ...prev,
-            fileAttachments: attachments,
-            fileNames: attachments.map(file => file.name)
-        }));
+        setForm(prev => updatePropertyRegistrationAttachments(prev, attachments));
         setMessage(null);
     };
 

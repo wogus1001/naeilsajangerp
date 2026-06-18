@@ -106,6 +106,17 @@ export const PROPERTY_REGISTRATION_INITIAL_FORM: PropertyRegistrationForm = {
     nextContactAt: ''
 };
 
+export function updatePropertyRegistrationAttachments(
+    form: PropertyRegistrationForm,
+    attachments: readonly PropertyRegistrationFileAttachment[]
+): PropertyRegistrationForm {
+    return {
+        ...form,
+        fileAttachments: attachments,
+        fileNames: attachments.map(file => file.name)
+    };
+}
+
 function normalizeRegion(address: string): string {
     return address.trim().split(/\s+/).slice(0, 2).join(' ');
 }

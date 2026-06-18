@@ -27,17 +27,7 @@ export type LeadRegistrationPayloadContext = {
 export type LeadRegistrationPromotionContext = {
     readonly promotedAt: string;
     readonly promotedBy: string;
-    readonly promotedByName: string;
-    readonly activityId: string;
     readonly requestId: string;
-};
-
-type LeadActivityLogItem = {
-    readonly id: string;
-    readonly type: '메모';
-    readonly content: string;
-    readonly createdAt: string;
-    readonly createdBy: string;
 };
 
 export const LEAD_REGISTRATION_INITIAL_FORM: LeadRegistrationForm = {
@@ -98,22 +88,10 @@ export function buildLeadRegistrationPayload(
     };
 }
 
-function readActivityLog(data: Record<string, unknown>): readonly unknown[] {
-    return Array.isArray(data.activityLog) ? data.activityLog : [];
-}
-
 export function buildLeadRegistrationPromotionData(
     existingData: Record<string, unknown>,
     context: LeadRegistrationPromotionContext
 ): Record<string, unknown> {
-    const activity: LeadActivityLogItem = {
-        id: context.activityId,
-        type: '메모',
-        content: '어드민 인입 관리에서 가맹 희망자 목록으로 밀어넣기',
-        createdAt: context.promotedAt,
-        createdBy: context.promotedByName || context.promotedBy
-    };
-
     return {
         ...existingData,
         leadStage: 'candidate',
@@ -121,7 +99,6 @@ export function buildLeadRegistrationPromotionData(
         adminIntakeStatus: 'promoted',
         leadRegistrationRequestId: context.requestId,
         intakePromotedAt: context.promotedAt,
-        intakePromotedBy: context.promotedBy,
-        activityLog: [activity, ...readActivityLog(existingData)]
+        intakePromotedBy: context.promotedBy
     };
 }
