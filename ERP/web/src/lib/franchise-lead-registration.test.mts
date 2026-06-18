@@ -43,7 +43,7 @@ test('Given no selected source When building payload Then registration source is
     assert.equal(payload.source, FRANCHISE_LEAD_REGISTRATION_SOURCE);
 });
 
-test('Given admin promotion context When building data Then raw intake becomes candidate with activity log', () => {
+test('Given admin promotion context When building data Then raw intake becomes candidate without auto activity log', () => {
     const data = buildLeadRegistrationPromotionData({
         leadStage: 'raw_intake',
         sourceType: 'franchise_lead_registration',
@@ -51,8 +51,6 @@ test('Given admin promotion context When building data Then raw intake becomes c
     }, {
         promotedAt: '2026-06-17T00:00:00.000Z',
         promotedBy: 'admin-1',
-        promotedByName: '관리자',
-        activityId: 'activity-1',
         requestId: 'request-1'
     });
 
@@ -60,16 +58,8 @@ test('Given admin promotion context When building data Then raw intake becomes c
     assert.equal(data.leadRegistrationRequestId, 'request-1');
     assert.equal(data.adminIntakeStatus, 'promoted');
     assert.equal(data.intakePromotedBy, 'admin-1');
-    assert.deepEqual(data.activityLog, [
-        {
-            id: 'activity-1',
-            type: '메모',
-            content: '어드민 인입 관리에서 가맹 희망자 목록으로 밀어넣기',
-            createdAt: '2026-06-17T00:00:00.000Z',
-            createdBy: '관리자'
-        },
-        { id: 'old', type: '메모' }
-    ]);
+    assert.deepEqual(data.activityLog, [{ id: 'old', type: '메모' }]);
+    assert.doesNotMatch(JSON.stringify(data.activityLog), /밀어넣기/);
 });
 
 test('Given manwon text When parsing Then it converts to won', () => {

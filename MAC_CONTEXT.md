@@ -417,6 +417,12 @@ npm run build
 - 회사 로고 업로드는 기존 `property-images/company-logos/<company_id>/...` 경로를 사용한다. 업로드 API는 storage bucket 준비를 먼저 시도하도록 보강했으므로, 실서버에서 계속 실패하면 production Supabase storage policy와 service-role env를 확인한다.
 - 로컬 QA 자동화용으로 `playwright`를 devDependency에 명시했다.
 
+## 2026-06-18 인입 관리 매핑/상담 이력 정리
+- 입점 요청 밀어넣기는 출점 후보지와 맞는 전용면적, 보증금, 권리금, 월세, 관리비, 상세주소, 주차 가능 여부를 target 컬럼/메모 섹션에 직접 반영하고, 남는 원본 전용 값만 snapshot/메모에 남긴다.
+- 예비 창업자 등록은 여러 회사 DB에 각각 밀어넣을 수 있고, 원본 수정 후 회사별 `수정` 상태에서 `업데이트`를 눌러 target 모객 DB를 동기화한다.
+- 밀어넣기 자체는 target lead 상담 이력을 자동 생성하지 않는다. 상세 상담 이력에는 담당자가 직접 남긴 기록만 표시한다.
+- 검증: franchise property/matching/lead registration/admin intake view/workflow 테스트, `tsc`, `lint`, `build`, `git diff --check`, Playwright mock 상담 이력 QA 통과.
+
 ## 새 Codex 세션 시작 체크리스트
 1. 이 문서 읽기
 2. `git worktree list`

@@ -2,9 +2,13 @@ import { getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
     buildFranchiseMatchingRequestPromotionDraft,
-    buildMatchingRequestSourcePromotionData,
+    shouldUseSourceLeadForSameCompanyPromotion,
     type FranchiseMatchingRequestPromotionRow
 } from '@/lib/franchise-matching-request-promotion';
+import {
+    buildMatchingRequestSourcePromotionData,
+    findMatchingRequestPromotion
+} from '@/lib/franchise-matching-request-promotion-links';
 import { FRANCHISE_MATCHING_REQUEST_SOURCE, normalizeLeadPhone } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -49,6 +53,12 @@ function parsePayload(value: unknown): PromotionPayload | null {
     };
 }
 
+function getErrorCode(error: unknown): string {
+    if (!isRecord(error)) return '';
+    const code = error.code;
+    return typeof code === 'string' ? code : '';
+}
+
 async function resolveManagerId(
     managerId: string | null,
     targetCompanyId: string,
@@ -67,11 +77,6 @@ async function resolveManagerId(
         return fail(403, 'FORBIDDEN', 'Forbidden: manager/company mismatch');
     }
     return manager.id;
-}
-
-function readPromotedLeadId(data: Record<string, unknown> | null): string {
-    const value = data?.matchingRequestPromotedLeadId;
-    return typeof value === 'string' ? value.trim() : '';
 }
 
 export async function POST(request: Request) {
@@ -94,10 +99,11 @@ export async function POST(request: Request) {
         if (source.source !== FRANCHISE_MATCHING_REQUEST_SOURCE) {
             return fail(400, 'VALIDATION_ERROR', 'Only matching request leads can be promoted');
         }
-        if (readPromotedLeadId(source.data)) return fail(409, 'VALIDATION_ERROR', '이미 모객 DB로 반영된 매칭 요청입니다.');
 
         const targetCompanyId = payload.targetCompanyId || source.company_id;
         if (!targetCompanyId) return fail(400, 'VALIDATION_ERROR', 'Target company is required');
+        const existingPromotion = findMatchingRequestPromotion(source.data || {}, targetCompanyId);
+        if (existingPromotion) return fail(409, 'VALIDATION_ERROR', '이미 대상 회사 모객 DB로 반영된 매칭 요청입니다.');
 
         const { data: company, error: companyError } = await supabaseAdmin
             .from('companies')
@@ -109,6 +115,28 @@ export async function POST(request: Request) {
 
         const selectedManagerId = await resolveManagerId(payload.managerId, targetCompanyId, source);
         if (selectedManagerId instanceof Response) return selectedManagerId;
+
+        const nowIso = new Date().toISOString();
+        if (shouldUseSourceLeadForSameCompanyPromotion(source, targetCompanyId)) {
+            const { data: updatedSource, error: updateError } = await supabaseAdmin
+                .from('franchise_leads')
+                .update({
+                    manager_id: selectedManagerId || source.manager_id,
+                    data: buildMatchingRequestSourcePromotionData(source.data || {}, {
+                        promotedAt: nowIso,
+                        promotedBy: requester.id,
+                        promotedLeadId: source.id,
+                        targetCompanyId,
+                        targetManagerId: selectedManagerId
+                    }),
+                    updated_at: nowIso
+                })
+                .eq('id', source.id)
+                .select()
+                .single();
+            if (updateError) throw updateError;
+            return ok({ request: updatedSource, lead: updatedSource });
+        }
 
         const normalizedPhone = source.mobile_normalized || normalizeLeadPhone(source.mobile);
         if (normalizedPhone) {
@@ -123,14 +151,18 @@ export async function POST(request: Request) {
             if (duplicate) return fail(409, 'VALIDATION_ERROR', '같은 연락처의 가맹 희망자가 이미 대상 회사 모객 DB에 있습니다.');
         }
 
-        const nowIso = new Date().toISOString();
         const draft = buildFranchiseMatchingRequestPromotionDraft(source, targetCompanyId, selectedManagerId, nowIso);
         const { data: insertedLead, error: insertError } = await supabaseAdmin
             .from('franchise_leads')
             .insert({ ...draft, created_at: nowIso, updated_at: nowIso })
             .select()
             .single();
-        if (insertError) throw insertError;
+        if (insertError) {
+            if (getErrorCode(insertError) === '23505') {
+                return fail(409, 'VALIDATION_ERROR', '같은 연락처의 가맹 희망자가 이미 대상 회사 모객 DB에 있습니다.');
+            }
+            throw insertError;
+        }
 
         const { data: updatedSource, error: updateError } = await supabaseAdmin
             .from('franchise_leads')

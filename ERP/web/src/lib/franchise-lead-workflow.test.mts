@@ -6,6 +6,7 @@ import {
     getLeadWorkQueueLabel,
     getLeadWorkQueueRank,
     getLeadWorkQueueSummary,
+    isLeadNextAction,
     matchesLeadWorkQueue,
     suggestLeadNextContactAt
 } from './franchise-lead-workflow.js';
@@ -139,6 +140,21 @@ test('suggestLeadNextContactAt recommends a three day follow-up for contract con
     }, now);
 
     assert.equal(suggestedAt, '2026-06-13T01:00:00.000Z');
+});
+
+test('suggestLeadNextContactAt recommends a next-day follow-up when a matching request needs a property proposal', () => {
+    const suggestedAt = suggestLeadNextContactAt({
+        nextAction: '물건 제안',
+        consultationResult: '미상담'
+    }, now);
+
+    assert.equal(suggestedAt, '2026-06-11T01:00:00.000Z');
+});
+
+test('isLeadNextAction accepts active actions carried from matching requests', () => {
+    const actions = ['브랜드 제안', '물건 제안', '예산 재확인', '대출 상담 연결', '보류'];
+
+    assert.deepEqual(actions.map(isLeadNextAction), [true, true, true, true, true]);
 });
 
 test('suggestLeadNextContactAt skips follow-up recommendations for churned leads', () => {

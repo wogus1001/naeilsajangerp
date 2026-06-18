@@ -32,7 +32,11 @@ export function IntakePropertiesTable({
         if (!requesterId) return;
         setSyncingId(property.id);
         try {
-            await syncAdminProperty({ propertyId: property.id, requesterId });
+            await syncAdminProperty({
+                propertyId: property.id,
+                requesterId,
+                targetCompanyId: property.promotedCompanyId || undefined
+            });
             onSyncedAction();
         } catch (error) {
             onErrorAction(error instanceof Error ? error.message : '출점 후보지 업데이트에 실패했습니다.');
@@ -49,8 +53,9 @@ export function IntakePropertiesTable({
                 </thead>
                 <tbody>
                     {properties.map(property => {
-                        const isPromoted = Boolean(property.promotedLocationId);
-                        const isStale = isPromoted && property.syncStatus === 'stale';
+                        const promoted = property.promotionCount > 0;
+                        const targetPromoted = Boolean(property.promotedLocationId);
+                        const stale = targetPromoted && property.syncStatus === 'stale';
                         return (
                             <tr key={property.id}>
                                 <td><strong>{property.name}</strong><small>{property.companyName}</small><small>{property.operationType || '-'}</small></td>
@@ -58,18 +63,19 @@ export function IntakePropertiesTable({
                                 <td>{property.status || '-'}</td>
                                 <td>{formatDate(property.createdAt)}</td>
                                 <td>
-                                    {isStale && <span className={styles.staleBadge}>수정</span>}
-                                    {!isStale && isPromoted && <span className={styles.doneBadge}>반영 완료</span>}
-                                    {!isPromoted && <span className={styles.waitBadge}>대기</span>}
+                                    {stale && <span className={styles.staleBadge}>수정</span>}
+                                    {!stale && targetPromoted && <span className={styles.doneBadge}>반영 완료</span>}
+                                    {!stale && !targetPromoted && promoted && <span className={styles.doneBadge}>{property.promotionCount}곳 반영</span>}
+                                    {!promoted && <span className={styles.waitBadge}>대기</span>}
                                 </td>
                                 <td>
-                                    {isStale ? (
+                                    {stale ? (
                                         <button className={styles.actionButton} onClick={() => void handleSync(property)} disabled={syncingId === property.id}>
                                             {syncingId === property.id ? '업데이트 중' : '업데이트'}
                                         </button>
                                     ) : (
-                                        <button className={styles.actionButton} onClick={() => onPromoteAction(property)} disabled={isPromoted}>
-                                            밀어넣기 <ArrowRight size={14} />
+                                        <button className={styles.actionButton} onClick={() => onPromoteAction(property)}>
+                                            {promoted ? '추가 밀어넣기' : '밀어넣기'} <ArrowRight size={14} />
                                         </button>
                                     )}
                                 </td>

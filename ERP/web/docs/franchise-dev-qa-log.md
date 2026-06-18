@@ -400,6 +400,15 @@
 - 검증: `git diff --check`, `npx tsx --test src/lib/franchise-matching-request-promotion.test.mts src/lib/franchise-property-promotion.test.mts src/lib/company-logo.test.mts` 12건, `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npm run build` 통과.
 - 브라우저 QA: Playwright mock 세션으로 1440px/390px에서 `/dashboard/franchise-leads/matching-request`의 상단 중복 제목 미노출과 `예비 창업자 정보` legend 유지, `/admin/franchise-intake`의 예비 창업자 등록 탭 `밀어넣기 -> 모객 DB 등록 -> 성공 메시지` 흐름, POST payload(`leadId`, `targetCompanyId`, `managerId`, `requesterId`)와 page overflow 0건을 확인했다.
 
+## 2026-06-18 인입 밀어넣기 매핑/상담 이력 QA
+
+- 입점 요청 -> 출점 후보지 밀어넣기 매핑을 보강했다. 전용면적, 보증금, 권리금, 월세, 관리비, 상세주소, 주차 가능 여부는 target 컬럼 또는 해당 메모 섹션에 직접 반영하고, `requesterId` 같은 내부 추적값은 종합메모에 노출하지 않는다.
+- 입점 요청 수정 모달은 등록 화면과 같은 첨부 정책을 사용해 기존 등록 파일을 확인하고 새 파일 메타데이터를 수정 저장할 수 있다.
+- 예비 창업자 등록 -> 모객 DB 밀어넣기는 회사별 중복 반영을 지원한다. 이미 반영된 회사 DB는 `반영 완료` 또는 `수정` 상태로 표시하고, 원본 수정 후에는 `업데이트`를 눌러 해당 회사의 target lead를 갱신한다.
+- 밀어넣기 성공 시 target lead에 `어드민 인입 관리에서 ... 밀어넣기` 상담 이력을 자동 생성하지 않도록 변경했다. 상담 이력 영역에는 담당자가 직접 입력한 기록만 남긴다.
+- 검증: `npx tsx --test src/lib/franchise-property-promotion.test.mts src/lib/franchise-matching-request-promotion.test.mts src/lib/franchise-lead-registration.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-admin-intake-view.test.mts src/lib/franchise-lead-workflow.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: Playwright mock 세션으로 `/dashboard/franchise-leads` 대상 lead 상세를 열어 밀어넣기 자동 상담 이력이 표시되지 않고 빈 상담 이력 상태가 유지되는 것을 확인했다.
+
 ## 다음 QA 체크리스트
 
 ### P0

@@ -4,6 +4,7 @@ import {
     PROPERTY_REGISTRATION_INITIAL_FORM,
     buildPropertyRegistrationSections,
     buildPropertyRegistrationPayload,
+    updatePropertyRegistrationAttachments,
     type PropertyRegistrationForm
 } from './franchise-property-registration.js';
 
@@ -79,4 +80,21 @@ test('buildPropertyRegistrationSections injects business type and middle industr
     assert.deepEqual(businessTypeField.options, ['', '요식업', '서비스업']);
     assert.equal(categoryField?.label, '업종 (중분류)');
     assert.deepEqual(categoryField?.options, ['', '커피', '치킨']);
+});
+
+test('updatePropertyRegistrationAttachments replaces attachments and syncs file names', () => {
+    const updated = updatePropertyRegistrationAttachments({
+        ...PROPERTY_REGISTRATION_INITIAL_FORM,
+        fileNames: ['기존도면.pdf'],
+        fileAttachments: [{ name: '기존도면.pdf', size: 1024, type: 'application/pdf' }]
+    }, [
+        { name: '새사진.png', size: 2048, type: 'image/png' },
+        { name: '새도면.pdf', size: 4096, type: 'application/pdf' }
+    ]);
+
+    assert.deepEqual(updated.fileNames, ['새사진.png', '새도면.pdf']);
+    assert.deepEqual(updated.fileAttachments, [
+        { name: '새사진.png', size: 2048, type: 'image/png' },
+        { name: '새도면.pdf', size: 4096, type: 'application/pdf' }
+    ]);
 });

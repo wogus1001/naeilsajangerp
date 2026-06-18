@@ -2,9 +2,12 @@ import { getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
     buildFranchiseMatchingRequestPromotionDraft,
-    buildMatchingRequestSourcePromotionData,
     type FranchiseMatchingRequestPromotionRow
 } from '@/lib/franchise-matching-request-promotion';
+import {
+    buildMatchingRequestSourcePromotionData,
+    findMatchingRequestPromotion
+} from '@/lib/franchise-matching-request-promotion-links';
 import { FRANCHISE_MATCHING_REQUEST_SOURCE } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -12,6 +15,7 @@ export const dynamic = 'force-dynamic';
 
 type Payload = {
     readonly leadId: string;
+    readonly targetCompanyId: string | null;
     readonly requesterId: string | null;
 };
 
@@ -30,7 +34,11 @@ function parsePayload(value: unknown): Payload | null {
     if (!isRecord(value)) return null;
     const leadId = readString(value, 'leadId');
     if (!leadId) return null;
-    return { leadId, requesterId: readString(value, 'requesterId') };
+    return {
+        leadId,
+        targetCompanyId: readString(value, 'targetCompanyId'),
+        requesterId: readString(value, 'requesterId')
+    };
 }
 
 function readDataString(data: Record<string, unknown> | null, key: string): string {
@@ -59,13 +67,14 @@ export async function POST(request: Request) {
             return fail(400, 'VALIDATION_ERROR', 'Only matching request leads can be updated');
         }
 
-        const promotedLeadId = readDataString(source.data, 'matchingRequestPromotedLeadId');
+        const promotion = findMatchingRequestPromotion(source.data || {}, payload.targetCompanyId);
+        const promotedLeadId = promotion?.promotedLeadId || readDataString(source.data, 'matchingRequestPromotedLeadId');
         if (!promotedLeadId) return fail(404, 'NOT_FOUND', 'Promoted lead not found');
 
-        const targetCompanyId = readDataString(source.data, 'matchingRequestPromotedCompanyId') || source.company_id;
+        const targetCompanyId = promotion?.targetCompanyId || readDataString(source.data, 'matchingRequestPromotedCompanyId') || source.company_id;
         if (!targetCompanyId) return fail(400, 'VALIDATION_ERROR', 'Target company is required');
 
-        const selectedManagerId = readDataString(source.data, 'matchingRequestPromotedManagerId') || (
+        const selectedManagerId = promotion?.targetManagerId || readDataString(source.data, 'matchingRequestPromotedManagerId') || (
             source.company_id === targetCompanyId ? source.manager_id || '' : ''
         );
         const nowIso = new Date().toISOString();
