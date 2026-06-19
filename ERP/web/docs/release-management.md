@@ -17,12 +17,14 @@
 - DB migration, API, UI가 한 기능을 이루면 같은 기능 커밋에 묶되, unrelated 정리는 분리한다.
 - `ERP/web/handoff.md`, `.env*`, provider token, service-role key, 개인 인증 정보는 커밋하지 않는다.
 - 커밋 전에는 `git diff --check`, `git status --short`, 관련 검증 결과를 확인한다.
+- 사용자 설명 방식에 영향을 주는 기능은 `/landing`과 `/demo`의 프랜차이즈 데모 시나리오, 딤드 설명 단계, 샘플 데이터 갱신 여부도 함께 확인한다.
 
 ## Update Flow
 
 1. 작업 브랜치 생성: `git switch -c codex/<topic>-YYYYMMDD origin/main`
 2. 구현 후 로컬 검증: lint, typecheck, tests, build, browser QA 중 변경 범위에 맞는 항목을 수행한다.
 3. 문서 갱신: README, roadmap, QA log, MAC_CONTEXT 중 변경 사실을 알 필요가 있는 문서만 수정한다.
+   - 공개 설명/사용 흐름에 영향이 있으면 데모 페이지를 함께 갱신하고, 영향이 없으면 QA 로그에 `데모 영향 없음`으로 남긴다.
 4. 기능 커밋 생성: 커밋 해시와 메시지를 작업 요약에 남긴다.
 5. dev 배포 요청 시: `my_project_dev_deploy`에서 해당 커밋을 반영하고 `dev`로 push한다.
 6. 실서버 배포 요청 시: `my_project_main_release`에서 검증 후 `main`으로 push한다.
@@ -45,12 +47,25 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-19 배포 요청 기준 최신 릴리즈 소스 커밋: `185d84d feat(contracts): add platform electronic contract flow`, `127b0ff feat(demo): add public franchise walkthrough`, `07b519e docs: align release ledger with contract demo rollout`
+- 이 릴리즈는 기존 계약 기능을 유지한 별도 `/contracts/electronic` 권리금 전자계약 v2, 내일사장 공용 유캔싸인 발송, SafetyData 인허가번호 내부 조회, 공개 `/demo` 프랜차이즈 샘플 데모, 실제 ERP UI 기반 대시보드/DB 관리/계약 완료/출점 후보지/가맹 운영 체험, 첫 진입 딤드 설명, 우측 사용 방법 패널, 랜딩 데모 CTA를 포함한다.
+- 공개 데모는 샘플 데이터만 사용하며 실제 저장/발송/삭제 API를 호출하지 않는다.
+- 전자계약 v2는 `supabase_electronic_contracts_platform_migration.sql`을 사용자가 Supabase SQL Editor에서 직접 적용해야 테이블과 공용 유캔싸인 연결이 완전히 활성화된다.
 - 2026-06-18 배포 요청 기준 최신 릴리즈 소스 커밋: `efced6e feat(franchise): add partner access and DB exports`
 - 이 릴리즈는 회원가입 휴대폰 필수화, 협력업체 역할/승인/권한 격리, 모객 DB/출점 후보지/가맹 운영 엑셀·PDF·인쇄 지원을 포함한다.
 - production Gmail 발송과 회사 로고 업로드는 각 환경의 Vercel env와 Supabase storage policy가 맞아야 한다.
 - 협력업체 권한 격리는 `supabase_partner_vendor_access_migration.sql`을 운영 DB에 직접 적용해야 완전히 활성화된다.
 
 ## Release Ledger
+
+2026-06-19
+- 작업 브랜치: `codex/franchise-next-alerts-20260616`
+- 기능 커밋: `185d84d feat(contracts): add platform electronic contract flow`, `127b0ff feat(demo): add public franchise walkthrough`, `07b519e docs: align release ledger with contract demo rollout`
+- dev 반영: `d0d56c6 docs: align release ledger with contract demo rollout`
+- main 반영: `479a22a feat(contracts): add platform electronic contract flow`, `837d279 feat(demo): add public franchise walkthrough`, 문서 보정 커밋은 배포 요청 기준 `main` HEAD로 반영
+- 배포 URL: `https://naeilsajang-dev.vercel.app`, `https://naeilsajang.vercel.app`
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/electronic-contracts/*.test.mts src/lib/ucansign/*.test.mts src/lib/api-auth.test.mts src/app/demo/demoContent.test.mts`, `npm run build`, Playwright `/demo` 1440px/390px 자동 투어/우측 설명 패널/로고 `데모`/`/api/**` 요청 0건/page-level horizontal overflow 0건 확인
+- 남은 이슈: `supabase_electronic_contracts_platform_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 전자계약 v2 테이블과 공용 유캔싸인 연결이 활성화된다. 공개 데모는 샘플 데이터만 사용하며 실제 운영 API 호출을 차단한다.
 
 2026-06-18
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
