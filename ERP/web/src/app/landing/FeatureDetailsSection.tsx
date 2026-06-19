@@ -11,30 +11,36 @@ export function FeatureDetailsSection() {
                     <h2>본사 직원이 매일 쓰는 업무 단위로 기능을 나눴습니다.</h2>
                 </div>
                 <div className={styles.featureGrid}>
-                    {FEATURE_DETAILS.map(feature => (
-                        <article key={feature.title} className={styles.featureCard}>
-                            <div className={styles.featureCopy}>
-                                <span className={styles.featureLabel}>업무 상황</span>
-                                <h3>
-                                    {feature.title}
-                                    {'statusLabel' in feature ? (
-                                        <>
-                                            {' '}
-                                            <span className={styles.eyebrow}>{feature.statusLabel}</span>
-                                        </>
-                                    ) : null}
-                                </h3>
-                                <p>{feature.situation}</p>
-                                <ul>
-                                    {feature.capabilities.map(capability => (
-                                        <li key={capability}>{capability}</li>
-                                    ))}
-                                </ul>
-                                <strong>{feature.outcome}</strong>
-                            </div>
-                            <FeatureMockPanel mock={feature.mock} />
-                        </article>
-                    ))}
+                    {FEATURE_DETAILS.map(feature => {
+                        const statusLabel = 'statusLabel' in feature && typeof feature.statusLabel === 'string'
+                            ? feature.statusLabel
+                            : null;
+
+                        return (
+                            <article key={feature.title} className={styles.featureCard}>
+                                <div className={styles.featureCopy}>
+                                    <span className={styles.featureLabel}>업무 상황</span>
+                                    <h3>
+                                        {feature.title}
+                                        {statusLabel ? (
+                                            <>
+                                                {' '}
+                                                <span className={styles.eyebrow}>{statusLabel}</span>
+                                            </>
+                                        ) : null}
+                                    </h3>
+                                    <p>{feature.situation}</p>
+                                    <ul>
+                                        {feature.capabilities.map(capability => (
+                                            <li key={capability}>{capability}</li>
+                                        ))}
+                                    </ul>
+                                    <strong>{feature.outcome}</strong>
+                                </div>
+                                <FeatureMockPanel mock={feature.mock} />
+                            </article>
+                        );
+                    })}
                 </div>
                 <div className={styles.teamScenePanel}>
                     <div className={styles.teamSceneHeader}>

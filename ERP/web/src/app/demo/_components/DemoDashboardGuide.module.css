@@ -1,0 +1,149 @@
+.dashboardGuideLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 304px);
+    gap: 16px;
+    align-items: start;
+}
+
+.dashboardGuideMain {
+    min-width: 0;
+}
+
+.guidePanel {
+    position: sticky;
+    top: 82px;
+    display: grid;
+    gap: 16px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px;
+}
+
+.guideHeader {
+    display: grid;
+    gap: 8px;
+}
+
+.guideHeader span {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 24px;
+    align-items: center;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.guideHeader h2 {
+    margin: 0;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.guideHeader p,
+.guideStep p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+    word-break: keep-all;
+}
+
+.guideSteps {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guideStep {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    border-top: 1px solid #f2f4f6;
+    padding-top: 10px;
+}
+
+.guideStep:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.guideStepIcon {
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 8px;
+    background: #f2f4f6;
+    color: #3182f6;
+}
+
+.guideStep strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.guideActions {
+    display: grid;
+    gap: 8px;
+}
+
+.guideActionButton {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.guideActionButton:hover,
+.guideActionButton:focus-visible {
+    border-color: #3182f6;
+    color: #2272eb;
+}
+
+.guideActionButton:focus-visible {
+    outline: 2px solid #3182f6;
+    outline-offset: 2px;
+}
+
+@media (max-width: 1180px) {
+    .dashboardGuideLayout {
+        grid-template-columns: 1fr;
+    }
+
+    .guidePanel {
+        position: static;
+        order: -1;
+    }
+
+    .guideSteps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .guideSteps {
+        grid-template-columns: 1fr;
+    }
+}

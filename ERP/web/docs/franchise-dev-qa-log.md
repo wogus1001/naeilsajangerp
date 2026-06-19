@@ -328,13 +328,6 @@
 - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
 - 로컬 브라우저 QA: `http://127.0.0.1:3000/privacy` 1440px/390px 렌더를 확인했고, `http://127.0.0.1:3000/landing`은 200 응답과 푸터의 개인정보처리방침 링크 포함을 확인했다.
 
-## 2026-06-16 main 배포 QA
-
-- `my_project_main_release`에서 `23e8d54 feat(franchise): finalize alerts and OAuth policy`까지 반영하고 `origin/main`으로 push했다.
-- GitHub Vercel status는 `success`, 설명은 `Deployment has completed`로 확인했다.
-- production URL `https://naeilsajang.vercel.app/privacy`와 `https://naeilsajang.vercel.app/landing` 모두 HTTP 200을 반환했다. `/privacy` 본문에는 `gmail.send`, `Gmail 수신함`, `naeilsajang@gmail.com`, `개인정보처리방침` 문구가 포함됐고, `/landing`에는 `/privacy` 링크가 포함됐다.
-- main release 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 `npx tsx --test ...`, `npm run build` 통과.
-
 ## 2026-06-17 알림 읽음 항목 숨김 QA
 
 - 기존 알림 팝오버는 `0건 미확인` 상태에서도 `read_at`이 채워진 읽음 알림을 최근 목록에 계속 표시했다. 이는 삭제 지연이 아니라 DB 감사 기록과 헤더 표시 필터가 분리되지 않은 상태였다.
@@ -436,6 +429,50 @@
 - 출점 후보지 export는 후보지 필터, 정렬, 표시 컬럼을 반영하고, 화면에서 한 줄 말줄임 처리되는 종합메모는 파일/인쇄용 일반 텍스트로 내보낸다. 가맹 운영 export는 운영 가맹점 기준 고정 컬럼으로 내보낸다.
 - 검증: `npx tsx --test src/components/franchise/franchiseDbExport.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
 - 브라우저 QA: 로컬 서버 `http://localhost:3000`의 보호 라우트 HEAD 응답은 200을 확인했다. 로그인 세션 없는 Playwright 보호 화면 렌더는 Supabase auth 세션 검증/로그아웃 흐름에 막혀 export 버튼 실클릭까지는 제한됐다. 실제 담당자 계정 세션에서 1440px/390px 버튼 배치, 엑셀 다운로드, PDF/인쇄 팝업은 후속 live QA로 재확인한다.
+
+## 2026-06-18 권리금 전자계약 v2 개발 QA
+
+- 기존 `/contracts`, `/contracts/create`, `/contracts/builder` 개인별 유캔싸인/계약 기능은 그대로 두고, 새 `/contracts/electronic`와 `/contracts/electronic/create` 흐름을 추가했다.
+- 새 흐름은 내일사장 공용 유캔싸인 계정 1개를 `platform_ucansign_connection`에 암호화 저장하고, ERP `electronic_contracts.company_id`와 `sent_by_profile_id`로 `내가 발송`, `회사 문서`, 관리자 `전체 문서`를 분리한다.
+- 권리금계약서 입력값은 ERP 양식에서 받고, 금액은 `...Amount` 숫자/콤마 필드와 `...Text` 한글 금액 필드로 분리해 유캔싸인 payload를 만든다. 주민등록번호, 실제 서명값, 민감 인증값은 ERP 스냅샷에 저장하지 않는다.
+- 인허가번호 조회는 SafetyData `인허가업소정보` 전체 import 후 내부 `license_business_records`에서 검색한다. 결과 카드는 `SALS_UNQ_SE_NO_LCPMT_NO`, `BUES_NM`, `ADDR`를 각각 영업허가번호, 상호명, 주소로 표시하고 도로명/지번 유사 배지를 붙인다.
+- 신규 SQL: `supabase_electronic_contracts_platform_migration.sql`. 실제 Supabase 적용은 사용자가 직접 진행해야 한다.
+- 검증: `npx tsx --test src/lib/electronic-contracts/*.test.mts src/lib/company-menu-features.test.mts` 13건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 로컬 dev 서버 `http://localhost:3000`에서 Supabase/auth/API mock 세션으로 `/contracts/electronic`와 `/contracts/electronic/create`를 1440px/390px에서 확인했다. 목록/작성 화면 모두 page overflow 0건, console error 0건이고, 작성 화면에서 인허가번호 조회 결과 카드가 표시됐다. 실제 공용 유캔싸인 연결, SafetyData import, 발송 성공은 `supabase_electronic_contracts_platform_migration.sql` 및 env 적용 후 운영 세션에서 추가 확인한다.
+
+## 2026-06-19 권리금 전자계약 v2 코드리뷰 보완
+
+- 코드리뷰 결과에 따라 신규 전자계약/공용 유캔싸인/인허가 API는 legacy `requesterId` 단독 인증 대신 Supabase bearer 세션을 요구하도록 보강했다.
+- 유캔싸인 webhook은 `UCANSIGN_WEBHOOK_SECRET` 검증, ERP 계약 ID와 저장된 유캔싸인 문서 ID 동시 매칭, 허용 상태값 정규화를 통과한 경우에만 계약 상태를 갱신한다.
+- 발송 실패 후 초안 재편집/재발송을 허용하고, 유캔싸인 문서 생성 이벤트가 먼저 기록된 경우 중복 발송 대신 ERP 상태 복구를 우선 시도한다.
+- SafetyData import는 새 batch를 먼저 비활성 삽입한 뒤 활성 batch를 교체해, 삽입 실패 시 기존 active 검색 데이터가 비는 위험을 줄였다.
+- 검증: `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/electronic-contracts/*.test.mts src/lib/ucansign/*.test.mts src/lib/api-auth.test.mts` 17건 통과.
+
+## 2026-06-19 공개 데모/사용 가이드 v1 개발 QA
+
+- `/landing`에 공개 데모 진입 CTA를 추가하고 현재 기능 기준으로 핵심 설명을 갱신했다.
+- `/demo`, `/demo/admin`, `/demo/manager`, `/demo/partner` 공개 라우트를 추가했다. 모든 데모는 샘플 데이터와 로컬 상태만 사용하며 실제 ERP API, Gmail, 유캔싸인, 저장/삭제 API를 호출하지 않는다.
+- 역할별 데모는 딤드 오버레이로 주요 기능을 5~6단계로 설명한다. 데스크톱은 강조 영역 옆 설명 카드, 모바일은 하단 설명 카드로 표시한다.
+- 향후 기능 개발 시 `/landing`과 `/demo` 영향 여부를 릴리즈 체크리스트에 포함한다. 변경 영향이 없으면 QA 로그에 `데모 영향 없음`으로 기록한다.
+- 검증: `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: production build를 `http://localhost:3002`에서 실행해 `/landing`, `/demo`, `/demo/admin`, `/demo/manager`, `/demo/partner`를 1440px/390px에서 확인했다. console error 0건, page error 0건, page-level horizontal overflow 0건. 담당자 데모에서 `샘플 발송 처리`, `샘플 계약 저장` 클릭 시 `/api/` 요청 0건이고 로컬 완료 메시지만 갱신되는 것을 확인했다.
+
+## 2026-06-19 실제 ERP UI 기반 공개 데모 v2 QA
+
+- `/demo/admin`, `/demo/manager`, `/demo/partner`를 실제 `MainLayout` 계열의 사이드바, 상단 헤더, breadcrumb, 탭, 필터, 표, 폼 밀도에 가깝게 재구성했다. 실제 인증/알림/API를 호출하는 보호 레이아웃은 직접 마운트하지 않고, 데모 전용 `DemoErpShell`과 프랜차이즈 workspace 어댑터로 분리했다.
+- 데모 범위는 프랜차이즈 우선으로 축소했다. 사이드바에는 상위 단독 `대시보드`와 `프랜차이즈` 하위 `모객 DB`, `출점 후보지`, `가맹 운영`만 노출하고 `업무`, `정보공개서`, `전자계약`, `인입 관리` 데모 목업은 제거했다.
+- `대시보드`와 `모객 DB`는 실제 `LeadDashboard`, `LeadDbWorkspace`, `LeadToolbar`, `LeadWorkspaceTabs`를 샘플 데이터로 구동한다. `출점 후보지`는 실제 `LocationMasterSection`, `MarketInsightWorkspaceTabs`, `MarketInsightViewTabs`를 사용하고, `가맹 운영`은 실제 `OperationsSummary`, `FranchiseLocationList`를 사용한다.
+- `/demo/**`에서 `/api/**` fetch가 발생하면 차단하는 데모 전용 guard를 유지했다. 데모 버튼은 후보지 연결, 후보지 반영, 운영 상태 변경처럼 로컬 완료 메시지만 갱신한다.
+- 검증: `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: 기존 로컬 서버 `http://localhost:3000`에서 `/demo`, `/demo/admin`, `/demo/manager`, `/demo/partner`를 1440px/390px로 확인했다. console error 0건, page error 0건, `/api/**` 요청 0건, page-level horizontal overflow 0건이다. 데모 사이드바에서 `업무` 메뉴는 노출되지 않고 `대시보드`와 프랜차이즈 메뉴만 표시되는 것을 확인했다.
+
+## 2026-06-19 공개 데모 직접 진입/탭 이동 QA
+
+- `/demo`의 역할 선택 화면을 제거하고 담당자 기준 프랜차이즈 데모가 바로 열리도록 변경했다. 랜딩 CTA도 단일 `데모 시작하기` 진입으로 정리했다.
+- `LeadWorkspaceTabs`의 `대시보드`, `DB 관리`, `계약 완료`를 모두 실제 데모 화면 전환에 연결했다. `계약 완료`는 샘플 체크리스트 요약을 주입해 운영 API 호출 없이 실제 체크리스트 UI를 표시한다.
+- `/demo` 첫 진입 시 대시보드 핵심 숫자부터 딤드 오버레이가 자동 표시되도록 변경했다. 우측에는 `사용 방법` 패널을 고정해 상단 숫자, 파이프라인, DB 관리, 계약 완료 확인 순서를 안내한다.
+- 데모 사이드바 로고와 담당자 회사 표기는 실회사명 대신 `데모` 기준으로 표시한다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npm run build` 통과. Playwright로 `/demo` 1440px/390px에서 자동 투어, 우측 설명 패널, 로고 `데모`, `/api/**` 요청 0건, page-level horizontal overflow 0건을 확인했다.
 
 ## 다음 QA 체크리스트
 

@@ -1,0 +1,849 @@
+.publicPage,
+.erpShell {
+    min-height: 100dvh;
+    background: #f2f4f6;
+    color: #191f28;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Segoe UI", sans-serif;
+}
+
+.publicHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(100%, 1180px);
+    margin: 0 auto;
+    padding: 20px 24px;
+}
+
+.brandLink {
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.publicHeader nav {
+    display: flex;
+    gap: 18px;
+}
+
+.publicHeader nav a {
+    color: #4e5968;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.demoHero {
+    width: min(100%, 1180px);
+    margin: 0 auto;
+    padding: 76px 24px 28px;
+}
+
+.kicker,
+.roleBadge,
+.tourCount,
+.demoModeBadge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 26px;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.demoHeaderButton,
+.demoBellButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.demoHeaderButton {
+    min-height: 36px;
+    padding: 0 12px;
+}
+
+.demoBellButton {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+}
+
+.demoNavButton {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.demoNavButton:focus-visible,
+.demoHeaderButton:focus-visible,
+.demoBellButton:focus-visible {
+    outline: 2px solid #3182f6;
+    outline-offset: 2px;
+}
+
+.demoActualLayout {
+    min-height: 100dvh;
+    color: #191f28;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Segoe UI", sans-serif;
+}
+
+.actualUiBlock {
+    display: grid;
+    gap: 12px;
+}
+
+.demoHero h1 {
+    max-width: 720px;
+    margin: 18px 0 0;
+    color: #191f28;
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1.24;
+    letter-spacing: 0;
+    word-break: keep-all;
+}
+
+.demoHero p {
+    max-width: 720px;
+    margin: 18px 0 0;
+    color: #4e5968;
+    font-size: 17px;
+    line-height: 1.7;
+    word-break: keep-all;
+}
+
+.roleGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    width: min(100%, 1180px);
+    margin: 0 auto;
+    padding: 0 24px 80px;
+}
+
+.roleCard {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: inherit;
+    padding: 22px;
+}
+
+.roleCard:hover {
+    border-color: #3182f6;
+}
+
+.roleIcon {
+    display: inline-grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #3182f6;
+}
+
+.roleCard strong {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.roleCard p,
+.roleCard li {
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.55;
+    word-break: keep-all;
+}
+
+.roleCard ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.roleCta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    color: #2272eb;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.erpShell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.erpSidebar {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    border-right: 1px solid #e5e8eb;
+    background: #ffffff;
+    padding: 18px 12px;
+}
+
+.erpLogo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    color: #191f28;
+    padding: 0 8px;
+}
+
+.erpLogoMark {
+    display: inline-grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #3182f6;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.erpSearchBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    margin: 18px 8px;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #8b95a1;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
+.erpNav,
+.erpNavGroup,
+.erpNavSubMenu {
+    display: grid;
+    gap: 6px;
+}
+
+.erpNavGroup {
+    margin-bottom: 8px;
+}
+
+.erpNavGroupTitle,
+.erpNavSubLink,
+.erpNavSubLinkActive {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #333d4b;
+    font: inherit;
+    cursor: pointer;
+}
+
+.erpNavGroupTitle {
+    justify-content: space-between;
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.erpNavGroupTitle > span {
+    flex: 1;
+    margin-left: 8px;
+    text-align: left;
+}
+
+.erpNavSubMenu {
+    padding-left: 18px;
+}
+
+.erpNavSubLink,
+.erpNavSubLinkActive {
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 10px;
+    color: #6b7684;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.erpNavSubLinkActive {
+    background: #f2f4f6;
+    color: #191f28;
+}
+
+.erpMain {
+    min-width: 0;
+}
+
+.erpHeader {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    border-bottom: 1px solid #e5e8eb;
+    background: #ffffff;
+    padding: 0 22px;
+}
+
+.erpBreadcrumbs,
+.erpHeaderActions,
+.erpProfile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.erpBreadcrumbs {
+    color: #8b95a1;
+    font-size: 13px;
+}
+
+.erpBreadcrumbs strong {
+    color: #191f28;
+}
+
+.erpHeaderActions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.erpTourButton,
+.erpIconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.erpTourButton {
+    padding: 0 12px;
+}
+
+.erpIconButton {
+    width: 36px;
+}
+
+.erpProfile {
+    border-left: 1px solid #e5e8eb;
+    padding-left: 12px;
+}
+
+.erpProfile strong,
+.erpProfile span {
+    display: block;
+}
+
+.erpProfile strong {
+    font-size: 13px;
+}
+
+.erpProfile span {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.erpContent {
+    min-width: 0;
+    padding: 24px;
+}
+
+.erpPageHero,
+.erpPanel,
+.erpMetricCard {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.erpPageHero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 20px;
+}
+
+.erpPageHero h1 {
+    margin: 0 0 8px;
+    color: #191f28;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0;
+}
+
+.erpPageHero p,
+.erpPanelHeader p,
+.erpMetricCard p,
+.erpFieldPreview span,
+.erpTable small,
+.erpNotice {
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.erpMetricGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.erpMetricCard {
+    min-height: 116px;
+    padding: 20px;
+}
+
+.erpMetricCard span {
+    color: #4e5968;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.erpMetricCard strong {
+    display: block;
+    margin-top: 18px;
+    color: #191f28;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.erpMetricCard p {
+    margin: 4px 0 0;
+}
+
+.erpTwoColumn {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+}
+
+.erpPanel {
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.erpPanelHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #e5e8eb;
+    padding: 16px 18px;
+}
+
+.erpPanelHeader h2 {
+    margin: 0 0 6px;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.erpPanelHeader p {
+    margin: 0;
+}
+
+.erpPanelActions,
+.inlineActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 18px 18px;
+}
+
+.erpToolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.segmentButton,
+.segmentActive,
+.searchPreview {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.segmentButton {
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.segmentActive {
+    border-color: #3182f6;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.searchPreview {
+    flex: 1 1 260px;
+    justify-content: flex-start;
+    color: #8b95a1;
+    font-weight: 500;
+}
+
+.erpTableWrap {
+    overflow-x: auto;
+}
+
+.erpTable {
+    width: 100%;
+    min-width: 880px;
+    border-collapse: collapse;
+    background: #ffffff;
+}
+
+.erpTable th,
+.erpTable td {
+    border-bottom: 1px solid #e5e8eb;
+    padding: 13px 14px;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+.erpTable th {
+    color: #4e5968;
+    background: #f9fafb;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.erpTable td {
+    color: #333d4b;
+}
+
+.erpTable strong,
+.erpTable small {
+    display: block;
+}
+
+.erpBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    border-radius: 999px;
+    padding: 0 9px;
+    background: #f2f4f6;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge_blue {
+    background: #e8f3ff;
+    color: #1c64d1;
+}
+
+.badge_green {
+    background: #e6f8f1;
+    color: #008a52;
+}
+
+.badge_orange {
+    background: #fff4e5;
+    color: #d97706;
+}
+
+.badge_red {
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.badge_neutral {
+    background: #f2f4f6;
+    color: #4e5968;
+}
+
+.erpFieldGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 18px;
+}
+
+.erpFieldPreview {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 13px 14px;
+}
+
+.erpFieldPreview strong {
+    display: block;
+    margin-top: 6px;
+    color: #191f28;
+    font-size: 14px;
+}
+
+.noticeStack {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+}
+
+.noticeStack p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #333d4b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.erpNotice {
+    margin: 0;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 13px 14px;
+    font-weight: 700;
+}
+
+.primaryButton,
+.secondaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primaryButton {
+    border: 0;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.secondaryButton {
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #333d4b;
+}
+
+.secondaryButton:disabled {
+    color: #b0b8c1;
+    cursor: not-allowed;
+}
+
+.tourLayer {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.spotlight {
+    position: fixed;
+    border: 2px solid #3182f6;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(25, 31, 40, 0.62);
+    pointer-events: none;
+}
+
+.tourCard {
+    position: fixed;
+    width: min(320px, calc(100vw - 32px));
+    border: 1px solid #d1d6db;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 18px;
+    pointer-events: auto;
+}
+
+.tourClose {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: inline-grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: #f2f4f6;
+    color: #4e5968;
+    cursor: pointer;
+}
+
+.tourCard h2 {
+    margin: 14px 36px 0 0;
+    font-size: 18px;
+}
+
+.tourCard p {
+    margin: 10px 0 0;
+    color: #4e5968;
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: keep-all;
+}
+
+.tourActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+    .roleGrid,
+    .erpMetricGrid,
+    .erpTwoColumn,
+    .erpFieldGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .erpShell {
+        grid-template-columns: 1fr;
+    }
+
+    .erpSidebar {
+        position: static;
+        height: auto;
+        max-height: none;
+        border-right: 0;
+        border-bottom: 1px solid #e5e8eb;
+    }
+
+    .erpNav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .erpHeader {
+        position: static;
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px 18px;
+    }
+
+    .erpContent {
+        padding: 18px;
+    }
+
+    .erpPageHero {
+        flex-direction: column;
+    }
+
+    .erpHeaderActions {
+        justify-content: flex-start;
+    }
+
+    .demoActualLayout :global(.global-sidebar) {
+        display: none;
+    }
+
+    .demoActualLayout :global(.global-header) {
+        gap: 8px;
+        padding: 0 12px;
+    }
+
+    .demoHeaderButton,
+    .demoBellButton,
+    .demoActualLayout .demoModeBadge {
+        display: none;
+    }
+
+    .tourCard {
+        inset: auto 12px 12px;
+        width: auto;
+    }
+}
+
+@media (max-width: 520px) {
+    .publicHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .publicHeader nav {
+        flex-wrap: wrap;
+    }
+
+    .demoHero {
+        padding-top: 40px;
+    }
+
+    .demoHero h1 {
+        font-size: 32px;
+    }
+
+    .erpNav {
+        grid-template-columns: 1fr;
+    }
+
+    .erpPageHero h1 {
+        font-size: 24px;
+    }
+
+    .erpToolbar,
+    .tourActions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
