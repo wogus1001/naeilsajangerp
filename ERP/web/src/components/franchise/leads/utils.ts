@@ -52,27 +52,48 @@ export function formatDate(value?: string | null) {
     if (!value) return '-';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
+    const { month, day } = getKoreanDateParts(date);
+    return `${month}. ${day}.`;
 }
 
 export function formatDateTime(value?: string | null) {
     if (!value) return '-';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const { month, day, hour, minute } = getKoreanDateParts(date);
+    const period = Number(hour) < 12 ? '오전' : '오후';
+    const hour12 = String(Number(hour) % 12 || 12).padStart(2, '0');
+    return `${month}. ${day}. ${period} ${hour12}:${minute}`;
 }
 
 export function formatFullDateTime(value?: string | null) {
     if (!value) return '-';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleString('ko-KR', {
+    const { year, month, day, hour, minute } = getKoreanDateParts(date);
+    const period = Number(hour) < 12 ? '오전' : '오후';
+    const hour12 = String(Number(hour) % 12 || 12).padStart(2, '0');
+    return `${year}. ${month}. ${day}. ${period} ${hour12}:${minute}`;
+}
+
+function getKoreanDateParts(date: Date) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
-    });
+        minute: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return {
+        year: values.year || '0000',
+        month: values.month || '00',
+        day: values.day || '00',
+        hour: values.hour || '00',
+        minute: values.minute || '00'
+    };
 }
 
 export function formatBudgetValue(value: number | null | undefined) {
