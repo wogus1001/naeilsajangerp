@@ -45,12 +45,24 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-19 배포 요청 기준 최신 릴리즈 소스 커밋: `127b0ff feat(demo): add public franchise walkthrough`
+- 이 릴리즈는 공개 `/demo` 프랜차이즈 샘플 데모, 실제 ERP UI 기반 대시보드/DB 관리/계약 완료/출점 후보지/가맹 운영 체험, 첫 진입 딤드 설명, 우측 사용 방법 패널, 랜딩 데모 CTA를 포함한다.
+- 공개 데모는 샘플 데이터만 사용하며 실제 저장/발송/삭제 API를 호출하지 않는다.
 - 2026-06-18 배포 요청 기준 최신 릴리즈 소스 커밋: `efced6e feat(franchise): add partner access and DB exports`
 - 이 릴리즈는 회원가입 휴대폰 필수화, 협력업체 역할/승인/권한 격리, 모객 DB/출점 후보지/가맹 운영 엑셀·PDF·인쇄 지원을 포함한다.
 - production Gmail 발송과 회사 로고 업로드는 각 환경의 Vercel env와 Supabase storage policy가 맞아야 한다.
 - 협력업체 권한 격리는 `supabase_partner_vendor_access_migration.sql`을 운영 DB에 직접 적용해야 완전히 활성화된다.
 
 ## Release Ledger
+
+2026-06-19
+- 작업 브랜치: `codex/franchise-next-alerts-20260616`
+- 기능 커밋: `127b0ff feat(demo): add public franchise walkthrough`
+- dev 반영: 배포 요청 기준 `dev` HEAD로 체리픽 반영
+- main 반영: 배포 요청 기준 `main` HEAD로 체리픽 반영 예정
+- 배포 URL: `https://naeilsajang-dev.vercel.app`, `https://naeilsajang.vercel.app`
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npm run build`, Playwright `/demo` 1440px/390px 자동 투어/우측 설명 패널/로고 `데모`/`/api/**` 요청 0건/page-level horizontal overflow 0건 확인
+- 남은 이슈: 별도 SQL 추가 없음. 공개 데모는 샘플 데이터만 사용하며 실제 운영 API 호출을 차단한다.
 
 2026-06-18
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
