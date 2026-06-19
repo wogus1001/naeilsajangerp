@@ -58,6 +58,7 @@ function parseFlagMap(value: unknown): CompanyMenuFlagMap | null {
         businessCards: flags.businessCards !== false,
         businessCardRegister: flags.businessCardRegister !== false,
         contracts: flags.contracts !== false,
+        electronicPremiumContracts: flags.electronicPremiumContracts !== false,
         contractCreate: flags.contractCreate !== false,
         contractBuilder: flags.contractBuilder !== false,
         companyStaff: flags.companyStaff !== false
