@@ -62,3 +62,12 @@ test('Given default company menu flags When reading franchise intake features Th
     assert.equal(flags.franchiseWorkIntake, true);
     assert.equal(flags.propertyRegister, true);
 });
+
+test('Given electronic premium contract route When resolving company menu feature Then new contract feature owns it', () => {
+    const feature = getCompanyMenuFeatureForPath('/contracts/electronic/create');
+    const contractSection = SIDEBAR_SECTIONS.find(section => section.key === 'contracts');
+
+    assert.equal(feature?.key, 'electronicPremiumContracts');
+    assert.equal(feature?.title, '권리금 전자계약');
+    assert.equal(contractSection?.items.some(item => item.featureKey === 'electronicPremiumContracts'), true);
+});

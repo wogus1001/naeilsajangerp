@@ -63,11 +63,12 @@ supabase_franchise_lead_registration_requests_migration.sql
 supabase_franchise_property_promotion_migration.sql
 supabase_partner_vendor_access_migration.sql
 supabase_company_menu_features_migration.sql
+supabase_electronic_contracts_platform_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, 또는 `company_menu_features` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, 또는 `electronic_contracts` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Signup And Partner Vendor Setup
 
@@ -259,6 +260,32 @@ Run `supabase_franchise_notifications_migration.sql` before enabling in-app fran
 The header bell uses `/api/franchise-notifications` to create and read 담당자 alerts. V1 alerts are in-app only and are derived from franchise lead data: disclosure not sent, Gmail send failure, disclosure D-3/D-1, contract eligibility, overdue contact, today's contact, and HOT lead follow-up scheduling. Stale automatic alerts are dismissed during sync when their source condition no longer applies. Read alerts keep their `read_at` audit record in the database but are hidden from the header popover so the list only shows items that still require 담당자 확인. Future Kakao 알림톡 delivery can reuse `franchise_notifications.delivery_channel`, `kakao_template_key`, and `data`.
 
 The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
+
+## Electronic Contract v2 Setup
+
+The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven 권리금계약 flow lives separately under `/contracts/electronic` and `/contracts/electronic/create`.
+
+Run `supabase_electronic_contracts_platform_migration.sql` before enabling the new flow. The migration creates the platform UCANSIGN connection table, company-scoped `electronic_contracts`, webhook `contract_events`, and SafetyData license import tables.
+
+Required environment variables:
+
+```bash
+UCANSIGN_CLIENT_ID=
+UCANSIGN_CLIENT_SECRET=
+UCANSIGN_TOKEN_ENCRYPTION_KEY=
+UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID=
+UCANSIGN_WEBHOOK_SECRET=
+SAFETYDATA_SERVICE_KEY=
+NEXT_PUBLIC_APP_URL=
+```
+
+The new flow uses one Naeilsajang platform UCANSIGN account. Admins connect or disconnect the shared account through `/api/admin/ucansign/*`; staff do not connect personal UCANSIGN accounts for this flow. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app.
+
+`UCANSIGN_WEBHOOK_SECRET` is the shared secret expected on UCanSign webhook requests. Configure the webhook to send it as `Authorization: Bearer <secret>` or `x-ucansign-webhook-secret`; if custom headers are not available, append `?secret=<secret>` to the webhook URL.
+
+License number search no longer calls Food Safety Korea in real time. Admins import SafetyData `인허가업소정보` through `/api/admin/license-businesses/import`, and `/api/license-businesses/search` searches the local `license_business_records` table. Search result cards map `SALS_UNQ_SE_NO_LCPMT_NO` to the contract license number, `BUES_NM` to business name, and `ADDR` to candidate address, with road-name and lot-address similarity badges.
+
+Amount fields in the 권리금계약 payload are split: numeric won display values go to `...Amount` fields and Korean won text goes to matching `...Text` fields. Resident registration numbers, real signature values, and sensitive authentication values are not stored in ERP snapshots.
 
 ## Franchise Partner Vendor Access Setup
 
