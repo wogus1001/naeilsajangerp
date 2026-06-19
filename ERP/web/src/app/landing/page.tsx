@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { DemoCtaSection } from './DemoCtaSection';
 import { FeatureDetailsSection } from './FeatureDetailsSection';
 import { MetricsPreviewSection } from './MetricsPreviewSection';
 import { ProductPreview } from './ProductPreview';
@@ -22,6 +23,7 @@ export default function LandingPage() {
                         <a href="#features">기능</a>
                         <a href="#metrics">지표</a>
                         <a href="#workflow">업무 흐름</a>
+                        <Link href="/demo">데모</Link>
                     </nav>
                 </div>
             </header>
@@ -40,6 +42,8 @@ export default function LandingPage() {
                     <ProductPreview />
                 </div>
             </section>
+
+            <DemoCtaSection />
 
             <SheetsComparisonSection />
 

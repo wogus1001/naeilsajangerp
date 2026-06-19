@@ -448,6 +448,32 @@
 - SafetyData import는 새 batch를 먼저 비활성 삽입한 뒤 활성 batch를 교체해, 삽입 실패 시 기존 active 검색 데이터가 비는 위험을 줄였다.
 - 검증: `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/electronic-contracts/*.test.mts src/lib/ucansign/*.test.mts src/lib/api-auth.test.mts` 17건 통과.
 
+## 2026-06-19 공개 데모/사용 가이드 v1 개발 QA
+
+- `/landing`에 공개 데모 진입 CTA를 추가하고 현재 기능 기준으로 핵심 설명을 갱신했다.
+- `/demo`, `/demo/admin`, `/demo/manager`, `/demo/partner` 공개 라우트를 추가했다. 모든 데모는 샘플 데이터와 로컬 상태만 사용하며 실제 ERP API, Gmail, 유캔싸인, 저장/삭제 API를 호출하지 않는다.
+- 역할별 데모는 딤드 오버레이로 주요 기능을 5~6단계로 설명한다. 데스크톱은 강조 영역 옆 설명 카드, 모바일은 하단 설명 카드로 표시한다.
+- 향후 기능 개발 시 `/landing`과 `/demo` 영향 여부를 릴리즈 체크리스트에 포함한다. 변경 영향이 없으면 QA 로그에 `데모 영향 없음`으로 기록한다.
+- 검증: `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: production build를 `http://localhost:3002`에서 실행해 `/landing`, `/demo`, `/demo/admin`, `/demo/manager`, `/demo/partner`를 1440px/390px에서 확인했다. console error 0건, page error 0건, page-level horizontal overflow 0건. 담당자 데모에서 `샘플 발송 처리`, `샘플 계약 저장` 클릭 시 `/api/` 요청 0건이고 로컬 완료 메시지만 갱신되는 것을 확인했다.
+
+## 2026-06-19 실제 ERP UI 기반 공개 데모 v2 QA
+
+- `/demo/admin`, `/demo/manager`, `/demo/partner`를 실제 `MainLayout` 계열의 사이드바, 상단 헤더, breadcrumb, 탭, 필터, 표, 폼 밀도에 가깝게 재구성했다. 실제 인증/알림/API를 호출하는 보호 레이아웃은 직접 마운트하지 않고, 데모 전용 `DemoErpShell`과 프랜차이즈 workspace 어댑터로 분리했다.
+- 데모 범위는 프랜차이즈 우선으로 축소했다. 사이드바에는 상위 단독 `대시보드`와 `프랜차이즈` 하위 `모객 DB`, `출점 후보지`, `가맹 운영`만 노출하고 `업무`, `정보공개서`, `전자계약`, `인입 관리` 데모 목업은 제거했다.
+- `대시보드`와 `모객 DB`는 실제 `LeadDashboard`, `LeadDbWorkspace`, `LeadToolbar`, `LeadWorkspaceTabs`를 샘플 데이터로 구동한다. `출점 후보지`는 실제 `LocationMasterSection`, `MarketInsightWorkspaceTabs`, `MarketInsightViewTabs`를 사용하고, `가맹 운영`은 실제 `OperationsSummary`, `FranchiseLocationList`를 사용한다.
+- `/demo/**`에서 `/api/**` fetch가 발생하면 차단하는 데모 전용 guard를 유지했다. 데모 버튼은 후보지 연결, 후보지 반영, 운영 상태 변경처럼 로컬 완료 메시지만 갱신한다.
+- 검증: `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: 기존 로컬 서버 `http://localhost:3000`에서 `/demo`, `/demo/admin`, `/demo/manager`, `/demo/partner`를 1440px/390px로 확인했다. console error 0건, page error 0건, `/api/**` 요청 0건, page-level horizontal overflow 0건이다. 데모 사이드바에서 `업무` 메뉴는 노출되지 않고 `대시보드`와 프랜차이즈 메뉴만 표시되는 것을 확인했다.
+
+## 2026-06-19 공개 데모 직접 진입/탭 이동 QA
+
+- `/demo`의 역할 선택 화면을 제거하고 담당자 기준 프랜차이즈 데모가 바로 열리도록 변경했다. 랜딩 CTA도 단일 `데모 시작하기` 진입으로 정리했다.
+- `LeadWorkspaceTabs`의 `대시보드`, `DB 관리`, `계약 완료`를 모두 실제 데모 화면 전환에 연결했다. `계약 완료`는 샘플 체크리스트 요약을 주입해 운영 API 호출 없이 실제 체크리스트 UI를 표시한다.
+- `/demo` 첫 진입 시 대시보드 핵심 숫자부터 딤드 오버레이가 자동 표시되도록 변경했다. 우측에는 `사용 방법` 패널을 고정해 상단 숫자, 파이프라인, DB 관리, 계약 완료 확인 순서를 안내한다.
+- 데모 사이드바 로고와 담당자 회사 표기는 실회사명 대신 `데모` 기준으로 표시한다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npm run build` 통과. Playwright로 `/demo` 1440px/390px에서 자동 투어, 우측 설명 패널, 로고 `데모`, `/api/**` 요청 0건, page-level horizontal overflow 0건을 확인했다.
+
 ## 다음 QA 체크리스트
 
 ### P0

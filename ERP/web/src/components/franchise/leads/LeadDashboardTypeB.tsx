@@ -51,7 +51,7 @@ export function LeadDashboardTypeB({
 
     return (
         <>
-            <section className={styles.kpiGrid}>
+            <section className={styles.kpiGrid} data-demo-id="dashboard-kpis">
                 <article className={styles.kpiCard}>
                     <span>1차 유입 DB</span>
                     <strong>{rawIntakeCount.toLocaleString()}</strong>
@@ -75,7 +75,7 @@ export function LeadDashboardTypeB({
             </section>
 
             <section className={styles.analyticsGrid}>
-                <article className={styles.panelWide}>
+                <article className={styles.panelWide} data-demo-id="dashboard-pipeline">
                     <div className={styles.panelHeader}>
                         <div>
                             <h2>모객 파이프라인</h2>
@@ -117,7 +117,7 @@ export function LeadDashboardTypeB({
                     </div>
                 </article>
 
-                <article className={styles.panel}>
+                <article className={styles.panel} data-demo-id="dashboard-source">
                     <div className={styles.panelHeader}>
                         <div>
                             <h2>유입 경로</h2>
@@ -143,7 +143,7 @@ export function LeadDashboardTypeB({
                     </div>
                 </article>
 
-                <article className={styles.panel}>
+                <article className={styles.panel} data-demo-id="dashboard-trend">
                     <div className={`${styles.panelHeader} ${styles.trendPanelHeader}`}>
                         <div>
                             <h2>{trendModeConfig.title}</h2>
@@ -177,7 +177,7 @@ export function LeadDashboardTypeB({
                     </div>
                 </article>
 
-                <article className={styles.panel}>
+                <article className={styles.panel} data-demo-id="dashboard-manager">
                     <div className={styles.panelHeader}>
                         <div>
                             <h2>담당자별 모객</h2>
