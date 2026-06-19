@@ -91,6 +91,7 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         collapsedTitle: '계약',
         items: [
             { title: '계약관리', url: '/contracts', category: '계약', featureKey: 'contracts' },
+            { title: '권리금 전자계약', url: '/contracts/electronic', category: '계약', featureKey: 'electronicPremiumContracts' },
             { title: '간편 서명 시작(전자)', url: '/contracts/create', category: '계약', featureKey: 'contractCreate' },
             { title: '새 계약 양식 만들기', url: '/contracts/builder', category: '계약', featureKey: 'contractBuilder' }
         ]
