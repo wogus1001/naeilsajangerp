@@ -45,9 +45,10 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
-- 2026-06-19 배포 요청 기준 최신 릴리즈 소스 커밋: `127b0ff feat(demo): add public franchise walkthrough`
-- 이 릴리즈는 공개 `/demo` 프랜차이즈 샘플 데모, 실제 ERP UI 기반 대시보드/DB 관리/계약 완료/출점 후보지/가맹 운영 체험, 첫 진입 딤드 설명, 우측 사용 방법 패널, 랜딩 데모 CTA를 포함한다.
+- 2026-06-19 배포 요청 기준 최신 릴리즈 소스 커밋: `185d84d feat(contracts): add platform electronic contract flow`, `127b0ff feat(demo): add public franchise walkthrough`, `07b519e docs: align release ledger with contract demo rollout`
+- 이 릴리즈는 기존 계약 기능을 유지한 별도 `/contracts/electronic` 권리금 전자계약 v2, 내일사장 공용 유캔싸인 발송, SafetyData 인허가번호 내부 조회, 공개 `/demo` 프랜차이즈 샘플 데모, 실제 ERP UI 기반 대시보드/DB 관리/계약 완료/출점 후보지/가맹 운영 체험, 첫 진입 딤드 설명, 우측 사용 방법 패널, 랜딩 데모 CTA를 포함한다.
 - 공개 데모는 샘플 데이터만 사용하며 실제 저장/발송/삭제 API를 호출하지 않는다.
+- 전자계약 v2는 `supabase_electronic_contracts_platform_migration.sql`을 사용자가 Supabase SQL Editor에서 직접 적용해야 테이블과 공용 유캔싸인 연결이 완전히 활성화된다.
 - 2026-06-18 배포 요청 기준 최신 릴리즈 소스 커밋: `efced6e feat(franchise): add partner access and DB exports`
 - 이 릴리즈는 회원가입 휴대폰 필수화, 협력업체 역할/승인/권한 격리, 모객 DB/출점 후보지/가맹 운영 엑셀·PDF·인쇄 지원을 포함한다.
 - production Gmail 발송과 회사 로고 업로드는 각 환경의 Vercel env와 Supabase storage policy가 맞아야 한다.
@@ -57,12 +58,12 @@ YYYY-MM-DD
 
 2026-06-19
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 기능 커밋: `127b0ff feat(demo): add public franchise walkthrough`
-- dev 반영: 배포 요청 기준 `dev` HEAD로 체리픽 반영
+- 기능 커밋: `185d84d feat(contracts): add platform electronic contract flow`, `127b0ff feat(demo): add public franchise walkthrough`, `07b519e docs: align release ledger with contract demo rollout`
+- dev 반영: `512ccce feat(contracts): add platform electronic contract flow`, `890d260 feat(demo): add public franchise walkthrough`, `1ab5c87 docs: record public demo release status`, 문서 보정 커밋은 배포 요청 기준 `dev` HEAD로 반영
 - main 반영: 배포 요청 기준 `main` HEAD로 체리픽 반영 예정
 - 배포 URL: `https://naeilsajang-dev.vercel.app`, `https://naeilsajang.vercel.app`
-- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npm run build`, Playwright `/demo` 1440px/390px 자동 투어/우측 설명 패널/로고 `데모`/`/api/**` 요청 0건/page-level horizontal overflow 0건 확인
-- 남은 이슈: 별도 SQL 추가 없음. 공개 데모는 샘플 데이터만 사용하며 실제 운영 API 호출을 차단한다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/electronic-contracts/*.test.mts src/lib/ucansign/*.test.mts src/lib/api-auth.test.mts src/app/demo/demoContent.test.mts`, `npm run build`, Playwright `/demo` 1440px/390px 자동 투어/우측 설명 패널/로고 `데모`/`/api/**` 요청 0건/page-level horizontal overflow 0건 확인
+- 남은 이슈: `supabase_electronic_contracts_platform_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 전자계약 v2 테이블과 공용 유캔싸인 연결이 활성화된다. 공개 데모는 샘플 데이터만 사용하며 실제 운영 API 호출을 차단한다.
 
 2026-06-18
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
