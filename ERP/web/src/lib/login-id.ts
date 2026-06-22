@@ -15,3 +15,13 @@ export function getEmailLocalLoginId(email: unknown): string {
     const atIndex = normalizedEmail.indexOf('@');
     return atIndex > 0 ? normalizedEmail.slice(0, atIndex) : normalizedEmail;
 }
+
+export function isLoginIdSchemaMissing(error: unknown): boolean {
+    const errorLike = error as { code?: unknown; message?: unknown; details?: unknown };
+    const code = String(errorLike?.code ?? '');
+    const message = `${String(errorLike?.message ?? '')} ${String(errorLike?.details ?? '')}`.toLowerCase();
+
+    return code === '42703'
+        || code === 'PGRST204'
+        || (message.includes('login_id') && (message.includes('column') || message.includes('schema')));
+}

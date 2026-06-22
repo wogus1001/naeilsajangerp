@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
+import { isLoginIdSchemaMissing, isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { id, loginId, companyId } = body;
+        const { id, loginId, companyId, currentProfileId } = body;
         const candidateLoginId = loginId ?? id;
 
         if (companyId && candidateLoginId) {
@@ -15,15 +15,27 @@ export async function POST(request: Request) {
             }
 
             const supabaseAdmin = getSupabaseAdmin();
-            const { data, error } = await supabaseAdmin
+            let query = supabaseAdmin
                 .from('profiles')
                 .select('id')
                 .eq('company_id', String(companyId))
                 .eq('login_id_normalized', normalizedLoginId)
                 .limit(1);
 
+            if (currentProfileId) {
+                query = query.neq('id', String(currentProfileId));
+            }
+
+            const { data, error } = await query;
+
             if (error) {
                 console.error('Company login ID check error:', error);
+                if (isLoginIdSchemaMissing(error)) {
+                    return NextResponse.json({
+                        available: false,
+                        message: '아이디 로그인 DB 설정이 필요합니다. supabase_login_id_migration.sql 적용 후 다시 시도해주세요.'
+                    }, { status: 500 });
+                }
                 return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
             }
 

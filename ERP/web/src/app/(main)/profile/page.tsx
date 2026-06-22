@@ -6,10 +6,9 @@ import { Save } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { BasicInfoSection } from './components/BasicInfoSection';
-import { IntegrationSection } from './components/IntegrationSection';
 import { PasswordSection } from './components/PasswordSection';
 import { WithdrawalSection } from './components/WithdrawalSection';
-import type { IdCheckMessage, ProfileUser, UcansignStatus } from './components/profileTypes';
+import type { IdCheckMessage, ProfileUser } from './components/profileTypes';
 
 export default function ProfilePage() {
     const [user, setUser] = useState<ProfileUser | null>(null);
@@ -21,7 +20,6 @@ export default function ProfilePage() {
         newPassword: '',
         confirmPassword: ''
     });
-    const [ucansignStatus, setUcansignStatus] = useState<UcansignStatus>({ connected: false });
     const [isLoading, setIsLoading] = useState(false);
 
     // ID duplication check state
@@ -75,16 +73,6 @@ export default function ProfilePage() {
                 companyName: parsed.companyName || ''
             }));
             setIsIdChecked(true); // Initial ID is valid
-
-            // Fetch UCanSign status
-            fetch(`/api/user/status?userId=${parsed.uid}`) // Use UID here for safety too
-                .then(res => res.json())
-                .then(data => {
-                    if (data.connected) {
-                        setUcansignStatus({ connected: true, linkedAt: data.linkedAt });
-                    }
-                })
-                .catch(err => console.error('Failed to fetch status:', err));
         }
     }, []);
 
@@ -113,16 +101,20 @@ export default function ProfilePage() {
             const res = await fetch('/api/users/check-id', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: formData.id })
+                body: JSON.stringify({
+                    id: formData.id,
+                    companyId: user?.companyId,
+                    currentProfileId: user?.uid
+                })
             });
             const data = await res.json();
 
             if (data.available) {
                 setIsIdChecked(true);
-                setIdCheckMessage({ text: '사용 가능한 아이디입니다.', type: 'success' });
+                setIdCheckMessage({ text: data.message || '사용 가능한 아이디입니다.', type: 'success' });
             } else {
                 setIsIdChecked(false);
-                setIdCheckMessage({ text: '이미 사용 중인 아이디입니다.', type: 'error' });
+                setIdCheckMessage({ text: data.message || '이미 사용 중인 아이디입니다.', type: 'error' });
             }
         } catch (error) {
             console.error('Check ID failed:', error);
@@ -227,12 +219,6 @@ export default function ProfilePage() {
                         onUserChangedAction={setUser}
                     />
                     <PasswordSection formData={formData} onChangeAction={handleChange} />
-                    <IntegrationSection
-                        user={user}
-                        ucansignStatus={ucansignStatus}
-                        showAlertAction={showAlert}
-                        showConfirmAction={showConfirm}
-                    />
                     <WithdrawalSection
                         user={user}
                         showAlertAction={showAlert}
