@@ -328,13 +328,6 @@
 - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
 - 로컬 브라우저 QA: `http://127.0.0.1:3000/privacy` 1440px/390px 렌더를 확인했고, `http://127.0.0.1:3000/landing`은 200 응답과 푸터의 개인정보처리방침 링크 포함을 확인했다.
 
-## 2026-06-16 main 배포 QA
-
-- `my_project_main_release`에서 `23e8d54 feat(franchise): finalize alerts and OAuth policy`까지 반영하고 `origin/main`으로 push했다.
-- GitHub Vercel status는 `success`, 설명은 `Deployment has completed`로 확인했다.
-- production URL `https://naeilsajang.vercel.app/privacy`와 `https://naeilsajang.vercel.app/landing` 모두 HTTP 200을 반환했다. `/privacy` 본문에는 `gmail.send`, `Gmail 수신함`, `naeilsajang@gmail.com`, `개인정보처리방침` 문구가 포함됐고, `/landing`에는 `/privacy` 링크가 포함됐다.
-- main release 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 관련 `npx tsx --test ...`, `npm run build` 통과.
-
 ## 2026-06-17 알림 읽음 항목 숨김 QA
 
 - 기존 알림 팝오버는 `0건 미확인` 상태에서도 `read_at`이 채워진 읽음 알림을 최근 목록에 계속 표시했다. 이는 삭제 지연이 아니라 DB 감사 기록과 헤더 표시 필터가 분리되지 않은 상태였다.
@@ -440,7 +433,7 @@
 ## 2026-06-18 권리금 전자계약 v2 개발 QA
 
 - 기존 `/contracts`, `/contracts/create`, `/contracts/builder` 개인별 유캔싸인/계약 기능은 그대로 두고, 새 `/contracts/electronic`와 `/contracts/electronic/create` 흐름을 추가했다.
-- 새 흐름은 내일사장 공용 유캔싸인 계정 1개를 `platform_ucansign_connection`에 암호화 저장하고, ERP `electronic_contracts.company_id`와 `sent_by_profile_id`로 `내가 발송`, `회사 문서`, 관리자 `전체 문서`를 분리한다.
+- 새 흐름은 내일사장 공용 UCanSign API KEY 1개로 access token을 발급받아 발송하고, ERP `electronic_contracts.company_id`와 `sent_by_profile_id`로 `내가 발송`, `회사 문서`, 관리자 `전체 문서`를 분리한다.
 - 권리금계약서 입력값은 ERP 양식에서 받고, 금액은 `...Amount` 숫자/콤마 필드와 `...Text` 한글 금액 필드로 분리해 유캔싸인 payload를 만든다. 주민등록번호, 실제 서명값, 민감 인증값은 ERP 스냅샷에 저장하지 않는다.
 - 인허가번호 조회는 SafetyData `인허가업소정보` 전체 import 후 내부 `license_business_records`에서 검색한다. 결과 카드는 `SALS_UNQ_SE_NO_LCPMT_NO`, `BUES_NM`, `ADDR`를 각각 영업허가번호, 상호명, 주소로 표시하고 도로명/지번 유사 배지를 붙인다.
 - 신규 SQL: `supabase_electronic_contracts_platform_migration.sql`. 실제 Supabase 적용은 사용자가 직접 진행해야 한다.
@@ -480,6 +473,63 @@
 - `/demo` 첫 진입 시 대시보드 핵심 숫자부터 딤드 오버레이가 자동 표시되도록 변경했다. 우측에는 `사용 방법` 패널을 고정해 상단 숫자, 파이프라인, DB 관리, 계약 완료 확인 순서를 안내한다.
 - 데모 사이드바 로고와 담당자 회사 표기는 실회사명 대신 `데모` 기준으로 표시한다.
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npm run build` 통과. Playwright로 `/demo` 1440px/390px에서 자동 투어, 우측 설명 패널, 로고 `데모`, `/api/**` 요청 0건, page-level horizontal overflow 0건을 확인했다.
+
+## 2026-06-19 회사 업로드 전자계약 템플릿 v2 QA
+
+- `/contracts/electronic`에 `템플릿 관리` 탭을 추가했다. 사용자 화면은 ERP에서 이름/PDF를 중복 입력하지 않고 `UCanSign에서 만들기`로 템플릿 설정 화면을 열어 이름, PDF, 입력칸, 서명칸을 UCanSign에서 저장하는 흐름으로 정리했다.
+- UCanSign 콜백이 돌아오면 ERP가 회사 템플릿 버전을 자동 연결/사용중 처리한다. 콜백 또는 상세 조회 응답에서 템플릿명이 확인되면 ERP 목록명도 UCanSign 저장명으로 동기화한다.
+- 보관 템플릿은 사용 템플릿 표와 분리해 노출한다. 사용 템플릿 삭제 시 발송 이력이 있으면 보관으로 이동하고, 보관 템플릿은 복원하거나 목록에서 완전 삭제할 수 있다. 삭제 확인은 브라우저 기본 confirm 대신 앱 시스템 다이얼로그로 표시한다.
+- 신규 API는 `GET/POST /api/electronic-contract-templates`, 상세/수정/삭제, PDF 업로드, 버전 저장, 자동 연결 콜백, `POST /api/electronic-contracts/send-company-template`로 분리했다. 기존 권리금 고정 템플릿 발송 API와 기존 계약 기능은 유지했다.
+- 공개 확인 가능한 유캔싸인 문서는 direct raw PDF 좌표 발송보다 템플릿/임베드 흐름이 명확하므로, 회사 업로드 템플릿 발송은 활성 버전에 `ucansign_template_id`가 연결된 경우에만 진행한다. 미연결 상태는 발송 차단 메시지를 보여준다.
+- 검증: `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: 로컬 로그인 세션에서 `/contracts/electronic` -> `템플릿 관리` 진입 후 API KEY 상태줄 미노출, 상단 설명 문구 제거, `문서/설정` 컬럼 대신 `생성자/생성일` 컬럼 노출, 사용/보관 템플릿 분리, `수정`/`복원`/`삭제` 버튼, 시스템 삭제 다이얼로그, 하단 중복 안내 패널 제거를 확인했다. 스크린샷: `.omo/evidence/electronic-contract-template-ui-20260619.png`.
+- 전자계약 헤더의 독립 `권리금계약 작성` 버튼을 제거하고, `템플릿 관리` 안에 `공통 템플릿` 섹션을 추가했다. 현재 기본 제공 양식은 `권리금계약서`이며, 회사가 만든 양식은 `회사 템플릿` 섹션에서 별도로 관리한다.
+
+## 2026-06-19 UCanSign API KEY 발송 전환 QA
+
+- 새 전자계약 v2 공용 발송을 OAuth 연결/refresh token 저장 방식에서 UCanSign API KEY 토큰 발급 방식으로 전환했다. 서버는 `UCANSIGN_API_KEY`로 30분 access token을 발급받아 캐시하고, 401 응답 시 1회 재발급 후 재시도한다.
+- ERP 문서 소유권 구조는 유지한다. 내일사장 제공 공통 권리금계약서와 회사별 업로드 템플릿은 모두 공용 API KEY로 발송하되, 문서함과 템플릿 관리는 `company_id`, `sent_by_profile_id`, 회사 템플릿 버전 기준으로 분리한다.
+- 관리자 상태 API는 DB 연결 상태가 아니라 `UCANSIGN_API_KEY`, 공통 권리금 템플릿 ID, webhook secret 누락 여부를 알려준다. 사용자 화면에는 재연동 흐름이 노출되지 않는다.
+- 검증: `npx tsx --test src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과.
+
+## 2026-06-22 전자계약 문서 다운로드 QA
+
+- 사용자가 받은 완료 문서 `[내일] ㅋㅋㅋzzzz.pdf`가 Chrome PDF viewer에서 열리지 않는 문제를 확인했다. 원인은 UCanSign 완료 문서 `full-file`이 실제 PDF 단일 파일이 아니라 서명 PDF, 감사추적인증서 PDF, 페이지 이미지가 들어있는 ZIP 묶음을 반환했는데, ERP가 이를 `.pdf`로 저장한 것이었다.
+- `normalizePlatformDocumentFile()`을 추가해 응답 첫 바이트가 `%PDF-`이면 PDF로 유지하고, ZIP이면 내부 PDF 중 가장 큰 파일을 주 문서로 추출해 `application/pdf`로 내려주게 했다. ZIP 안에 유효한 PDF가 없을 때만 `.zip`으로 저장한다.
+- 전자계약 문서함 다운로드 버튼도 서버 응답 `Content-Type`에 따라 `.pdf` 또는 `.zip` 확장자를 붙이도록 맞췄다.
+- 검증: `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/ucansign/platform-client.test.mts`, `npm run build` 통과. 추가 관련 테스트 묶음 `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/common-templates.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts`는 34건 통과했다.
+
+## 2026-06-22 회사 템플릿 직접 작성 임베딩 QA
+
+- 회사 업로드 템플릿에서 `템플릿에서 직접 작성`을 선택했을 때 UCanSign 범용 문서 선택 화면이 뜨는 문제를 수정했다.
+- 원인은 ERP가 활성 템플릿 버전의 `ucansign_template_id`를 사용하지 않고 범용 `/embedding/sign-creating` 임베딩을 열던 것이었다. UCanSign 공식 임베딩 API의 범용 `sign-creating`은 문서 선택 화면부터 시작하며, `POST /openapi/embedding/sign-creating/{templateId}`는 404로 확인됐다.
+- 이제 저장된 템플릿 ID가 있는 경우 `https://app.ucansign.com/signCreating/progress/{ucansign_template_id}` 진행 화면을 열어 해당 템플릿의 참여자 설정/서명 요청 화면으로 바로 진입하고, 연결 ID가 없으면 `UCanSign 템플릿 연결이 필요합니다.`로 차단한다.
+- 이 변경은 실제 저장/발송 API 구조를 바꾸지 않으며, 회사/발송자 기준 문서 분리와 UCanSign API KEY 공용 발송 정책은 유지한다. 신규 SQL은 없다.
+- 검증: `npx tsx --test src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/lib/electronic-contracts/ucansign-webhook.test.mts src/app/(main)/contracts/electronic/_components/signerParticipantModel.test.mts src/lib/electronic-contracts/signer-participant-validation.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-06-22 회사 템플릿 작성 방식 단순화 QA
+
+- 회사 업로드 템플릿 계약 작성 화면에서 `작성 방식` 선택 카드와 `템플릿에서 직접 작성` 임베딩 진입을 제거했다. 사용자 화면은 `필드명` 입력, 서명자 정보, 임시저장, 전자계약 발송만 남긴다.
+- 임시저장/발송 payload는 항상 `inputMode='erp'`와 ERP 입력값을 기준으로 저장한다. 기존 공통 템플릿/회사 템플릿 분리, 회사/발송자 기준 문서함 분리는 유지한다.
+- UCanSign Postman 컬렉션을 확인한 결과 템플릿 기반 서명문서 생성, 문서 세부정보/이력, 문서 파일, 종합 파일 다운로드, 템플릿 생성/수정 임베딩 endpoint는 있으나, 저장된 템플릿에 ERP 입력값을 넣은 PDF를 발송 전에 렌더링하는 preview endpoint는 확인되지 않았다.
+- 다음 고도화 후보는 발송 전 입력값/서명자 확인 모달, 템플릿 연결 상태 진단, webhook 누락 시 상태 새로고침, 완료 문서 다운로드/이력 재조회 강화다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-06-22 회사별 아이디 로그인 QA
+
+- 회원가입 화면을 `아이디`, `이메일`, `비밀번호`, `비밀번호 확인`, `이름`, `휴대폰 번호`, `회사` 입력 흐름으로 정리했다. 비밀번호 확인 불일치, 휴대폰 누락, 아이디 규칙 위반은 가입 전에 차단한다.
+- 로그인은 기본적으로 `회사 + 아이디 + 비밀번호`를 서버에 전달하고, 서버가 `profiles.company_id + login_id_normalized`로 실제 Supabase Auth 이메일을 찾아 세션을 발급한다. 전환 안정성을 위해 이메일 입력 로그인은 임시 fallback으로 유지한다.
+- 신규 SQL: `supabase_login_id_migration.sql`. 이 SQL은 `profiles.login_id`, `profiles.login_id_normalized`를 추가하고 기존 계정을 이메일 `@` 앞부분으로 backfill한다. 같은 회사 안에 중복 local-part가 있으면 SQL이 실패하므로 사용자가 Supabase SQL Editor에서 중복 정리 후 직접 적용해야 한다.
+- 검증: `npx tsx --test src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, Browserslist/baseline-browser-mapping 경고만 출력했다.
+- 브라우저 QA: 기존 로컬 서버 `http://localhost:3000`에서 `/signup`, `/login`을 1440px 기준으로 확인했다. 회원가입 라벨은 아이디/이메일/비밀번호/비밀번호 확인/이름/휴대폰 번호/회사명/가입 승인 방식으로 표시됐고, 로그인 라벨은 회사/아이디/비밀번호/아이디 저장으로 표시됐다. 두 화면 모두 page-level horizontal overflow 0건이었다.
+- 데모 영향 없음: 공개 `/demo`는 인증 없는 샘플 데이터 화면이므로 이번 로그인 방식 변경에 따른 데모 UI 수정은 없다.
+
+## 2026-06-22 로그인 화면 저장 UX QA
+
+- 로그인 화면을 `LoginForm` 프레젠테이션 컴포넌트와 `loginStorage` helper로 분리했다. 회사는 최초 1회 검색해 저장하고, 다음 로그인부터 저장된 회사가 자동 선택되도록 했다.
+- `아이디 저장`은 아이디만 선택적으로 저장하고, 회사 선택값은 로그인 성공 또는 회사 선택 시 별도로 저장한다. 이메일 로그인 fallback은 유지하되 UI 기본 안내는 아이디 로그인 기준으로 정리했다.
+- 검증: `npx tsx --test src/app/login/loginStorage.test.mts src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 신규 SQL은 없다. 기존 회사별 아이디 로그인 SQL 적용 상태에 따라 실제 아이디 로그인 schema가 활성화된다.
 
 ## 다음 QA 체크리스트
 

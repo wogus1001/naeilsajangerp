@@ -171,7 +171,7 @@ export default function PremiumRightsCreatePage() {
             const payload: SendResponse = await response.json();
             if (!response.ok) throw new Error(payload.message || '전자계약 발송에 실패했습니다.');
             if (payload.data?.contractId) setDraftContractId(payload.data.contractId);
-            setSuccess(`발송 완료: ${payload.data?.ucansignDocumentId || payload.data?.contractId || ''}`);
+            setSuccess('전자계약 발송이 완료되었습니다.');
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : '전자계약 발송에 실패했습니다.');
         } finally {
@@ -184,7 +184,7 @@ export default function PremiumRightsCreatePage() {
             <section className={`${styles.panel} ${styles.header}`}>
                 <div>
                     <h1 className={styles.title}>권리금계약 작성</h1>
-                    <p className={styles.description}>ERP 양식에 계약 정보를 입력하면 내일사장 공용 유캔싸인 계정으로 발송됩니다.</p>
+                    <p className={styles.description}>ERP 양식에 계약 정보를 입력하면 내일사장 공용 UCanSign API KEY로 발송됩니다.</p>
                 </div>
                 <Link className={styles.secondaryButton} href="/contracts/electronic">
                     <ArrowLeft size={16} />
@@ -263,7 +263,7 @@ export default function PremiumRightsCreatePage() {
                     </button>
                     <button className={styles.primaryButton} type="submit" disabled={sending}>
                         <Send size={16} />
-                        {sending ? '발송 중' : '유캔싸인 발송'}
+                        {sending ? '발송 중' : '전자계약 발송'}
                     </button>
                 </div>
             </form>

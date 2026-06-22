@@ -95,6 +95,56 @@
     box-shadow: 0 0 0 3px var(--primary-light);
 }
 
+.companyPickerRow {
+    display: flex;
+    gap: 8px;
+}
+
+.companyInput {
+    flex: 1;
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.secondaryButton {
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.helperText {
+    margin: 0;
+    color: #868e96;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.rememberRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.checkbox {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.checkboxLabel {
+    color: #666666;
+    font-size: 14px;
+    cursor: pointer;
+}
+
 .loginButton {
     margin-top: 12px;
     padding: 14px;

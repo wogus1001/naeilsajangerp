@@ -5,6 +5,9 @@ export type ElectronicContractRow = {
     readonly ucansign_document_id: string | null;
     readonly template_key: string | null;
     readonly template_version: string | null;
+    readonly template_source: string | null;
+    readonly company_template_id: string | null;
+    readonly company_template_version_id: string | null;
     readonly name: string | null;
     readonly status: string | null;
     readonly license_number: string | null;
@@ -23,6 +26,9 @@ export type ElectronicContractView = {
     readonly ucansignDocumentId: string;
     readonly templateKey: string;
     readonly templateVersion: string;
+    readonly templateSource: string;
+    readonly companyTemplateId: string;
+    readonly companyTemplateVersionId: string;
     readonly name: string;
     readonly status: string;
     readonly licenseNumber: string;
@@ -41,6 +47,15 @@ function stringFromRecord(record: Record<string, unknown> | null, key: string): 
     return typeof value === 'string' ? value : '';
 }
 
+function participantName(record: Record<string, unknown> | null, index: number): string {
+    const participants = record?.participants;
+    if (!Array.isArray(participants)) return '';
+    const value = participants[index];
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return '';
+    const name = value.name;
+    return typeof name === 'string' ? name : '';
+}
+
 export function toElectronicContractView(row: ElectronicContractRow): ElectronicContractView {
     const snapshot = row.form_snapshot;
     return {
@@ -50,6 +65,9 @@ export function toElectronicContractView(row: ElectronicContractRow): Electronic
         ucansignDocumentId: row.ucansign_document_id || '',
         templateKey: row.template_key || '',
         templateVersion: row.template_version || '',
+        templateSource: row.template_source || '',
+        companyTemplateId: row.company_template_id || '',
+        companyTemplateVersionId: row.company_template_version_id || '',
         name: row.name || '전자계약',
         status: row.status || 'draft',
         licenseNumber: row.license_number || '',
@@ -57,9 +75,9 @@ export function toElectronicContractView(row: ElectronicContractRow): Electronic
         completedAt: row.completed_at || '',
         createdAt: row.created_at || '',
         updatedAt: row.updated_at || '',
-        businessName: stringFromRecord(snapshot, 'businessName'),
-        transferorName: stringFromRecord(snapshot, 'transferorName'),
-        transfereeName: stringFromRecord(snapshot, 'transfereeName'),
+        businessName: stringFromRecord(snapshot, 'businessName') || stringFromRecord(snapshot, 'templateName'),
+        transferorName: stringFromRecord(snapshot, 'transferorName') || participantName(snapshot, 0),
+        transfereeName: stringFromRecord(snapshot, 'transfereeName') || participantName(snapshot, 1),
         companyName: stringFromRecord(snapshot, 'companyName')
     };
 }

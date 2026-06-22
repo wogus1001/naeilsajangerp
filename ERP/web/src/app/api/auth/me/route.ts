@@ -9,6 +9,7 @@ type ProfileRow = {
     company_id: string | null;
     status: string | null;
     email: string | null;
+    login_id: string | null;
     company: { name: string | null; logo_url?: string | null } | null;
 };
 
@@ -52,21 +53,28 @@ export async function GET(request: Request) {
         }
 
         const supabaseAdmin = getSupabaseAdmin();
-        let profileResult = await supabaseAdmin
+        const profileResult = await supabaseAdmin
             .from('profiles')
-            .select('id, name, role, company_id, status, email, company:companies!company_id(name, logo_url)')
+            .select('id, name, role, company_id, status, email, login_id, company:companies!company_id(name, logo_url)')
             .eq('id', userData.user.id)
             .single<ProfileRow>();
 
-        if (profileResult.error) {
-            profileResult = await supabaseAdmin
+        let profile: ProfileRow | null = profileResult.data;
+        let profileError = profileResult.error;
+
+        if (profileError) {
+            const fallbackProfileResult = await supabaseAdmin
                 .from('profiles')
                 .select('id, name, role, company_id, status, email, company:companies!company_id(name)')
                 .eq('id', userData.user.id)
-                .single<ProfileRow>();
+                .single<Omit<ProfileRow, 'login_id'>>();
+
+            profile = fallbackProfileResult.data
+                ? { ...fallbackProfileResult.data, login_id: null }
+                : null;
+            profileError = fallbackProfileResult.error;
         }
 
-        const { data: profile, error: profileError } = profileResult;
         if (profileError || !profile) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -79,7 +87,7 @@ export async function GET(request: Request) {
         }
 
         const normalizedUser = {
-            id: toLegacyLoginId(profile.email || userData.user.email || null, userData.user.id),
+            id: profile.login_id || toLegacyLoginId(profile.email || userData.user.email || null, userData.user.id),
             uid: userData.user.id,
             email: userData.user.email || profile.email || null,
             name: profile.name || '',

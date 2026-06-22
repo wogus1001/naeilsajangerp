@@ -6,6 +6,7 @@ import styles from '../login/page.module.css'; // Reuse login styles
 import { AlertModal } from '@/components/common/AlertModal';
 import { CompanySearchModal, type Company } from './CompanySearchModal';
 import { SignupApprovalNotice } from './SignupApprovalNotice';
+import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 
 function normalizeCompanyName(value: string): string {
     return value.trim().normalize('NFC').replace(/\s+/g, '');
@@ -29,6 +30,12 @@ export default function SignupPage() {
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [isNewCompanyRequest, setIsNewCompanyRequest] = useState(false);
     const [signupRole, setSignupRole] = useState<'staff' | 'partner_vendor'>('staff');
+    const [loginIdCheck, setLoginIdCheck] = useState<{
+        companyId: string;
+        loginId: string;
+        available: boolean;
+        message: string;
+    } | null>(null);
 
     // Alert Modal State
     const [alertConfig, setAlertConfig] = useState<{
@@ -62,12 +69,32 @@ export default function SignupPage() {
         e.preventDefault();
         setIsLoading(true);
 
-        const id = getInputValue('id');
+        const loginId = getInputValue('loginId');
+        const email = getInputValue('email');
         const password = getInputValue('password');
+        const passwordConfirm = getInputValue('passwordConfirm');
         const name = getInputValue('name');
         const phone = getInputValue('phone');
         const companyName = getInputValue('companyName');
         const phoneNormalized = phone.replace(/\D/g, '');
+        const normalizedLoginId = normalizeLoginId(loginId);
+
+        if (!isValidLoginId(normalizedLoginId)) {
+            showAlert(LOGIN_ID_RULE_MESSAGE, 'error');
+            setIsLoading(false);
+            return;
+        }
+
+        if (selectedCompany && !isNewCompanyRequest) {
+            const loginIdWasChecked = loginIdCheck?.available === true
+                && loginIdCheck.companyId === selectedCompany.id
+                && loginIdCheck.loginId === normalizedLoginId;
+            if (!loginIdWasChecked) {
+                showAlert('아이디 중복 확인을 해주세요.', 'error');
+                setIsLoading(false);
+                return;
+            }
+        }
 
         if (password.length < 6) {
             showAlert('비밀번호는 최소 6자 이상이어야 합니다.', 'error');
@@ -75,10 +102,22 @@ export default function SignupPage() {
             return;
         }
 
+        if (password !== passwordConfirm) {
+            showAlert('비밀번호가 일치하지 않습니다.', 'error');
+            setIsLoading(false);
+            return;
+        }
+
         // Email Validation Policy
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(id)) {
-            showAlert('아이디는 이메일 형식(예: user@example.com)으로 입력해주세요.', 'error');
+        if (!emailRegex.test(email)) {
+            showAlert('이메일 형식이 올바르지 않습니다.', 'error');
+            setIsLoading(false);
+            return;
+        }
+
+        if (phoneNormalized.length < 10 || phoneNormalized.length > 11) {
+            showAlert('휴대폰 번호를 정확히 입력해주세요.', 'error');
             setIsLoading(false);
             return;
         }
@@ -93,7 +132,17 @@ export default function SignupPage() {
             const res = await fetch('/api/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, password, name, phone, companyName, role: isNewCompanyRequest ? 'manager' : signupRole }),
+                body: JSON.stringify({
+                    loginId: normalizedLoginId,
+                    email,
+                    password,
+                    passwordConfirm,
+                    name,
+                    phone,
+                    companyName,
+                    companyId: selectedCompany?.id,
+                    role: isNewCompanyRequest ? 'manager' : signupRole
+                }),
             });
 
             const data = await res.json();
@@ -116,6 +165,46 @@ export default function SignupPage() {
             showAlert('회원가입 중 오류가 발생했습니다.', 'error');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleCheckLoginId = async () => {
+        const loginId = normalizeLoginId(getInputValue('loginId'));
+        if (!selectedCompany || isNewCompanyRequest) {
+            showAlert('기존 회사를 선택한 뒤 아이디 중복 확인을 해주세요.', 'info');
+            return;
+        }
+        if (!isValidLoginId(loginId)) {
+            setLoginIdCheck({
+                companyId: selectedCompany.id,
+                loginId,
+                available: false,
+                message: LOGIN_ID_RULE_MESSAGE
+            });
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/users/check-id', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyId: selectedCompany.id, loginId })
+            });
+            const data = await res.json();
+            setLoginIdCheck({
+                companyId: selectedCompany.id,
+                loginId,
+                available: Boolean(data.available),
+                message: data.message || (data.available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.')
+            });
+        } catch (error) {
+            console.error('Login ID check failed:', error);
+            setLoginIdCheck({
+                companyId: selectedCompany.id,
+                loginId,
+                available: false,
+                message: '아이디 확인 중 오류가 발생했습니다.'
+            });
         }
     };
 
@@ -153,6 +242,7 @@ export default function SignupPage() {
         setSelectedCompany(company);
         setIsNewCompanyRequest(false);
         setSignupRole('staff');
+        setLoginIdCheck(null);
         setShowSearchModal(false);
     };
 
@@ -170,6 +260,7 @@ export default function SignupPage() {
         setSelectedCompany(null);
         setIsNewCompanyRequest(true);
         setSignupRole('staff');
+        setLoginIdCheck(null);
         setShowSearchModal(false);
     };
 
@@ -200,17 +291,58 @@ export default function SignupPage() {
 
                 <form onSubmit={handleSignup} className={styles.form}>
                     <div className={styles.inputGroup}>
-                        <label htmlFor="id" className={styles.label}>아이디</label>
+                        <label htmlFor="loginId" className={styles.label}>아이디</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                                type="text"
+                                id="loginId"
+                                placeholder="영문 소문자, 숫자, ., _, -"
+                                className={styles.input}
+                                required
+                                autoCapitalize="none"
+                                onChange={() => setLoginIdCheck(null)}
+                                style={{ flex: 1 }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => { void handleCheckLoginId(); }}
+                                disabled={!selectedCompany || isNewCompanyRequest}
+                                style={{
+                                    padding: '0 12px',
+                                    height: '42px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #ced4da',
+                                    backgroundColor: !selectedCompany || isNewCompanyRequest ? '#f1f3f5' : '#ffffff',
+                                    color: !selectedCompany || isNewCompanyRequest ? '#adb5bd' : '#333d4b',
+                                    cursor: !selectedCompany || isNewCompanyRequest ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                중복 확인
+                            </button>
+                        </div>
+                        {loginIdCheck && (
+                            <p style={{
+                                fontSize: '12px',
+                                color: loginIdCheck.available ? '#03b26c' : '#f04452',
+                                marginTop: '4px'
+                            }}>
+                                {loginIdCheck.message}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                        <label htmlFor="email" className={styles.label}>이메일</label>
                         <input
-                            type="text"
-                            id="id"
-                            placeholder="아이디(이메일)를 입력하세요"
+                            type="email"
+                            id="email"
+                            placeholder="user@example.com"
                             className={styles.input}
                             required
+                            autoComplete="email"
                         />
-                        <p style={{ fontSize: '12px', color: '#868e96', marginTop: '4px' }}>
-                            이메일 형식을 권장합니다. (예: user@example.com)
-                        </p>
                     </div>
 
                     <div className={styles.inputGroup}>
@@ -219,6 +351,17 @@ export default function SignupPage() {
                             type="password"
                             id="password"
                             placeholder="비밀번호 (6자 이상)"
+                            className={styles.input}
+                            required
+                        />
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                        <label htmlFor="passwordConfirm" className={styles.label}>비밀번호 확인</label>
+                        <input
+                            type="password"
+                            id="passwordConfirm"
+                            placeholder="비밀번호를 한 번 더 입력하세요"
                             className={styles.input}
                             required
                         />
