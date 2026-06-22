@@ -7,9 +7,13 @@ import {
     extractUcansignTemplateRoles,
     normalizeTemplateFields,
     normalizeTemplateRoles,
-    renderTemplateFormFromFields,
-    type CompanyTemplateParticipant
+    renderTemplateFormFromFields
 } from '@/lib/electronic-contracts/company-template';
+import {
+    invalidSignerContactLabels,
+    missingRequiredSignerLabels,
+    parseRequestSignerParticipants
+} from '@/lib/electronic-contracts/signer-participant-validation';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
     extractUcansignDocumentId,
@@ -47,15 +51,6 @@ function recordValues(value: unknown): Record<string, string> {
 
 function inputMode(value: unknown): 'erp' | 'template' {
     return value === 'template' ? 'template' : 'erp';
-}
-
-function participantsFromBody(value: unknown): readonly CompanyTemplateParticipant[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter(isRecord).map(row => ({
-        roleKey: textValue(row, 'roleKey'),
-        name: textValue(row, 'name'),
-        contact: textValue(row, 'contact')
-    })).filter(participant => participant.roleKey && participant.name && participant.contact);
 }
 
 async function recordProviderDocument(
@@ -162,12 +157,14 @@ export async function POST(request: Request) {
             return fail(400, 'VALIDATION_ERROR', `필수 입력값을 확인해주세요: ${missingFields.join(', ')}`);
         }
 
-        const participants = participantsFromBody(body.participants);
-        const missingRoles = effectiveRoles
-            .filter(role => role.required && !participants.some(participant => participant.roleKey === role.roleKey))
-            .map(role => role.label);
+        const participants = parseRequestSignerParticipants(body.participants);
+        const missingRoles = missingRequiredSignerLabels(effectiveRoles, participants);
         if (missingRoles.length > 0) {
             return fail(400, 'VALIDATION_ERROR', `서명자 정보를 확인해주세요: ${missingRoles.join(', ')}`);
+        }
+        const invalidContacts = invalidSignerContactLabels(effectiveRoles, participants);
+        if (invalidContacts.length > 0) {
+            return fail(400, 'VALIDATION_ERROR', `서명자 연락처 형식을 확인해주세요: ${invalidContacts.join(', ')}`);
         }
 
         const { data: company } = await supabaseAdmin

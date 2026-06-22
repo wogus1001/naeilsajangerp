@@ -202,3 +202,14 @@ export async function saveCompanyTemplateDraft(input: {
         body: JSON.stringify(input)
     });
 }
+
+export async function startCompanyTemplateSignEmbedding(input: {
+    readonly templateId: string;
+    readonly versionId: string;
+    readonly contractId: string;
+}): Promise<{ readonly contractId: string; readonly url: string }> {
+    return jsonRequest('/api/electronic-contracts/company-template-embedding', {
+        method: 'POST',
+        body: JSON.stringify(input)
+    });
+}

@@ -6,7 +6,8 @@ import {
     extractUcansignDocumentId,
     extractUcansignFileUrl,
     extractUcansignTemplateName,
-    normalizePlatformDocumentFile
+    normalizePlatformDocumentFile,
+    platformTemplateSignEmbeddingEndpoint
 } from './platform-client.js';
 
 test('Given UCanSign API key token response When extracting token Then access token is returned', () => {
@@ -35,6 +36,17 @@ test('Given UCanSign send response When document id is nested Then document id i
     assert.equal(extractUcansignDocumentId({ result: { documentId: '2068871675408027649' } }), '2068871675408027649');
     assert.equal(extractUcansignDocumentId({ result: { document: { id: '2068871675408027650' } } }), '2068871675408027650');
     assert.equal(extractUcansignDocumentId({ data: { document: { documentId: 12345 } } }), '12345');
+});
+
+test('Given UCanSign template id When building sign embedding endpoint Then template progress endpoint is used', () => {
+    assert.equal(
+        platformTemplateSignEmbeddingEndpoint('2068854428568391681'),
+        '/embedding/sign-creating/2068854428568391681'
+    );
+    assert.equal(
+        platformTemplateSignEmbeddingEndpoint('id with space'),
+        '/embedding/sign-creating/id%20with%20space'
+    );
 });
 
 test('Given UCanSign download response When file url is nested Then file url is returned', () => {

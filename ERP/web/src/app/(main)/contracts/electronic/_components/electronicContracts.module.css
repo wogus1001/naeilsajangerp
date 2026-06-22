@@ -243,6 +243,20 @@
     gap: 16px;
 }
 
+.companyTemplateForm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.companyTemplateForm .formSection:last-of-type {
+    margin-bottom: 0;
+}
+
+.companyTemplateForm .formFooter {
+    position: static;
+}
+
 .formSection {
     background: #ffffff;
     border: 1px solid #e5e8eb;
@@ -348,7 +362,8 @@
 .field input,
 .field select,
 .field textarea,
-.searchRow input {
+.searchRow input,
+.signerInput input {
     width: 100%;
     min-height: 42px;
     border: 1px solid #d6dee9;
@@ -359,10 +374,126 @@
     padding: 0 12px;
 }
 
+.signerInput input[aria-invalid="true"] {
+    border-color: #ff6b6b;
+    background: #fff7f7;
+}
+
 .field textarea {
     min-height: 92px;
     padding: 12px;
     resize: vertical;
+}
+
+.signerStack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 360px));
+    gap: 12px;
+}
+
+.signerCard {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.signerCardHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px 16px 12px;
+}
+
+.signerCardHeader strong {
+    display: block;
+    color: #191f28;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.signerCardHeader span:not(.signerOrderBadge) {
+    display: block;
+    margin-top: 2px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.signerOrderBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #e6fcf5;
+    color: #00a881;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.signerInput {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px 12px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.signerInputPolicy,
+.signerInputError {
+    display: block;
+    margin-top: 0;
+    font-size: 12px;
+    font-style: normal;
+    line-height: 1.45;
+}
+
+.signerInputPolicy {
+    color: #8b95a1;
+    font-weight: 600;
+}
+
+.signerInputError {
+    color: #e42939;
+    font-weight: 800;
+}
+
+.signerDeliveryTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 4px;
+    border-top: 1px solid #e5e8eb;
+}
+
+.signerDeliveryTab,
+.signerDeliveryTabActive {
+    min-height: 44px;
+    border: 0;
+    background: #ffffff;
+    color: #6b7684;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.signerDeliveryTab + .signerDeliveryTab,
+.signerDeliveryTab + .signerDeliveryTabActive,
+.signerDeliveryTabActive + .signerDeliveryTab,
+.signerDeliveryTabActive + .signerDeliveryTabActive {
+    border-left: 1px solid #e5e8eb;
+}
+
+.signerDeliveryTabActive {
+    background: #e8f3ff;
+    color: #1c64d1;
 }
 
 .wideField {
@@ -448,6 +579,22 @@
     font-size: 13px;
     line-height: 1.6;
     padding: 14px;
+}
+
+.embeddingPanel {
+    overflow: hidden;
+    min-height: min(820px, calc(100dvh - 210px));
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f2f4f6;
+}
+
+.embeddingFrame {
+    display: block;
+    width: 100%;
+    min-height: min(820px, calc(100dvh - 210px));
+    border: 0;
+    background: #f2f4f6;
 }
 
 .formFooter {
@@ -1004,6 +1151,11 @@
     .toast {
         width: 100%;
         max-width: none;
+    }
+
+    .embeddingPanel,
+    .embeddingFrame {
+        min-height: calc(100dvh - 180px);
     }
 
     .formGrid,

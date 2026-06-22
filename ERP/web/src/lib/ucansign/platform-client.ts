@@ -35,6 +35,16 @@ type CachedPlatformToken = {
     readonly expiresAt: number;
 };
 
+type PlatformSignEmbeddingInput = {
+    readonly redirectUrl: string;
+    readonly customValue?: string;
+    readonly customValue1?: string;
+    readonly customValue2?: string;
+    readonly customValue3?: string;
+    readonly customValue4?: string;
+    readonly customValue5?: string;
+};
+
 let cachedPlatformToken: CachedPlatformToken | null = null;
 
 export class UcansignPlatformError extends Error {
@@ -171,6 +181,29 @@ export async function modifyPlatformTemplateEmbedding(documentId: string, redire
     const response = await uCanSignPlatformClient(`/embedding/template-modifying/${encodeURIComponent(documentId)}`, {
         method: 'POST',
         body: JSON.stringify({ redirectUrl })
+    });
+    return embeddingUrlFromResponse(response);
+}
+
+export async function createPlatformSignEmbedding(input: PlatformSignEmbeddingInput): Promise<string> {
+    const response = await uCanSignPlatformClient('/embedding/sign-creating', {
+        method: 'POST',
+        body: JSON.stringify(input)
+    });
+    return embeddingUrlFromResponse(response);
+}
+
+export function platformTemplateSignEmbeddingEndpoint(documentId: string): string {
+    return `/embedding/sign-creating/${encodeURIComponent(documentId)}`;
+}
+
+export async function createPlatformTemplateSignEmbedding(
+    documentId: string,
+    input: PlatformSignEmbeddingInput
+): Promise<string> {
+    const response = await uCanSignPlatformClient(platformTemplateSignEmbeddingEndpoint(documentId), {
+        method: 'POST',
+        body: JSON.stringify(input)
     });
     return embeddingUrlFromResponse(response);
 }

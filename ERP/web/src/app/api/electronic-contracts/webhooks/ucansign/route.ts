@@ -15,6 +15,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 type ContractStatusRow = {
     readonly id: string;
     readonly status: string | null;
+    readonly ucansign_document_id: string | null;
 };
 
 async function findContractByWebhookPayload(
@@ -25,17 +26,16 @@ async function findContractByWebhookPayload(
     if (contractId) {
         const { data, error } = await supabaseAdmin
             .from('electronic_contracts')
-            .select('id, status')
+            .select('id, status, ucansign_document_id')
             .eq('id', contractId)
-            .eq('ucansign_document_id', documentId)
             .maybeSingle<ContractStatusRow>();
         if (error) throw error;
-        if (data) return data;
+        if (data && (!data.ucansign_document_id || data.ucansign_document_id === documentId)) return data;
     }
 
     const { data, error } = await supabaseAdmin
         .from('electronic_contracts')
-        .select('id, status')
+        .select('id, status, ucansign_document_id')
         .eq('ucansign_document_id', documentId)
         .maybeSingle<ContractStatusRow>();
     if (error) throw error;
@@ -75,11 +75,17 @@ export async function POST(request: Request) {
             return ok({ received: true, ignored: true, reason: 'completed_contract_is_terminal' });
         }
 
+        const now = new Date().toISOString();
+        const nextStatus = status === 'updated' ? 'sent' : status;
         const updatePayload: Record<string, string> = {
-            status,
-            updated_at: new Date().toISOString()
+            status: nextStatus,
+            updated_at: now
         };
-        if (status === 'completed') updatePayload.completed_at = new Date().toISOString();
+        if (!contract.ucansign_document_id) {
+            updatePayload.ucansign_document_id = documentId;
+            updatePayload.sent_at = now;
+        }
+        if (status === 'completed') updatePayload.completed_at = now;
 
         const { error: updateError } = await supabaseAdmin
             .from('electronic_contracts')
