@@ -1,48 +1,95 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isLoginIdSchemaMissing, isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+
+type ResolvedProfile = {
+    id: string;
+    email: string | null;
+    company_id: string | null;
+    login_id?: string | null;
+};
+
+async function selectProfileById(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    id: string
+): Promise<ResolvedProfile | null> {
+    const result = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, company_id, login_id')
+        .eq('id', id)
+        .single<ResolvedProfile>();
+
+    if (!isLoginIdSchemaMissing(result.error)) {
+        return result.data;
+    }
+
+    const fallbackResult = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, company_id')
+        .eq('id', id)
+        .single<Omit<ResolvedProfile, 'login_id'>>();
+
+    return fallbackResult.data ? { ...fallbackResult.data, login_id: null } : null;
+}
+
+async function selectProfileByEmail(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    email: string
+): Promise<ResolvedProfile | null> {
+    const result = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, company_id, login_id')
+        .eq('email', email)
+        .single<ResolvedProfile>();
+
+    if (!isLoginIdSchemaMissing(result.error)) {
+        return result.data;
+    }
+
+    const fallbackResult = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, company_id')
+        .eq('email', email)
+        .single<Omit<ResolvedProfile, 'login_id'>>();
+
+    return fallbackResult.data ? { ...fallbackResult.data, login_id: null } : null;
+}
 
 export async function PUT(request: Request) {
     try {
 
         const body = await request.json();
-        const { currentId, newId, name, companyName, oldPassword, newPassword, targetUuid } = body;
+        const { currentId, newId, name, oldPassword, newPassword, targetUuid } = body;
 
-        // Validation
         if (!currentId && !targetUuid) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
         const supabaseAdmin = await getSupabaseAdmin();
 
-        let profile = null;
+        let profile: ResolvedProfile | null = null;
         let userId = '';
 
-        // 1. Resolve User ID (Priority: targetUuid > currentId)
         if (targetUuid) {
-            const { data } = await supabaseAdmin.from('profiles').select('id, email').eq('id', targetUuid).single();
-            if (data) {
-                profile = data;
-                userId = data.id;
+            const resolvedProfile = await selectProfileById(supabaseAdmin, String(targetUuid));
+            if (resolvedProfile) {
+                profile = resolvedProfile;
+                userId = resolvedProfile.id;
             }
         }
 
         if (!profile && currentId) {
-            // Robust Resolution of currentId (which could be UUID, short ID, or email)
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentId);
 
             if (isUuid) {
-                const { data } = await supabaseAdmin.from('profiles').select('id, email').eq('id', currentId).single();
-                profile = data;
+                profile = await selectProfileById(supabaseAdmin, String(currentId));
             } else {
-                // Try assuming it's a short ID -> email
                 const emailAttempt1 = currentId.includes('@') ? currentId : `${currentId}@example.com`;
-                const { data: p1 } = await supabaseAdmin.from('profiles').select('id, email').eq('email', emailAttempt1).single();
+                const p1 = await selectProfileByEmail(supabaseAdmin, emailAttempt1);
                 if (p1) profile = p1;
                 else if (currentId.includes('@')) {
-                    // Try exact match in case regex failed or format oddity
-                    const { data: p2 } = await supabaseAdmin.from('profiles').select('id, email').eq('email', currentId).single();
-                    profile = p2;
+                    profile = await selectProfileByEmail(supabaseAdmin, String(currentId));
                 }
             }
         }
@@ -55,45 +102,70 @@ export async function PUT(request: Request) {
         }
 
         const actualEmail = profile.email;
-        // userId is already declared above, just assign it if not targetUuid case
         if (!targetUuid) {
             userId = profile.id;
         }
 
-        // 2. Handle ID (Email) Change
-        if (newId && newId !== currentId) {
-            const newEmail = newId.includes('@') ? newId : `${newId}@example.com`;
-
-            // Check duplicate
-            const { data: { users: existingUsers } } = await supabaseAdmin.auth.admin.listUsers();
-            if (existingUsers.some(u => u.email === newEmail)) {
-                return NextResponse.json({ error: '[DEBUG-FINAL] 이미 사용 중인 아이디입니다.' }, { status: 409 });
+        if (newId && normalizeLoginId(newId) !== normalizeLoginId(profile.login_id || currentId)) {
+            const nextLoginId = normalizeLoginId(newId);
+            if (!isValidLoginId(nextLoginId)) {
+                return NextResponse.json({ error: LOGIN_ID_RULE_MESSAGE }, { status: 400 });
             }
 
-            const { error: updateEmailError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: newEmail });
-            if (updateEmailError) throw updateEmailError;
+            if (!profile.company_id) {
+                return NextResponse.json({ error: '소속 회사 정보가 없어 아이디를 변경할 수 없습니다.' }, { status: 400 });
+            }
 
-            // Profile email should update automatically or manually?
-            // Helper function `handle_new_user` handles insert. Updates might need manual sync or triggers.
-            // We should update profile email manually to be safe.
-            await supabaseAdmin.from('profiles').update({ email: newEmail }).eq('id', userId);
+            const { data: duplicateProfiles, error: duplicateError } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('company_id', profile.company_id)
+                .eq('login_id_normalized', nextLoginId)
+                .neq('id', userId)
+                .limit(1);
+
+            if (duplicateError) {
+                if (isLoginIdSchemaMissing(duplicateError)) {
+                    return NextResponse.json({
+                        error: '아이디 로그인 DB 설정이 필요합니다. supabase_login_id_migration.sql 적용 후 다시 저장해주세요.'
+                    }, { status: 500 });
+                }
+                throw duplicateError;
+            }
+
+            if ((duplicateProfiles ?? []).length > 0) {
+                return NextResponse.json({ error: '이미 사용 중인 아이디입니다.' }, { status: 409 });
+            }
+
+            const { error: updateLoginIdError } = await supabaseAdmin
+                .from('profiles')
+                .update({
+                    login_id: nextLoginId,
+                    login_id_normalized: nextLoginId
+                })
+                .eq('id', userId);
+
+            if (updateLoginIdError) {
+                if (isLoginIdSchemaMissing(updateLoginIdError)) {
+                    return NextResponse.json({
+                        error: '아이디 로그인 DB 설정이 필요합니다. supabase_login_id_migration.sql 적용 후 다시 저장해주세요.'
+                    }, { status: 500 });
+                }
+                throw updateLoginIdError;
+            }
         }
 
-        // 3. Handle Password Change
         if (newPassword) {
             if (!oldPassword) {
                 return NextResponse.json({ error: '기존 비밀번호를 입력해주세요.' }, { status: 401 });
             }
 
-            // Verify old password (expensive but necessary?)
-            // We can't verify old password easily as admin without signing in.
-            // So we try sign in.
             const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
             const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
             const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
             const { error: signInError } = await supabase.auth.signInWithPassword({
-                email: actualEmail, // use current email
+                email: actualEmail || '',
                 password: oldPassword
             });
 
@@ -105,7 +177,6 @@ export async function PUT(request: Request) {
                 return NextResponse.json({ error: '새 비밀번호는 최소 6자 이상이어야 합니다.' }, { status: 400 });
             }
 
-            // Update password
             const { error: updatePwdError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: newPassword });
             if (updatePwdError) {
                 if (updatePwdError.message.includes('Password should be at least')) {
@@ -115,14 +186,8 @@ export async function PUT(request: Request) {
             }
         }
 
-        // 4. Update Profile Info
-        const updates: any = {};
-        if (name) updates.name = name;
-        // Company name update? Usually not allowed directly, implies company change?
-        // Let's ignore company name change for now or handle company logic if needed. 
-        // Legacy code: if (companyName) user.companyName = companyName;
-        // In DB, company is linked by ID. Changing name of COMPANY? Or changing User's Company?
-        // Assuming just User's Name update for now. Changing company is complex (safety).
+        const updates: { name?: string } = {};
+        if (typeof name === 'string') updates.name = name;
 
         if (Object.keys(updates).length > 0) {
             await supabaseAdmin.from('profiles').update(updates).eq('id', userId);
@@ -149,7 +214,7 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({
             user: {
-                id: newId || currentId, // Keep display ID
+                id: finalProfile.login_id || newId || currentId,
                 name: finalProfile.name,
                 email: finalProfile.email,
                 role: finalProfile.role,
@@ -160,10 +225,11 @@ export async function PUT(request: Request) {
             }
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Update user/profile route error:', error);
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
         return NextResponse.json({
-            error: `[DEBUG-CRITICAL] 서버 오류가 발생했습니다: ${error.message || JSON.stringify(error)}`
+            error: `서버 오류가 발생했습니다: ${message}`
         }, { status: 500 });
     }
 }
