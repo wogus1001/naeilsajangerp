@@ -55,6 +55,14 @@ YYYY-MM-DD
   - main 반영: 이 릴리즈 문서 커밋 포함 HEAD를 `main`으로 반영 예정
   - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/electronic-contracts/*.test.mts src/lib/ucansign/*.test.mts src/lib/api-auth.test.mts src/app/demo/demoContent.test.mts`, `npm run build` 통과. Playwright로 `/demo` 1440px/390px 자동 투어, 우측 설명 패널, 로고 `데모`, `/api/**` 요청 0건, page-level horizontal overflow 0건 확인
   - 남은 이슈: `supabase_electronic_contracts_platform_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 전자계약 v2 테이블과 공용 유캔싸인 연결이 활성화된다. 공개 데모는 샘플 데이터만 사용하며 실제 저장/발송/삭제 API를 호출하지 않는다.
+- 2026-06-19
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `74d6755 feat(contracts): add company template electronic flow`
+  - 주요 기능: 회사별 UCanSign 템플릿 관리, UCanSign 설정 화면 자동 진입/수정, 템플릿 ID/이름 자동 연결, 보관 템플릿 분리, 회사 템플릿 발송 게이트, 내일사장 공용 UCanSign API KEY 발송 전환, 완료 문서 다운로드 PDF 정규화
+  - dev 반영: none
+  - main 반영: none
+  - 검증: `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/common-templates.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 로컬 브라우저 QA로 템플릿 관리 탭의 상태줄 제거, 사용/보관 분리, 시스템 삭제 다이얼로그를 확인. UCanSign ZIP 다운로드 응답은 내부 주 PDF 추출 테스트로 고정했다
+  - 남은 이슈: `supabase_company_contract_templates_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 템플릿 관리 API/UI가 실데이터로 동작한다. UCanSign direct PDF 좌표 발송 API는 공개 문서상 확정되지 않아 활성 버전에 `ucansign_template_id`가 연결된 경우만 발송한다. 운영/개발 환경에는 `UCANSIGN_API_KEY`를 서버 환경변수로 등록해야 한다.
 - 2026-06-18
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `efced6e feat(franchise): add partner access and DB exports`

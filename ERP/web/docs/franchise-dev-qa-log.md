@@ -433,7 +433,7 @@
 ## 2026-06-18 권리금 전자계약 v2 개발 QA
 
 - 기존 `/contracts`, `/contracts/create`, `/contracts/builder` 개인별 유캔싸인/계약 기능은 그대로 두고, 새 `/contracts/electronic`와 `/contracts/electronic/create` 흐름을 추가했다.
-- 새 흐름은 내일사장 공용 유캔싸인 계정 1개를 `platform_ucansign_connection`에 암호화 저장하고, ERP `electronic_contracts.company_id`와 `sent_by_profile_id`로 `내가 발송`, `회사 문서`, 관리자 `전체 문서`를 분리한다.
+- 새 흐름은 내일사장 공용 UCanSign API KEY 1개로 access token을 발급받아 발송하고, ERP `electronic_contracts.company_id`와 `sent_by_profile_id`로 `내가 발송`, `회사 문서`, 관리자 `전체 문서`를 분리한다.
 - 권리금계약서 입력값은 ERP 양식에서 받고, 금액은 `...Amount` 숫자/콤마 필드와 `...Text` 한글 금액 필드로 분리해 유캔싸인 payload를 만든다. 주민등록번호, 실제 서명값, 민감 인증값은 ERP 스냅샷에 저장하지 않는다.
 - 인허가번호 조회는 SafetyData `인허가업소정보` 전체 import 후 내부 `license_business_records`에서 검색한다. 결과 카드는 `SALS_UNQ_SE_NO_LCPMT_NO`, `BUES_NM`, `ADDR`를 각각 영업허가번호, 상호명, 주소로 표시하고 도로명/지번 유사 배지를 붙인다.
 - 신규 SQL: `supabase_electronic_contracts_platform_migration.sql`. 실제 Supabase 적용은 사용자가 직접 진행해야 한다.
@@ -473,6 +473,31 @@
 - `/demo` 첫 진입 시 대시보드 핵심 숫자부터 딤드 오버레이가 자동 표시되도록 변경했다. 우측에는 `사용 방법` 패널을 고정해 상단 숫자, 파이프라인, DB 관리, 계약 완료 확인 순서를 안내한다.
 - 데모 사이드바 로고와 담당자 회사 표기는 실회사명 대신 `데모` 기준으로 표시한다.
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npm run build` 통과. Playwright로 `/demo` 1440px/390px에서 자동 투어, 우측 설명 패널, 로고 `데모`, `/api/**` 요청 0건, page-level horizontal overflow 0건을 확인했다.
+
+## 2026-06-19 회사 업로드 전자계약 템플릿 v2 QA
+
+- `/contracts/electronic`에 `템플릿 관리` 탭을 추가했다. 사용자 화면은 ERP에서 이름/PDF를 중복 입력하지 않고 `UCanSign에서 만들기`로 템플릿 설정 화면을 열어 이름, PDF, 입력칸, 서명칸을 UCanSign에서 저장하는 흐름으로 정리했다.
+- UCanSign 콜백이 돌아오면 ERP가 회사 템플릿 버전을 자동 연결/사용중 처리한다. 콜백 또는 상세 조회 응답에서 템플릿명이 확인되면 ERP 목록명도 UCanSign 저장명으로 동기화한다.
+- 보관 템플릿은 사용 템플릿 표와 분리해 노출한다. 사용 템플릿 삭제 시 발송 이력이 있으면 보관으로 이동하고, 보관 템플릿은 복원하거나 목록에서 완전 삭제할 수 있다. 삭제 확인은 브라우저 기본 confirm 대신 앱 시스템 다이얼로그로 표시한다.
+- 신규 API는 `GET/POST /api/electronic-contract-templates`, 상세/수정/삭제, PDF 업로드, 버전 저장, 자동 연결 콜백, `POST /api/electronic-contracts/send-company-template`로 분리했다. 기존 권리금 고정 템플릿 발송 API와 기존 계약 기능은 유지했다.
+- 공개 확인 가능한 유캔싸인 문서는 direct raw PDF 좌표 발송보다 템플릿/임베드 흐름이 명확하므로, 회사 업로드 템플릿 발송은 활성 버전에 `ucansign_template_id`가 연결된 경우에만 진행한다. 미연결 상태는 발송 차단 메시지를 보여준다.
+- 검증: `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 브라우저 QA: 로컬 로그인 세션에서 `/contracts/electronic` -> `템플릿 관리` 진입 후 API KEY 상태줄 미노출, 상단 설명 문구 제거, `문서/설정` 컬럼 대신 `생성자/생성일` 컬럼 노출, 사용/보관 템플릿 분리, `수정`/`복원`/`삭제` 버튼, 시스템 삭제 다이얼로그, 하단 중복 안내 패널 제거를 확인했다. 스크린샷: `.omo/evidence/electronic-contract-template-ui-20260619.png`.
+- 전자계약 헤더의 독립 `권리금계약 작성` 버튼을 제거하고, `템플릿 관리` 안에 `공통 템플릿` 섹션을 추가했다. 현재 기본 제공 양식은 `권리금계약서`이며, 회사가 만든 양식은 `회사 템플릿` 섹션에서 별도로 관리한다.
+
+## 2026-06-19 UCanSign API KEY 발송 전환 QA
+
+- 새 전자계약 v2 공용 발송을 OAuth 연결/refresh token 저장 방식에서 UCanSign API KEY 토큰 발급 방식으로 전환했다. 서버는 `UCANSIGN_API_KEY`로 30분 access token을 발급받아 캐시하고, 401 응답 시 1회 재발급 후 재시도한다.
+- ERP 문서 소유권 구조는 유지한다. 내일사장 제공 공통 권리금계약서와 회사별 업로드 템플릿은 모두 공용 API KEY로 발송하되, 문서함과 템플릿 관리는 `company_id`, `sent_by_profile_id`, 회사 템플릿 버전 기준으로 분리한다.
+- 관리자 상태 API는 DB 연결 상태가 아니라 `UCANSIGN_API_KEY`, 공통 권리금 템플릿 ID, webhook secret 누락 여부를 알려준다. 사용자 화면에는 재연동 흐름이 노출되지 않는다.
+- 검증: `npx tsx --test src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과.
+
+## 2026-06-22 전자계약 문서 다운로드 QA
+
+- 사용자가 받은 완료 문서 `[내일] ㅋㅋㅋzzzz.pdf`가 Chrome PDF viewer에서 열리지 않는 문제를 확인했다. 원인은 UCanSign 완료 문서 `full-file`이 실제 PDF 단일 파일이 아니라 서명 PDF, 감사추적인증서 PDF, 페이지 이미지가 들어있는 ZIP 묶음을 반환했는데, ERP가 이를 `.pdf`로 저장한 것이었다.
+- `normalizePlatformDocumentFile()`을 추가해 응답 첫 바이트가 `%PDF-`이면 PDF로 유지하고, ZIP이면 내부 PDF 중 가장 큰 파일을 주 문서로 추출해 `application/pdf`로 내려주게 했다. ZIP 안에 유효한 PDF가 없을 때만 `.zip`으로 저장한다.
+- 전자계약 문서함 다운로드 버튼도 서버 응답 `Content-Type`에 따라 `.pdf` 또는 `.zip` 확장자를 붙이도록 맞췄다.
+- 검증: `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/ucansign/platform-client.test.mts`, `npm run build` 통과. 추가 관련 테스트 묶음 `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/common-templates.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts`는 34건 통과했다.
 
 ## 다음 QA 체크리스트
 
