@@ -1,16 +1,13 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { missingUcansignSendEnv, missingUcansignWebhookEnv } from '@/lib/ucansign/platform-config';
+import {
+    missingUcansignPlatformEnv,
+    missingUcansignPremiumRightsEnv,
+    missingUcansignWebhookEnv
+} from '@/lib/ucansign/platform-config';
 
 export const dynamic = 'force-dynamic';
-
-type PlatformConnectionRow = {
-    readonly status: string | null;
-    readonly expires_at: number | null;
-    readonly updated_at: string | null;
-    readonly connected_by: string | null;
-};
 
 export async function GET(request: Request) {
     try {
@@ -19,26 +16,24 @@ export async function GET(request: Request) {
         if (!requester) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         if (!isAdmin(requester)) return fail(403, 'FORBIDDEN', 'Admin access required');
 
-        const missingEnv = missingUcansignSendEnv();
+        const missingEnv = missingUcansignPlatformEnv();
+        const premiumRightsMissingEnv = missingUcansignPremiumRightsEnv();
         const webhookMissingEnv = missingUcansignWebhookEnv();
-        const { data, error } = await supabaseAdmin
-            .from('platform_ucansign_connection')
-            .select('status, expires_at, updated_at, connected_by')
-            .eq('id', 'naeilsajang-platform')
-            .maybeSingle<PlatformConnectionRow>();
-
-        if (error) throw error;
+        const configured = missingEnv.length === 0;
 
         return ok({
-            configured: missingEnv.length === 0,
+            authMode: 'api_key',
+            configured,
             missingEnv,
+            premiumRightsConfigured: premiumRightsMissingEnv.length === 0,
+            premiumRightsMissingEnv,
             webhookConfigured: webhookMissingEnv.length === 0,
             webhookMissingEnv,
-            connected: data?.status === 'active',
-            status: data?.status || 'disconnected',
-            expiresAt: data?.expires_at || null,
-            updatedAt: data?.updated_at || null,
-            connectedBy: data?.connected_by || null
+            connected: configured,
+            status: configured ? 'api_key' : 'not_configured',
+            expiresAt: null,
+            updatedAt: null,
+            connectedBy: null
         });
     } catch (error) {
         console.error('Admin UCANSIGN status error:', error);

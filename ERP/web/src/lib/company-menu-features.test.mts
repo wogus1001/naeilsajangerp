@@ -68,6 +68,6 @@ test('Given electronic premium contract route When resolving company menu featur
     const contractSection = SIDEBAR_SECTIONS.find(section => section.key === 'contracts');
 
     assert.equal(feature?.key, 'electronicPremiumContracts');
-    assert.equal(feature?.title, '권리금 전자계약');
+    assert.equal(feature?.title, '전자계약');
     assert.equal(contractSection?.items.some(item => item.featureKey === 'electronicPremiumContracts'), true);
 });

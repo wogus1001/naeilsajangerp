@@ -31,16 +31,8 @@ export const COMPANY_DASHBOARD_MODES: readonly {
     readonly label: string;
     readonly description: string;
 }[] = [
-    {
-        mode: 'a',
-        label: 'A 타입',
-        description: '모객 DB와 출점 후보지 주요 건수를 먼저 보여줍니다.'
-    },
-    {
-        mode: 'b',
-        label: 'B 타입',
-        description: '일정, 계약, 점포, 고객 중심의 기존 요약 화면입니다.'
-    }
+    { mode: 'a', label: 'A 타입', description: '모객 DB와 출점 후보지 주요 건수를 먼저 보여줍니다.' },
+    { mode: 'b', label: 'B 타입', description: '일정, 계약, 점포, 고객 중심의 기존 요약 화면입니다.' }
 ] as const;
 
 export type CompanyMenuFeatureDefinition = {
@@ -172,8 +164,8 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     {
         key: 'electronicPremiumContracts',
         category: '계약',
-        title: '권리금 전자계약',
-        description: '내일사장 공용 유캔싸인 계정으로 권리금계약서를 작성하고 발송합니다.',
+        title: '전자계약',
+        description: '공통 템플릿과 회사 템플릿으로 전자계약 문서를 작성하고 발송합니다.',
         routePrefixes: ['/contracts/electronic']
     },
     {

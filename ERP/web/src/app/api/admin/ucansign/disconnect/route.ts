@@ -1,6 +1,7 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { missingUcansignPlatformEnv } from '@/lib/ucansign/platform-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,19 +12,11 @@ export async function POST(request: Request) {
         if (!requester) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         if (!isAdmin(requester)) return fail(403, 'FORBIDDEN', 'Admin access required');
 
-        const { error } = await supabaseAdmin
-            .from('platform_ucansign_connection')
-            .update({
-                status: 'disconnected',
-                access_token_encrypted: null,
-                refresh_token_encrypted: null,
-                expires_at: null,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', 'naeilsajang-platform');
-
-        if (error) throw error;
-        return ok({ disconnected: true });
+        return ok({
+            authMode: 'api_key',
+            disconnected: missingUcansignPlatformEnv().length > 0,
+            message: 'API KEY 방식은 DB 연결을 해제하지 않습니다. 해제가 필요하면 서버 환경변수 UCANSIGN_API_KEY를 제거하세요.'
+        });
     } catch (error) {
         console.error('Admin UCANSIGN disconnect error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to disconnect UCanSign platform account');

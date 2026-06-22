@@ -16,7 +16,11 @@ import {
 } from '@/lib/electronic-contracts/premium-rights-draft';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getPremiumRightsTemplateId } from '@/lib/ucansign/platform-config';
-import { uCanSignPlatformClient, UcansignPlatformError } from '@/lib/ucansign/platform-client';
+import {
+    extractUcansignDocumentId,
+    uCanSignPlatformClient,
+    UcansignPlatformError
+} from '@/lib/ucansign/platform-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,12 +57,6 @@ function requireFields(input: PremiumRightsContractInput): string[] {
         ['totalPremiumAmount', input.totalPremiumAmount]
     ];
     return checks.filter(([, value]) => !value).map(([key]) => key);
-}
-
-function documentIdFromResponse(response: unknown): string {
-    if (!isRecord(response) || !isRecord(response.result)) return '';
-    const documentId = response.result.documentId || response.result.id;
-    return typeof documentId === 'string' ? documentId : '';
 }
 
 async function recordProviderDocument(
@@ -204,8 +202,13 @@ export async function POST(request: Request) {
             method: 'POST',
             body: JSON.stringify(ucansignRequestBody)
         });
-        const ucansignDocumentId = documentIdFromResponse(response);
-        if (!ucansignDocumentId) throw new UcansignPlatformError('API_ERROR', 'UCanSign document id is missing');
+        const ucansignDocumentId = extractUcansignDocumentId(response);
+        if (!ucansignDocumentId) {
+            throw new UcansignPlatformError(
+                'API_ERROR',
+                '전자계약 발송 응답에서 문서 ID를 확인하지 못했습니다. 서명자 연락처와 템플릿 서명자 설정을 확인해주세요.'
+            );
+        }
         await recordProviderDocument(supabaseAdmin, contractId, ucansignDocumentId, response);
 
         await markContractSent(supabaseAdmin, contractId, ucansignDocumentId);

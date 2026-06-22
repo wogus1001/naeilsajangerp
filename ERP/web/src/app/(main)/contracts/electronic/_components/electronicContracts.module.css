@@ -44,7 +44,8 @@
 
 .primaryButton,
 .secondaryButton,
-.weakButton {
+.weakButton,
+.dangerButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -74,6 +75,12 @@
     background: #f2f4f6;
     border: 1px solid #e5e8eb;
     color: #4e5968;
+}
+
+.dangerButton {
+    background: #ffffff;
+    border: 1px solid #ffd6dc;
+    color: #e42939;
 }
 
 .tabs {
@@ -113,6 +120,19 @@
     gap: 12px;
     color: #4e5968;
     font-size: 13px;
+}
+
+.rowActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tableStack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .tableWrap {
@@ -196,6 +216,27 @@
     font-weight: 600;
 }
 
+.toastViewport {
+    position: fixed;
+    top: 72px;
+    right: 24px;
+    z-index: 1100;
+    pointer-events: none;
+}
+
+.toast {
+    min-width: 220px;
+    max-width: min(360px, calc(100vw - 32px));
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #1c64d1;
+    border: 1px solid #b9dcff;
+    box-shadow: 0 12px 30px rgba(25, 31, 40, 0.14);
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
 .contractForm {
     display: flex;
     flex-direction: column;
@@ -237,6 +278,62 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
+}
+
+.inputModeGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.inputModeOption,
+.inputModeOptionActive {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-height: 96px;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.inputModeOption {
+    background: #ffffff;
+    border: 1px solid #e5e8eb;
+}
+
+.inputModeOptionActive {
+    background: #e8f3ff;
+    border: 1px solid #3182f6;
+}
+
+.inputModeTitle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.inputModeTitle em {
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1c64d1;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.inputModeMeta {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
 }
 
 .field {
@@ -341,6 +438,16 @@
     font-size: 11px;
     font-style: normal;
     font-weight: 700;
+}
+
+.inlineNotice {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 14px;
 }
 
 .formFooter {
@@ -453,6 +560,426 @@
     gap: 10px;
 }
 
+.templateLayout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.templateSectionTitle {
+    margin: 0 0 12px;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.templateActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.templateQuickStart {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.templateCreateCard {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 14px;
+}
+
+.templateCreateCard {
+    display: grid;
+    gap: 10px;
+    background: #ffffff;
+}
+
+.templateCreateTitle {
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.templateCreateGrid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(240px, 2fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.ucansignSetup {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.setupSummary {
+    display: flex;
+    gap: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 14px;
+}
+
+.setupIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #1c64d1;
+}
+
+.setupSummary h3,
+.setupStep strong {
+    margin: 0;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.setupSummary p,
+.setupStep p {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.setupSteps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.setupStep {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 14px;
+}
+
+.stepNumber,
+.stepDone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-bottom: 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.stepNumber {
+    background: #f2f4f6;
+    color: #6b7684;
+}
+
+.stepDone {
+    background: #e8f3ff;
+    color: #1c64d1;
+}
+
+.setupActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dialogBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(25, 31, 40, 0.48);
+}
+
+.systemDialog {
+    width: min(100%, 420px);
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 24px;
+    box-shadow: 0 18px 48px rgba(25, 31, 40, 0.22);
+}
+
+.systemDialogIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.systemDialog h3 {
+    margin: 16px 0 8px;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.systemDialog p {
+    margin: 0;
+    color: #4e5968;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.systemDialogActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.selectedRow {
+    background: #e8f3ff;
+}
+
+.textButton {
+    border: 0;
+    background: transparent;
+    color: #191f28;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.hiddenInput {
+    display: none;
+}
+
+.hiddenLink {
+    display: none;
+}
+
+.fieldCompact {
+    display: grid;
+    grid-template-columns: auto 72px;
+    align-items: center;
+    gap: 8px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.fieldCompact input {
+    min-height: 40px;
+    border: 1px solid #d6dee9;
+    border-radius: 8px;
+    padding: 0 10px;
+}
+
+.builderGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 16px;
+    align-items: start;
+}
+
+.builderPreview,
+.builderPanel {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px;
+}
+
+.builderToolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.builderToolbar h3 {
+    margin: 0;
+    color: #191f28;
+    font-size: 16px;
+}
+
+.builderToolbar span {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.pdfStage {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 620px;
+    overflow: auto;
+    border: 1px solid #d6dee9;
+    border-radius: 8px;
+    background: #edf1f5;
+    padding: 24px;
+}
+
+.pdfPageSurface {
+    position: relative;
+    width: min(100%, 860px);
+    aspect-ratio: 210 / 297;
+    overflow: hidden;
+    border: 1px solid #d6dee9;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(25, 31, 40, 0.12);
+}
+
+.pdfObject {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.fieldOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.templateFieldBox {
+    position: absolute;
+    z-index: 2;
+    overflow: hidden;
+    border: 1px solid #3182f6;
+    border-radius: 6px;
+    background: rgba(232, 243, 255, 0.86);
+    color: #1c64d1;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+}
+
+.templateFieldBox:active {
+    cursor: grabbing;
+}
+
+.templateFieldBoxSelected {
+    border-color: #0064ff;
+    background: rgba(49, 130, 246, 0.18);
+    box-shadow: 0 0 0 2px rgba(49, 130, 246, 0.18);
+}
+
+.templateFieldLabel {
+    display: block;
+    overflow: hidden;
+    padding: 2px 6px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fieldResizeHandle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    border-top: 1px solid #3182f6;
+    border-left: 1px solid #3182f6;
+    background: #ffffff;
+    cursor: nwse-resize;
+}
+
+.builderPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.inlineActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.builderList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding-top: 12px;
+}
+
+.builderListHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.compactEditor,
+.fieldEditor {
+    display: grid;
+    gap: 8px;
+}
+
+.compactEditor {
+    grid-template-columns: 1fr 1fr 72px;
+}
+
+.fieldEditor {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.compactEditor input,
+.fieldEditor input,
+.fieldEditor select {
+    min-height: 36px;
+    border: 1px solid #d6dee9;
+    border-radius: 8px;
+    padding: 0 10px;
+    color: #191f28;
+    font-size: 13px;
+}
+
+.fieldMini {
+    display: grid;
+    gap: 4px;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.coordinateGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.checkField {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 16px;
@@ -466,6 +993,17 @@
 
     .actions {
         justify-content: flex-start;
+    }
+
+    .toastViewport {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+    }
+
+    .toast {
+        width: 100%;
+        max-width: none;
     }
 
     .formGrid,
@@ -488,5 +1026,19 @@
 
     .previewParties {
         grid-template-columns: 1fr;
+    }
+
+    .templateCreateGrid,
+    .templateQuickStart,
+    .setupSteps,
+    .inputModeGrid,
+    .builderGrid,
+    .compactEditor,
+    .coordinateGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .pdfStage {
+        min-height: 420px;
     }
 }
