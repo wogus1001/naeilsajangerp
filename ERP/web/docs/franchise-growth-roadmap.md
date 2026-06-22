@@ -275,7 +275,7 @@
 - 2026-06-19 전자계약 v2 2차 범위로 회사별 UCanSign 템플릿 관리를 추가했다. `/contracts/electronic`의 `템플릿 관리`에서 ERP가 회사별 placeholder를 만들고 UCanSign 템플릿 설정 화면을 열며, 콜백 후 UCanSign 템플릿 ID와 이름을 회사 템플릿 버전에 자동 연결한다. 사용자는 템플릿 이름/PDF/입력칸/서명칸을 UCanSign에서 한 번만 설정한다. 발송 이력이 있는 삭제 요청은 보관 처리하고, 보관 템플릿은 별도 목록으로 분리한다. 권리금계약서 같은 내일사장 기본 제공 양식은 독립 작성 버튼이 아니라 `공통 템플릿` 안에 배치해, 향후 표준 양식을 여러 개 제공할 수 있게 했다. 적용 SQL은 `supabase_company_contract_templates_migration.sql`이며 사용자가 Supabase SQL Editor에 직접 적용해야 한다.
 - 2026-06-19 전자계약 v2 공용 발송 인증을 OAuth 연결/refresh token 저장에서 UCanSign API KEY 토큰 발급 방식으로 전환했다. 공통 제공 템플릿과 회사별 생성 템플릿 구조는 유지하고, 문서/템플릿 소유권은 ERP의 회사/발송자 기준으로 계속 관리한다.
 - 2026-06-22 전자계약 완료 문서 다운로드를 보강했다. UCanSign `full-file`이 서명 PDF, 감사추적인증서, 이미지가 포함된 ZIP을 반환하는 경우가 있어, ERP 다운로드 API가 ZIP 내부의 주 PDF를 추출해 실제 PDF로 내려주고 PDF가 없으면 `.zip`으로 저장되게 처리한다.
-- 2026-06-22 회사 업로드 템플릿의 `템플릿에서 직접 작성` 흐름을 저장된 UCanSign 템플릿 ID 기반 서명요청 임베딩으로 수정했다. 이제 범용 문서 선택 모달이 아니라 해당 템플릿의 참여자 설정/서명 요청 진행 화면으로 바로 들어가며, 연결 ID가 없는 템플릿은 명확한 검증 메시지로 차단한다.
+- 2026-06-22 회사 업로드 템플릿의 `템플릿에서 직접 작성` 흐름을 저장된 UCanSign 템플릿 진행 화면으로 수정했다. UCanSign 공개 임베딩 API의 범용 `sign-creating`은 문서 선택 화면부터 시작하고 템플릿 전용 endpoint는 확인되지 않아, 저장된 `ucansign_template_id`가 있으면 `https://app.ucansign.com/signCreating/progress/{id}`를 열어 해당 템플릿의 참여자 설정/서명 요청 화면으로 바로 진입한다. 연결 ID가 없는 템플릿은 명확한 검증 메시지로 차단한다.
 - 2026-06-11 안정화 QA에서 기존 단계값 없는 리드 유지, `연락 완료` 처리, 후보지 연결 상태/메모 reload 유지를 추가 확인했다.
 - 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)는 2026-06-11 `admin` requester와 실제 `.xlsx` fixture로 통과했다. runner 생성 리드는 `raw_intake` 저장 후 `candidate` 승격과 cleanup까지 확인했다.
 - 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.

@@ -50,11 +50,11 @@ YYYY-MM-DD
 - 2026-06-22
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회사 템플릿 직접 작성 임베딩 커밋
-  - 주요 기능: 회사 업로드 전자계약 템플릿의 `템플릿에서 직접 작성`을 저장된 UCanSign 템플릿 ID 기반 서명요청 임베딩으로 연결, 미연결 템플릿 검증 메시지 보강
+  - 주요 기능: 회사 업로드 전자계약 템플릿의 `템플릿에서 직접 작성`을 저장된 UCanSign 템플릿 진행 화면으로 직접 연결, 미연결 템플릿 검증 메시지 보강
   - dev 반영: none
   - main 반영: none
   - 검증: `npx tsx --test src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/lib/electronic-contracts/ucansign-webhook.test.mts src/app/(main)/contracts/electronic/_components/signerParticipantModel.test.mts src/lib/electronic-contracts/signer-participant-validation.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과
-  - 남은 이슈: UCanSign 템플릿 버전에 `ucansign_template_id`가 없는 경우 사용자가 `템플릿 만들기/수정`으로 UCanSign 설정을 완료해야 한다. 신규 SQL은 없다.
+  - 남은 이슈: UCanSign 템플릿 버전에 `ucansign_template_id`가 없는 경우 사용자가 `템플릿 만들기/수정`으로 UCanSign 설정을 완료해야 한다. UCanSign 공개 임베딩 API는 저장 템플릿 전용 sign-creating endpoint를 제공하지 않아, 직접 작성 모드는 `https://app.ucansign.com/signCreating/progress/{ucansign_template_id}` 진행 화면을 사용한다. 신규 SQL은 없다.
 - 2026-06-22
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회사별 아이디 로그인 커밋
@@ -78,7 +78,7 @@ YYYY-MM-DD
   - dev 반영: none
   - main 반영: none
   - 검증: `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/common-templates.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 로컬 브라우저 QA로 템플릿 관리 탭의 상태줄 제거, 사용/보관 분리, 시스템 삭제 다이얼로그를 확인. UCanSign ZIP 다운로드 응답은 내부 주 PDF 추출 테스트로 고정했다
-  - 남은 이슈: `supabase_company_contract_templates_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 템플릿 관리 API/UI가 실데이터로 동작한다. UCanSign direct PDF 좌표 발송 API는 공개 문서상 확정되지 않아 활성 버전에 `ucansign_template_id`가 연결된 경우만 발송한다. 운영/개발 환경에는 `UCANSIGN_API_KEY`를 서버 환경변수로 등록해야 한다.
+  - 남은 이슈: `supabase_company_contract_templates_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 템플릿 관리 API/UI가 실데이터로 동작한다. UCanSign direct PDF 좌표 발송 API는 공개 문서상 확정되지 않아 활성 버전에 `ucansign_template_id`가 연결된 경우만 발송한다. UCanSign 공개 임베딩 API의 범용 `sign-creating`은 문서 선택 화면부터 시작하므로 저장 템플릿 직접 작성은 UCanSign 웹 진행 URL로 연다. 운영/개발 환경에는 `UCANSIGN_API_KEY`를 서버 환경변수로 등록해야 한다.
 - 2026-06-18
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `efced6e feat(franchise): add partner access and DB exports`

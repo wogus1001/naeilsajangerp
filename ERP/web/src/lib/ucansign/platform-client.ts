@@ -193,19 +193,9 @@ export async function createPlatformSignEmbedding(input: PlatformSignEmbeddingIn
     return embeddingUrlFromResponse(response);
 }
 
-export function platformTemplateSignEmbeddingEndpoint(documentId: string): string {
-    return `/embedding/sign-creating/${encodeURIComponent(documentId)}`;
-}
-
-export async function createPlatformTemplateSignEmbedding(
-    documentId: string,
-    input: PlatformSignEmbeddingInput
-): Promise<string> {
-    const response = await uCanSignPlatformClient(platformTemplateSignEmbeddingEndpoint(documentId), {
-        method: 'POST',
-        body: JSON.stringify(input)
-    });
-    return embeddingUrlFromResponse(response);
+export function platformTemplateSignProgressUrl(documentId: string): string {
+    const platformOrigin = new URL(UCANSIGN_PLATFORM_BASE_URL).origin;
+    return `${platformOrigin}/signCreating/progress/${encodeURIComponent(documentId)}`;
 }
 
 export async function getPlatformTemplateName(documentId: string): Promise<string> {

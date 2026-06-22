@@ -502,7 +502,8 @@
 ## 2026-06-22 회사 템플릿 직접 작성 임베딩 QA
 
 - 회사 업로드 템플릿에서 `템플릿에서 직접 작성`을 선택했을 때 UCanSign 범용 문서 선택 화면이 뜨는 문제를 수정했다.
-- 원인은 ERP가 활성 템플릿 버전의 `ucansign_template_id`를 사용하지 않고 범용 `/embedding/sign-creating` 임베딩을 열던 것이었다. 이제 저장된 템플릿 ID가 있는 경우 템플릿 전용 서명요청 임베딩 경로를 사용하고, 연결 ID가 없으면 `UCanSign 템플릿 연결이 필요합니다.`로 차단한다.
+- 원인은 ERP가 활성 템플릿 버전의 `ucansign_template_id`를 사용하지 않고 범용 `/embedding/sign-creating` 임베딩을 열던 것이었다. UCanSign 공식 임베딩 API의 범용 `sign-creating`은 문서 선택 화면부터 시작하며, `POST /openapi/embedding/sign-creating/{templateId}`는 404로 확인됐다.
+- 이제 저장된 템플릿 ID가 있는 경우 `https://app.ucansign.com/signCreating/progress/{ucansign_template_id}` 진행 화면을 열어 해당 템플릿의 참여자 설정/서명 요청 화면으로 바로 진입하고, 연결 ID가 없으면 `UCanSign 템플릿 연결이 필요합니다.`로 차단한다.
 - 이 변경은 실제 저장/발송 API 구조를 바꾸지 않으며, 회사/발송자 기준 문서 분리와 UCanSign API KEY 공용 발송 정책은 유지한다. 신규 SQL은 없다.
 - 검증: `npx tsx --test src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/lib/electronic-contracts/ucansign-webhook.test.mts src/app/(main)/contracts/electronic/_components/signerParticipantModel.test.mts src/lib/electronic-contracts/signer-participant-validation.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 

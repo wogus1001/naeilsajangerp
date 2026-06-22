@@ -1,7 +1,7 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { createPlatformTemplateSignEmbedding } from '@/lib/ucansign/platform-client';
+import { platformTemplateSignProgressUrl } from '@/lib/ucansign/platform-client';
 import {
     fetchTemplateForRequester,
     fetchVersionDetails,
@@ -82,6 +82,7 @@ export async function POST(request: Request) {
         const contractId = draftContractId || crypto.randomUUID();
         const now = new Date().toISOString();
         const documentName = `[${company?.name || '회사'}] ${access.template.name}`;
+        const redirectUrl = `${originFromRequest(request)}/contracts/electronic?contractId=${encodeURIComponent(contractId)}`;
         const row = {
             id: contractId,
             company_id: access.template.company_id,
@@ -101,8 +102,9 @@ export async function POST(request: Request) {
                 participants: []
             },
             payload_snapshot: {
-                embedding: 'template-sign-creating',
-                ucansignTemplateId
+                embedding: 'ucansign-template-progress',
+                ucansignTemplateId,
+                redirectUrl
             },
             updated_at: now
         };
@@ -112,14 +114,7 @@ export async function POST(request: Request) {
             : await supabaseAdmin.from('electronic_contracts').insert({ ...row, created_at: now });
         if (saveError) throw saveError;
 
-        const redirectUrl = `${originFromRequest(request)}/contracts/electronic?contractId=${encodeURIComponent(contractId)}`;
-        const url = await createPlatformTemplateSignEmbedding(ucansignTemplateId, {
-            redirectUrl,
-            customValue: contractId,
-            customValue1: templateId,
-            customValue2: versionId,
-            customValue3: requester.id
-        });
+        const url = platformTemplateSignProgressUrl(ucansignTemplateId);
 
         return ok({ contractId, url });
     } catch (error) {

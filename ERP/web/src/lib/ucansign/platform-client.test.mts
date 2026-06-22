@@ -7,7 +7,7 @@ import {
     extractUcansignFileUrl,
     extractUcansignTemplateName,
     normalizePlatformDocumentFile,
-    platformTemplateSignEmbeddingEndpoint
+    platformTemplateSignProgressUrl
 } from './platform-client.js';
 
 test('Given UCanSign API key token response When extracting token Then access token is returned', () => {
@@ -38,14 +38,14 @@ test('Given UCanSign send response When document id is nested Then document id i
     assert.equal(extractUcansignDocumentId({ data: { document: { documentId: 12345 } } }), '12345');
 });
 
-test('Given UCanSign template id When building sign embedding endpoint Then template progress endpoint is used', () => {
+test('Given UCanSign template id When building sign progress url Then saved template flow is opened directly', () => {
     assert.equal(
-        platformTemplateSignEmbeddingEndpoint('2068854428568391681'),
-        '/embedding/sign-creating/2068854428568391681'
+        platformTemplateSignProgressUrl('2068854428568391681'),
+        'https://app.ucansign.com/signCreating/progress/2068854428568391681'
     );
     assert.equal(
-        platformTemplateSignEmbeddingEndpoint('id with space'),
-        '/embedding/sign-creating/id%20with%20space'
+        platformTemplateSignProgressUrl('id with space'),
+        'https://app.ucansign.com/signCreating/progress/id%20with%20space'
     );
 });
 
