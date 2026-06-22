@@ -47,6 +47,14 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-22
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 회사별 아이디 로그인 커밋
+  - 주요 기능: 회원가입 비밀번호 확인, 회사별 로그인 아이디 저장/중복 확인, `회사 + 아이디 + 비밀번호` 로그인 API, 기존 이메일 로그인 fallback, 기존 계정 이메일 local-part backfill SQL
+  - dev 반영: none
+  - main 반영: none
+  - 검증: `npx tsx --test src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright로 `/signup`, `/login` 1440px 라벨과 page-level horizontal overflow 0건 확인
+  - 남은 이슈: `supabase_login_id_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 회사별 아이디 로그인 schema가 활성화된다. 같은 회사 내 기존 이메일 local-part 중복이 있으면 SQL이 실패하므로 중복 ID를 정리한 뒤 다시 적용한다.
 - 2026-06-19
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `185d84d feat(contracts): add platform electronic contract flow`, `127b0ff feat(demo): add public franchise walkthrough`

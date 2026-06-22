@@ -4,19 +4,33 @@ import {
     type SignupApprovalRole,
     type SignupApprovalStatus
 } from '@/lib/signup-approval-policy';
+import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 function normalizePhone(value: unknown): string {
     return String(value ?? '').replace(/\D/g, '');
 }
 
+function getText(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { id, password, name, companyName, phone, role: requestedRole } = body; // id here is treated as email/loginId
+        const { loginId, email: rawEmail, password, passwordConfirm, name: rawName, companyName: rawCompanyName, companyId: rawCompanyId, phone, role: requestedRole } = body;
+        const normalizedLoginId = normalizeLoginId(loginId);
+        const email = getText(rawEmail).toLowerCase();
+        const name = getText(rawName);
+        const companyName = getText(rawCompanyName);
+        const selectedCompanyId = getText(rawCompanyId);
 
-        if (!id || !password || !name || !companyName || !phone) {
+        if (!normalizedLoginId || !email || !password || !passwordConfirm || !name || !companyName || !phone) {
             return NextResponse.json({ error: '필수 정보를 모두 입력해주세요.' }, { status: 400 });
+        }
+
+        if (!isValidLoginId(normalizedLoginId)) {
+            return NextResponse.json({ error: LOGIN_ID_RULE_MESSAGE }, { status: 400 });
         }
 
         const phoneNormalized = normalizePhone(phone);
@@ -28,15 +42,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '비밀번호는 최소 6자 이상이어야 합니다.' }, { status: 400 });
         }
 
-        // Policy: Strict Email ID for new signups
-        if (!id.includes('@')) {
-            return NextResponse.json({ error: '아이디는 이메일 형식이어야 합니다.' }, { status: 400 });
+        if (password !== passwordConfirm) {
+            return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 400 });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json({ error: '이메일 형식이 올바르지 않습니다.' }, { status: 400 });
         }
 
         const trimmedCompanyName = companyName.trim();
         const nfcCompanyName = trimmedCompanyName.normalize('NFC');
         const nfdCompanyName = trimmedCompanyName.normalize('NFD');
-        const email = id;
         const supabaseAdmin = await getSupabaseAdmin();
 
         console.log(`[Signup] Attempting to join/create company: "${trimmedCompanyName}"`);
@@ -48,30 +65,50 @@ export async function POST(request: Request) {
         let finalStatus: SignupApprovalStatus = 'pending_approval';
         let message = '가입 요청이 완료되었습니다.';
 
-        // Robust check: Search for company name using ilike to handle minor differences (spaces/normalization)
-        const { data: companyResults, error: findError } = await supabaseAdmin
-            .from('companies')
-            .select('id, manager_id, name')
-            .or(`name.ilike.${nfcCompanyName},name.ilike.${nfdCompanyName}`)
-            .order('created_at', { ascending: true });
+        let companyResults: { id: string; manager_id: string | null; name: string }[] | null = null;
+        let findError: { message?: string } | null = null;
+
+        if (selectedCompanyId) {
+            const selectedCompanyResult = await supabaseAdmin
+                .from('companies')
+                .select('id, manager_id, name')
+                .eq('id', selectedCompanyId)
+                .maybeSingle<{ id: string; manager_id: string | null; name: string }>();
+            if (selectedCompanyResult.error) {
+                findError = selectedCompanyResult.error;
+            } else if (selectedCompanyResult.data) {
+                companyResults = [selectedCompanyResult.data];
+            }
+        }
+
+        if (!companyResults) {
+            // Robust check: Search for company name using ilike to handle minor differences (spaces/normalization)
+            const companySearchResult = await supabaseAdmin
+                .from('companies')
+                .select('id, manager_id, name')
+                .or(`name.ilike.${nfcCompanyName},name.ilike.${nfdCompanyName}`)
+                .order('created_at', { ascending: true });
+            companyResults = companySearchResult.data;
+            findError = companySearchResult.error;
+        }
 
         if (findError) {
             console.error('[Signup] Find company error:', findError);
         }
 
         // Try to find an exact or near-exact match in memory
-        let existingCompany = null;
+        let existingCompany: { id: string; manager_id: string | null; name?: string } | null = null;
         if (companyResults && companyResults.length > 0) {
             // First try strict match
             existingCompany = companyResults.find(c =>
                 c.name.trim().normalize('NFC') === nfcCompanyName ||
                 c.name.trim().normalize('NFD') === nfdCompanyName ||
                 c.name.replace(/\s+/g, '') === nfcCompanyName.replace(/\s+/g, '')
-            );
+            ) ?? null;
 
             // If still not found, just take the first result as a fallback for ilike matches
             if (!existingCompany) {
-                existingCompany = companyResults[0];
+                existingCompany = companyResults[0] ?? null;
             }
         }
 
@@ -130,6 +167,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '회사 정보를 확정하지 못했습니다.' }, { status: 500 });
         }
 
+        const { data: duplicateLoginId, error: duplicateLoginIdError } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('login_id_normalized', normalizedLoginId)
+            .limit(1);
+
+        if (duplicateLoginIdError) {
+            console.error('[Signup] Login ID duplicate check error:', duplicateLoginIdError);
+            return NextResponse.json({ error: '아이디 중복 확인에 실패했습니다.' }, { status: 500 });
+        }
+
+        if ((duplicateLoginId ?? []).length > 0) {
+            return NextResponse.json({ error: '이미 사용 중인 아이디입니다.' }, { status: 409 });
+        }
+
         const approvalPolicy = resolveSignupApprovalPolicy({
             companyExists: !isNewCompany,
             requestedRole
@@ -157,7 +210,7 @@ export async function POST(request: Request) {
             if (msg.includes('unique constraint') ||
                 msg.includes('already registered') ||
                 msg.includes('a user with this email address has already been registered')) {
-                return NextResponse.json({ error: '이미 존재하는 ID(이메일)입니다.' }, { status: 409 });
+                return NextResponse.json({ error: '이미 존재하는 이메일입니다.' }, { status: 409 });
             }
             if (msg.includes('password should be at least')) {
                 return NextResponse.json({ error: '비밀번호는 최소 6자 이상이어야 합니다.' }, { status: 400 });
@@ -180,7 +233,9 @@ export async function POST(request: Request) {
                 status: finalStatus,
                 name: name,
                 phone: String(phone).trim(),
-                phone_normalized: phoneNormalized
+                phone_normalized: phoneNormalized,
+                login_id: normalizedLoginId,
+                login_id_normalized: normalizedLoginId
             })
             .eq('id', userId);
 
@@ -188,6 +243,9 @@ export async function POST(request: Request) {
             console.error('Profile update error:', profileError);
             // Cleanup auth user?
             await supabaseAdmin.auth.admin.deleteUser(userId);
+            if (profileError.message?.includes('login_id')) {
+                return NextResponse.json({ error: 'SQL 등록 필요: supabase_login_id_migration.sql 적용 후 다시 가입해주세요.' }, { status: 500 });
+            }
             return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
         }
 
@@ -195,6 +253,7 @@ export async function POST(request: Request) {
             success: true,
             user: {
                 id: userId,
+                loginId: normalizedLoginId,
                 name,
                 email, // useful for display
                 role: finalRole,

@@ -62,6 +62,7 @@ supabase_franchise_market_monitoring_migration.sql
 supabase_franchise_lead_registration_requests_migration.sql
 supabase_franchise_property_promotion_migration.sql
 supabase_partner_vendor_access_migration.sql
+supabase_login_id_migration.sql
 supabase_company_menu_features_migration.sql
 supabase_electronic_contracts_platform_migration.sql
 supabase_meta_lead_ads_migration.sql
@@ -73,6 +74,10 @@ supabase_realty_import_migration.sql
 ## Signup And Partner Vendor Setup
 
 Run `supabase_partner_vendor_access_migration.sql` after the franchise location, location messages, and opening projects migrations.
+
+Run `supabase_login_id_migration.sql` before enabling company-scoped ID login in production. The migration adds `profiles.login_id` and `profiles.login_id_normalized`, backfills existing accounts from the email local part before `@`, and creates a unique index on `(company_id, login_id_normalized)`.
+
+If two existing users in the same company share the same email local part, the migration intentionally fails with a duplicate login ID notice. Resolve the duplicate IDs manually, then re-run the SQL. New signup requires `아이디`, `이메일`, `비밀번호`, `비밀번호 확인`, `이름`, `휴대폰`, and company selection. Login defaults to `회사 + 아이디 + 비밀번호`; email login remains temporarily available as a migration fallback.
 
 New signup requires a mobile phone number and stores both the original `profiles.phone` value and the digits-only `profiles.phone_normalized` value. Existing-company signup can request either `브랜드 임직원` or `협력업체`; both wait for the company team lead to approve. New-company signup stays team-lead-only and waits for admin approval.
 

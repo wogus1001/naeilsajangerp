@@ -499,6 +499,15 @@
 - 전자계약 문서함 다운로드 버튼도 서버 응답 `Content-Type`에 따라 `.pdf` 또는 `.zip` 확장자를 붙이도록 맞췄다.
 - 검증: `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/ucansign/platform-client.test.mts`, `npm run build` 통과. 추가 관련 테스트 묶음 `npx tsx --test src/lib/electronic-contracts/company-template.test.mts src/lib/electronic-contracts/template-field-layout.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/common-templates.test.mts src/lib/ucansign/platform-config.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts`는 34건 통과했다.
 
+## 2026-06-22 회사별 아이디 로그인 QA
+
+- 회원가입 화면을 `아이디`, `이메일`, `비밀번호`, `비밀번호 확인`, `이름`, `휴대폰 번호`, `회사` 입력 흐름으로 정리했다. 비밀번호 확인 불일치, 휴대폰 누락, 아이디 규칙 위반은 가입 전에 차단한다.
+- 로그인은 기본적으로 `회사 + 아이디 + 비밀번호`를 서버에 전달하고, 서버가 `profiles.company_id + login_id_normalized`로 실제 Supabase Auth 이메일을 찾아 세션을 발급한다. 전환 안정성을 위해 이메일 입력 로그인은 임시 fallback으로 유지한다.
+- 신규 SQL: `supabase_login_id_migration.sql`. 이 SQL은 `profiles.login_id`, `profiles.login_id_normalized`를 추가하고 기존 계정을 이메일 `@` 앞부분으로 backfill한다. 같은 회사 안에 중복 local-part가 있으면 SQL이 실패하므로 사용자가 Supabase SQL Editor에서 중복 정리 후 직접 적용해야 한다.
+- 검증: `npx tsx --test src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, Browserslist/baseline-browser-mapping 경고만 출력했다.
+- 브라우저 QA: 기존 로컬 서버 `http://localhost:3000`에서 `/signup`, `/login`을 1440px 기준으로 확인했다. 회원가입 라벨은 아이디/이메일/비밀번호/비밀번호 확인/이름/휴대폰 번호/회사명/가입 승인 방식으로 표시됐고, 로그인 라벨은 회사/아이디/비밀번호/아이디 저장으로 표시됐다. 두 화면 모두 page-level horizontal overflow 0건이었다.
+- 데모 영향 없음: 공개 `/demo`는 인증 없는 샘플 데이터 화면이므로 이번 로그인 방식 변경에 따른 데모 UI 수정은 없다.
+
 ## 다음 QA 체크리스트
 
 ### P0
