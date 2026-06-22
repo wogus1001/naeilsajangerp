@@ -2,18 +2,20 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getPendingApprovalLoginMessage } from '@/lib/signup-approval-policy';
 import { getSupabase } from '@/lib/supabase';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
-
-type LoginUser = {
-    id?: string;
-    uid?: string;
-    name?: string;
-    role?: string;
-    companyName?: string;
-};
+import { CompanySearchModal, type Company } from '../signup/CompanySearchModal';
+import { LoginForm } from './LoginForm';
+import type { LoginApiResponse, LoginUser } from './loginTypes';
+import {
+    getLoginCompanyFromUser,
+    readSavedLoginCompany,
+    readSavedLoginId,
+    writeSavedLoginCompany,
+    writeSavedLoginId,
+    type LoginCompany
+} from './loginStorage';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -24,13 +26,24 @@ export default function LoginPage() {
 
     const [savedId, setSavedId] = useState('');
     const [rememberId, setRememberId] = useState(false);
+    const [selectedCompany, setSelectedCompany] = useState<LoginCompany | null>(null);
+    const [showSearchModal, setShowSearchModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Company[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
 
     React.useEffect(() => {
         const bootstrap = async () => {
-            const saved = localStorage.getItem('saved_login_id');
+            const saved = readSavedLoginId();
             if (saved) {
                 setSavedId(saved);
                 setRememberId(true);
+            }
+
+            const savedCompany = readSavedLoginCompany();
+            if (savedCompany) {
+                setSelectedCompany(savedCompany);
             }
 
             try {
@@ -100,94 +113,84 @@ export default function LoginPage() {
 
         const id = (document.getElementById('email') as HTMLInputElement).value;
         const password = (document.getElementById('password') as HTMLInputElement).value;
+        const isEmailLogin = id.includes('@');
+
+        if (!isEmailLogin && !selectedCompany) {
+            setErrorMsg('회사를 선택해주세요.');
+            setIsLoading(false);
+            return;
+        }
 
         try {
-            // Heuristic for migration compatibility + Default Domain
-            // If no @, assume it's a legacy ID and append default domain
-            let email = id;
-            if (!id.includes('@')) {
-                email = `${id}@example.com`;
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id,
+                    password,
+                    companyId: selectedCompany?.id
+                })
+            });
+            const data = await res.json() as LoginApiResponse;
+
+            if (!res.ok || !data.user || !data.session?.access_token || !data.session.refresh_token) {
+                setErrorMsg(data.error || '아이디 또는 비밀번호가 일치하지 않습니다.');
+                setIsLoading(false);
+                return;
             }
 
             const supabase = getSupabase();
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            const { error: sessionError } = await supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token
             });
 
-            if (error) {
-                console.error('Supabase auth error:', error);
-                if (error.message.includes('Invalid login credentials')) {
-                    setErrorMsg('아이디 또는 비밀번호가 일치하지 않습니다.');
-                } else {
-                    setErrorMsg(error.message);
-                }
-            } else if (data.user) {
-                // Fetch additional profile info from 'profiles' table
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('id, name, role, status, company_id')
-                    .eq('id', data.user.id)
-                    .single();
-
-                if (!profile) {
-                    console.error('[Login Error] Profile not found for User ID:', data.user.id);
-                    await supabase.auth.signOut();
-                    setErrorMsg('사용자 프로필을 찾을 수 없습니다. (DB 누락 가능성)');
-                    setIsLoading(false);
-                    return;
-                }
-
-                // Security Check: Enforce Status
-                console.log('[Login] Profile Status:', profile.status);
-
-                if (profile.status === 'pending_approval') {
-                    await supabase.auth.signOut();
-                    setErrorMsg(getPendingApprovalLoginMessage(profile.role));
-                    setIsLoading(false);
-                    return;
-                }
-
-                if (profile.status !== 'active') { // Explicit check, no fallback
-                    await supabase.auth.signOut();
-                    setErrorMsg('사용이 정지된 계정입니다. 관리자에게 문의하세요.');
-                    setIsLoading(false);
-                    return;
-                }
-
-                const { data: company } = await supabase
-                    .from('companies')
-                    .select('name')
-                    .eq('id', profile.company_id)
-                    .single();
-
-                // Construct user object
-                const userInfo = {
-                    id: id,
-                    email: data.user.email,
-                    name: profile.name || data.user.user_metadata.name || '사용자',
-                    role: profile.role || 'staff',
-                    companyName: company?.name || '',
-                    companyId: profile.company_id,
-                    uid: data.user.id,
-                    status: profile.status // No default 'active'
-                };
-
-                if (rememberId) {
-                    localStorage.setItem('saved_login_id', id);
-                } else {
-                    localStorage.removeItem('saved_login_id');
-                }
-
-                localStorage.setItem('user', JSON.stringify(userInfo));
-                router.push('/dashboard');
+            if (sessionError) {
+                console.error('Failed to set Supabase session:', sessionError);
+                setErrorMsg('로그인 세션을 저장하지 못했습니다.');
+                setIsLoading(false);
+                return;
             }
+
+            writeSavedLoginId(id, rememberId);
+            writeSavedLoginCompany(getLoginCompanyFromUser(data.user) || selectedCompany);
+
+            localStorage.setItem('user', JSON.stringify(data.user));
+            router.push('/dashboard');
         } catch (error) {
             console.error('Login error:', error);
             setErrorMsg('로그인 중 오류가 발생했습니다.');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSearch = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!searchQuery.trim()) {
+            setErrorMsg('검색어를 입력해주세요.');
+            return;
+        }
+
+        setIsSearching(true);
+        setHasSearched(false);
+        try {
+            const res = await fetch(`/api/companies/search?query=${encodeURIComponent(searchQuery)}`);
+            const data = await res.json();
+            setSearchResults(res.ok ? data.data || [] : []);
+        } catch (error) {
+            console.error('Company search failed:', error);
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+            setHasSearched(true);
+        }
+    };
+
+    const handleSelectCompany = (company: Company) => {
+        setSelectedCompany(company);
+        writeSavedLoginCompany(company);
+        setShowSearchModal(false);
     };
 
     return (
@@ -222,45 +225,15 @@ export default function LoginPage() {
                         </button>
                     </div>
                 ) : (
-                    <form onSubmit={handleLogin} className={styles.form}>
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="email" className={styles.label}>아이디</label>
-                            <input
-                                type="text"
-                                id="email"
-                                placeholder="아이디를 입력하세요"
-                                className={styles.input}
-                                defaultValue={savedId}
-                                required
-                            />
-                        </div>
-
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="password" className={styles.label}>비밀번호</label>
-                            <input
-                                type="password"
-                                id="password"
-                                placeholder="비밀번호를 입력하세요"
-                                className={styles.input}
-                                required
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-                            <input
-                                type="checkbox"
-                                id="rememberId"
-                                checked={rememberId}
-                                onChange={(e) => setRememberId(e.target.checked)}
-                                style={{ width: '16px', height: '16px', marginRight: '8px', cursor: 'pointer' }}
-                            />
-                            <label htmlFor="rememberId" style={{ fontSize: '14px', color: '#666', cursor: 'pointer' }}>아이디 저장</label>
-                        </div>
-
-                        <button type="submit" className={styles.loginButton} disabled={isLoading}>
-                            {isLoading ? '로그인 중...' : '로그인'}
-                        </button>
-                    </form>
+                    <LoginForm
+                        isLoading={isLoading}
+                        savedId={savedId}
+                        rememberId={rememberId}
+                        selectedCompany={selectedCompany}
+                        onSubmit={handleLogin}
+                        onOpenCompanySearch={() => setShowSearchModal(true)}
+                        onRememberIdChange={setRememberId}
+                    />
                 )}
 
                 <div className={styles.footer}>
@@ -278,6 +251,22 @@ export default function LoginPage() {
                 message={errorMsg || ''}
                 type="error"
             />
+            {showSearchModal && (
+                <CompanySearchModal
+                    searchQuery={searchQuery}
+                    searchResults={searchResults}
+                    isSearching={isSearching}
+                    hasSearched={hasSearched}
+                    onQueryChange={(value) => {
+                        setSearchQuery(value);
+                        setHasSearched(false);
+                    }}
+                    onSearch={handleSearch}
+                    onClose={() => setShowSearchModal(false)}
+                    onSelectCompany={handleSelectCompany}
+                    onRegisterNewCompany={() => setErrorMsg('로그인은 등록된 회사만 선택할 수 있습니다.')}
+                />
+            )}
         </div>
     );
 }

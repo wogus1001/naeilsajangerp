@@ -62,6 +62,7 @@ supabase_franchise_market_monitoring_migration.sql
 supabase_franchise_lead_registration_requests_migration.sql
 supabase_franchise_property_promotion_migration.sql
 supabase_partner_vendor_access_migration.sql
+supabase_login_id_migration.sql
 supabase_company_menu_features_migration.sql
 supabase_electronic_contracts_platform_migration.sql
 supabase_meta_lead_ads_migration.sql
@@ -73,6 +74,10 @@ supabase_realty_import_migration.sql
 ## Signup And Partner Vendor Setup
 
 Run `supabase_partner_vendor_access_migration.sql` after the franchise location, location messages, and opening projects migrations.
+
+Run `supabase_login_id_migration.sql` before enabling company-scoped ID login in production. The migration adds `profiles.login_id` and `profiles.login_id_normalized`, backfills existing accounts from the email local part before `@`, and creates a unique index on `(company_id, login_id_normalized)`.
+
+If two existing users in the same company share the same email local part, the migration intentionally fails with a duplicate login ID notice. Resolve the duplicate IDs manually, then re-run the SQL. New signup requires `아이디`, `이메일`, `비밀번호`, `비밀번호 확인`, `이름`, `휴대폰`, and company selection. Login defaults to `회사 + 아이디 + 비밀번호`; email login remains temporarily available as a migration fallback.
 
 New signup requires a mobile phone number and stores both the original `profiles.phone` value and the digits-only `profiles.phone_normalized` value. Existing-company signup can request either `브랜드 임직원` or `협력업체`; both wait for the company team lead to approve. New-company signup stays team-lead-only and waits for admin approval.
 
@@ -263,25 +268,34 @@ The 모객 DB list also shows a `정보공개서` column and sort options for di
 
 ## Electronic Contract v2 Setup
 
-The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven 권리금계약 flow lives separately under `/contracts/electronic` and `/contracts/electronic/create`.
+The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven electronic contract flow lives under `/contracts/electronic`; built-in forms such as 권리금계약서 are exposed as common templates, while company-created UCanSign templates stay under company templates.
 
 Run `supabase_electronic_contracts_platform_migration.sql` before enabling the new flow. The migration creates the platform UCANSIGN connection table, company-scoped `electronic_contracts`, webhook `contract_events`, and SafetyData license import tables.
+
+Run `supabase_company_contract_templates_migration.sql` before enabling company-uploaded contract templates. It creates company-scoped PDF template tables, roles, fields, version metadata, and extends `electronic_contracts` with `template_source`, `company_template_id`, and `company_template_version_id`. The SQL must be applied manually in Supabase SQL Editor.
 
 Required environment variables:
 
 ```bash
-UCANSIGN_CLIENT_ID=
-UCANSIGN_CLIENT_SECRET=
-UCANSIGN_TOKEN_ENCRYPTION_KEY=
+UCANSIGN_API_KEY=
 UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID=
 UCANSIGN_WEBHOOK_SECRET=
+UCANSIGN_TEMPLATE_LINK_SECRET=
 SAFETYDATA_SERVICE_KEY=
 NEXT_PUBLIC_APP_URL=
 ```
 
-The new flow uses one Naeilsajang platform UCANSIGN account. Admins connect or disconnect the shared account through `/api/admin/ucansign/*`; staff do not connect personal UCANSIGN accounts for this flow. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app.
+The new flow uses one Naeilsajang platform UCANSIGN API KEY. Users and companies do not connect personal UCANSIGN accounts for this flow; the server issues short-lived UCANSIGN access tokens from `UCANSIGN_API_KEY` and sends documents through the Naeilsajang shared account. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app. `UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID` is required only for the built-in Naeilsajang 권리금계약서 template. Company-uploaded templates remain company-scoped in ERP and are linked to UCANSIGN template/document IDs per active template version.
+
+`UCANSIGN_TEMPLATE_LINK_SECRET` signs temporary template-link callback state for company template embedding. If it is omitted, the app falls back to `UCANSIGN_WEBHOOK_SECRET` or `UCANSIGN_API_KEY`.
 
 `UCANSIGN_WEBHOOK_SECRET` is the shared secret expected on UCanSign webhook requests. Configure the webhook to send it as `Authorization: Bearer <secret>` or `x-ucansign-webhook-secret`; if custom headers are not available, append `?secret=<secret>` to the webhook URL.
+
+Company-uploaded templates are managed in `/contracts/electronic` -> `템플릿 관리`. ERP creates a company-scoped placeholder, opens the UCanSign template setup screen, and links the returned UCanSign template/document ID to the company template version. Template name, PDF, fields, signer roles, and signature boxes are configured in UCanSign so users do not type the template name twice. If UCanSign exposes the template name in callback/detail response, ERP syncs it back to the list. Templates with existing sent documents are archived instead of hard-deleted.
+
+When writing a contract from a company-uploaded template, ERP now uses a single `필드명` input flow. Users enter the mapped field values and signer information in ERP, then send through the linked UCanSign template. The previous `작성 방식` / `템플릿에서 직접 작성` branch is not exposed because the public UCanSign API collection does not provide a reliable rendered-template preview endpoint for pre-send review. If the active template version has no linked UCanSign template/document ID, ERP blocks send with a clear template-link validation message.
+
+Completed document downloads use `/api/electronic-contracts/:id/download`. UCanSign can return a ZIP bundle containing the signed PDF, audit certificate, and preview images; the ERP download API extracts the main PDF and serves it as `application/pdf`. If no valid PDF exists in the bundle, the response falls back to `.zip` so the browser does not save a ZIP archive with a misleading `.pdf` extension.
 
 License number search no longer calls Food Safety Korea in real time. Admins import SafetyData `인허가업소정보` through `/api/admin/license-businesses/import`, and `/api/license-businesses/search` searches the local `license_business_records` table. Search result cards map `SALS_UNQ_SE_NO_LCPMT_NO` to the contract license number, `BUES_NM` to business name, and `ADDR` to candidate address, with road-name and lot-address similarity badges.
 

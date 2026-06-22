@@ -1,5 +1,6 @@
 import { fail, ok } from '@/lib/api-response';
 import {
+    extractUcansignWebhookPayloadInfo,
     isAuthorizedUcansignWebhook,
     normalizeUcansignWebhookStatus
 } from '@/lib/electronic-contracts/ucansign-webhook';
@@ -11,19 +12,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function stringValue(record: Record<string, unknown>, keys: readonly string[]): string {
-    for (const key of keys) {
-        const value = record[key];
-        if (typeof value === 'string' && value.trim()) return value.trim();
-        if (typeof value === 'number') return String(value);
-    }
-    return '';
-}
-
 type ContractStatusRow = {
     readonly id: string;
     readonly status: string | null;
+    readonly ucansign_document_id: string | null;
 };
+
+async function findContractByWebhookPayload(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    contractId: string,
+    documentId: string
+): Promise<ContractStatusRow | null> {
+    if (contractId) {
+        const { data, error } = await supabaseAdmin
+            .from('electronic_contracts')
+            .select('id, status, ucansign_document_id')
+            .eq('id', contractId)
+            .maybeSingle<ContractStatusRow>();
+        if (error) throw error;
+        if (data && (!data.ucansign_document_id || data.ucansign_document_id === documentId)) return data;
+    }
+
+    const { data, error } = await supabaseAdmin
+        .from('electronic_contracts')
+        .select('id, status, ucansign_document_id')
+        .eq('ucansign_document_id', documentId)
+        .maybeSingle<ContractStatusRow>();
+    if (error) throw error;
+    return data || null;
+}
 
 export async function POST(request: Request) {
     try {
@@ -34,24 +51,15 @@ export async function POST(request: Request) {
         const body: unknown = await request.json();
         if (!isRecord(body)) return fail(400, 'VALIDATION_ERROR', 'Invalid webhook payload');
 
-        const customValue = stringValue(body, ['customValue', 'custom_value']);
-        const documentId = stringValue(body, ['documentId', 'document_id', 'id']);
-        const rawStatus = stringValue(body, ['status', 'documentStatus', 'eventType', 'event']);
+        const { contractId, documentId, rawStatus } = extractUcansignWebhookPayloadInfo(body);
         const status = normalizeUcansignWebhookStatus(rawStatus);
-        if (!customValue || !documentId) {
-            return fail(400, 'VALIDATION_ERROR', 'Contract id and document id are required');
+        if (!documentId) {
+            return fail(400, 'VALIDATION_ERROR', 'Document id is required');
         }
         if (!status) return fail(400, 'VALIDATION_ERROR', 'Unsupported UCanSign webhook status');
 
         const supabaseAdmin = getSupabaseAdmin();
-
-        const { data: contract, error: contractError } = await supabaseAdmin
-            .from('electronic_contracts')
-            .select('id, status')
-            .eq('id', customValue)
-            .eq('ucansign_document_id', documentId)
-            .maybeSingle<ContractStatusRow>();
-        if (contractError) throw contractError;
+        const contract = await findContractByWebhookPayload(supabaseAdmin, contractId, documentId);
         if (!contract) return fail(404, 'NOT_FOUND', 'Matching electronic contract not found');
 
         const { error: eventError } = await supabaseAdmin.from('contract_events').insert({
@@ -67,11 +75,17 @@ export async function POST(request: Request) {
             return ok({ received: true, ignored: true, reason: 'completed_contract_is_terminal' });
         }
 
+        const now = new Date().toISOString();
+        const nextStatus = status === 'updated' ? 'sent' : status;
         const updatePayload: Record<string, string> = {
-            status,
-            updated_at: new Date().toISOString()
+            status: nextStatus,
+            updated_at: now
         };
-        if (status === 'completed') updatePayload.completed_at = new Date().toISOString();
+        if (!contract.ucansign_document_id) {
+            updatePayload.ucansign_document_id = documentId;
+            updatePayload.sent_at = now;
+        }
+        if (status === 'completed') updatePayload.completed_at = now;
 
         const { error: updateError } = await supabaseAdmin
             .from('electronic_contracts')
