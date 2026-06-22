@@ -49,6 +49,14 @@ YYYY-MM-DD
 
 - 2026-06-22
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 회사 템플릿 작성 방식 단순화 커밋
+  - 주요 기능: 회사 업로드 전자계약 템플릿 작성 화면에서 `작성 방식` 선택과 `템플릿에서 직접 작성` 임베딩 진입을 제거하고, `필드명` 입력/서명자 정보/임시저장/전자계약 발송 단일 흐름으로 정리
+  - dev 반영: none
+  - main 반영: none
+  - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력
+  - 남은 이슈: UCanSign Postman 컬렉션 기준 템플릿 기반 서명문서 생성, 문서 파일/종합 파일 다운로드, 템플릿 생성/수정 임베딩은 확인됐지만, 저장된 템플릿에 ERP 입력값을 넣은 PDF를 발송 전에 렌더링하는 preview endpoint는 확인되지 않았다. 발송 전 확인은 입력값/서명자 요약 UX로 고도화한다. 신규 SQL은 없다.
+- 2026-06-22
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회사 템플릿 직접 작성 임베딩 커밋
   - 주요 기능: 회사 업로드 전자계약 템플릿의 `템플릿에서 직접 작성`을 저장된 UCanSign 템플릿 진행 화면으로 직접 연결, 미연결 템플릿 검증 메시지 보강
   - dev 반영: none

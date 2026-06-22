@@ -3,10 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Save, Send } from 'lucide-react';
-import {
-    renderTemplateFormFromFields,
-    type CompanyTemplateInputMode
-} from '@/lib/electronic-contracts/company-template';
+import { renderTemplateFormFromFields } from '@/lib/electronic-contracts/company-template';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     fetchCompanyTemplateDetail,
@@ -18,14 +15,11 @@ import {
     detailRoles,
     isRecord,
     recordStringMap,
-    snapshotInputMode,
     snapshotParticipants,
     type ContractDetailResponse
 } from './companyTemplateContractModel';
 import { CompanyTemplateFormFields } from './CompanyTemplateFormFields';
 import { CompanyTemplateCreateHeader } from './CompanyTemplateCreateHeader';
-import { CompanyTemplateInputModeSelector } from './CompanyTemplateInputModeSelector';
-import { CompanyTemplateSignEmbedding } from './CompanyTemplateSignEmbedding';
 import { CompanyTemplateSignerParticipants } from './CompanyTemplateSignerParticipants';
 import {
     createEmptySignerParticipants,
@@ -58,7 +52,6 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
     const [sending, setSending] = React.useState(false);
     const [savingDraft, setSavingDraft] = React.useState(false);
     const [draftContractId, setDraftContractId] = React.useState('');
-    const [inputMode, setInputMode] = React.useState<CompanyTemplateInputMode>('erp');
     const [message, setMessage] = React.useState('');
     const [participantIssues, setParticipantIssues] = React.useState<SignerParticipantIssueMap>({});
 
@@ -101,7 +94,6 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                 ...initialParticipants,
                 ...signerParticipantsFromRecord(snapshotParticipants(snapshot.participants))
             });
-            setInputMode(snapshotInputMode(snapshot));
             setDraftContractId(payload.data?.contract?.id || requestedDraftId);
             setMessage('저장된 초안을 불러왔습니다.');
         } catch (caught) {
@@ -153,8 +145,8 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                 templateId: currentDetail.template.id,
                 versionId: version.id,
                 contractId: draftContractId,
-                inputMode,
-                values: inputMode === 'erp' ? values : {},
+                inputMode: 'erp',
+                values,
                 participants: Object.values(participants)
             });
             setDraftContractId(payload.contractId);
@@ -188,8 +180,8 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                     templateId: currentDetail.template.id,
                     versionId: version.id,
                     contractId: draftContractId,
-                    inputMode,
-                    values: inputMode === 'erp' ? values : {},
+                    inputMode: 'erp',
+                    values,
                     participants: participantValidation.participants
                 })
             });
@@ -208,54 +200,40 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
             <CompanyTemplateCreateHeader title={currentDetail.template.name} />
             {message && <div className={message.includes('완료') ? styles.success : styles.error}>{message}</div>}
             <div className={styles.companyTemplateForm}>
-                <CompanyTemplateInputModeSelector
-                    value={inputMode}
-                    fieldCount={formFields.length}
-                    onChange={setInputMode}
-                />
-                {inputMode === 'template' ? (
-                    <CompanyTemplateSignEmbedding
-                        templateId={currentDetail.template.id}
-                        versionId={version?.id || ''}
-                        contractId={draftContractId}
-                        onContractIdChange={setDraftContractId}
-                    />
-                ) : (
-                    <form className={styles.companyTemplateForm} onSubmit={submit}>
-                        <section className={styles.formSection}>
-                            <h2 className={styles.sectionTitle}>ERP에서 직접 작성</h2>
-                            {formFields.length > 0 ? (
-                                <CompanyTemplateFormFields
-                                    fields={formFields}
-                                    values={values}
-                                    onChange={(fieldKey, value) => setValues(previous => ({ ...previous, [fieldKey]: value }))}
-                                />
-                            ) : (
-                                <div className={styles.inlineNotice}>ERP에서 미리 입력할 필드가 없습니다. 템플릿에서 직접 작성 방식을 사용해 주세요.</div>
-                            )}
-                        </section>
-                        <section className={styles.formSection}>
-                            <h2 className={styles.sectionTitle}>서명자 정보</h2>
-                            <CompanyTemplateSignerParticipants
-                                roles={roles}
-                                participants={participants}
-                                issues={participantIssues}
-                                onChange={updateParticipant}
+                <form className={styles.companyTemplateForm} onSubmit={submit}>
+                    <section className={styles.formSection}>
+                        <h2 className={styles.sectionTitle}>필드명</h2>
+                        {formFields.length > 0 ? (
+                            <CompanyTemplateFormFields
+                                fields={formFields}
+                                values={values}
+                                onChange={(fieldKey, value) => setValues(previous => ({ ...previous, [fieldKey]: value }))}
                             />
-                        </section>
-                        <div className={styles.formFooter}>
-                            <Link className={styles.secondaryButton} href="/contracts/electronic">취소</Link>
-                            <button className={styles.secondaryButton} type="button" onClick={saveDraft} disabled={savingDraft || sending}>
-                                <Save size={16} />
-                                {savingDraft ? '저장 중' : '임시저장'}
-                            </button>
-                            <button className={styles.primaryButton} type="submit" disabled={sending || savingDraft || !version?.ucansign_template_id}>
-                                <Send size={16} />
-                                {sending ? '발송 중' : '전자계약 발송'}
-                            </button>
-                        </div>
-                    </form>
-                )}
+                        ) : (
+                            <div className={styles.inlineNotice}>입력할 필드가 없습니다.</div>
+                        )}
+                    </section>
+                    <section className={styles.formSection}>
+                        <h2 className={styles.sectionTitle}>서명자 정보</h2>
+                        <CompanyTemplateSignerParticipants
+                            roles={roles}
+                            participants={participants}
+                            issues={participantIssues}
+                            onChange={updateParticipant}
+                        />
+                    </section>
+                    <div className={styles.formFooter}>
+                        <Link className={styles.secondaryButton} href="/contracts/electronic">취소</Link>
+                        <button className={styles.secondaryButton} type="button" onClick={saveDraft} disabled={savingDraft || sending}>
+                            <Save size={16} />
+                            {savingDraft ? '저장 중' : '임시저장'}
+                        </button>
+                        <button className={styles.primaryButton} type="submit" disabled={sending || savingDraft || !version?.ucansign_template_id}>
+                            <Send size={16} />
+                            {sending ? '발송 중' : '전자계약 발송'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </main>
     );

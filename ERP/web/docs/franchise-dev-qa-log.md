@@ -507,6 +507,14 @@
 - 이 변경은 실제 저장/발송 API 구조를 바꾸지 않으며, 회사/발송자 기준 문서 분리와 UCanSign API KEY 공용 발송 정책은 유지한다. 신규 SQL은 없다.
 - 검증: `npx tsx --test src/lib/ucansign/platform-client.test.mts src/lib/ucansign/template-link-state.test.mts src/lib/electronic-contracts/ucansign-webhook.test.mts src/app/(main)/contracts/electronic/_components/signerParticipantModel.test.mts src/lib/electronic-contracts/signer-participant-validation.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 
+## 2026-06-22 회사 템플릿 작성 방식 단순화 QA
+
+- 회사 업로드 템플릿 계약 작성 화면에서 `작성 방식` 선택 카드와 `템플릿에서 직접 작성` 임베딩 진입을 제거했다. 사용자 화면은 `필드명` 입력, 서명자 정보, 임시저장, 전자계약 발송만 남긴다.
+- 임시저장/발송 payload는 항상 `inputMode='erp'`와 ERP 입력값을 기준으로 저장한다. 기존 공통 템플릿/회사 템플릿 분리, 회사/발송자 기준 문서함 분리는 유지한다.
+- UCanSign Postman 컬렉션을 확인한 결과 템플릿 기반 서명문서 생성, 문서 세부정보/이력, 문서 파일, 종합 파일 다운로드, 템플릿 생성/수정 임베딩 endpoint는 있으나, 저장된 템플릿에 ERP 입력값을 넣은 PDF를 발송 전에 렌더링하는 preview endpoint는 확인되지 않았다.
+- 다음 고도화 후보는 발송 전 입력값/서명자 확인 모달, 템플릿 연결 상태 진단, webhook 누락 시 상태 새로고침, 완료 문서 다운로드/이력 재조회 강화다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
 ## 2026-06-22 회사별 아이디 로그인 QA
 
 - 회원가입 화면을 `아이디`, `이메일`, `비밀번호`, `비밀번호 확인`, `이름`, `휴대폰 번호`, `회사` 입력 흐름으로 정리했다. 비밀번호 확인 불일치, 휴대폰 누락, 아이디 규칙 위반은 가입 전에 차단한다.
