@@ -524,6 +524,13 @@
 - 브라우저 QA: 기존 로컬 서버 `http://localhost:3000`에서 `/signup`, `/login`을 1440px 기준으로 확인했다. 회원가입 라벨은 아이디/이메일/비밀번호/비밀번호 확인/이름/휴대폰 번호/회사명/가입 승인 방식으로 표시됐고, 로그인 라벨은 회사/아이디/비밀번호/아이디 저장으로 표시됐다. 두 화면 모두 page-level horizontal overflow 0건이었다.
 - 데모 영향 없음: 공개 `/demo`는 인증 없는 샘플 데이터 화면이므로 이번 로그인 방식 변경에 따른 데모 UI 수정은 없다.
 
+## 2026-06-22 로그인 화면 저장 UX QA
+
+- 로그인 화면을 `LoginForm` 프레젠테이션 컴포넌트와 `loginStorage` helper로 분리했다. 회사는 최초 1회 검색해 저장하고, 다음 로그인부터 저장된 회사가 자동 선택되도록 했다.
+- `아이디 저장`은 아이디만 선택적으로 저장하고, 회사 선택값은 로그인 성공 또는 회사 선택 시 별도로 저장한다. 이메일 로그인 fallback은 유지하되 UI 기본 안내는 아이디 로그인 기준으로 정리했다.
+- 검증: `npx tsx --test src/app/login/loginStorage.test.mts src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 신규 SQL은 없다. 기존 회사별 아이디 로그인 SQL 적용 상태에 따라 실제 아이디 로그인 schema가 활성화된다.
+
 ## 다음 QA 체크리스트
 
 ### P0

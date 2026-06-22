@@ -6,27 +6,16 @@ import { getSupabase } from '@/lib/supabase';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
 import { CompanySearchModal, type Company } from '../signup/CompanySearchModal';
-
-type LoginUser = {
-    id?: string;
-    uid?: string;
-    name?: string;
-    role?: string;
-    companyName?: string;
-    companyId?: string | null;
-    companyLogoUrl?: string;
-    email?: string | null;
-    status?: string;
-};
-
-type LoginApiResponse = {
-    user?: LoginUser;
-    session?: {
-        access_token?: string;
-        refresh_token?: string;
-    };
-    error?: string;
-};
+import { LoginForm } from './LoginForm';
+import type { LoginApiResponse, LoginUser } from './loginTypes';
+import {
+    getLoginCompanyFromUser,
+    readSavedLoginCompany,
+    readSavedLoginId,
+    writeSavedLoginCompany,
+    writeSavedLoginId,
+    type LoginCompany
+} from './loginStorage';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -37,7 +26,7 @@ export default function LoginPage() {
 
     const [savedId, setSavedId] = useState('');
     const [rememberId, setRememberId] = useState(false);
-    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    const [selectedCompany, setSelectedCompany] = useState<LoginCompany | null>(null);
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Company[]>([]);
@@ -46,10 +35,15 @@ export default function LoginPage() {
 
     React.useEffect(() => {
         const bootstrap = async () => {
-            const saved = localStorage.getItem('saved_login_id');
+            const saved = readSavedLoginId();
             if (saved) {
                 setSavedId(saved);
                 setRememberId(true);
+            }
+
+            const savedCompany = readSavedLoginCompany();
+            if (savedCompany) {
+                setSelectedCompany(savedCompany);
             }
 
             try {
@@ -158,11 +152,8 @@ export default function LoginPage() {
                 return;
             }
 
-            if (rememberId) {
-                localStorage.setItem('saved_login_id', id);
-            } else {
-                localStorage.removeItem('saved_login_id');
-            }
+            writeSavedLoginId(id, rememberId);
+            writeSavedLoginCompany(getLoginCompanyFromUser(data.user) || selectedCompany);
 
             localStorage.setItem('user', JSON.stringify(data.user));
             router.push('/dashboard');
@@ -198,6 +189,7 @@ export default function LoginPage() {
 
     const handleSelectCompany = (company: Company) => {
         setSelectedCompany(company);
+        writeSavedLoginCompany(company);
         setShowSearchModal(false);
     };
 
@@ -233,80 +225,15 @@ export default function LoginPage() {
                         </button>
                     </div>
                 ) : (
-                    <form onSubmit={handleLogin} className={styles.form}>
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="companyName" className={styles.label}>회사</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                    type="text"
-                                    id="companyName"
-                                    placeholder="회사 찾기 버튼을 이용해주세요"
-                                    className={styles.input}
-                                    value={selectedCompany?.name || ''}
-                                    readOnly
-                                    onClick={() => setShowSearchModal(true)}
-                                    style={{ flex: 1, backgroundColor: '#f8f9fa', cursor: 'pointer' }}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSearchModal(true)}
-                                    style={{
-                                        padding: '0 12px',
-                                        height: '42px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ced4da',
-                                        backgroundColor: '#ffffff',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        whiteSpace: 'nowrap'
-                                    }}
-                                >
-                                    회사 찾기
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="email" className={styles.label}>아이디</label>
-                            <input
-                                type="text"
-                                id="email"
-                                placeholder="아이디를 입력하세요"
-                                className={styles.input}
-                                defaultValue={savedId}
-                                required
-                            />
-                            <p style={{ fontSize: '12px', color: '#868e96', marginTop: '4px' }}>
-                                기존 이메일 로그인도 임시로 사용할 수 있습니다.
-                            </p>
-                        </div>
-
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="password" className={styles.label}>비밀번호</label>
-                            <input
-                                type="password"
-                                id="password"
-                                placeholder="비밀번호를 입력하세요"
-                                className={styles.input}
-                                required
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-                            <input
-                                type="checkbox"
-                                id="rememberId"
-                                checked={rememberId}
-                                onChange={(e) => setRememberId(e.target.checked)}
-                                style={{ width: '16px', height: '16px', marginRight: '8px', cursor: 'pointer' }}
-                            />
-                            <label htmlFor="rememberId" style={{ fontSize: '14px', color: '#666', cursor: 'pointer' }}>아이디 저장</label>
-                        </div>
-
-                        <button type="submit" className={styles.loginButton} disabled={isLoading}>
-                            {isLoading ? '로그인 중...' : '로그인'}
-                        </button>
-                    </form>
+                    <LoginForm
+                        isLoading={isLoading}
+                        savedId={savedId}
+                        rememberId={rememberId}
+                        selectedCompany={selectedCompany}
+                        onSubmit={handleLogin}
+                        onOpenCompanySearch={() => setShowSearchModal(true)}
+                        onRememberIdChange={setRememberId}
+                    />
                 )}
 
                 <div className={styles.footer}>

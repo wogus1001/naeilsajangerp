@@ -49,6 +49,14 @@ YYYY-MM-DD
 
 - 2026-06-22
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 로그인 화면 저장 UX 커밋
+  - 주요 기능: 로그인 화면을 `LoginForm`과 저장 helper로 분리하고, 최초 회사 선택값을 저장해 다음 로그인부터 자동 선택되도록 정리. 아이디 저장은 선택 저장, 기존 이메일 로그인 fallback은 유지
+  - dev 반영: 이번 커밋 포함 HEAD를 `dev`로 반영 예정
+  - main 반영: 이번 커밋 포함 HEAD를 `main`으로 반영 예정
+  - 검증: `npx tsx --test src/app/login/loginStorage.test.mts src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력
+  - 남은 이슈: 신규 SQL은 없다. 회사별 아이디 로그인은 기존 `supabase_login_id_migration.sql` 적용 상태에 의존한다.
+- 2026-06-22
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회사 템플릿 작성 방식 단순화 커밋
   - 주요 기능: 회사 업로드 전자계약 템플릿 작성 화면에서 `작성 방식` 선택과 `템플릿에서 직접 작성` 임베딩 진입을 제거하고, `필드명` 입력/서명자 정보/임시저장/전자계약 발송 단일 흐름으로 정리
   - dev 반영: none
