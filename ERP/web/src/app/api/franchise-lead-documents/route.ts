@@ -2,6 +2,10 @@ import { canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
+    buildLeadDocumentStorageData,
+    readLeadDocumentScopedStorageTarget
+} from '@/lib/franchise-lead-document-storage';
+import {
     attachChecklistLinksToDocuments,
     normalizeFranchiseLeadDocumentSourceType,
     type FranchiseLeadDocumentChecklistLinkInput,
@@ -241,6 +245,19 @@ export async function POST(request: Request) {
         if (!title) return fail(400, 'VALIDATION_ERROR', 'title is required');
         const sourceType = normalizeFranchiseLeadDocumentSourceType(getFirst(body, ['sourceType', 'source_type']));
         const sourceId = cleanString(getFirst(body, ['sourceId', 'source_id']));
+        const storageData = buildLeadDocumentStorageData({
+            storageBucket: getFirst(body, ['storageBucket', 'storage_bucket']),
+            storagePath: getFirst(body, ['storagePath', 'storage_path'])
+        });
+        if (storageData && !readLeadDocumentScopedStorageTarget({
+            source_type: sourceType,
+            data: storageData
+        }, {
+            companyId: access.lead.company_id,
+            leadId: access.lead.id
+        })) {
+            return fail(400, 'VALIDATION_ERROR', 'Invalid document storage path');
+        }
         const nowIso = new Date().toISOString();
 
         const { data, error } = await supabaseAdmin
@@ -257,7 +274,8 @@ export async function POST(request: Request) {
                 memo: cleanString(body.memo),
                 status: 'active',
                 created_by: access.requester.id,
-                updated_at: nowIso
+                updated_at: nowIso,
+                ...(storageData ? { data: storageData } : {})
             }, {
                 onConflict: 'company_id,lead_id,source_type,source_id'
             })
@@ -309,7 +327,7 @@ export async function PATCH(request: Request) {
         }
 
         const nowIso = new Date().toISOString();
-        const updatePayload: Record<string, string> = { updated_at: nowIso };
+        const updatePayload: JsonRecord = { updated_at: nowIso };
         const nextTitle = cleanString(body.title);
         const nextDocumentStatus = cleanString(getFirst(body, ['documentStatus', 'document_status']));
         const nextFileUrl = cleanString(getFirst(body, ['fileUrl', 'file_url']));
@@ -319,6 +337,22 @@ export async function PATCH(request: Request) {
         if (nextFileUrl) updatePayload.file_url = nextFileUrl;
         if (nextFileName) updatePayload.file_name = nextFileName;
         if (Object.prototype.hasOwnProperty.call(body, 'memo')) updatePayload.memo = cleanString(body.memo) || '';
+        const storageData = buildLeadDocumentStorageData({
+            storageBucket: getFirst(body, ['storageBucket', 'storage_bucket']),
+            storagePath: getFirst(body, ['storagePath', 'storage_path'])
+        });
+        if (storageData) {
+            if (!readLeadDocumentScopedStorageTarget({
+                source_type: cleanString(document.source_type),
+                data: storageData
+            }, {
+                companyId: access.lead.company_id,
+                leadId: access.lead.id
+            })) {
+                return fail(400, 'VALIDATION_ERROR', 'Invalid document storage path');
+            }
+            updatePayload.data = storageData;
+        }
 
         const { error: updateError } = await supabaseAdmin
             .from('franchise_lead_documents')
@@ -392,15 +426,26 @@ export async function DELETE(request: Request) {
             return ok(await fetchLeadDocumentState(supabaseAdmin, access.lead.id, access.lead.company_id));
         }
 
-        const { error: updateError } = await supabaseAdmin
+        const storageTarget = readLeadDocumentScopedStorageTarget(document, {
+            companyId: access.lead.company_id,
+            leadId: access.lead.id
+        });
+
+        const { error: deleteError } = await supabaseAdmin
             .from('franchise_lead_documents')
-            .update({
-                status: 'archived',
-                updated_at: new Date().toISOString()
-            })
+            .delete()
             .eq('id', documentId)
             .eq('company_id', access.lead.company_id);
-        if (updateError) throw updateError;
+        if (deleteError) throw deleteError;
+
+        if (storageTarget) {
+            const { error: storageError } = await supabaseAdmin.storage
+                .from(storageTarget.bucket)
+                .remove([storageTarget.path]);
+            if (storageError) {
+                console.error('Franchise lead document storage cleanup failed:', storageError);
+            }
+        }
 
         return ok(await fetchLeadDocumentState(supabaseAdmin, access.lead.id, access.lead.company_id));
     } catch (error) {

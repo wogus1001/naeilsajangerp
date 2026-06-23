@@ -19,12 +19,14 @@ import type {
     LeadContractChecklistStep,
     LeadContractRequirementType
 } from '@/lib/franchise-lead-contract-checklist';
+import { buildLeadDocumentStoragePrefix } from '@/lib/franchise-lead-document-storage';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import { useLeadContractChecklist } from './useLeadContractChecklist';
 import styles from './LeadContractChecklistSection.module.css';
 
 type Props = {
+    readonly companyId: string;
     readonly leadId: string;
     readonly onDocumentChanged?: () => void;
     readonly onSaved?: () => void;
@@ -44,6 +46,7 @@ type QuickDocumentDraft = {
 };
 
 type UploadResponse = {
+    readonly path?: string;
     readonly publicUrl?: string;
 };
 
@@ -170,6 +173,7 @@ function documentOpenHref(document: LeadContractChecklistDocumentItem): string {
 }
 
 export function LeadContractChecklistSection({
+    companyId,
     leadId,
     onDocumentChanged,
     onSaved,
@@ -237,22 +241,30 @@ export function LeadContractChecklistSection({
     };
 
     const uploadFile = async (file: File) => {
+        if (!companyId) throw new Error('회사 정보를 확인할 수 없습니다.');
         const formData = new FormData();
         const suffix = Math.random().toString(36).slice(2, 10) || 'upload';
         const fileName = sanitizePathPart(file.name);
+        const storagePrefix = buildLeadDocumentStoragePrefix({ companyId, leadId });
         formData.append('file', file);
         formData.append('bucket', UPLOAD_BUCKET);
+        formData.append('companyId', companyId);
+        formData.append('leadId', leadId);
         formData.append(
             'path',
-            `franchise-lead-documents/${sanitizePathPart(leadId)}/${Date.now()}-${suffix}-${fileName}`
+            `${storagePrefix}${Date.now()}-${suffix}-${fileName}`
         );
 
-        const response = await fetch('/api/upload', { method: 'POST', body: formData });
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+            headers: await getApiAuthHeaders()
+        });
         const payload = await response.json();
         if (!response.ok) throw new Error(readApiError(payload));
         const data = unwrapApiData<UploadResponse>(payload);
-        if (!data.publicUrl) throw new Error('업로드 URL을 확인할 수 없습니다.');
-        return data.publicUrl;
+        if (!data.publicUrl || !data.path) throw new Error('업로드 URL을 확인할 수 없습니다.');
+        return data;
     };
 
     const saveQuickDocument = async () => {
@@ -275,9 +287,9 @@ export function LeadContractChecklistSection({
         setDocumentMessage('');
         setDocumentErrorMessage('');
         try {
-            const fileUrl = quickDraft.mode === 'upload' && quickDraft.file
+            const uploadResult = quickDraft.mode === 'upload' && quickDraft.file
                 ? await uploadFile(quickDraft.file)
-                : '';
+                : null;
             const selectedContract = electronicContracts.find(contract => contract.id === quickDraft.electronicContractId);
             const response = await fetch('/api/franchise-lead-documents', {
                 method: 'POST',
@@ -289,8 +301,10 @@ export function LeadContractChecklistSection({
                     sourceType: quickDraft.mode,
                     sourceId: quickDraft.mode === 'electronic_contract' ? quickDraft.electronicContractId : '',
                     documentStatus: 'stored',
-                    fileUrl,
+                    fileUrl: uploadResult?.publicUrl || '',
                     fileName: quickDraft.file?.name || '',
+                    storageBucket: uploadResult ? UPLOAD_BUCKET : '',
+                    storagePath: uploadResult?.path || '',
                     memo: quickDraft.memo,
                     checklistStepKey: quickDraft.stepKey
                 })

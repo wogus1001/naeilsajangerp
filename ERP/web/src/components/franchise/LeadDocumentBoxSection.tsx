@@ -3,6 +3,7 @@
 import React from 'react';
 import { ExternalLink, FileText, Link2, Trash2, UploadCloud, X } from 'lucide-react';
 import { LEAD_CONTRACT_CHECKLIST_DEFINITIONS } from '@/lib/franchise-lead-contract-checklist';
+import { buildLeadDocumentStoragePrefix } from '@/lib/franchise-lead-document-storage';
 import type { FranchiseLeadDocument } from '@/lib/franchise-lead-documents';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
@@ -22,6 +23,7 @@ type LeadDocumentsResponse = {
 };
 
 type UploadResponse = {
+    readonly path?: string;
     readonly publicUrl?: string;
 };
 
@@ -185,22 +187,27 @@ export function LeadDocumentBoxSection({
     }, [fetchDocuments, fetchElectronicContracts, refreshKey]);
 
     const uploadFile = async (file: File) => {
+        if (!companyId) throw new Error('회사 정보를 확인할 수 없습니다.');
         const formData = new FormData();
         const suffix = Math.random().toString(36).slice(2, 10) || 'upload';
         const fileName = sanitizePathPart(file.name);
+        const storagePrefix = buildLeadDocumentStoragePrefix({ companyId, leadId });
         formData.append('file', file);
         formData.append('bucket', UPLOAD_BUCKET);
-        formData.append(
-            'path',
-            `franchise-lead-documents/${sanitizePathPart(companyId || 'company')}/${sanitizePathPart(leadId)}/${Date.now()}-${suffix}-${fileName}`
-        );
+        formData.append('companyId', companyId);
+        formData.append('leadId', leadId);
+        formData.append('path', `${storagePrefix}${Date.now()}-${suffix}-${fileName}`);
 
-        const response = await fetch('/api/upload', { method: 'POST', body: formData });
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+            headers: await getApiAuthHeaders()
+        });
         const payload = await response.json();
         if (!response.ok) throw new Error(readApiError(payload));
         const data = unwrapApiData<UploadResponse>(payload);
-        if (!data.publicUrl) throw new Error('업로드 URL을 확인할 수 없습니다.');
-        return data.publicUrl;
+        if (!data.publicUrl || !data.path) throw new Error('업로드 URL을 확인할 수 없습니다.');
+        return data;
     };
 
     const resetForm = () => {
@@ -225,9 +232,9 @@ export function LeadDocumentBoxSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const publicUrl = formMode === 'upload' && selectedFile
+            const uploadResult = formMode === 'upload' && selectedFile
                 ? await uploadFile(selectedFile)
-                : '';
+                : null;
             const selectedContract = electronicContracts.find(contract => contract.id === electronicContractId.trim());
             const response = await fetch('/api/franchise-lead-documents', {
                 method: 'POST',
@@ -239,8 +246,10 @@ export function LeadDocumentBoxSection({
                     sourceType: formMode,
                     sourceId: formMode === 'electronic_contract' ? electronicContractId.trim() : '',
                     documentStatus: 'stored',
-                    fileUrl: publicUrl,
+                    fileUrl: uploadResult?.publicUrl || '',
                     fileName: selectedFile?.name || '',
+                    storageBucket: uploadResult ? UPLOAD_BUCKET : '',
+                    storagePath: uploadResult?.path || '',
                     memo,
                     checklistStepKey: checklistStepKey || undefined
                 })
