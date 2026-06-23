@@ -63,10 +63,11 @@ YYYY-MM-DD
 
 - 2026-06-23
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-  - 기능 커밋: 이번 전자계약 운영 후속 작업 커밋
+  - 기능 커밋: `b224e17 feat(contracts): refine electronic contract operations`
   - 주요 기능: `전자계약` 메뉴를 프랜차이즈 하단으로 이동하고 사이드바 아이콘 추가, 개인 UCanSign 프로필 연동 UI/로그아웃 disconnect 제거, UCanSign 문서 접근 링크와 서명 요청 취소 API 액션 추가, 회사별 전자계약 사용량 관리자 패널 추가, 관리자 회원 표 `login_id` 표시, 전자계약 문서함/템플릿 상태 문구 정리, 회사 템플릿 UCanSign 연결 전 상태/버튼 문구 명확화, 미연결 초안 템플릿을 기본 화면에서 숨김, 회사 템플릿 수정 버튼 라벨 축약, 어드민 모바일 레이아웃 보정
   - dev 반영: none
-  - main 반영: none
+  - main 반영: `ab73c56 feat(contracts): refine electronic contract operations`
+  - 배포 URL: `https://naeilsajang.vercel.app` (`dpl_3oq8jstPhr4Nmd9gudRQ4rPLDPDz`, READY)
   - 검증: `npx tsx --test src/lib/company-menu-features.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/usage-summary.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/platform-document-actions.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 후속 아이콘/라벨 변경 후 `npx tsx --test src/lib/company-menu-features.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateTableState.test.mts" "src/app/(main)/contracts/electronic/_components/companyTemplateSections.test.mts"`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check` 재통과. Playwright mock QA로 `/contracts/electronic`, `/profile`, `/admin`, `/admin/users`를 확인했고 `/contracts/electronic`, `/admin`, `/admin/users` 모바일 page-level overflow 0건과 전자계약 모바일 표의 한글 단어 nowrap, `전자계약` 사이드바 아이콘, 템플릿 관리 `수정` 버튼 라벨, UCanSign 미연결 템플릿이 기본 화면에 노출되지 않는 것을 확인
   - 남은 이슈: 신규 SQL은 없다. 실제 UCanSign 운영 키로 `내용 확인 후 서명` 접근 URL과 `서명 요청 취소` 후 webhook idempotency를 운영 샘플 문서로 확인한다.
 - 2026-06-22
