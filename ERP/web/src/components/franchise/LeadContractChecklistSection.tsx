@@ -4,18 +4,18 @@ import React from 'react';
 import {
     CheckCircle2,
     Clock3,
+    ExternalLink,
     FileCheck2,
     FilePlus2,
-    FileText,
     FileUp,
     Link2,
     ListChecks,
-    Save,
+    Trash2,
     X
 } from 'lucide-react';
 import type {
     LeadContractApplicability,
-    LeadContractBasisType,
+    LeadContractChecklistDocumentItem,
     LeadContractChecklistStep,
     LeadContractRequirementType
 } from '@/lib/franchise-lead-contract-checklist';
@@ -58,12 +58,6 @@ type ElectronicContractsResponse = {
 };
 
 const UPLOAD_BUCKET = 'property-documents';
-
-const BASIS_LABELS: Record<LeadContractBasisType, string> = {
-    franchise_law: '가맹사업법상',
-    privacy: '개인정보',
-    internal: '운영필수'
-};
 
 const CHECKLIST_GROUPS = [
     {
@@ -125,22 +119,11 @@ function summaryCardClass(requirementType: LeadContractRequirementType): string 
     }
 }
 
-function basisClass(basisType: LeadContractBasisType): string {
-    switch (basisType) {
-        case 'franchise_law':
-            return styles.lawBadge;
-        case 'privacy':
-            return styles.privacyBadge;
-        case 'internal':
-            return styles.internalBadge;
-    }
-}
-
 function documentText(step: LeadContractChecklistStep): string {
     if (step.documentSummary.count > 0) {
         return `${step.documentSummary.count}건 연결`;
     }
-    return step.requiredEvidence ? '문서 필요' : '문서 없음';
+    return '문서 연결';
 }
 
 function readApplicabilityOption(value: string): LeadContractApplicability {
@@ -174,6 +157,18 @@ function electronicContractLabel(contract: ElectronicContractOption): string {
     return `${contract.name || '전자계약'} · ${status}`;
 }
 
+function documentUploaderText(document: LeadContractChecklistDocumentItem): string {
+    return document.createdByName || document.createdBy || '담당자 미확인';
+}
+
+function documentOpenHref(document: LeadContractChecklistDocumentItem): string {
+    if (document.fileUrl) return document.fileUrl;
+    if (document.sourceType === 'electronic_contract' && document.sourceId) {
+        return `/contracts/electronic?contractId=${encodeURIComponent(document.sourceId)}`;
+    }
+    return '';
+}
+
 export function LeadContractChecklistSection({
     leadId,
     onDocumentChanged,
@@ -192,11 +187,13 @@ export function LeadContractChecklistSection({
         summary
     } = useLeadContractChecklist({ leadId, onSaved, userId });
     const [electronicContracts, setElectronicContracts] = React.useState<readonly ElectronicContractOption[]>([]);
-    const [memoDrafts, setMemoDrafts] = React.useState<Record<string, string>>({});
     const [quickDraft, setQuickDraft] = React.useState<QuickDocumentDraft | null>(null);
     const [quickSavingStepKey, setQuickSavingStepKey] = React.useState('');
     const [documentMessage, setDocumentMessage] = React.useState('');
     const [documentErrorMessage, setDocumentErrorMessage] = React.useState('');
+    const activeDocumentStep = quickDraft
+        ? steps.find(step => step.stepKey === quickDraft.stepKey) || null
+        : null;
 
     const fetchElectronicContracts = React.useCallback(async () => {
         if (!leadId) return;
@@ -229,23 +226,13 @@ export function LeadContractChecklistSection({
         return () => window.clearTimeout(timeoutId);
     }, [fetchChecklist, fetchElectronicContracts, refreshKey]);
 
-    const memoDraftKey = React.useCallback((stepKey: string) => `${leadId}:${stepKey}`, [leadId]);
-
-    const readStepMemo = React.useCallback((step: LeadContractChecklistStep) => (
-        memoDrafts[memoDraftKey(step.stepKey)] ?? step.memo
-    ), [memoDraftKey, memoDrafts]);
-
-    const updateMemoDraft = (stepKey: string, memo: string) => {
-        setMemoDrafts(prev => ({ ...prev, [memoDraftKey(stepKey)]: memo }));
-    };
-
     const saveApplicability = (
         step: LeadContractChecklistStep,
         applicability: LeadContractApplicability
     ) => {
         void saveStep(step.stepKey, {
             applicability,
-            memo: readStepMemo(step)
+            memo: step.memo
         });
     };
 
@@ -321,7 +308,7 @@ export function LeadContractChecklistSection({
         }
     };
 
-    const unlinkDocument = async (documentId: string, stepKey: string) => {
+    const deleteDocument = async (documentId: string, stepKey: string) => {
         if (!documentId || !stepKey) return;
         setQuickSavingStepKey(stepKey);
         setDocumentMessage('');
@@ -329,17 +316,16 @@ export function LeadContractChecklistSection({
         try {
             const params = new URLSearchParams({
                 requesterId: userId,
-                id: documentId,
-                checklistStepKey: stepKey
+                id: documentId
             });
             const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, { method: 'DELETE' });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
-            setDocumentMessage('연결 문서를 해제했습니다.');
+            setDocumentMessage('문서를 삭제했습니다.');
             await fetchChecklist();
             onDocumentChanged?.();
         } catch (error) {
-            setDocumentErrorMessage(error instanceof Error ? error.message : '연결 문서를 해제하지 못했습니다.');
+            setDocumentErrorMessage(error instanceof Error ? error.message : '문서를 삭제하지 못했습니다.');
         } finally {
             setQuickSavingStepKey('');
         }
@@ -349,7 +335,7 @@ export function LeadContractChecklistSection({
         <section className={styles.section}>
             <div className={styles.header}>
                 <div>
-                    <h3><ListChecks size={16} /> 계약 전 체크</h3>
+                    <h3><ListChecks size={16} /> 구비서류 체크리스트</h3>
                     <p>필수는 계약 가능 게이트, 내부보고는 경고, 선택은 관리 편의 항목입니다.</p>
                 </div>
                 <span className={summary.missingRequiredCount > 0 ? styles.blockingPill : styles.readyPill}>
@@ -370,7 +356,7 @@ export function LeadContractChecklistSection({
                 })}
             </div>
 
-            <div className={styles.progress} aria-label={`필수 계약 전 체크 진행률 ${summary.groups.required.progressPercent}%`}>
+            <div className={styles.progress} aria-label={`필수 구비서류 체크리스트 진행률 ${summary.groups.required.progressPercent}%`}>
                 <span style={{ width: `${summary.groups.required.progressPercent}%` }} />
             </div>
 
@@ -402,7 +388,7 @@ export function LeadContractChecklistSection({
                                     const isQuickSaving = quickSavingStepKey === step.stepKey;
                                     const completedAt = formatChecklistDate(step.completedAt);
                                     const isNotApplicable = step.applicability === 'not_applicable';
-                                    const activeQuickDraft = quickDraft?.stepKey === step.stepKey ? quickDraft : null;
+                                    const hasLinkedDocument = step.documentSummary.count > 0;
                                     return (
                                         <article
                                             key={step.stepKey}
@@ -415,12 +401,12 @@ export function LeadContractChecklistSection({
                                                     onClick={() => void saveStep(step.stepKey, {
                                                         completed: !step.completed,
                                                         applicability: 'applicable',
-                                                        memo: readStepMemo(step)
+                                                        memo: step.memo
                                                     })}
                                                     disabled={isSaving}
                                                 >
                                                     {step.completed ? <CheckCircle2 size={16} /> : <Clock3 size={16} />}
-                                                    <span>{step.completed ? '완료됨' : '완료 처리'}</span>
+                                                    <span>{step.completed ? '완료됨' : '완료'}</span>
                                                     {step.completed && completedAt && <small>{completedAt}</small>}
                                                     {!step.completed && isNotApplicable && <small>해당없음</small>}
                                                 </button>
@@ -428,155 +414,46 @@ export function LeadContractChecklistSection({
                                                 <div className={styles.titleCell}>
                                                     <strong>{step.label}</strong>
                                                     <span>{step.basisText}</span>
-                                                    <div className={styles.metaGrid}>
-                                                        <label>
-                                                            해당 여부
-                                                            <select
-                                                                className={styles.select}
-                                                                value={step.applicability}
-                                                                disabled={isSaving}
-                                                                onChange={(event) => saveApplicability(step, readApplicabilityOption(event.target.value))}
-                                                            >
-                                                                <option value="applicable">해당</option>
-                                                                <option value="not_applicable">해당없음</option>
-                                                            </select>
-                                                        </label>
-                                                        <div>
-                                                            근거
-                                                            <span className={`${styles.badge} ${basisClass(step.basisType)}`}>
-                                                                {BASIS_LABELS[step.basisType]}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            제출담당
-                                                            <span className={styles.ownerCell}>{step.ownerTeam}</span>
-                                                        </div>
-                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className={styles.statusPanel}>
-                                                <div className={`${styles.documentCell} ${step.documentSummary.count > 0 ? styles.documentLinked : ''}`}>
-                                                    {step.documentSummary.count > 0 ? <FileCheck2 size={16} /> : <FileText size={16} />}
-                                                    <div>
-                                                        <strong>{documentText(step)}</strong>
-                                                        <span>{step.documentSummary.latestTitle || '체크 항목에 문서를 연결해주세요.'}</span>
+                                            <div className={`${styles.statusPanel} ${hasLinkedDocument ? '' : styles.statusPanelNoDocument}`}>
+                                                <div className={styles.rowControls}>
+                                                    <label className={styles.applicabilityControl}>
+                                                        해당 여부
+                                                        <select
+                                                            className={styles.select}
+                                                            value={step.applicability}
+                                                            disabled={isSaving}
+                                                            onChange={(event) => saveApplicability(step, readApplicabilityOption(event.target.value))}
+                                                        >
+                                                            <option value="applicable">해당</option>
+                                                            <option value="not_applicable">해당없음</option>
+                                                        </select>
+                                                    </label>
+                                                    <div className={styles.documentActions}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setQuickDraft(createQuickDraft(step, 'upload'))}
+                                                            disabled={isSaving || isQuickSaving}
+                                                        >
+                                                            <FileUp size={14} />
+                                                            업로드
+                                                        </button>
                                                     </div>
                                                 </div>
 
-                                                <div className={styles.documentActions}>
+                                                {hasLinkedDocument && (
                                                     <button
                                                         type="button"
+                                                        className={`${styles.documentCell} ${styles.documentLinked}`}
                                                         onClick={() => setQuickDraft(createQuickDraft(step, 'upload'))}
                                                         disabled={isSaving || isQuickSaving}
                                                     >
-                                                        <FileUp size={14} />
-                                                        수기 등록
+                                                        <FileCheck2 size={16} />
+                                                        <strong>{documentText(step)}</strong>
                                                     </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setQuickDraft(createQuickDraft(step, 'electronic_contract'))}
-                                                        disabled={isSaving || isQuickSaving}
-                                                    >
-                                                        <Link2 size={14} />
-                                                        전자계약 연결
-                                                    </button>
-                                                </div>
-
-                                                {activeQuickDraft && (
-                                                    <div className={styles.quickDocumentForm}>
-                                                        <div className={styles.quickDocumentHeader}>
-                                                            <strong>{activeQuickDraft.mode === 'upload' ? '수기 등록' : '전자계약 연결'}</strong>
-                                                            <button type="button" onClick={() => setQuickDraft(null)} disabled={isQuickSaving}>
-                                                                <X size={14} />
-                                                            </button>
-                                                        </div>
-                                                        <label>
-                                                            문서명
-                                                            <input
-                                                                value={activeQuickDraft.title}
-                                                                onChange={(event) => setQuickDraft({ ...activeQuickDraft, title: event.target.value })}
-                                                                disabled={isQuickSaving}
-                                                            />
-                                                        </label>
-                                                        {activeQuickDraft.mode === 'upload' ? (
-                                                            <label>
-                                                                파일
-                                                                <input
-                                                                    type="file"
-                                                                    onChange={(event) => setQuickDraft({ ...activeQuickDraft, file: event.target.files?.[0] || null })}
-                                                                    disabled={isQuickSaving}
-                                                                />
-                                                            </label>
-                                                        ) : (
-                                                            <label>
-                                                                전자계약 문서
-                                                                <select
-                                                                    value={activeQuickDraft.electronicContractId}
-                                                                    onChange={(event) => setQuickDraft({ ...activeQuickDraft, electronicContractId: event.target.value })}
-                                                                    disabled={isQuickSaving}
-                                                                >
-                                                                    <option value="">연결할 전자계약 선택</option>
-                                                                    {electronicContracts.length === 0 && (
-                                                                        <option value="" disabled>완료된 전자계약 문서가 없습니다</option>
-                                                                    )}
-                                                                    {electronicContracts.map(contract => (
-                                                                        <option key={contract.id} value={contract.id}>
-                                                                            {electronicContractLabel(contract)}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            </label>
-                                                        )}
-                                                        <label>
-                                                            메모
-                                                            <input
-                                                                value={activeQuickDraft.memo}
-                                                                onChange={(event) => setQuickDraft({ ...activeQuickDraft, memo: event.target.value })}
-                                                                placeholder="문서 확인 내용"
-                                                                disabled={isQuickSaving}
-                                                            />
-                                                        </label>
-                                                        <button type="button" onClick={() => void saveQuickDocument()} disabled={isQuickSaving}>
-                                                            <FilePlus2 size={14} />
-                                                            {isQuickSaving ? '등록 중' : '등록'}
-                                                        </button>
-                                                    </div>
                                                 )}
-
-                                                {step.documentSummary.documentIds.length > 0 && (
-                                                    <div className={styles.linkedDocumentRemoveList}>
-                                                        {step.documentSummary.documentIds.map((documentId, index) => (
-                                                            <button
-                                                                key={documentId}
-                                                                type="button"
-                                                                onClick={() => void unlinkDocument(documentId, step.stepKey)}
-                                                                disabled={isSaving || isQuickSaving}
-                                                            >
-                                                                <X size={13} />
-                                                                {step.documentSummary.documentIds.length === 1 ? '연결 해제' : `${index + 1}번 연결 해제`}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                <div className={styles.memoCell}>
-                                                    <input
-                                                        value={readStepMemo(step)}
-                                                        onChange={(event) => updateMemoDraft(step.stepKey, event.target.value)}
-                                                        placeholder={isNotApplicable ? '해당없음 사유' : '메모'}
-                                                        disabled={isSaving}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        aria-label={`${step.label} 메모 저장`}
-                                                        title="메모 저장"
-                                                        onClick={() => void saveStep(step.stepKey, { memo: readStepMemo(step) })}
-                                                        disabled={isSaving}
-                                                    >
-                                                        <Save size={14} />
-                                                    </button>
-                                                </div>
                                             </div>
                                         </article>
                                     );
@@ -586,6 +463,168 @@ export function LeadContractChecklistSection({
                     );
                 })}
             </div>
+
+            {quickDraft && activeDocumentStep && (
+                <div className={styles.documentModalBackdrop} onClick={() => setQuickDraft(null)}>
+                    <section
+                        className={styles.documentModal}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="lead-checklist-document-modal-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className={styles.documentModalHeader}>
+                            <div>
+                                <span>연결 문서 관리</span>
+                                <h4 id="lead-checklist-document-modal-title">{activeDocumentStep.label}</h4>
+                                <p>{activeDocumentStep.basisText}</p>
+                            </div>
+                            <button type="button" aria-label="닫기" onClick={() => setQuickDraft(null)} disabled={quickSavingStepKey === activeDocumentStep.stepKey}>
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className={styles.documentModalLinked}>
+                            <strong>연결된 문서 · {documentText(activeDocumentStep)}</strong>
+                            {activeDocumentStep.documentSummary.count > 0 ? (
+                                <div className={styles.documentModalLinkedBody}>
+                                    {activeDocumentStep.documentSummary.documents.length > 0 ? (
+                                        activeDocumentStep.documentSummary.documents.map(document => {
+                                            const href = documentOpenHref(document);
+                                            return (
+                                                <div key={document.id} className={styles.linkedDocumentItem}>
+                                                    <div>
+                                                        <strong>{document.title}</strong>
+                                                        <span>올림 담당자 · {documentUploaderText(document)}</span>
+                                                    </div>
+                                                    <div className={styles.linkedDocumentActions}>
+                                                        {href && (
+                                                            <a href={href} target="_blank" rel="noreferrer">
+                                                                <ExternalLink size={13} />
+                                                                열기
+                                                            </a>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void deleteDocument(document.id, activeDocumentStep.stepKey)}
+                                                            disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                                        >
+                                                            <Trash2 size={13} />
+                                                            문서 삭제
+                                                        </button>
+                                                    </div>
+                                                    <p className={document.memo ? '' : styles.documentEmptyMemo}>
+                                                        {document.memo || '문서 메모 없음'}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className={styles.linkedDocumentItem}>
+                                            <div>
+                                                <strong>{activeDocumentStep.documentSummary.latestTitle || '점주 문서'}</strong>
+                                                <span>올림 담당자 · {activeDocumentStep.documentSummary.latestCreatedByName || activeDocumentStep.documentSummary.latestCreatedBy || '담당자 미확인'}</span>
+                                            </div>
+                                            <p className={activeDocumentStep.documentSummary.latestMemo ? '' : styles.documentEmptyMemo}>
+                                                {activeDocumentStep.documentSummary.latestMemo || '문서 메모 없음'}
+                                            </p>
+                                            <div className={styles.linkedDocumentRemoveList}>
+                                                {activeDocumentStep.documentSummary.documentIds.map(documentId => (
+                                                    <button
+                                                        key={documentId}
+                                                        type="button"
+                                                        onClick={() => void deleteDocument(documentId, activeDocumentStep.stepKey)}
+                                                        disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                                    >
+                                                        <Trash2 size={13} />
+                                                        문서 삭제
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p>아직 연결된 문서가 없습니다.</p>
+                            )}
+                        </div>
+
+                        <div className={styles.documentModeTabs} aria-label="문서 연결 방식">
+                            <button
+                                type="button"
+                                className={quickDraft.mode === 'upload' ? styles.documentModeTabActive : styles.documentModeTab}
+                                onClick={() => setQuickDraft({ ...quickDraft, mode: 'upload' })}
+                                disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                            >
+                                <FileUp size={14} />
+                                업로드
+                            </button>
+                            <button
+                                type="button"
+                                className={quickDraft.mode === 'electronic_contract' ? styles.documentModeTabActive : styles.documentModeTab}
+                                onClick={() => setQuickDraft({ ...quickDraft, mode: 'electronic_contract' })}
+                                disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                            >
+                                <Link2 size={14} />
+                                전자계약
+                            </button>
+                        </div>
+
+                        <div className={styles.quickDocumentForm}>
+                            <label>
+                                문서명
+                                <input
+                                    value={quickDraft.title}
+                                    onChange={(event) => setQuickDraft({ ...quickDraft, title: event.target.value })}
+                                    disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                />
+                            </label>
+                            {quickDraft.mode === 'upload' ? (
+                                <label>
+                                    파일
+                                    <input
+                                        type="file"
+                                        onChange={(event) => setQuickDraft({ ...quickDraft, file: event.target.files?.[0] || null })}
+                                        disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                    />
+                                </label>
+                            ) : (
+                                <label>
+                                    전자계약 문서
+                                    <select
+                                        value={quickDraft.electronicContractId}
+                                        onChange={(event) => setQuickDraft({ ...quickDraft, electronicContractId: event.target.value })}
+                                        disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                    >
+                                        <option value="">연결할 전자계약 선택</option>
+                                        {electronicContracts.length === 0 && (
+                                            <option value="" disabled>완료된 전자계약 문서가 없습니다</option>
+                                        )}
+                                        {electronicContracts.map(contract => (
+                                            <option key={contract.id} value={contract.id}>
+                                                {electronicContractLabel(contract)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            )}
+                            <label>
+                                문서 메모
+                                <input
+                                    value={quickDraft.memo}
+                                    onChange={(event) => setQuickDraft({ ...quickDraft, memo: event.target.value })}
+                                    placeholder="문서 확인 내용"
+                                    disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                />
+                            </label>
+                            <button type="button" onClick={() => void saveQuickDocument()} disabled={quickSavingStepKey === activeDocumentStep.stepKey}>
+                                <FilePlus2 size={14} />
+                                {quickSavingStepKey === activeDocumentStep.stepKey ? '등록 중' : '문서 등록'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
         </section>
     );
 }

@@ -309,16 +309,20 @@ export async function PATCH(request: Request) {
         }
 
         const nowIso = new Date().toISOString();
+        const updatePayload: Record<string, string> = { updated_at: nowIso };
+        const nextTitle = cleanString(body.title);
+        const nextDocumentStatus = cleanString(getFirst(body, ['documentStatus', 'document_status']));
+        const nextFileUrl = cleanString(getFirst(body, ['fileUrl', 'file_url']));
+        const nextFileName = cleanString(getFirst(body, ['fileName', 'file_name']));
+        if (nextTitle) updatePayload.title = nextTitle;
+        if (nextDocumentStatus) updatePayload.document_status = nextDocumentStatus;
+        if (nextFileUrl) updatePayload.file_url = nextFileUrl;
+        if (nextFileName) updatePayload.file_name = nextFileName;
+        if (Object.prototype.hasOwnProperty.call(body, 'memo')) updatePayload.memo = cleanString(body.memo) || '';
+
         const { error: updateError } = await supabaseAdmin
             .from('franchise_lead_documents')
-            .update({
-                title: cleanString(body.title) || undefined,
-                document_status: cleanString(getFirst(body, ['documentStatus', 'document_status'])) || undefined,
-                file_url: cleanString(getFirst(body, ['fileUrl', 'file_url'])) || undefined,
-                file_name: cleanString(getFirst(body, ['fileName', 'file_name'])) || undefined,
-                memo: cleanString(body.memo) || '',
-                updated_at: nowIso
-            })
+            .update(updatePayload)
             .eq('id', documentId)
             .eq('company_id', access.lead.company_id);
         if (updateError) throw updateError;

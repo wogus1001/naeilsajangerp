@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ExternalLink, MapPin, Save, Store, Wand2 } from 'lucide-react';
+import KakaoAddressSearch, { type KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import { readContractStoreSourceType } from '@/lib/franchise-contract-store';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
@@ -19,6 +20,8 @@ type StoreFormState = {
     readonly status: string;
     readonly region: string;
     readonly address: string;
+    readonly latitude: number | null;
+    readonly longitude: number | null;
     readonly openedAt: string;
     readonly memo: string;
 };
@@ -30,6 +33,8 @@ type SourceOption = {
     readonly title: string;
     readonly meta: string;
     readonly address: string;
+    readonly latitude: number | null;
+    readonly longitude: number | null;
 };
 
 type LeadContractStoreSectionProps = {
@@ -77,8 +82,19 @@ function toStoreFormState(lead: FranchiseLead, location?: FranchiseLocation | nu
         status: readStoreStatus(location?.status || '오픈준비'),
         region: location?.region || lead.desiredRegion || '',
         address: location?.address || source?.address || '',
+        latitude: location?.latitude ?? source?.latitude ?? null,
+        longitude: location?.longitude ?? source?.longitude ?? null,
         openedAt: location?.openedAt || '',
         memo: location?.memo || `${lead.name} 계약 완료 후 오픈준비 전환`
+    };
+}
+
+function updateAddressFromKakao(result: KakaoAddressResult): Pick<StoreFormState, 'address' | 'region' | 'latitude' | 'longitude'> {
+    return {
+        address: result.address,
+        region: result.region,
+        latitude: result.latitude,
+        longitude: result.longitude
     };
 }
 
@@ -122,7 +138,9 @@ export function LeadContractStoreSection({
                     targetId: location.id,
                     title: location.name,
                     meta: [location.locationType || '예정점', location.status || '상태 미지정', location.brand || '브랜드 미지정'].join(' · '),
-                    address: location.address || location.region || ''
+                    address: location.address || location.region || '',
+                    latitude: location.latitude ?? null,
+                    longitude: location.longitude ?? null
                 });
                 return;
             }
@@ -134,7 +152,9 @@ export function LeadContractStoreSection({
                 targetId: listing.id,
                 title: listing.title || listing.address || '외부 상가',
                 meta: formatListingMeta(listing),
-                address: listing.address || listing.region || ''
+                address: listing.address || listing.region || '',
+                latitude: null,
+                longitude: null
             });
         });
         return options;
@@ -156,7 +176,7 @@ export function LeadContractStoreSection({
             const data = unwrapApiData<LocationResponse>(payload);
             const [firstLocation] = data.locations || [];
             setStoreLocation(firstLocation || null);
-            setForm(toStoreFormState(lead, firstLocation || null));
+            if (firstLocation) setForm(toStoreFormState(lead, firstLocation));
         } catch (error) {
             setStoreLocation(null);
             setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 불러오지 못했습니다.');
@@ -209,6 +229,11 @@ export function LeadContractStoreSection({
 
     const createStore = async (useSource: boolean) => {
         const parsedSource = useSource ? parseSourceKey(selectedSourceKey) : null;
+        if (!form.address.trim()) {
+            setErrorMessage('주소 검색으로 가맹점 주소를 선택해주세요.');
+            setMessage('');
+            return;
+        }
         setIsSaving(true);
         setErrorMessage('');
         setMessage('');
@@ -254,7 +279,7 @@ export function LeadContractStoreSection({
             {!storeLocation && (
                 <div className={styles.sourcePanel}>
                     <div className={styles.sourceHeader}>
-                        <strong>전환할 후보지</strong>
+                        <strong>가맹 운영으로 전환할 후보지</strong>
                         <span>{isLocationMatchLoading ? '후보지를 불러오는 중입니다.' : `${sourceOptions.length}건 연결됨`}</span>
                     </div>
                     {sourceOptions.length > 0 ? (
@@ -300,10 +325,18 @@ export function LeadContractStoreSection({
                     지역
                     <input value={form.region} onChange={(event) => updateForm({ region: event.target.value })} disabled={isSaving || isLoading} />
                 </label>
-                <label className={styles.wideField}>
-                    주소
-                    <input value={form.address} onChange={(event) => updateForm({ address: event.target.value })} disabled={isSaving || isLoading} />
-                </label>
+                <KakaoAddressSearch
+                    requesterId={userId}
+                    value={form.address}
+                    disabled={isSaving || isLoading}
+                    onAddressChange={(address) => updateForm({ address, latitude: null, longitude: null })}
+                    onSelect={(result) => updateForm(updateAddressFromKakao(result))}
+                    classNames={{
+                        field: styles.wideField,
+                        row: styles.addressSearchRow,
+                        button: styles.addressSearchButton
+                    }}
+                />
                 <label>
                     오픈예정일/오픈일
                     <input type="date" value={form.openedAt} onChange={(event) => updateForm({ openedAt: event.target.value })} disabled={isSaving || isLoading} />
@@ -343,7 +376,7 @@ export function LeadContractStoreSection({
                             disabled={isSaving || isLoading || !selectedSourceKey}
                         >
                             <Wand2 size={15} />
-                            후보지로 생성
+                            가맹 운영에 생성
                         </button>
                     </>
                 )}

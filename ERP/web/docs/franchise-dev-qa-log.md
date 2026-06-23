@@ -601,7 +601,7 @@
 
 - 계약 전 체크를 기존 7개 운영 확인에서 문서 기반 17개 항목으로 전환했다. 각 항목은 `필수/내부보고/선택`, `가맹사업법상/개인정보/운영필수`, 자료근거, 제출담당, 해당 여부, 연결 문서 요약을 분리해 표시한다.
 - 기본 계약 가능 게이트는 `필수` 그룹만 본다. `내부보고`는 경고성 진행률, `선택`은 관리 편의 진행률로 별도 집계한다. `예상매출액 산정서`는 조건부 법정 항목으로 기본 `해당없음` 처리된다.
-- `해당없음` 저장은 메모 사유가 필요하다. 필수 항목도 사유 메모가 있으면 `해당없음`으로 저장하고 해결 처리하되, 완료 체크와는 분리된다.
+- `해당없음` 저장은 체크 메모 없이도 가능하다. 필수 항목도 `해당없음`으로 저장하고 해결 처리하되, 완료 체크와는 분리된다. 체크리스트 행에서는 체크 메모를 제거하고 문서 메모만 문서 관리 모달/문서함에서 확인한다.
 - 점주 문서함 API `/api/franchise-lead-documents`를 추가했다. 리드 회사 접근 검증 후 문서 등록/수정/보관 처리와 체크리스트 항목 링크를 관리한다. 후보자 상세의 계약 전 체크 전용 패널에 `점주 문서함` 섹션을 추가해 파일 업로드 문서를 개별 체크 항목에 연결할 수 있게 했다.
 - 회사 템플릿 전자계약 작성 URL/API가 `leadId`를 받을 수 있게 했다. 초안 저장과 발송 성공 시 `electronic_contracts.lead_id`를 저장하고, 점주 문서함에 `전자계약` 문서 레코드를 자동 생성/갱신한 뒤 `가맹계약서` 체크 항목에 연결한다.
 - 신규 SQL: `supabase_franchise_lead_documents_migration.sql` 추가. `franchise_lead_contract_checklist_steps` v2 컬럼, `electronic_contracts.lead_id`, `franchise_lead_documents`, `franchise_lead_document_checklist_links`, 인덱스/RLS를 포함한다. **SQL 등록 필요**.
@@ -619,6 +619,9 @@
 - 연결 해제: 체크리스트 행과 점주 문서함 문서 목록에서 체크 항목 링크를 해제할 수 있게 했다. 문서 자체는 보관 처리하지 않고 `franchise_lead_document_checklist_links` 연결만 삭제한다.
 - 체크리스트 카드 폭 보정: 그룹 내부 체크 항목을 전체 폭 행이 아니라 390~460px 카드 그리드로 배치했다. 단일 항목도 `auto-fill` 트랙 안에 머물게 해 과도하게 길어지지 않도록 했고, 카드 안은 `완료 처리/완료됨` 버튼, 제출서류 정보, 연결 문서/메모 액션 순서로 세로 정리했다. 900px 이하에서는 1열로 전환된다.
 - 후속 검증: `./node_modules/.bin/eslint src/components/franchise/LeadContractChecklistSection.tsx src/components/franchise/LeadDocumentBoxSection.tsx src/app/api/franchise-lead-documents/route.ts src/app/api/electronic-contracts/route.ts` 에러/경고 없이 통과. 추가 CSS 보정과 `PropertyCard` Recharts formatter/purity 정리 후 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-contract-store.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 20개 테스트, `git diff --check`, `npm run build` 통과. Playwright로 `http://localhost:3023/demo/manager` 계약 완료 요약을 1280px/390px에서 확인했고 page-level horizontal overflow 0건이었다. 데모의 `체크리스트 열기`는 실제 상세 모달이 아니라 샘플 토스트 동작이라, 실제 카드형 체크리스트 조작 QA는 SQL/로그인 세션에서 추가 확인이 필요하다.
+- 실데이터 QA 샘플: Supabase service role로 `내일` 회사(`92924bd6-b2a1-49bb-844b-05eabcc51bbf`) 관리자 계정(`7006b59c-031e-40f8-9041-e4255af22b1b`)에 `contract_check_14day_seed_20260623` 샘플을 생성/갱신했다. `QA_14일경과_문채원`, `QA_14일경과_강태오`, `QA_14일경과_이서준` 3건은 모두 `계약완료`, `leadStage=candidate`, 연결 후보지 1건, 정보공개서 발송 이력 `sent_at=2026-06-01 01:00:00+00`, `send_status=recorded`를 가진다. 2026-06-23 기준 21일 경과로 14일 계약 게이트 통과를 DB 재조회로 확인했다. 이번 seed용 신규 SQL은 없다.
+- 가맹점 정보 탭 보정: 연결 후보지 선택 후 기존 가맹점 조회가 끝나면서 폼이 기본값으로 덮여 후보지 주소가 비는 문제를 수정했다. 후보지 선택 주소/좌표는 가맹 운영 마스터 생성 폼에 유지되고, 직접 입력 주소도 자유입력이 아니라 Kakao 주소 검색 컴포넌트로 선택하도록 바꿨다. 생성 버튼 문구는 `후보지로 생성`에서 `가맹 운영에 생성`으로 변경했다.
+- 가맹점 정보 보정 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-contract-store.test.mts`, `git diff --check`, `npm run build` 통과. `npm run start -- --hostname 127.0.0.1 --port 3067` production build에 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads` 계약 완료 상세의 `가맹점 정보` 탭을 1280px/390px에서 확인했다. 후보지 주소 `서울 광진구 능동로50길 8`이 주소 필드에 유지되고, 지역 `서울 광진구`, `가맹 운영에 생성` 버튼, 후보지 주소 표시를 확인했다. 모바일 page-level overflow는 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-store-address-copy-desktop.png`, `ERP/web/.omo/evidence/contract-store-address-copy-mobile.png`.
 
 ## 다음 QA 체크리스트
 

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+    type LeadContractChecklistDocumentItem,
     normalizeLeadContractChecklistStepKey,
     type LeadContractChecklistDocumentSummary
 } from './franchise-lead-contract-checklist';
@@ -37,6 +38,8 @@ export type FranchiseLeadDocumentInput = {
     readonly status?: unknown;
     readonly createdBy?: unknown;
     readonly created_by?: unknown;
+    readonly createdByName?: unknown;
+    readonly created_by_name?: unknown;
     readonly createdAt?: unknown;
     readonly created_at?: unknown;
     readonly updatedAt?: unknown;
@@ -72,6 +75,7 @@ export type FranchiseLeadDocument = {
     readonly memo: string;
     readonly status: string;
     readonly createdBy: string;
+    readonly createdByName: string;
     readonly createdAt: string;
     readonly updatedAt: string;
     readonly checklistStepKeys: readonly string[];
@@ -139,6 +143,7 @@ export function toFranchiseLeadDocumentView(
         memo: cleanString(row.memo),
         status: cleanString(row.status) || 'active',
         createdBy: cleanString(row.createdBy ?? row.created_by),
+        createdByName: cleanString(row.createdByName ?? row.created_by_name),
         createdAt: cleanDateString(row.createdAt ?? row.created_at),
         updatedAt: cleanDateString(row.updatedAt ?? row.updated_at),
         checklistStepKeys
@@ -160,7 +165,8 @@ export function toFranchiseLeadDocumentChecklistLinkView(
 
 export function attachChecklistLinksToDocuments(
     documents: readonly FranchiseLeadDocumentInput[],
-    links: readonly FranchiseLeadDocumentChecklistLinkInput[]
+    links: readonly FranchiseLeadDocumentChecklistLinkInput[],
+    profileNamesById: ReadonlyMap<string, string> = new Map()
 ): readonly FranchiseLeadDocument[] {
     const stepKeysByDocumentId = new Map<string, string[]>();
     links.forEach(row => {
@@ -173,33 +179,65 @@ export function attachChecklistLinksToDocuments(
 
     return documents.map(row => {
         const id = cleanString(row.id);
-        return toFranchiseLeadDocumentView(row, stepKeysByDocumentId.get(id) || []);
+        const document = toFranchiseLeadDocumentView(row, stepKeysByDocumentId.get(id) || []);
+        return {
+            ...document,
+            createdByName: profileNamesById.get(document.createdBy) || document.createdByName
+        };
     });
 }
 
 export function buildChecklistDocumentSummaries(
     documents: readonly FranchiseLeadDocumentInput[],
-    links: readonly FranchiseLeadDocumentChecklistLinkInput[]
+    links: readonly FranchiseLeadDocumentChecklistLinkInput[],
+    profileNamesById: ReadonlyMap<string, string> = new Map()
 ): Record<string, LeadContractChecklistDocumentSummary> {
     const documentsById = new Map<string, FranchiseLeadDocument>();
-    attachChecklistLinksToDocuments(documents, links).forEach(document => {
+    attachChecklistLinksToDocuments(documents, links, profileNamesById).forEach(document => {
         if (document.id && document.status !== 'archived') documentsById.set(document.id, document);
     });
 
-    const summaries = new Map<string, LeadContractChecklistDocumentSummary>();
+    const documentsByStepKey = new Map<string, LeadContractChecklistDocumentItem[]>();
     links.forEach(row => {
         const link = toFranchiseLeadDocumentChecklistLinkView(row);
         const document = documentsById.get(link.leadDocumentId);
         if (!document || !link.stepKey) return;
-        const previous = summaries.get(link.stepKey);
-        const documentIds = previous ? [...previous.documentIds, document.id] : [document.id];
-        summaries.set(link.stepKey, {
-            count: documentIds.length,
-            latestTitle: document.title,
-            latestStatus: document.documentStatus,
-            requiredEvidenceLinked: documentIds.length > 0,
-            documentIds
+        const rows = documentsByStepKey.get(link.stepKey) || [];
+        rows.push({
+            id: document.id,
+            title: document.title,
+            sourceType: document.sourceType,
+            sourceId: document.sourceId,
+            status: document.documentStatus,
+            fileUrl: document.fileUrl,
+            fileName: document.fileName,
+            memo: document.memo,
+            createdBy: document.createdBy,
+            createdByName: document.createdByName,
+            createdAt: document.createdAt,
+            updatedAt: document.updatedAt
         });
+        documentsByStepKey.set(link.stepKey, rows);
+    });
+
+    const summaries = Array.from(documentsByStepKey.entries()).map(([stepKey, items]) => {
+        const sortedItems = [...items].sort((left, right) => {
+            const rightTime = Date.parse(right.updatedAt || right.createdAt || '');
+            const leftTime = Date.parse(left.updatedAt || left.createdAt || '');
+            return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime);
+        });
+        const latest = sortedItems[0];
+        return [stepKey, {
+            count: sortedItems.length,
+            latestTitle: latest?.title || '',
+            latestStatus: latest?.status || '',
+            latestMemo: latest?.memo || '',
+            latestCreatedBy: latest?.createdBy || '',
+            latestCreatedByName: latest?.createdByName || '',
+            requiredEvidenceLinked: sortedItems.length > 0,
+            documentIds: sortedItems.map(document => document.id),
+            documents: sortedItems
+        }] as const;
     });
 
     return Object.fromEntries(summaries);

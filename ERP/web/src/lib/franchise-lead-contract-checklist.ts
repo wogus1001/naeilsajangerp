@@ -24,8 +24,27 @@ export type LeadContractChecklistDocumentSummary = {
     readonly count: number;
     readonly latestTitle: string;
     readonly latestStatus: string;
+    readonly latestMemo: string;
+    readonly latestCreatedBy: string;
+    readonly latestCreatedByName: string;
     readonly requiredEvidenceLinked: boolean;
     readonly documentIds: readonly string[];
+    readonly documents: readonly LeadContractChecklistDocumentItem[];
+};
+
+export type LeadContractChecklistDocumentItem = {
+    readonly id: string;
+    readonly title: string;
+    readonly sourceType: string;
+    readonly sourceId: string;
+    readonly status: string;
+    readonly fileUrl: string;
+    readonly fileName: string;
+    readonly memo: string;
+    readonly createdBy: string;
+    readonly createdByName: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
 };
 
 export type LeadContractChecklistStepInput = {
@@ -157,16 +176,6 @@ export class UnknownLeadContractChecklistStepError extends Error {
     constructor(stepKey: string) {
         super(`Unknown lead contract checklist step: ${stepKey}`);
         this.name = 'UnknownLeadContractChecklistStepError';
-        this.stepKey = stepKey;
-    }
-}
-
-export class InvalidLeadContractChecklistApplicabilityError extends Error {
-    readonly stepKey: string;
-
-    constructor(stepKey: string, message: string) {
-        super(message);
-        this.name = 'InvalidLeadContractChecklistApplicabilityError';
         this.stepKey = stepKey;
     }
 }
@@ -401,8 +410,12 @@ const EMPTY_DOCUMENT_SUMMARY: LeadContractChecklistDocumentSummary = {
     count: 0,
     latestTitle: '',
     latestStatus: '',
+    latestMemo: '',
+    latestCreatedBy: '',
+    latestCreatedByName: '',
     requiredEvidenceLinked: false,
-    documentIds: []
+    documentIds: [],
+    documents: []
 };
 
 function cleanString(value: unknown): string {
@@ -468,6 +481,36 @@ function readApplicability(value: unknown, fallback: LeadContractApplicability):
     }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeDocumentItems(input: LeadContractChecklistDocumentSummary): readonly LeadContractChecklistDocumentItem[] {
+    return Array.isArray(input.documents)
+        ? input.documents.map(item => {
+            if (!isRecord(item)) {
+                return null;
+            }
+            const id = cleanString(item.id);
+            if (!id) return null;
+            return {
+                id,
+                title: cleanString(item.title) || '점주 문서',
+                sourceType: cleanString(item.sourceType),
+                sourceId: cleanString(item.sourceId),
+                status: cleanString(item.status),
+                fileUrl: cleanString(item.fileUrl),
+                fileName: cleanString(item.fileName),
+                memo: cleanString(item.memo),
+                createdBy: cleanString(item.createdBy),
+                createdByName: cleanString(item.createdByName),
+                createdAt: cleanDateString(item.createdAt),
+                updatedAt: cleanDateString(item.updatedAt)
+            };
+        }).filter((item): item is LeadContractChecklistDocumentItem => item !== null)
+        : [];
+}
+
 function isStepResolved(step: Pick<LeadContractChecklistStep, 'applicability' | 'completed'>): boolean {
     return step.completed || step.applicability === 'not_applicable';
 }
@@ -477,16 +520,24 @@ function normalizeDocumentSummary(
     input: LeadContractChecklistDocumentSummary | undefined
 ): LeadContractChecklistDocumentSummary {
     if (!input) return EMPTY_DOCUMENT_SUMMARY;
-    const documentIds = Array.isArray(input.documentIds)
+    const documents = normalizeDocumentItems(input);
+    const documentIds = documents.length > 0
+        ? documents.map(document => document.id)
+        : Array.isArray(input.documentIds)
         ? input.documentIds.map(cleanString).filter(Boolean)
         : [];
     const count = Math.max(0, Number.isFinite(input.count) ? input.count : documentIds.length);
+    const latestDocument = documents[0];
     return {
         count,
-        latestTitle: cleanString(input.latestTitle),
-        latestStatus: cleanString(input.latestStatus),
+        latestTitle: latestDocument?.title || cleanString(input.latestTitle),
+        latestStatus: latestDocument?.status || cleanString(input.latestStatus),
+        latestMemo: latestDocument?.memo || cleanString(input.latestMemo),
+        latestCreatedBy: latestDocument?.createdBy || cleanString(input.latestCreatedBy),
+        latestCreatedByName: latestDocument?.createdByName || cleanString(input.latestCreatedByName),
         requiredEvidenceLinked: definition.requiredEvidence && count > 0,
-        documentIds
+        documentIds,
+        documents
     };
 }
 
@@ -684,13 +735,6 @@ export function buildLeadContractChecklistUpsert(
     const nextApplicability = input.applicability
         || existing?.applicability
         || definition.defaultApplicability;
-
-    if (nextApplicability === 'not_applicable' && !nextMemo) {
-        throw new InvalidLeadContractChecklistApplicabilityError(
-            definition.stepKey,
-            '해당없음 처리 사유를 메모에 입력해주세요.'
-        );
-    }
 
     const hasCompletedPatch = typeof input.completed === 'boolean';
     const nextCompleted = nextApplicability === 'not_applicable'

@@ -232,33 +232,38 @@
 
 .table {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(390px, 460px));
+    grid-template-columns: 1fr;
     align-items: start;
     justify-content: start;
-    gap: 12px;
-    padding: 12px;
-    background: #f9fafb;
+    gap: 0;
+    padding: 0;
+    background: #ffffff;
 }
 
 .row {
     display: grid;
-    grid-template-columns: 1fr;
-    align-content: start;
-    gap: 12px;
+    grid-template-columns: minmax(300px, 0.95fr) minmax(360px, 1.05fr);
+    align-items: center;
+    gap: 18px;
     min-width: 0;
-    padding: 14px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
+    padding: 14px 16px;
+    border: 0;
+    border-bottom: 1px solid #e5e8eb;
+    border-radius: 0;
     background: #ffffff;
 }
 
 .row:first-child {
-    border-top: 1px solid #e5e8eb;
+    border-top: 0;
 }
 
 .resolvedRow {
-    border-color: #cce5ff;
+    box-shadow: inset 3px 0 0 #3182f6;
     background: #fbfdff;
+}
+
+.row:has(.statusPanelNoDocument) {
+    grid-template-columns: minmax(300px, 0.95fr) minmax(360px, 1.05fr);
 }
 
 .empty {
@@ -270,26 +275,33 @@
 
 .documentInfo {
     display: grid;
-    grid-template-columns: 112px minmax(0, 1fr);
-    align-items: start;
-    gap: 12px;
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
     min-width: 0;
 }
 
 .completeButton,
 .completeButtonDone {
     display: grid;
-    align-content: center;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    justify-content: center;
     justify-items: center;
-    gap: 5px;
-    min-height: 80px;
-    padding: 10px;
+    align-content: center;
+    gap: 3px 5px;
+    width: 88px;
+    height: 50px;
+    padding: 0 8px;
     border: 1px solid #d6e6ff;
     border-radius: 8px;
     background: #ffffff;
     color: #0064d9;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
 }
 
 .completeButtonDone {
@@ -304,56 +316,55 @@
     opacity: 0.55;
 }
 
+.completeButton svg,
+.completeButtonDone svg {
+    flex: 0 0 auto;
+}
+
+.completeButton span,
+.completeButtonDone span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .completeButton small,
 .completeButtonDone small {
+    grid-column: 1 / -1;
+    justify-self: center;
     color: #6b7684;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
+    line-height: 1.25;
     white-space: nowrap;
 }
 
 .titleCell {
     display: grid;
-    gap: 8px;
+    align-items: center;
+    gap: 4px;
     min-width: 0;
 }
 
 .titleCell strong {
     color: #191f28;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     line-height: 1.5;
 }
 
 .titleCell > span {
-    color: #6b7684;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.metaGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    align-items: start;
-}
-
-.metaGrid > div:last-child {
-    grid-column: 1 / -1;
-}
-
-.metaGrid label,
-.metaGrid > div {
-    display: grid;
-    gap: 6px;
+    overflow: hidden;
     color: #6b7684;
     font-size: 12px;
-    font-weight: 700;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .select {
     width: 100%;
-    height: 36px;
+    height: 30px;
     min-width: 0;
     padding: 0 10px;
     border: 1px solid #e5e8eb;
@@ -369,85 +380,69 @@
     color: #8b95a1;
 }
 
-.badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: fit-content;
-    min-height: 24px;
-    padding: 0 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.lawBadge {
-    background: #e8f3ff;
-    color: #0064d9;
-}
-
-.privacyBadge {
-    background: #f4f0ff;
-    color: #6d3bd8;
-}
-
-.internalBadge {
-    background: #eefaf7;
-    color: #087d73;
-}
-
-.ownerCell {
-    color: #333d4b;
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1.8;
-}
-
 .statusPanel {
     display: grid;
-    align-content: start;
-    gap: 10px;
+    grid-template-columns: auto max-content;
+    grid-template-areas: "controls document";
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
     min-width: 0;
-    padding-top: 12px;
-    border-top: 1px solid #f2f4f6;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.statusPanelNoDocument {
+    grid-template-columns: auto;
+    grid-template-areas: "controls";
+    justify-content: start;
+}
+
+.rowControls {
+    grid-area: controls;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.applicabilityControl {
+    display: grid;
+    width: 116px;
+    gap: 5px;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .documentCell {
+    grid-area: document;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto auto;
     gap: 8px;
-    align-items: start;
-    padding: 10px;
+    align-items: center;
+    justify-self: end;
+    min-height: 34px;
+    padding: 0 10px;
     border: 1px solid #e5e8eb;
     border-radius: 8px;
     background: #f9fafb;
     color: #8b95a1;
+    font-family: inherit;
+    cursor: pointer;
 }
 
 .documentCell svg {
-    margin-top: 2px;
     color: currentColor;
-}
-
-.documentCell div {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
 }
 
 .documentCell strong {
     color: #333d4b;
-    font-size: 13px;
-    font-weight: 800;
-}
-
-.documentCell span {
-    overflow: hidden;
-    color: #8b95a1;
     font-size: 12px;
-    line-height: 1.5;
-    text-overflow: ellipsis;
+    font-weight: 800;
     white-space: nowrap;
 }
 
@@ -457,21 +452,27 @@
     color: #0064d9;
 }
 
+.documentCell:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .documentActions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: auto;
     gap: 6px;
 }
 
 .documentActions button,
 .quickDocumentForm button,
-.memoCell button {
+.documentModeTab,
+.documentModeTabActive {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    min-height: 34px;
-    width: 100%;
+    min-height: 30px;
+    width: auto;
     padding: 0 8px;
     border: 1px solid #e5e8eb;
     border-radius: 8px;
@@ -485,37 +486,236 @@
 
 .documentActions button:disabled,
 .quickDocumentForm button:disabled,
-.memoCell button:disabled {
+.documentModeTab:disabled,
+.documentModeTabActive:disabled {
     cursor: not-allowed;
     opacity: 0.55;
 }
 
-.quickDocumentForm {
+.documentModalBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(25, 31, 40, 0.32);
+}
+
+.documentModal {
+    display: grid;
+    box-sizing: border-box;
+    width: min(560px, 100%);
+    max-height: min(760px, calc(100dvh - 48px));
+    gap: 14px;
+    overflow: auto;
+    padding: 18px;
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 18px 48px rgba(25, 31, 40, 0.18);
+}
+
+.documentModalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.documentModalHeader > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.documentModalHeader span {
+    color: #0064d9;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.documentModalHeader h4 {
+    margin: 0;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.documentModalHeader p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.documentModalHeader > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 10px;
+    background: #f9fafb;
+    color: #4e5968;
+}
+
+.documentModalHeader > button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.documentModalLinked {
     display: grid;
     gap: 8px;
-    padding: 10px;
-    border: 1px solid #d6e6ff;
+    padding: 12px;
+    border: 1px solid #e5e8eb;
     border-radius: 8px;
-    background: #f5faff;
+    background: #f9fafb;
 }
 
-.quickDocumentHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.quickDocumentHeader strong {
-    color: #191f28;
+.documentModalLinked > strong {
+    color: #333d4b;
     font-size: 13px;
     font-weight: 800;
 }
 
-.quickDocumentHeader button {
-    width: 28px;
-    min-height: 28px;
-    padding: 0;
+.documentModalLinked > p {
+    margin: 0;
+    color: #8b95a1;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.documentModalLinkedBody {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.documentModalLinkedBody p {
+    margin: 0;
+    overflow: hidden;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.linkedDocumentItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.linkedDocumentItem > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.linkedDocumentItem strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.linkedDocumentItem span {
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.linkedDocumentItem p {
+    grid-column: 1 / -1;
+    color: #4e5968;
+    white-space: normal;
+}
+
+.linkedDocumentActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.linkedDocumentActions a,
+.linkedDocumentActions button,
+.linkedDocumentItem > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.linkedDocumentActions a {
+    border: 1px solid #e5e8eb;
+    color: #333d4b;
+}
+
+.linkedDocumentActions button,
+.linkedDocumentItem > button {
+    border: 1px solid #fecdd3;
+    color: #e42939;
+}
+
+.linkedDocumentItem > button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.documentEmptyMemo {
+    color: #8b95a1 !important;
+}
+
+.documentModeTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.documentModeTab,
+.documentModeTabActive {
+    min-height: 38px;
+    width: 100%;
+}
+
+.documentModeTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #0064d9;
+}
+
+.quickDocumentForm {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #d6e6ff;
+    border-radius: 8px;
+    background: #f5faff;
 }
 
 .quickDocumentForm label {
@@ -544,29 +744,13 @@
 }
 
 .quickDocumentForm > button {
-    width: fit-content;
+    width: 100%;
+    min-height: 38px;
     border-color: #3182f6;
     background: #3182f6;
     color: #ffffff;
 }
 
-.memoCell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-}
-
-.memoCell input {
-    min-width: 0;
-    height: 36px;
-    padding: 0 10px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    color: #191f28;
-    font-size: 13px;
-}
-
-.memoCell input:focus,
 .quickDocumentForm input:focus,
 .quickDocumentForm select:focus,
 .select:focus {
@@ -601,21 +785,33 @@
     opacity: 0.55;
 }
 
-.memoCell button {
-    width: 36px;
-    padding: 0;
-}
-
 @media (max-width: 1180px) {
+    .row {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
     .completeButton,
     .completeButtonDone {
-        min-height: 72px;
+        height: 50px;
     }
 }
 
 @media (max-width: 900px) {
     .table {
         grid-template-columns: 1fr;
+    }
+
+    .statusPanel {
+        grid-template-columns: auto max-content;
+        grid-template-areas: "controls document";
+        justify-content: space-between;
+    }
+
+    .statusPanelNoDocument {
+        grid-template-columns: auto;
+        grid-template-areas: "controls";
+        justify-content: start;
     }
 }
 
@@ -644,20 +840,65 @@
     }
 
     .documentInfo,
-    .metaGrid,
-    .memoCell {
+    .statusPanel {
         grid-template-columns: 1fr;
+    }
+
+    .titleCell {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .statusPanel {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "controls document";
+        justify-content: space-between;
+    }
+
+    .statusPanelNoDocument {
+        grid-template-columns: 1fr;
+        grid-template-areas: "controls";
+        justify-content: start;
     }
 
     .completeButton,
     .completeButtonDone {
-        min-height: 56px;
-        grid-template-columns: auto auto auto;
-        align-content: center;
-        justify-content: center;
+        width: 100%;
+        max-width: 88px;
+        height: 44px;
+    }
+
+    .rowControls {
+        flex-wrap: nowrap;
     }
 
     .documentActions {
         grid-template-columns: 1fr;
+    }
+
+    .documentActions button {
+        width: auto;
+        min-height: 36px;
+    }
+
+    .documentModalBackdrop {
+        padding: 12px;
+    }
+
+    .documentModal {
+        max-height: calc(100dvh - 24px);
+        padding: 16px;
+    }
+
+    .documentModeTabs {
+        grid-template-columns: 1fr;
+    }
+
+    .linkedDocumentItem {
+        grid-template-columns: 1fr;
+    }
+
+    .linkedDocumentItem > button {
+        width: fit-content;
     }
 }

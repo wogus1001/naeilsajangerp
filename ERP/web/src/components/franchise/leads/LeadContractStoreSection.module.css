@@ -171,6 +171,24 @@
     resize: vertical;
 }
 
+.addressSearchRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.addressSearchButton {
+    min-width: 88px;
+    height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .wideField {
     grid-column: span 2;
 }

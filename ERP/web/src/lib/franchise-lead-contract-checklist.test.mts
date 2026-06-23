@@ -4,7 +4,6 @@ import {
     buildLeadContractChecklistSummaryMap,
     buildLeadContractChecklistUpsert,
     filterLeadContractChecklistRowsByLeadCompany,
-    InvalidLeadContractChecklistApplicabilityError,
     mergeLeadContractChecklistSteps,
     summarizeLeadContractChecklist,
     summarizeLeadContractChecklistForLead
@@ -62,8 +61,12 @@ test('mergeLeadContractChecklistSteps preserves saved completion, memo, and v2 m
             count: 0,
             latestTitle: '',
             latestStatus: '',
+            latestMemo: '',
+            latestCreatedBy: '',
+            latestCreatedByName: '',
             requiredEvidenceLinked: false,
-            documentIds: []
+            documentIds: [],
+            documents: []
         }
     });
 });
@@ -94,8 +97,12 @@ test('summarizeLeadContractChecklist counts missing linked documents for require
             count: 1,
             latestTitle: '신분증.pdf',
             latestStatus: 'active',
+            latestMemo: '',
+            latestCreatedBy: '',
+            latestCreatedByName: '',
             requiredEvidenceLinked: true,
-            documentIds: ['doc-1']
+            documentIds: ['doc-1'],
+            documents: []
         }
     });
 
@@ -144,17 +151,19 @@ test('buildLeadContractChecklistUpsert preserves existing completion metadata du
     assert.equal(patch.memo, '추가 메모');
 });
 
-test('buildLeadContractChecklistUpsert requires memo for not-applicable handling', () => {
-    assert.throws(
-        () => buildLeadContractChecklistUpsert({
-            companyId: 'company-1',
-            leadId: 'lead-1',
-            requesterId: 'manager-1',
-            stepKey: 'site-survey-request',
-            applicability: 'not_applicable'
-        }),
-        InvalidLeadContractChecklistApplicabilityError
-    );
+test('buildLeadContractChecklistUpsert allows not-applicable without memo', () => {
+    const patch = buildLeadContractChecklistUpsert({
+        companyId: 'company-1',
+        leadId: 'lead-1',
+        requesterId: 'manager-1',
+        stepKey: 'site-survey-request',
+        applicability: 'not_applicable'
+    });
+
+    assert.equal(patch.applicability, 'not_applicable');
+    assert.equal(patch.completed, false);
+    assert.equal(patch.completed_at, null);
+    assert.equal(patch.memo, '');
 });
 
 test('buildLeadContractChecklistUpsert allows not-applicable for required documents when memo exists', () => {
@@ -199,8 +208,12 @@ test('buildLeadContractChecklistSummaryMap groups rows and document summaries by
                 count: 1,
                 latestTitle: '신분증.pdf',
                 latestStatus: 'active',
+                latestMemo: '',
+                latestCreatedBy: '',
+                latestCreatedByName: '',
                 requiredEvidenceLinked: true,
-                documentIds: ['doc-1']
+                documentIds: ['doc-1'],
+                documents: []
             }
         }
     });

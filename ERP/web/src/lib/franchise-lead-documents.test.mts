@@ -37,9 +37,17 @@ test('buildChecklistDocumentSummaries counts non-archived linked documents per s
             id: 'doc-1',
             company_id: 'company-1',
             lead_id: 'lead-1',
+            source_type: 'upload',
+            source_id: 'source-1',
             title: '신분증',
             document_status: 'stored',
-            status: 'active'
+            file_url: 'https://example.com/id.pdf',
+            file_name: 'id.pdf',
+            memo: '인감증명서는 원본 확인',
+            status: 'active',
+            created_by: 'manager-1',
+            created_at: '2026-06-23T03:00:00.000Z',
+            updated_at: '2026-06-23T04:00:00.000Z'
         },
         {
             id: 'doc-2',
@@ -58,14 +66,31 @@ test('buildChecklistDocumentSummaries counts non-archived linked documents per s
             lead_document_id: 'doc-2',
             step_key: 'owner-id-seal-certificate'
         }
-    ]);
+    ], new Map([['manager-1', '김담당']]));
 
     assert.deepEqual(summaries['owner-id-seal-certificate'], {
         count: 1,
         latestTitle: '신분증',
         latestStatus: 'stored',
+        latestMemo: '인감증명서는 원본 확인',
+        latestCreatedBy: 'manager-1',
+        latestCreatedByName: '김담당',
         requiredEvidenceLinked: true,
-        documentIds: ['doc-1']
+        documentIds: ['doc-1'],
+        documents: [{
+            id: 'doc-1',
+            title: '신분증',
+            sourceType: 'upload',
+            sourceId: 'source-1',
+            status: 'stored',
+            fileUrl: 'https://example.com/id.pdf',
+            fileName: 'id.pdf',
+            memo: '인감증명서는 원본 확인',
+            createdBy: 'manager-1',
+            createdByName: '김담당',
+            createdAt: '2026-06-23T03:00:00.000Z',
+            updatedAt: '2026-06-23T04:00:00.000Z'
+        }]
     });
 });
 

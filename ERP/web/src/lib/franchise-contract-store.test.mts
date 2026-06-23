@@ -48,6 +48,10 @@ test('Given a linked candidate location When building a contract store draft The
     assert.equal(draft.sourceLocationId, 'location-1');
     assert.equal(draft.sourcePropertyId, 'property-1');
     assert.equal(draft.contractLeadId, 'lead-1');
+    assert.equal(draft.region, '서울 강남구');
+    assert.equal(draft.address, '서울 강남구 테헤란로 1');
+    assert.equal(draft.latitude, 37.1);
+    assert.equal(draft.longitude, 127.1);
     assert.equal(draft.sourceCandidateSnapshot.locationType, '예정점');
 });
 

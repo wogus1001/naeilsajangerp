@@ -3,7 +3,6 @@ import { fail, ok } from '@/lib/api-response';
 import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     buildLeadContractChecklistUpsert,
-    InvalidLeadContractChecklistApplicabilityError,
     mergeLeadContractChecklistSteps,
     normalizeLeadContractChecklistStepKey,
     summarizeLeadContractChecklist,
@@ -28,6 +27,12 @@ type LeadAccessRow = {
     readonly company_id: string;
     readonly manager_id: string | null;
     readonly created_by: string | null;
+};
+
+type ProfileNameRow = {
+    readonly id: string;
+    readonly name: string | null;
+    readonly email: string | null;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -117,6 +122,8 @@ function readDocumentRow(value: unknown): FranchiseLeadDocumentInput | null {
         title: value.title,
         document_status: value.document_status,
         status: value.status,
+        memo: value.memo,
+        created_by: value.created_by,
         created_at: value.created_at,
         updated_at: value.updated_at
     };
@@ -162,9 +169,6 @@ function handleChecklistError(error: unknown, action: string) {
     if (error instanceof UnknownLeadContractChecklistStepError) {
         return fail(400, 'VALIDATION_ERROR', 'Unknown checklist step');
     }
-    if (error instanceof InvalidLeadContractChecklistApplicabilityError) {
-        return fail(400, 'VALIDATION_ERROR', error.message);
-    }
     return fail(500, 'INTERNAL_ERROR', `Failed to ${action.toLowerCase()} contract checklist`);
 }
 
@@ -192,6 +196,37 @@ function readRows<T>(data: unknown, reader: (value: unknown) => T | null): reado
         : [];
 }
 
+function readProfileNameRow(value: unknown): ProfileNameRow | null {
+    if (!isRecord(value)) return null;
+    const id = cleanString(value.id);
+    if (!id) return null;
+    return {
+        id,
+        name: cleanString(value.name),
+        email: cleanString(value.email)
+    };
+}
+
+function displayProfileName(profile: ProfileNameRow): string {
+    return profile.name || profile.email || profile.id;
+}
+
+async function fetchProfileNamesById(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    profileIds: readonly string[]
+): Promise<ReadonlyMap<string, string>> {
+    const uniqueIds = Array.from(new Set(profileIds.map(cleanString).filter(Boolean)));
+    if (uniqueIds.length === 0) return new Map();
+
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', uniqueIds);
+    if (error) throw error;
+
+    return new Map(readRows(data, readProfileNameRow).map(profile => [profile.id, displayProfileName(profile)]));
+}
+
 async function fetchChecklistSteps(
     supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
     leadId: string,
@@ -215,7 +250,7 @@ async function fetchDocumentSummaries(
     const [{ data: documentData, error: documentError }, { data: linkData, error: linkError }] = await Promise.all([
         supabaseAdmin
             .from('franchise_lead_documents')
-            .select('id, company_id, lead_id, title, document_status, status, created_at, updated_at')
+            .select('id, company_id, lead_id, title, document_status, status, memo, created_by, created_at, updated_at')
             .eq('lead_id', leadId)
             .eq('company_id', companyId)
             .neq('status', 'archived'),
@@ -227,9 +262,18 @@ async function fetchDocumentSummaries(
     ]);
     if (documentError) throw documentError;
     if (linkError) throw linkError;
+    const documents = readRows(documentData, readDocumentRow);
+    const creatorIds = documents
+        .map(document => cleanString(document.created_by ?? document.createdBy))
+        .filter((id): id is string => Boolean(id));
+    const profileNamesById = await fetchProfileNamesById(
+        supabaseAdmin,
+        creatorIds
+    );
     return buildChecklistDocumentSummaries(
-        readRows(documentData, readDocumentRow),
-        readRows(linkData, readLinkRow)
+        documents,
+        readRows(linkData, readLinkRow),
+        profileNamesById
     );
 }
 

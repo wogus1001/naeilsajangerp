@@ -38,14 +38,15 @@ type ElectronicContractsResponse = {
 type DocumentFormMode = 'upload' | 'electronic_contract';
 
 const UPLOAD_BUCKET = 'property-documents';
+const UNLINKED_CHECKLIST_STEP_KEY = '';
 
 const CHECKLIST_LABELS = new Map<string, string>(
     LEAD_CONTRACT_CHECKLIST_DEFINITIONS.map(definition => [definition.stepKey, definition.label])
 );
 
 const FORM_MODES = [
-    { mode: 'upload', label: '수기 등록', icon: UploadCloud },
-    { mode: 'electronic_contract', label: '전자계약 연결', icon: Link2 }
+    { mode: 'upload', label: '업로드', icon: UploadCloud },
+    { mode: 'electronic_contract', label: '전자계약', icon: Link2 }
 ] as const;
 
 function sanitizePathPart(value: string): string {
@@ -124,6 +125,7 @@ export function LeadDocumentBoxSection({
     const [memo, setMemo] = React.useState('');
     const [electronicContractId, setElectronicContractId] = React.useState('');
     const [checklistStepKey, setChecklistStepKey] = React.useState('owner-id-seal-certificate');
+    const [linkDrafts, setLinkDrafts] = React.useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
     const [message, setMessage] = React.useState('');
@@ -240,13 +242,14 @@ export function LeadDocumentBoxSection({
                     fileUrl: publicUrl,
                     fileName: selectedFile?.name || '',
                     memo,
-                    checklistStepKey
+                    checklistStepKey: checklistStepKey || undefined
                 })
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<LeadDocumentsResponse>(payload);
             setDocuments(data.documents || []);
+            setLinkDrafts({});
             resetForm();
             setMessage('점주 문서함에 등록했습니다.');
             onSaved?.();
@@ -273,10 +276,46 @@ export function LeadDocumentBoxSection({
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<LeadDocumentsResponse>(payload);
             setDocuments(data.documents || []);
-            setMessage('체크 항목 연결을 해제했습니다.');
+            setMessage('체크 항목 연결을 삭제했습니다.');
             onSaved?.();
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : '체크 항목 연결을 해제하지 못했습니다.');
+            setErrorMessage(error instanceof Error ? error.message : '체크 항목 연결을 삭제하지 못했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const linkDocument = async (documentId: string, stepKey: string) => {
+        if (!documentId || !stepKey) {
+            setErrorMessage('연결할 체크 항목을 선택해주세요.');
+            return;
+        }
+        setIsSaving(true);
+        setMessage('');
+        setErrorMessage('');
+        try {
+            const response = await fetch('/api/franchise-lead-documents', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requesterId: userId,
+                    id: documentId,
+                    checklistStepKey: stepKey
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(readApiError(payload));
+            const data = unwrapApiData<LeadDocumentsResponse>(payload);
+            setDocuments(data.documents || []);
+            setLinkDrafts(prev => {
+                const next = { ...prev };
+                delete next[documentId];
+                return next;
+            });
+            setMessage('체크 항목에 연결했습니다.');
+            onSaved?.();
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : '체크 항목에 연결하지 못했습니다.');
         } finally {
             setIsSaving(false);
         }
@@ -294,10 +333,10 @@ export function LeadDocumentBoxSection({
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<LeadDocumentsResponse>(payload);
             setDocuments(data.documents || []);
-            setMessage('문서를 보관 처리했습니다.');
+            setMessage('문서를 삭제했습니다.');
             onSaved?.();
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : '문서를 보관 처리하지 못했습니다.');
+            setErrorMessage(error instanceof Error ? error.message : '문서를 삭제하지 못했습니다.');
         } finally {
             setIsSaving(false);
         }
@@ -350,6 +389,7 @@ export function LeadDocumentBoxSection({
                                 {definition.label}
                             </option>
                         ))}
+                        <option value={UNLINKED_CHECKLIST_STEP_KEY}>기타(체크 항목 미연결)</option>
                     </select>
                 </label>
                 {formMode === 'upload' && (
@@ -422,13 +462,40 @@ export function LeadDocumentBoxSection({
                                         type="button"
                                         onClick={() => void unlinkDocument(document.id, stepKey)}
                                         disabled={isSaving}
-                                        title={`${checklistLabel(stepKey)} 연결 해제`}
+                                        title={`${checklistLabel(stepKey)} 연결 삭제`}
                                     >
                                         {checklistLabel(stepKey)}
                                         <X size={12} />
                                     </button>
                                 ))
-                                : <span>체크 항목 미연결</span>}
+                                : (
+                                    <div className={styles.relinkControl}>
+                                        <span>체크 항목 미연결</span>
+                                        <select
+                                            value={linkDrafts[document.id] || ''}
+                                            onChange={(event) => setLinkDrafts(prev => ({
+                                                ...prev,
+                                                [document.id]: event.target.value
+                                            }))}
+                                            disabled={isSaving}
+                                        >
+                                            <option value="">연결 항목 선택</option>
+                                            {LEAD_CONTRACT_CHECKLIST_DEFINITIONS.map(definition => (
+                                                <option key={definition.stepKey} value={definition.stepKey}>
+                                                    {definition.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => void linkDocument(document.id, linkDrafts[document.id] || '')}
+                                            disabled={isSaving || !linkDrafts[document.id]}
+                                        >
+                                            <Link2 size={12} />
+                                            연결
+                                        </button>
+                                    </div>
+                                )}
                         </div>
                         <div className={styles.documentActions}>
                             {document.fileUrl ? (
@@ -442,9 +509,14 @@ export function LeadDocumentBoxSection({
                                     전자계약
                                 </a>
                             ) : null}
-                            <button type="button" onClick={() => void deleteDocument(document.id)} disabled={isSaving}>
+                            <button
+                                type="button"
+                                onClick={() => void deleteDocument(document.id)}
+                                disabled={isSaving}
+                                title="문서를 삭제합니다."
+                            >
                                 <Trash2 size={15} />
-                                보관
+                                삭제
                             </button>
                         </div>
                     </article>

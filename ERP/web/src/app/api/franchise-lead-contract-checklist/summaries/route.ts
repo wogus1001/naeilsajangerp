@@ -24,6 +24,12 @@ type LeadAccessRow = {
     readonly created_by: string | null;
 };
 
+type ProfileNameRow = {
+    readonly id: string;
+    readonly name: string | null;
+    readonly email: string | null;
+};
+
 function isRecord(value: unknown): value is JsonRecord {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -87,6 +93,8 @@ function readDocumentRow(value: unknown): FranchiseLeadDocumentInput | null {
         title: value.title,
         document_status: value.document_status,
         status: value.status,
+        memo: value.memo,
+        created_by: value.created_by,
         created_at: value.created_at,
         updated_at: value.updated_at
     };
@@ -110,6 +118,37 @@ function readRows<T>(data: unknown, reader: (value: unknown) => T | null): reado
         : [];
 }
 
+function readProfileNameRow(value: unknown): ProfileNameRow | null {
+    if (!isRecord(value)) return null;
+    const id = cleanString(value.id);
+    if (!id) return null;
+    return {
+        id,
+        name: cleanString(value.name) || null,
+        email: cleanString(value.email) || null
+    };
+}
+
+function displayProfileName(profile: ProfileNameRow): string {
+    return profile.name || profile.email || profile.id;
+}
+
+async function fetchProfileNamesById(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    profileIds: readonly string[]
+): Promise<ReadonlyMap<string, string>> {
+    const uniqueIds = Array.from(new Set(profileIds.map(cleanString).filter(Boolean)));
+    if (uniqueIds.length === 0) return new Map();
+
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', uniqueIds);
+    if (error) throw error;
+
+    return new Map(readRows(data, readProfileNameRow).map(profile => [profile.id, displayProfileName(profile)]));
+}
+
 function getErrorCode(error: unknown) {
     return isRecord(error) && typeof error.code === 'string' ? error.code : '';
 }
@@ -128,7 +167,8 @@ function isMissingChecklistSchemaError(error: unknown) {
 
 function groupDocumentSummariesByLeadId(
     documents: readonly FranchiseLeadDocumentInput[],
-    links: readonly FranchiseLeadDocumentChecklistLinkInput[]
+    links: readonly FranchiseLeadDocumentChecklistLinkInput[],
+    profileNamesById: ReadonlyMap<string, string>
 ) {
     const documentsByLeadId = new Map<string, FranchiseLeadDocumentInput[]>();
     documents.forEach(document => {
@@ -152,7 +192,8 @@ function groupDocumentSummariesByLeadId(
         .reduce<Record<string, ReturnType<typeof buildChecklistDocumentSummaries>>>((acc, leadId) => {
             acc[leadId] = buildChecklistDocumentSummaries(
                 documentsByLeadId.get(leadId) || [],
-                linksByLeadId.get(leadId) || []
+                linksByLeadId.get(leadId) || [],
+                profileNamesById
             );
             return acc;
         }, {});
@@ -203,7 +244,7 @@ export async function GET(request: Request) {
         const [{ data: documentData, error: documentError }, { data: linkData, error: linkError }] = await Promise.all([
             supabaseAdmin
                 .from('franchise_lead_documents')
-                .select('id, company_id, lead_id, title, document_status, status, created_at, updated_at')
+                .select('id, company_id, lead_id, title, document_status, status, memo, created_by, created_at, updated_at')
                 .in('lead_id', leadIds)
                 .neq('status', 'archived'),
             supabaseAdmin
@@ -229,6 +270,11 @@ export async function GET(request: Request) {
             }
             throw linkError;
         }
+        const documents = readRows(documentData, readDocumentRow);
+        const creatorIds = documents
+            .map(document => cleanString(document.created_by ?? document.createdBy))
+            .filter(Boolean);
+        const profileNamesById = await fetchProfileNamesById(supabaseAdmin, creatorIds);
 
         return ok({
             summaries: buildLeadContractChecklistSummaryMap(
@@ -236,8 +282,9 @@ export async function GET(request: Request) {
                 filterLeadContractChecklistRowsByLeadCompany(readRows(stepData, readChecklistRow), leads),
                 true,
                 groupDocumentSummariesByLeadId(
-                    readRows(documentData, readDocumentRow),
-                    readRows(linkData, readLinkRow)
+                    documents,
+                    readRows(linkData, readLinkRow),
+                    profileNamesById
                 )
             ),
             schemaReady: true
