@@ -47,6 +47,7 @@ export function useFranchiseOperationsController() {
     const [scanningLocationId, setScanningLocationId] = React.useState('');
     const [updatingStatusId, setUpdatingStatusId] = React.useState('');
     const [creatingLocationPropertyId, setCreatingLocationPropertyId] = React.useState('');
+    const [deepLinkLocationId, setDeepLinkLocationId] = React.useState('');
 
     React.useEffect(() => {
         const parsedUser = readStoredUser();
@@ -54,6 +55,7 @@ export function useFranchiseOperationsController() {
         const storedCompanyName = parsedUser.companyName || parsedUser.company_name || '';
         setUserId(currentUserId);
         setCompanyName(storedCompanyName || '');
+        setDeepLinkLocationId(new URLSearchParams(window.location.search).get('locationId') || '');
     }, []);
 
     const fetchLocations = React.useCallback(async () => {
@@ -105,6 +107,14 @@ export function useFranchiseOperationsController() {
     const resetLocationForm = () => setLocationForm(EMPTY_LOCATION_FORM);
     const updateLocationForm = (patch: Partial<LocationFormState>) => setLocationForm(prev => ({ ...prev, ...patch }));
     const editLocation = (location: FranchiseLocation) => setLocationForm(toLocationFormState(location));
+
+    React.useEffect(() => {
+        if (!deepLinkLocationId || locations.length === 0) return;
+        const targetLocation = locations.find(location => location.id === deepLinkLocationId);
+        if (!targetLocation) return;
+        setLocationForm(toLocationFormState(targetLocation));
+        setDeepLinkLocationId('');
+    }, [deepLinkLocationId, locations]);
 
     const selectKakaoAddress = (result: KakaoAddressResult) => setLocationForm(prev => ({
         ...prev,

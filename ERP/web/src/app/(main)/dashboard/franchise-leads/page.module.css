@@ -5693,11 +5693,57 @@
 }
 
 .contractChecklistOnlyPanel {
-    width: min(760px, calc(100vw - 32px));
+    width: min(1180px, calc(100vw - 32px));
 }
 
-.contractChecklistOnlyContent .contractChecklistSection {
-    margin-top: 0;
+.contractChecklistOnlyContent {
+    display: grid;
+    gap: 16px;
+}
+
+.contractDetailTabs {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    padding: 4px;
+    overflow-x: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.contractDetailTab,
+.contractDetailTabActive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 132px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.contractDetailTab {
+    background: transparent;
+    color: #4e5968;
+}
+
+.contractDetailTab:hover {
+    background: #ffffff;
+    color: #191f28;
+}
+
+.contractDetailTabActive {
+    background: #ffffff;
+    border-color: #cce5ff;
+    color: #0064d9;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .detailHeader {

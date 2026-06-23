@@ -1,5 +1,8 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { normalizeLeadContractChecklistStepKey } from '@/lib/franchise-lead-contract-checklist';
+import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
+import { upsertElectronicContractLeadDocument } from '@/lib/franchise-lead-documents';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
     fetchTemplateForRequester,
@@ -17,9 +20,17 @@ type CompanyRow = {
 type DraftRow = {
     readonly id: string;
     readonly company_id: string | null;
+    readonly lead_id: string | null;
     readonly sent_by_profile_id: string | null;
     readonly status: string | null;
     readonly template_source: string | null;
+};
+
+type LeadRow = {
+    readonly id: string;
+    readonly company_id: string;
+    readonly manager_id: string | null;
+    readonly created_by: string | null;
 };
 
 type DraftParticipant = {
@@ -48,6 +59,31 @@ function draftParticipants(value: unknown): readonly DraftParticipant[] {
     })).filter(participant => participant.roleKey);
 }
 
+function readLeadRow(value: unknown): LeadRow | null {
+    if (!isRecord(value)) return null;
+    const id = textValue(value, 'id');
+    const companyId = textValue(value, 'company_id');
+    if (!id || !companyId) return null;
+    return {
+        id,
+        company_id: companyId,
+        manager_id: textValue(value, 'manager_id') || null,
+        created_by: textValue(value, 'created_by') || null
+    };
+}
+
+async function fetchLinkedLead(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    leadId: string
+) {
+    const { data, error } = await supabaseAdmin
+        .from('franchise_leads')
+        .select('id, company_id, manager_id, created_by')
+        .eq('id', leadId)
+        .maybeSingle();
+    return { lead: readLeadRow(data), error };
+}
+
 export async function POST(request: Request) {
     try {
         const body: unknown = await request.json();
@@ -71,10 +107,11 @@ export async function POST(request: Request) {
         if (!details.version || details.version.template_id !== templateId) return fail(404, 'NOT_FOUND', '템플릿 버전을 찾을 수 없습니다.');
 
         const draftContractId = textValue(body, 'contractId') || textValue(body, 'draftContractId');
+        let existingLeadId = '';
         if (draftContractId) {
             const { data: draft, error: draftError } = await supabaseAdmin
                 .from('electronic_contracts')
-                .select('id, company_id, sent_by_profile_id, status, template_source')
+                .select('id, company_id, lead_id, sent_by_profile_id, status, template_source')
                 .eq('id', draftContractId)
                 .maybeSingle<DraftRow>();
             if (draftError) throw draftError;
@@ -85,6 +122,19 @@ export async function POST(request: Request) {
             if (draft.template_source !== 'company_uploaded') return fail(400, 'VALIDATION_ERROR', '회사 템플릿 초안이 아닙니다.');
             if (!isAdmin(requester) && draft.sent_by_profile_id !== requester.id) return fail(403, 'FORBIDDEN', 'Draft owner required');
             if (draft.company_id !== access.template.company_id) return fail(403, 'FORBIDDEN', 'Company scope mismatch');
+            existingLeadId = draft.lead_id || '';
+        }
+
+        const requestedLeadId = textValue(body, 'leadId') || textValue(body, 'lead_id') || existingLeadId;
+        const requestedChecklistStepKey = normalizeLeadContractChecklistStepKey(
+            textValue(body, 'checklistStepKey') || textValue(body, 'checklist_step_key')
+        );
+        if (requestedLeadId) {
+            const { lead, error: leadError } = await fetchLinkedLead(supabaseAdmin, requestedLeadId);
+            if (leadError) throw leadError;
+            if (!lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
+            if (lead.company_id !== access.template.company_id) return fail(403, 'FORBIDDEN', 'Lead company scope mismatch');
+            if (!canAccessFranchiseLead(requester, lead)) return fail(403, 'FORBIDDEN', 'Lead access denied');
         }
 
         const { data: company } = await supabaseAdmin
@@ -108,11 +158,14 @@ export async function POST(request: Request) {
             template_source: 'company_uploaded',
             company_template_id: templateId,
             company_template_version_id: versionId,
+            lead_id: requestedLeadId || null,
             name: documentName,
             status: 'draft',
             form_snapshot: {
                 companyName: company?.name || '',
                 templateName: access.template.name,
+                leadId: requestedLeadId,
+                checklistStepKey: requestedChecklistStepKey || '',
                 inputMode: nextInputMode,
                 values,
                 participants
@@ -125,6 +178,19 @@ export async function POST(request: Request) {
             ? await supabaseAdmin.from('electronic_contracts').update(row).eq('id', contractId)
             : await supabaseAdmin.from('electronic_contracts').insert({ ...row, created_at: now });
         if (error) throw error;
+
+        if (requestedLeadId) {
+            await upsertElectronicContractLeadDocument(supabaseAdmin, {
+                companyId: access.template.company_id,
+                leadId: requestedLeadId,
+                contractId,
+                checklistStepKey: requestedChecklistStepKey || undefined,
+                title: documentName,
+                documentStatus: 'draft',
+                requesterId: requester.id,
+                nowIso: now
+            });
+        }
 
         return ok({ contractId, status: 'draft', updatedAt: now });
     } catch (error) {

@@ -31,6 +31,7 @@ type TemplateNotice = {
 export function CompanyContractTemplatesPanel() {
     const [templates, setTemplates] = React.useState<readonly CompanyTemplateSummary[]>([]);
     const [busy, setBusy] = React.useState(false);
+    const [createContext, setCreateContext] = React.useState<{ readonly checklistStepKey?: string; readonly leadId?: string }>({});
     const [notice, setNotice] = React.useState<TemplateNotice | null>(null);
     const [pendingDelete, setPendingDelete] = React.useState<CompanyTemplateSummary | null>(null);
 
@@ -58,6 +59,14 @@ export function CompanyContractTemplatesPanel() {
 
     React.useEffect(() => {
         loadTemplates().catch(caught => showError(caught instanceof Error ? caught.message : '템플릿 목록을 불러오지 못했습니다.'));
+    }, []);
+
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        setCreateContext({
+            leadId: params.get('leadId') || undefined,
+            checklistStepKey: params.get('checklistStepKey') || undefined
+        });
     }, []);
 
     React.useEffect(() => {
@@ -191,6 +200,7 @@ export function CompanyContractTemplatesPanel() {
                     templates={templateSections.readyTemplates}
                     emptyText="발송 가능한 회사 템플릿이 없습니다."
                     busy={busy}
+                    createContext={createContext}
                     onEdit={editTemplate}
                     onCopy={copyTemplate}
                     onDelete={setPendingDelete}

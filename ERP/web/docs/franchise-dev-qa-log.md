@@ -597,6 +597,29 @@
 - 브라우저 QA: 기존 `http://127.0.0.1:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic`를 1280px/390px에서 확인했다. `내용 확인 후 서명`은 0건, 다운로드 버튼은 완료 문서 1건에만 표시, 서명 대기 문서는 취소/삭제만 표시, 템플릿 관리 탭에는 `권리금계약서`와 `공통 템플릿` 섹션이 없었다. 두 viewport 모두 page-level horizontal overflow 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-actions-template-hidden-desktop.png`, `ERP/web/.omo/evidence/electronic-contract-actions-template-hidden-mobile.png`.
 - 신규 SQL은 없다.
 
+## 2026-06-23 계약 전 체크 v2 및 점주 문서함 연동 QA
+
+- 계약 전 체크를 기존 7개 운영 확인에서 문서 기반 17개 항목으로 전환했다. 각 항목은 `필수/내부보고/선택`, `가맹사업법상/개인정보/운영필수`, 자료근거, 제출담당, 해당 여부, 연결 문서 요약을 분리해 표시한다.
+- 기본 계약 가능 게이트는 `필수` 그룹만 본다. `내부보고`는 경고성 진행률, `선택`은 관리 편의 진행률로 별도 집계한다. `예상매출액 산정서`는 조건부 법정 항목으로 기본 `해당없음` 처리된다.
+- `해당없음` 저장은 메모 사유가 필요하다. 필수 항목도 사유 메모가 있으면 `해당없음`으로 저장하고 해결 처리하되, 완료 체크와는 분리된다.
+- 점주 문서함 API `/api/franchise-lead-documents`를 추가했다. 리드 회사 접근 검증 후 문서 등록/수정/보관 처리와 체크리스트 항목 링크를 관리한다. 후보자 상세의 계약 전 체크 전용 패널에 `점주 문서함` 섹션을 추가해 파일 업로드 문서를 개별 체크 항목에 연결할 수 있게 했다.
+- 회사 템플릿 전자계약 작성 URL/API가 `leadId`를 받을 수 있게 했다. 초안 저장과 발송 성공 시 `electronic_contracts.lead_id`를 저장하고, 점주 문서함에 `전자계약` 문서 레코드를 자동 생성/갱신한 뒤 `가맹계약서` 체크 항목에 연결한다.
+- 신규 SQL: `supabase_franchise_lead_documents_migration.sql` 추가. `franchise_lead_contract_checklist_steps` v2 컬럼, `electronic_contracts.lead_id`, `franchise_lead_documents`, `franchise_lead_document_checklist_links`, 인덱스/RLS를 포함한다. **SQL 등록 필요**.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 임시 빌드 후 `node --test /tmp/erp-contract-check-tests/franchise-lead-contract-checklist.test.mjs /tmp/erp-contract-check-tests/franchise-lead-documents.test.mjs` 14개 테스트 통과, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: `npm run start -- --hostname 127.0.0.1 --port 3000`로 production build를 띄운 뒤 Playwright로 `/demo/manager` 계약 완료 흐름을 1280px/390px에서 확인했다. 계약 전 체크 리스트 요약은 두 viewport 모두 page-level horizontal overflow 0건이었다. 실 대시보드 `/dashboard/franchise-leads`는 로컬 인증/데이터 조건 때문에 본문을 확인하지 못했고, 실제 후보자 상세의 체크리스트 저장/문서 업로드/전자계약 자동 연결은 SQL 적용 후 로그인 세션에서 live QA가 필요하다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-check-v2-workflow-desktop.png`, `ERP/web/.omo/evidence/contract-check-v2-workflow-mobile.png`.
+- UI 보정: 체크리스트 상세에서 `필수/보고/선택`을 행 배지가 아니라 섹션 단위로 분리하고, 상단 요약 카드와 섹션 좌측 컬러 라인으로 구분한다. 행에서는 `구분` 컬럼을 제거해 제출서류, 해당 여부, 근거, 제출담당, 연결 문서, 메모에 집중하도록 정리했다.
+- UI 재검증: production build에 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads` 계약 완료 탭에서 상세 체크리스트를 1280px/390px로 확인했다. 두 viewport 모두 page-level horizontal overflow 0건이고, 메모 저장 아이콘 버튼 17개가 모두 패널 안쪽에 들어왔다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-checklist-grouped-desktop-v2.png`, `ERP/web/.omo/evidence/contract-checklist-grouped-mobile-v2.png`.
+- 계약 완료 점주 상세 패널을 `체크리스트 / 문서함 / 가맹점 정보` 탭으로 분리했다. `가맹점 정보` 탭은 계약완료 상태에서만 노출되고, 연결 후보지가 있으면 원본 후보지를 보존한 채 `가맹점`, `오픈준비` 가맹점 마스터 레코드를 새로 생성한다. 생성 후에는 같은 탭에서 이름, 브랜드, 상태, 지역, 주소, 오픈예정일/오픈일, 운영 이관 메모를 수정하고, 운영 화면 deep link로 이동할 수 있다.
+- 신규 API: `POST /api/franchise-leads/contract-store` 추가. 계약완료 lead와 후보지/외부 상가/직접 입력을 받아 `franchise_locations`에 운영 가맹점 레코드를 생성한다. 기존 `/api/franchise-locations`에는 `contractLeadId` 필터와 계약 연동 컬럼 응답을 추가했다. 운영 화면 `/dashboard/franchise-operations?locationId=...` 진입 시 해당 가맹점 폼이 자동 선택된다.
+- 신규 SQL: `supabase_franchise_contract_store_linkage_migration.sql` 추가. `franchise_locations.contract_lead_id`, `source_location_id`, `source_external_listing_id`, `contracted_at`, 중복 생성 방지 unique index와 조회 index를 포함한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-contract-store.test.mts` 3개 테스트 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: `npm run start -- -p 3063` production build에 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads` 계약 완료 탭 상세의 `가맹점 정보` 생성 흐름을 1280px/390px에서 확인했다. 생성 전 후보지 선택, `후보지로 생성`, 생성 후 `운영 화면`/`가맹점 수정` 노출을 확인했고 두 viewport 모두 page-level/dialog horizontal overflow 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-store-link-desktop-before.png`, `ERP/web/.omo/evidence/contract-store-link-desktop-after.png`, `ERP/web/.omo/evidence/contract-store-link-mobile-before.png`, `ERP/web/.omo/evidence/contract-store-link-mobile-after.png`.
+- 후속 UI 보정: 체크리스트 행을 큰 `완료 처리` 버튼 중심의 카드형 행으로 재배치하고, 완료 시간은 `06.23 19:30` 형식으로 줄바꿈 없이 표시한다. `보고` 사용자 표기는 `내부보고`로 변경하되 내부 enum `report`는 유지한다.
+- 점주 문서함 보정: 파일 없는 `수기 등록`은 제거하고, `수기 등록`은 파일 업로드 문서 등록으로 통일했다. `전자계약 연결`은 새 작성 CTA가 아니라 해당 lead의 `서명 완료` 전자계약 문서를 불러와 선택 연결한다.
+- 연결 해제: 체크리스트 행과 점주 문서함 문서 목록에서 체크 항목 링크를 해제할 수 있게 했다. 문서 자체는 보관 처리하지 않고 `franchise_lead_document_checklist_links` 연결만 삭제한다.
+- 체크리스트 카드 폭 보정: 그룹 내부 체크 항목을 전체 폭 행이 아니라 390~460px 카드 그리드로 배치했다. 단일 항목도 `auto-fill` 트랙 안에 머물게 해 과도하게 길어지지 않도록 했고, 카드 안은 `완료 처리/완료됨` 버튼, 제출서류 정보, 연결 문서/메모 액션 순서로 세로 정리했다. 900px 이하에서는 1열로 전환된다.
+- 후속 검증: `./node_modules/.bin/eslint src/components/franchise/LeadContractChecklistSection.tsx src/components/franchise/LeadDocumentBoxSection.tsx src/app/api/franchise-lead-documents/route.ts src/app/api/electronic-contracts/route.ts` 에러/경고 없이 통과. 추가 CSS 보정과 `PropertyCard` Recharts formatter/purity 정리 후 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-contract-store.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 20개 테스트, `git diff --check`, `npm run build` 통과. Playwright로 `http://localhost:3023/demo/manager` 계약 완료 요약을 1280px/390px에서 확인했고 page-level horizontal overflow 0건이었다. 데모의 `체크리스트 열기`는 실제 상세 모달이 아니라 샘플 토스트 동작이라, 실제 카드형 체크리스트 조작 QA는 SQL/로그인 세션에서 추가 확인이 필요하다.
+
 ## 다음 QA 체크리스트
 
 ### P0

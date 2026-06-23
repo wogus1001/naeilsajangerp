@@ -44,6 +44,10 @@ export type FranchiseLocation = FranchiseLocationMasterData & {
     readonly longitude: number | null;
     readonly openedAt: string | null;
     readonly sourcePropertyId?: string | null;
+    readonly contractLeadId?: string;
+    readonly sourceLocationId?: string;
+    readonly sourceExternalListingId?: string;
+    readonly contractedAt?: string;
     readonly memo: string;
     readonly createdAt?: string;
     readonly updatedAt?: string;

@@ -63,6 +63,15 @@ YYYY-MM-DD
 
 - 2026-06-23
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 계약 전 체크/점주 문서함/가맹점 정보 연동 커밋
+  - 주요 기능: 계약 전 체크를 문서 기반 v2로 확장하고 `필수/내부보고/선택`, 근거, 제출담당, 해당 여부, 연결 문서, 메모를 분리해 표시한다. 체크리스트 행은 큰 `완료 처리` 버튼 중심의 390~460px 카드 그리드로 정리했고, 필수 항목도 사유 메모가 있으면 `해당없음` 저장/해결 처리가 가능하다. 점주 문서함은 파일 업로드형 `수기 등록`, 완료 전자계약 문서 연결, 체크 항목 연결 해제를 지원한다. 계약완료 점주 상세에는 `체크리스트 / 문서함 / 가맹점 정보` 탭을 추가하고, 연결 후보지 또는 직접 입력으로 운영 가맹점 마스터를 생성해 `/dashboard/franchise-operations?locationId=...`로 이어갈 수 있다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-contract-store.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`는 가맹점 정보 연동 직후 통과했다. 후속 체크리스트/문서함 UI 보정과 `PropertyCard` Recharts formatter/purity 정리 후 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-contract-store.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 20개 테스트, `git diff --check`, `npm run build` 통과. Playwright로 `/demo/manager` 계약 완료 요약을 1280px/390px에서 확인했고 page-level horizontal overflow 0건이었다.
+  - 남은 이슈: `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql` SQL 등록 필요. SQL/로그인 세션 적용 후 실제 후보자 상세에서 체크리스트 저장, 해당없음 사유 검증, 수기 등록 파일 업로드, 완료 전자계약 연결/해제, 가맹점 정보 생성, 교차 회사 접근 차단을 live QA한다.
+- 2026-06-23
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `b224e17 feat(contracts): refine electronic contract operations`
   - 주요 기능: `전자계약` 메뉴를 프랜차이즈 하단으로 이동하고 사이드바 아이콘 추가, 개인 UCanSign 프로필 연동 UI/로그아웃 disconnect 제거, 서명 요청 취소 API 액션 추가, 실서버에서 깨지는 UCanSign 문서 접근 액션 제거, 완료 문서 전용 다운로드 가드, 발송 후 문서함 즉시 이동, 아직 완성 전인 기본 제공 권리금계약서 공통 템플릿 숨김, 회사별 전자계약 사용량 관리자 패널 추가, 관리자 회원 표 `login_id` 표시, 전자계약 문서함/템플릿 상태 문구 정리, 회사 템플릿 UCanSign 연결 전 상태/버튼 문구 명확화, 미연결 초안 템플릿을 기본 화면에서 숨김, 회사 템플릿 수정 버튼 라벨 축약, 어드민 모바일 레이아웃 보정
   - dev 반영: none

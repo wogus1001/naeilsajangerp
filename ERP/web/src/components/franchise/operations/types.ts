@@ -36,6 +36,10 @@ export type FranchiseLocation = {
     readonly createdAt?: string;
     readonly updatedAt?: string;
     readonly sourcePropertyId?: string | null;
+    readonly contractLeadId?: string;
+    readonly sourceLocationId?: string;
+    readonly sourceExternalListingId?: string;
+    readonly contractedAt?: string;
     readonly competitionScan?: LocationCompetitionScan;
     readonly competitionKeyword?: string;
     readonly brandId?: string;

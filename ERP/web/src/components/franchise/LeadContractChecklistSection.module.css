@@ -1,0 +1,663 @@
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.header h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.header p {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.readyPill,
+.blockingPill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.readyPill {
+    background: #e8f8f1;
+    color: #008a51;
+}
+
+.blockingPill {
+    background: #fff4e5;
+    color: #b86400;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.summaryCard {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    padding: 12px 12px 12px 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    overflow: hidden;
+}
+
+.summaryCard::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+}
+
+.requiredSummary::before {
+    background: #3182f6;
+}
+
+.reportSummary::before {
+    background: #fe9800;
+}
+
+.optionalSummary::before {
+    background: #8b95a1;
+}
+
+.summaryGrid span {
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.summaryGrid strong {
+    color: #191f28;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.summaryGrid small {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.progress {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e8eb;
+}
+
+.progress span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: inherit;
+    background: #3182f6;
+}
+
+.error,
+.message {
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.error {
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.message {
+    border: 1px solid #cce5ff;
+    background: #e8f3ff;
+    color: #0064d9;
+}
+
+.groupList {
+    display: grid;
+    gap: 14px;
+}
+
+.groupSection {
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.groupHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e8eb;
+    background: #f9fafb;
+}
+
+.groupHeader > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.groupHeader span {
+    width: fit-content;
+    min-height: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.groupHeader strong {
+    color: #191f28;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.groupHeader small {
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.groupHeader em {
+    color: #191f28;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
+.requiredGroup {
+    border-left: 4px solid #3182f6;
+}
+
+.requiredGroup .groupHeader span {
+    background: #e8f3ff;
+    color: #0064d9;
+}
+
+.reportGroup {
+    border-left: 4px solid #fe9800;
+}
+
+.reportGroup .groupHeader span {
+    background: #fff4e5;
+    color: #b86400;
+}
+
+.optionalGroup {
+    border-left: 4px solid #b0b8c1;
+}
+
+.optionalGroup .groupHeader span {
+    background: #f2f4f6;
+    color: #4e5968;
+}
+
+.table {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(390px, 460px));
+    align-items: start;
+    justify-content: start;
+    gap: 12px;
+    padding: 12px;
+    background: #f9fafb;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.row:first-child {
+    border-top: 1px solid #e5e8eb;
+}
+
+.resolvedRow {
+    border-color: #cce5ff;
+    background: #fbfdff;
+}
+
+.empty {
+    padding: 24px;
+    color: #6b7684;
+    font-size: 14px;
+    text-align: center;
+}
+
+.documentInfo {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.completeButton,
+.completeButtonDone {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 5px;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid #d6e6ff;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0064d9;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.completeButtonDone {
+    border-color: #b7ebd1;
+    background: #eefaf7;
+    color: #008a51;
+}
+
+.completeButton:disabled,
+.completeButtonDone:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.completeButton small,
+.completeButtonDone small {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.titleCell {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.titleCell strong {
+    color: #191f28;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.titleCell > span {
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.metaGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-items: start;
+}
+
+.metaGrid > div:last-child {
+    grid-column: 1 / -1;
+}
+
+.metaGrid label,
+.metaGrid > div {
+    display: grid;
+    gap: 6px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.select {
+    width: 100%;
+    height: 36px;
+    min-width: 0;
+    padding: 0 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.select:disabled {
+    background: #f2f4f6;
+    color: #8b95a1;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.lawBadge {
+    background: #e8f3ff;
+    color: #0064d9;
+}
+
+.privacyBadge {
+    background: #f4f0ff;
+    color: #6d3bd8;
+}
+
+.internalBadge {
+    background: #eefaf7;
+    color: #087d73;
+}
+
+.ownerCell {
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.8;
+}
+
+.statusPanel {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+    padding-top: 12px;
+    border-top: 1px solid #f2f4f6;
+}
+
+.documentCell {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    padding: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #8b95a1;
+}
+
+.documentCell svg {
+    margin-top: 2px;
+    color: currentColor;
+}
+
+.documentCell div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.documentCell strong {
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.documentCell span {
+    overflow: hidden;
+    color: #8b95a1;
+    font-size: 12px;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.documentLinked {
+    border-color: #cce5ff;
+    background: #f5faff;
+    color: #0064d9;
+}
+
+.documentActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.documentActions button,
+.quickDocumentForm button,
+.memoCell button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    width: 100%;
+    padding: 0 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.documentActions button:disabled,
+.quickDocumentForm button:disabled,
+.memoCell button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.quickDocumentForm {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #d6e6ff;
+    border-radius: 8px;
+    background: #f5faff;
+}
+
+.quickDocumentHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.quickDocumentHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.quickDocumentHeader button {
+    width: 28px;
+    min-height: 28px;
+    padding: 0;
+}
+
+.quickDocumentForm label {
+    display: grid;
+    gap: 5px;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.quickDocumentForm input,
+.quickDocumentForm select {
+    width: 100%;
+    height: 36px;
+    min-width: 0;
+    padding: 0 10px;
+    border: 1px solid #dbe2ea;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 13px;
+}
+
+.quickDocumentForm input[type="file"] {
+    padding-top: 8px;
+}
+
+.quickDocumentForm > button {
+    width: fit-content;
+    border-color: #3182f6;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.memoCell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.memoCell input {
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #191f28;
+    font-size: 13px;
+}
+
+.memoCell input:focus,
+.quickDocumentForm input:focus,
+.quickDocumentForm select:focus,
+.select:focus {
+    border-color: #3182f6;
+    outline: none;
+}
+
+.linkedDocumentRemoveList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.linkedDocumentRemoveList button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 30px;
+    padding: 0 9px;
+    border: 1px solid #fecdd3;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #e42939;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.linkedDocumentRemoveList button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.memoCell button {
+    width: 36px;
+    padding: 0;
+}
+
+@media (max-width: 1180px) {
+    .completeButton,
+    .completeButtonDone {
+        min-height: 72px;
+    }
+}
+
+@media (max-width: 900px) {
+    .table {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .section {
+        padding: 14px;
+    }
+
+    .header,
+    .groupHeader {
+        display: grid;
+        gap: 8px;
+    }
+
+    .summaryGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .table {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+
+    .row {
+        padding: 12px;
+    }
+
+    .documentInfo,
+    .metaGrid,
+    .memoCell {
+        grid-template-columns: 1fr;
+    }
+
+    .completeButton,
+    .completeButtonDone {
+        min-height: 56px;
+        grid-template-columns: auto auto auto;
+        align-content: center;
+        justify-content: center;
+    }
+
+    .documentActions {
+        grid-template-columns: 1fr;
+    }
+}

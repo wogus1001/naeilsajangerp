@@ -6,6 +6,11 @@ import {
     filterLeadContractChecklistRowsByLeadCompany,
     type LeadContractChecklistSummaryRowInput
 } from '@/lib/franchise-lead-contract-checklist';
+import {
+    buildChecklistDocumentSummaries,
+    type FranchiseLeadDocumentChecklistLinkInput,
+    type FranchiseLeadDocumentInput
+} from '@/lib/franchise-lead-documents';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -58,12 +63,44 @@ function readChecklistRow(value: unknown): LeadContractChecklistSummaryRowInput 
         step_key: value.step_key,
         label: value.label,
         required: value.required,
+        requirement_type: value.requirement_type,
+        basis_type: value.basis_type,
+        basis_text: value.basis_text,
+        owner_team: value.owner_team,
+        applicability: value.applicability,
+        required_evidence: value.required_evidence,
         completed: value.completed,
         completed_at: value.completed_at,
         completed_by: value.completed_by,
         memo: value.memo,
         sort_order: value.sort_order,
         updated_at: value.updated_at
+    };
+}
+
+function readDocumentRow(value: unknown): FranchiseLeadDocumentInput | null {
+    if (!isRecord(value)) return null;
+    return {
+        id: value.id,
+        company_id: value.company_id,
+        lead_id: value.lead_id,
+        title: value.title,
+        document_status: value.document_status,
+        status: value.status,
+        created_at: value.created_at,
+        updated_at: value.updated_at
+    };
+}
+
+function readLinkRow(value: unknown): FranchiseLeadDocumentChecklistLinkInput | null {
+    if (!isRecord(value)) return null;
+    return {
+        id: value.id,
+        company_id: value.company_id,
+        lead_id: value.lead_id,
+        lead_document_id: value.lead_document_id,
+        step_key: value.step_key,
+        created_at: value.created_at
     };
 }
 
@@ -86,7 +123,39 @@ function isMissingChecklistSchemaError(error: unknown) {
     const code = getErrorCode(error);
     const message = getErrorMessage(error);
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code)
-        && /franchise_lead_contract_checklist_steps/i.test(message);
+        && /franchise_lead_contract_checklist_steps|franchise_lead_documents|franchise_lead_document_checklist_links/i.test(message);
+}
+
+function groupDocumentSummariesByLeadId(
+    documents: readonly FranchiseLeadDocumentInput[],
+    links: readonly FranchiseLeadDocumentChecklistLinkInput[]
+) {
+    const documentsByLeadId = new Map<string, FranchiseLeadDocumentInput[]>();
+    documents.forEach(document => {
+        const leadId = cleanString(document.leadId ?? document.lead_id);
+        if (!leadId) return;
+        const rows = documentsByLeadId.get(leadId) || [];
+        rows.push(document);
+        documentsByLeadId.set(leadId, rows);
+    });
+
+    const linksByLeadId = new Map<string, FranchiseLeadDocumentChecklistLinkInput[]>();
+    links.forEach(link => {
+        const leadId = cleanString(link.leadId ?? link.lead_id);
+        if (!leadId) return;
+        const rows = linksByLeadId.get(leadId) || [];
+        rows.push(link);
+        linksByLeadId.set(leadId, rows);
+    });
+
+    return Array.from(new Set([...documentsByLeadId.keys(), ...linksByLeadId.keys()]))
+        .reduce<Record<string, ReturnType<typeof buildChecklistDocumentSummaries>>>((acc, leadId) => {
+            acc[leadId] = buildChecklistDocumentSummaries(
+                documentsByLeadId.get(leadId) || [],
+                linksByLeadId.get(leadId) || []
+            );
+            return acc;
+        }, {});
 }
 
 export async function GET(request: Request) {
@@ -131,10 +200,45 @@ export async function GET(request: Request) {
             throw stepError;
         }
 
+        const [{ data: documentData, error: documentError }, { data: linkData, error: linkError }] = await Promise.all([
+            supabaseAdmin
+                .from('franchise_lead_documents')
+                .select('id, company_id, lead_id, title, document_status, status, created_at, updated_at')
+                .in('lead_id', leadIds)
+                .neq('status', 'archived'),
+            supabaseAdmin
+                .from('franchise_lead_document_checklist_links')
+                .select('*')
+                .in('lead_id', leadIds)
+        ]);
+        if (documentError) {
+            if (isMissingChecklistSchemaError(documentError)) {
+                return ok({
+                    summaries: buildLeadContractChecklistSummaryMap(leadIds, readRows(stepData, readChecklistRow), false),
+                    schemaReady: false
+                });
+            }
+            throw documentError;
+        }
+        if (linkError) {
+            if (isMissingChecklistSchemaError(linkError)) {
+                return ok({
+                    summaries: buildLeadContractChecklistSummaryMap(leadIds, readRows(stepData, readChecklistRow), false),
+                    schemaReady: false
+                });
+            }
+            throw linkError;
+        }
+
         return ok({
             summaries: buildLeadContractChecklistSummaryMap(
                 leadIds,
-                filterLeadContractChecklistRowsByLeadCompany(readRows(stepData, readChecklistRow), leads)
+                filterLeadContractChecklistRowsByLeadCompany(readRows(stepData, readChecklistRow), leads),
+                true,
+                groupDocumentSummariesByLeadId(
+                    readRows(documentData, readDocumentRow),
+                    readRows(linkData, readLinkRow)
+                )
             ),
             schemaReady: true
         });

@@ -3,12 +3,20 @@ import { fail, ok } from '@/lib/api-response';
 import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     buildLeadContractChecklistUpsert,
+    InvalidLeadContractChecklistApplicabilityError,
     mergeLeadContractChecklistSteps,
     normalizeLeadContractChecklistStepKey,
     summarizeLeadContractChecklist,
+    type LeadContractApplicability,
+    type LeadContractChecklistDocumentSummary,
     UnknownLeadContractChecklistStepError,
     type LeadContractChecklistStepInput
 } from '@/lib/franchise-lead-contract-checklist';
+import {
+    buildChecklistDocumentSummaries,
+    type FranchiseLeadDocumentChecklistLinkInput,
+    type FranchiseLeadDocumentInput
+} from '@/lib/franchise-lead-documents';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -85,12 +93,44 @@ function readChecklistRow(value: unknown): LeadContractChecklistStepInput | null
         step_key: value.step_key,
         label: value.label,
         required: value.required,
+        requirement_type: value.requirement_type,
+        basis_type: value.basis_type,
+        basis_text: value.basis_text,
+        owner_team: value.owner_team,
+        applicability: value.applicability,
+        required_evidence: value.required_evidence,
         completed: value.completed,
         completed_at: value.completed_at,
         completed_by: value.completed_by,
         memo: value.memo,
         sort_order: value.sort_order,
         updated_at: value.updated_at
+    };
+}
+
+function readDocumentRow(value: unknown): FranchiseLeadDocumentInput | null {
+    if (!isRecord(value)) return null;
+    return {
+        id: value.id,
+        company_id: value.company_id,
+        lead_id: value.lead_id,
+        title: value.title,
+        document_status: value.document_status,
+        status: value.status,
+        created_at: value.created_at,
+        updated_at: value.updated_at
+    };
+}
+
+function readLinkRow(value: unknown): FranchiseLeadDocumentChecklistLinkInput | null {
+    if (!isRecord(value)) return null;
+    return {
+        id: value.id,
+        company_id: value.company_id,
+        lead_id: value.lead_id,
+        lead_document_id: value.lead_document_id,
+        step_key: value.step_key,
+        created_at: value.created_at
     };
 }
 
@@ -107,7 +147,7 @@ function isMissingChecklistSchemaError(error: unknown) {
     const code = getErrorCode(error);
     const message = getErrorMessage(error);
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code)
-        && /franchise_lead_contract_checklist_steps/i.test(message);
+        && /franchise_lead_contract_checklist_steps|franchise_lead_documents|franchise_lead_document_checklist_links/i.test(message);
 }
 
 function handleChecklistError(error: unknown, action: string) {
@@ -121,6 +161,9 @@ function handleChecklistError(error: unknown, action: string) {
     }
     if (error instanceof UnknownLeadContractChecklistStepError) {
         return fail(400, 'VALIDATION_ERROR', 'Unknown checklist step');
+    }
+    if (error instanceof InvalidLeadContractChecklistApplicabilityError) {
+        return fail(400, 'VALIDATION_ERROR', error.message);
     }
     return fail(500, 'INTERNAL_ERROR', `Failed to ${action.toLowerCase()} contract checklist`);
 }
@@ -143,6 +186,12 @@ function readChecklistRows(data: unknown) {
         : [];
 }
 
+function readRows<T>(data: unknown, reader: (value: unknown) => T | null): readonly T[] {
+    return Array.isArray(data)
+        ? data.map(reader).filter((row): row is T => row !== null)
+        : [];
+}
+
 async function fetchChecklistSteps(
     supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
     leadId: string,
@@ -158,10 +207,47 @@ async function fetchChecklistSteps(
     return readChecklistRows(data);
 }
 
-function buildChecklistResponse(savedSteps: readonly LeadContractChecklistStepInput[]) {
+async function fetchDocumentSummaries(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    leadId: string,
+    companyId: string
+): Promise<Record<string, LeadContractChecklistDocumentSummary>> {
+    const [{ data: documentData, error: documentError }, { data: linkData, error: linkError }] = await Promise.all([
+        supabaseAdmin
+            .from('franchise_lead_documents')
+            .select('id, company_id, lead_id, title, document_status, status, created_at, updated_at')
+            .eq('lead_id', leadId)
+            .eq('company_id', companyId)
+            .neq('status', 'archived'),
+        supabaseAdmin
+            .from('franchise_lead_document_checklist_links')
+            .select('*')
+            .eq('lead_id', leadId)
+            .eq('company_id', companyId)
+    ]);
+    if (documentError) throw documentError;
+    if (linkError) throw linkError;
+    return buildChecklistDocumentSummaries(
+        readRows(documentData, readDocumentRow),
+        readRows(linkData, readLinkRow)
+    );
+}
+
+function readApplicabilityPatch(value: unknown): LeadContractApplicability | null | undefined {
+    if (value === undefined) return undefined;
+    const raw = cleanString(value);
+    if (!raw) return null;
+    if (raw === 'applicable' || raw === 'not_applicable') return raw;
+    return null;
+}
+
+function buildChecklistResponse(
+    savedSteps: readonly LeadContractChecklistStepInput[],
+    documentSummaries: Record<string, LeadContractChecklistDocumentSummary>
+) {
     return {
-        steps: mergeLeadContractChecklistSteps(savedSteps),
-        summary: summarizeLeadContractChecklist(savedSteps)
+        steps: mergeLeadContractChecklistSteps(savedSteps, documentSummaries),
+        summary: summarizeLeadContractChecklist(savedSteps, documentSummaries)
     };
 }
 
@@ -191,8 +277,11 @@ export async function GET(request: Request) {
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
         if (!canAccessFranchiseLead(requester, lead)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
 
-        const savedSteps = await fetchChecklistSteps(supabaseAdmin, lead.id, lead.company_id);
-        return ok(buildChecklistResponse(savedSteps));
+        const [savedSteps, documentSummaries] = await Promise.all([
+            fetchChecklistSteps(supabaseAdmin, lead.id, lead.company_id),
+            fetchDocumentSummaries(supabaseAdmin, lead.id, lead.company_id)
+        ]);
+        return ok(buildChecklistResponse(savedSteps, documentSummaries));
     } catch (error) {
         return handleChecklistError(error, 'GET');
     }
@@ -227,6 +316,9 @@ export async function PUT(request: Request) {
         const hasCompletedPatch = hasOwn(body, 'completed');
         const completed = hasCompletedPatch ? readOptionalBoolean(body.completed) : undefined;
         if (hasCompletedPatch && completed === null) return fail(400, 'VALIDATION_ERROR', 'completed is invalid');
+        const hasApplicabilityPatch = hasOwn(body, 'applicability');
+        const applicability = hasApplicabilityPatch ? readApplicabilityPatch(body.applicability) : undefined;
+        if (hasApplicabilityPatch && applicability === null) return fail(400, 'VALIDATION_ERROR', 'applicability is invalid');
 
         const nowIso = new Date().toISOString();
         const payload = buildLeadContractChecklistUpsert({
@@ -235,6 +327,7 @@ export async function PUT(request: Request) {
             requesterId: requester.id,
             stepKey,
             completed,
+            applicability,
             memo: hasOwn(body, 'memo') ? body.memo : undefined,
             nowIso,
             existing: readChecklistRow(existingData)
@@ -247,12 +340,15 @@ export async function PUT(request: Request) {
             .single();
         if (error) throw error;
 
-        const savedSteps = await fetchChecklistSteps(supabaseAdmin, lead.id, lead.company_id);
-        const savedStep = mergeLeadContractChecklistSteps(readChecklistRows([data]))
+        const [savedSteps, documentSummaries] = await Promise.all([
+            fetchChecklistSteps(supabaseAdmin, lead.id, lead.company_id),
+            fetchDocumentSummaries(supabaseAdmin, lead.id, lead.company_id)
+        ]);
+        const savedStep = mergeLeadContractChecklistSteps(readChecklistRows([data]), documentSummaries)
             .find(step => step.stepKey === stepKey);
         return ok({
             step: savedStep,
-            ...buildChecklistResponse(savedSteps)
+            ...buildChecklistResponse(savedSteps, documentSummaries)
         });
     } catch (error) {
         return handleChecklistError(error, 'SAVE');

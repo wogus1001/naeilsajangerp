@@ -1,0 +1,353 @@
+"use client";
+
+import React from 'react';
+import { ExternalLink, MapPin, Save, Store, Wand2 } from 'lucide-react';
+import { readContractStoreSourceType } from '@/lib/franchise-contract-store';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import type {
+    ExternalPropertyListing,
+    FranchiseLead,
+    FranchiseLocation,
+    LeadLocationLink
+} from './types';
+import styles from './LeadContractStoreSection.module.css';
+
+type StoreFormState = {
+    readonly name: string;
+    readonly brand: string;
+    readonly status: string;
+    readonly region: string;
+    readonly address: string;
+    readonly openedAt: string;
+    readonly memo: string;
+};
+
+type SourceOption = {
+    readonly key: string;
+    readonly sourceType: 'franchise_location' | 'external_property_listing';
+    readonly targetId: string;
+    readonly title: string;
+    readonly meta: string;
+    readonly address: string;
+};
+
+type LeadContractStoreSectionProps = {
+    readonly lead: FranchiseLead;
+    readonly userId: string;
+    readonly companyName: string;
+    readonly selectedLocationLinks: readonly LeadLocationLink[];
+    readonly franchiseLocations: readonly FranchiseLocation[];
+    readonly externalListings: readonly ExternalPropertyListing[];
+    readonly isLocationMatchLoading: boolean;
+};
+
+type LocationResponse = {
+    readonly location?: FranchiseLocation | null;
+    readonly locations?: readonly FranchiseLocation[];
+    readonly created?: boolean;
+};
+
+const STORE_STATUSES = ['오픈준비', '운영중', '휴점', '폐점'] as const;
+
+function buildSourceKey(sourceType: SourceOption['sourceType'], targetId: string): string {
+    return `${sourceType}:${targetId}`;
+}
+
+function parseSourceKey(value: string): Pick<SourceOption, 'sourceType' | 'targetId'> | null {
+    const [rawType, targetId] = value.split(':');
+    const sourceType = readContractStoreSourceType(rawType);
+    if (sourceType === 'direct' || !targetId) return null;
+    return { sourceType, targetId };
+}
+
+function readStoreStatus(value: string): string {
+    return STORE_STATUSES.find(status => status === value) || '오픈준비';
+}
+
+function formatMoney(value?: number | null): string {
+    if (!value || !Number.isFinite(value)) return '';
+    return `${Math.round(value / 10_000).toLocaleString()}만원`;
+}
+
+function toStoreFormState(lead: FranchiseLead, location?: FranchiseLocation | null, source?: SourceOption | null): StoreFormState {
+    return {
+        name: location?.name || source?.title || `${lead.name} 가맹점`,
+        brand: location?.brand || lead.interestedBrand || '',
+        status: readStoreStatus(location?.status || '오픈준비'),
+        region: location?.region || lead.desiredRegion || '',
+        address: location?.address || source?.address || '',
+        openedAt: location?.openedAt || '',
+        memo: location?.memo || `${lead.name} 계약 완료 후 오픈준비 전환`
+    };
+}
+
+function formatListingMeta(listing: ExternalPropertyListing): string {
+    const price = listing.salePrice
+        ? `매매 ${formatMoney(listing.salePrice)}`
+        : `보증금 ${formatMoney(listing.depositAmount) || '-'} / 월세 ${formatMoney(listing.monthlyRent) || '-'}`;
+    return [listing.source || '외부 상가', price, listing.areaPyeong || '', listing.floorInfo || '']
+        .filter(Boolean)
+        .join(' · ');
+}
+
+export function LeadContractStoreSection({
+    lead,
+    userId,
+    companyName,
+    selectedLocationLinks,
+    franchiseLocations,
+    externalListings,
+    isLocationMatchLoading
+}: LeadContractStoreSectionProps) {
+    const [storeLocation, setStoreLocation] = React.useState<FranchiseLocation | null>(null);
+    const [selectedSourceKey, setSelectedSourceKey] = React.useState('');
+    const [form, setForm] = React.useState<StoreFormState>(() => toStoreFormState(lead));
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [isSaving, setIsSaving] = React.useState(false);
+    const [message, setMessage] = React.useState('');
+    const [errorMessage, setErrorMessage] = React.useState('');
+
+    const sourceOptions = React.useMemo<readonly SourceOption[]>(() => {
+        const locationsById = new Map(franchiseLocations.map(location => [location.id, location]));
+        const listingsById = new Map(externalListings.map(listing => [listing.id, listing]));
+        const options: SourceOption[] = [];
+        selectedLocationLinks.forEach(link => {
+            if (link.targetType === 'franchise_location') {
+                const location = locationsById.get(link.targetId);
+                if (!location) return;
+                options.push({
+                    key: buildSourceKey('franchise_location', location.id),
+                    sourceType: 'franchise_location',
+                    targetId: location.id,
+                    title: location.name,
+                    meta: [location.locationType || '예정점', location.status || '상태 미지정', location.brand || '브랜드 미지정'].join(' · '),
+                    address: location.address || location.region || ''
+                });
+                return;
+            }
+            const listing = listingsById.get(link.targetId);
+            if (!listing) return;
+            options.push({
+                key: buildSourceKey('external_property_listing', listing.id),
+                sourceType: 'external_property_listing',
+                targetId: listing.id,
+                title: listing.title || listing.address || '외부 상가',
+                meta: formatListingMeta(listing),
+                address: listing.address || listing.region || ''
+            });
+        });
+        return options;
+    }, [externalListings, franchiseLocations, selectedLocationLinks]);
+
+    const selectedSource = sourceOptions.find(option => option.key === selectedSourceKey) || null;
+
+    const fetchStoreLocation = React.useCallback(async () => {
+        if (!userId || !lead.id) return;
+        setIsLoading(true);
+        setErrorMessage('');
+        try {
+            const params = new URLSearchParams({ requesterId: userId, contractLeadId: lead.id });
+            if (companyName) params.set('company', companyName);
+            const headers = await getApiAuthHeaders();
+            const response = await fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', headers });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(readApiError(payload));
+            const data = unwrapApiData<LocationResponse>(payload);
+            const [firstLocation] = data.locations || [];
+            setStoreLocation(firstLocation || null);
+            setForm(toStoreFormState(lead, firstLocation || null));
+        } catch (error) {
+            setStoreLocation(null);
+            setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 불러오지 못했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [companyName, lead, userId]);
+
+    React.useEffect(() => {
+        void fetchStoreLocation();
+    }, [fetchStoreLocation]);
+
+    React.useEffect(() => {
+        if (!selectedSourceKey && sourceOptions.length === 1) {
+            setSelectedSourceKey(sourceOptions[0]?.key || '');
+        }
+    }, [selectedSourceKey, sourceOptions]);
+
+    React.useEffect(() => {
+        if (!storeLocation) setForm(toStoreFormState(lead, null, selectedSource));
+    }, [lead, selectedSource, storeLocation]);
+
+    const updateForm = (patch: Partial<StoreFormState>) => {
+        setForm(prev => ({ ...prev, ...patch }));
+    };
+
+    const saveExistingStore = async () => {
+        if (!storeLocation) return;
+        setIsSaving(true);
+        setErrorMessage('');
+        setMessage('');
+        try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+            const response = await fetch('/api/franchise-locations', {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({ ...form, id: storeLocation.id, requesterId: userId, companyName, locationType: '가맹점' })
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(readApiError(payload));
+            const data = unwrapApiData<LocationResponse>(payload);
+            setStoreLocation(data.location || null);
+            setMessage('가맹점 정보를 저장했습니다.');
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 저장하지 못했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const createStore = async (useSource: boolean) => {
+        const parsedSource = useSource ? parseSourceKey(selectedSourceKey) : null;
+        setIsSaving(true);
+        setErrorMessage('');
+        setMessage('');
+        try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+            const response = await fetch('/api/franchise-leads/contract-store', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    requesterId: userId,
+                    companyName,
+                    leadId: lead.id,
+                    sourceType: parsedSource?.sourceType || 'direct',
+                    sourceId: parsedSource?.targetId || '',
+                    draft: form
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(readApiError(payload));
+            const data = unwrapApiData<LocationResponse>(payload);
+            setStoreLocation(data.location || null);
+            setMessage(data.created === false ? '이미 연결된 가맹점 정보를 불러왔습니다.' : '가맹점 정보를 생성했습니다.');
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 생성하지 못했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <section className={styles.section}>
+            <div className={styles.header}>
+                <div>
+                    <h3><Store size={16} /> 가맹점 정보</h3>
+                    <p>계약 완료 점주를 오픈준비 가맹점 마스터로 이어받습니다.</p>
+                </div>
+                {storeLocation ? <span className={styles.readyBadge}>연동됨</span> : <span className={styles.pendingBadge}>등록 전</span>}
+            </div>
+
+            {errorMessage && <div className={styles.error}>{errorMessage}</div>}
+            {message && <div className={styles.message}>{message}</div>}
+
+            {!storeLocation && (
+                <div className={styles.sourcePanel}>
+                    <div className={styles.sourceHeader}>
+                        <strong>전환할 후보지</strong>
+                        <span>{isLocationMatchLoading ? '후보지를 불러오는 중입니다.' : `${sourceOptions.length}건 연결됨`}</span>
+                    </div>
+                    {sourceOptions.length > 0 ? (
+                        <div className={styles.sourceList}>
+                            {sourceOptions.map(option => (
+                                <label key={option.key} className={selectedSourceKey === option.key ? styles.sourceOptionActive : styles.sourceOption}>
+                                    <input
+                                        type="radio"
+                                        name="contract-store-source"
+                                        checked={selectedSourceKey === option.key}
+                                        onChange={() => setSelectedSourceKey(option.key)}
+                                    />
+                                    <span>
+                                        <strong>{option.title}</strong>
+                                        <small>{option.meta}</small>
+                                        <em><MapPin size={13} /> {option.address || '주소 미입력'}</em>
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className={styles.empty}>연결된 후보지가 없습니다. 직접 입력으로 먼저 등록할 수 있습니다.</div>
+                    )}
+                </div>
+            )}
+
+            <div className={styles.formGrid} aria-busy={isLoading}>
+                <label>
+                    가맹점명
+                    <input value={form.name} onChange={(event) => updateForm({ name: event.target.value })} disabled={isSaving || isLoading} />
+                </label>
+                <label>
+                    브랜드
+                    <input value={form.brand} onChange={(event) => updateForm({ brand: event.target.value })} disabled={isSaving || isLoading} />
+                </label>
+                <label>
+                    상태
+                    <select value={form.status} onChange={(event) => updateForm({ status: readStoreStatus(event.target.value) })} disabled={isSaving || isLoading}>
+                        {STORE_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
+                    </select>
+                </label>
+                <label>
+                    지역
+                    <input value={form.region} onChange={(event) => updateForm({ region: event.target.value })} disabled={isSaving || isLoading} />
+                </label>
+                <label className={styles.wideField}>
+                    주소
+                    <input value={form.address} onChange={(event) => updateForm({ address: event.target.value })} disabled={isSaving || isLoading} />
+                </label>
+                <label>
+                    오픈예정일/오픈일
+                    <input type="date" value={form.openedAt} onChange={(event) => updateForm({ openedAt: event.target.value })} disabled={isSaving || isLoading} />
+                </label>
+                <label className={styles.memoField}>
+                    운영 이관 메모
+                    <textarea value={form.memo} onChange={(event) => updateForm({ memo: event.target.value })} disabled={isSaving || isLoading} />
+                </label>
+            </div>
+
+            <div className={styles.actionRow}>
+                {storeLocation ? (
+                    <>
+                        <a href={`/dashboard/franchise-operations?locationId=${storeLocation.id}`} className={styles.secondaryAction}>
+                            <ExternalLink size={15} />
+                            운영 화면
+                        </a>
+                        <button type="button" className={styles.primaryAction} onClick={() => void saveExistingStore()} disabled={isSaving || isLoading}>
+                            <Save size={15} />
+                            가맹점 수정
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            type="button"
+                            className={styles.secondaryAction}
+                            onClick={() => void createStore(false)}
+                            disabled={isSaving || isLoading}
+                        >
+                            직접 입력 생성
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.primaryAction}
+                            onClick={() => void createStore(true)}
+                            disabled={isSaving || isLoading || !selectedSourceKey}
+                        >
+                            <Wand2 size={15} />
+                            후보지로 생성
+                        </button>
+                    </>
+                )}
+            </div>
+        </section>
+    );
+}

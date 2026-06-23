@@ -17,6 +17,7 @@ type CompanyTemplateTableProps = {
     readonly emptyText: string;
     readonly busy: boolean;
     readonly archived?: boolean;
+    readonly createContext?: { readonly checklistStepKey?: string; readonly leadId?: string };
     readonly onEdit: (template: CompanyTemplateSummary) => void;
     readonly onCopy?: (template: CompanyTemplateSummary) => void;
     readonly onDelete: (template: CompanyTemplateSummary) => void;
@@ -28,6 +29,7 @@ export function CompanyTemplateTable({
     emptyText,
     busy,
     archived = false,
+    createContext,
     onEdit,
     onCopy,
     onDelete,
@@ -61,7 +63,7 @@ export function CompanyTemplateTable({
                                     {!archived && (
                                         <>
                                             {usageState.canCreateContract ? (
-                                                <Link className={styles.primaryButton} href={companyTemplateCreateHref(template.id)}>
+                                                <Link className={styles.primaryButton} href={companyTemplateCreateHref(template.id, createContext)}>
                                                     <Send size={14} />
                                                     {usageState.createLabel}
                                                 </Link>

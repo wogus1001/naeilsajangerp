@@ -26,6 +26,10 @@ type FranchiseLocationApiRow = ManagerReferenceRow & {
     readonly longitude: number | null;
     readonly opened_at: string | null;
     readonly source_property_id: string | null;
+    readonly contract_lead_id?: string | null;
+    readonly source_location_id?: string | null;
+    readonly source_external_listing_id?: string | null;
+    readonly contracted_at?: string | null;
     readonly created_by: string | null;
     readonly memo: string | null;
     readonly created_at: string | null;
@@ -84,6 +88,10 @@ export function transformLocation(row: FranchiseLocationApiRow | null, managerNa
         longitude: row.longitude,
         openedAt: row.opened_at,
         sourcePropertyId: row.source_property_id,
+        contractLeadId: cleanString(row.contract_lead_id) || '',
+        sourceLocationId: cleanString(row.source_location_id) || '',
+        sourceExternalListingId: cleanString(row.source_external_listing_id) || '',
+        contractedAt: row.contracted_at || '',
         createdBy: row.created_by,
         memo: row.memo || '',
         createdAt: row.created_at,
