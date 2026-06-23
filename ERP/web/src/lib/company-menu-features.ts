@@ -163,7 +163,7 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     },
     {
         key: 'electronicPremiumContracts',
-        category: '계약',
+        category: '프랜차이즈',
         title: '전자계약',
         description: '공통 템플릿과 회사 템플릿으로 전자계약 문서를 작성하고 발송합니다.',
         routePrefixes: ['/contracts/electronic']

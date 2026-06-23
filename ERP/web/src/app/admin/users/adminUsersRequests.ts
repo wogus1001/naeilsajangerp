@@ -3,6 +3,7 @@ import type { AssignableAdminUserRole } from './AdminUserRoleSelect';
 
 export type AdminUserRow = {
     readonly id: string | null;
+    readonly loginId: string | null;
     readonly uuid: string;
     readonly name: string | null;
     readonly companyName: string | null;

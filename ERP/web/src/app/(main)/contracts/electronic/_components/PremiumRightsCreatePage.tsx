@@ -183,7 +183,7 @@ export default function PremiumRightsCreatePage() {
         <main className={styles.container}>
             <section className={`${styles.panel} ${styles.header}`}>
                 <div>
-                    <h1 className={styles.title}>권리금계약 작성</h1>
+                    <h1 className={styles.title}>전자계약 작성</h1>
                     <p className={styles.description}>ERP 양식에 계약 정보를 입력하면 내일사장 공용 UCanSign API KEY로 발송됩니다.</p>
                 </div>
                 <Link className={styles.secondaryButton} href="/contracts/electronic">

@@ -31,10 +31,10 @@ export const adminUsersStyles = {
         backgroundColor: 'white',
         borderRadius: '12px',
         border: '1px solid #e9ecef',
-        overflow: 'hidden',
+        overflowX: 'auto',
         boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
     },
-    table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '14px' },
+    table: { width: '100%', minWidth: '900px', borderCollapse: 'collapse' as const, fontSize: '14px' },
     th: {
         textAlign: 'left' as const,
         padding: '16px',

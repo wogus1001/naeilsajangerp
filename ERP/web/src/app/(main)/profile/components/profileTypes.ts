@@ -26,8 +26,3 @@ export type AlertType = 'success' | 'error' | 'info';
 
 export type ShowAlert = (message: string, type?: AlertType, onClose?: () => void) => void;
 export type ShowConfirm = (message: string, onConfirm: () => void, isDanger?: boolean) => void;
-
-export type UcansignStatus = {
-    readonly connected: boolean;
-    readonly linkedAt?: string;
-};

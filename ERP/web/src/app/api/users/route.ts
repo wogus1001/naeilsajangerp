@@ -100,6 +100,7 @@ export async function GET(request: Request) {
 
             return {
                 id: displayId,
+                loginId: profile.login_id || displayId,
                 uuid: profile.id,
                 name: profile.name,
                 companyName: profile.company?.name || '-',

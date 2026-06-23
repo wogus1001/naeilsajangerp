@@ -8,7 +8,7 @@ export type SidebarSectionKey =
     | 'customers'
     | 'businessCards'
     | 'contracts';
-export type SidebarLinkIcon = 'target' | 'mapPin' | 'store' | 'users' | 'list';
+export type SidebarLinkIcon = 'target' | 'mapPin' | 'store' | 'users' | 'list' | 'fileSignature';
 
 export type SidebarMenuItem = {
     readonly title: string;
@@ -43,7 +43,8 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         items: [
             { title: '모객 DB', url: '/dashboard/franchise-leads', category: '프랜차이즈', featureKey: 'franchiseLeads', icon: 'target' },
             { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '프랜차이즈', featureKey: 'marketInsights', icon: 'mapPin' },
-            { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store' }
+            { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store' },
+            { title: '전자계약', url: '/contracts/electronic', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature' }
         ]
     },
     {
@@ -91,7 +92,6 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         collapsedTitle: '계약',
         items: [
             { title: '계약관리', url: '/contracts', category: '계약', featureKey: 'contracts' },
-            { title: '권리금 전자계약', url: '/contracts/electronic', category: '계약', featureKey: 'electronicPremiumContracts' },
             { title: '간편 서명 시작(전자)', url: '/contracts/create', category: '계약', featureKey: 'contractCreate' },
             { title: '새 계약 양식 만들기', url: '/contracts/builder', category: '계약', featureKey: 'contractBuilder' }
         ]

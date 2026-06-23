@@ -2,13 +2,8 @@ import Link from 'next/link';
 import { ArchiveRestore, Copy, ExternalLink, Send, Trash2 } from 'lucide-react';
 import type { CompanyTemplateSummary } from './companyTemplatesClient';
 import { companyTemplateCreateHref } from './companyTemplateRoutes';
+import { getCompanyTemplateUsageState } from './companyTemplateTableState';
 import styles from './electronicContracts.module.css';
-
-function statusLabel(status: string): string {
-    if (status === 'active') return '사용중';
-    if (status === 'archived') return '보관';
-    return '작성중';
-}
 
 function formatDate(value: string): string {
     if (!value) return '-';
@@ -44,20 +39,20 @@ export function CompanyTemplateTable({
                 <thead>
                     <tr>
                         <th>템플릿</th>
-                        <th>상태</th>
+                        <th>사용 상태</th>
                         <th>생성자</th>
                         <th>생성일</th>
-                        <th>버전</th>
+                        <th>연결 버전</th>
                         <th>관리</th>
                     </tr>
                 </thead>
                 <tbody>
                     {templates.map(template => {
-                        const canCreateContract = template.status === 'active' && Boolean(template.latestVersion?.ucansignTemplateId);
+                        const usageState = getCompanyTemplateUsageState(template);
                         return (
                         <tr key={template.id}>
                             <td><strong>{template.name}</strong></td>
-                            <td><span className={styles.badge}>{statusLabel(template.status)}</span></td>
+                            <td><span className={styles.badge}>{usageState.statusLabel}</span></td>
                             <td>{template.createdByName || '-'}</td>
                             <td>{formatDate(template.createdAt)}</td>
                             <td>{template.latestVersion ? `v${template.latestVersion.versionNumber}` : '-'}</td>
@@ -65,20 +60,20 @@ export function CompanyTemplateTable({
                                 <div className={styles.templateActions}>
                                     {!archived && (
                                         <>
-                                            {canCreateContract ? (
+                                            {usageState.canCreateContract ? (
                                                 <Link className={styles.primaryButton} href={companyTemplateCreateHref(template.id)}>
                                                     <Send size={14} />
-                                                    작성
+                                                    {usageState.createLabel}
                                                 </Link>
                                             ) : (
                                                 <button className={styles.weakButton} type="button" disabled>
                                                     <Send size={14} />
-                                                    작성
+                                                    {usageState.createLabel}
                                                 </button>
                                             )}
                                             <button className={styles.weakButton} type="button" onClick={() => onEdit(template)} disabled={busy || !template.latestVersion}>
                                                 <ExternalLink size={14} />
-                                                수정
+                                                {usageState.editLabel}
                                             </button>
                                             {onCopy && (
                                                 <button className={styles.weakButton} type="button" onClick={() => onCopy(template)} disabled={busy || !template.latestVersion}>

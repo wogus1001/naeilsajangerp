@@ -29,11 +29,11 @@ export type ContractsResponse = {
 
 export function statusLabel(status: string): string {
     if (status === 'draft') return '초안';
-    if (status === 'sent') return '발송 완료';
+    if (status === 'sent') return '서명 대기';
     if (status === 'completed') return '서명 완료';
     if (status === 'send_failed') return '발송 실패';
     if (status === 'sending') return '발송 중';
-    if (status === 'canceled') return '취소';
+    if (status === 'canceled') return '요청 취소';
     return status || '대기';
 }
 

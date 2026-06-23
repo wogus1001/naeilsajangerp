@@ -531,6 +531,61 @@
 - 검증: `npx tsx --test src/app/login/loginStorage.test.mts src/lib/login-id.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 신규 SQL은 없다. 기존 회사별 아이디 로그인 SQL 적용 상태에 따라 실제 아이디 로그인 schema가 활성화된다.
 
+## 2026-06-22 전자계약/어드민 후속 작업 기록
+
+- 지금까지 반영된 흐름: 기존 계약 기능은 유지하고, 새 `/contracts/electronic` 전자계약 v2에서 공통 템플릿/회사 템플릿, UCanSign API KEY 발송, 문서함 scope, 문서 다운로드, 회사별 아이디 로그인을 분리했다.
+- 남은 UI 정리: `권리금 전자계약` 메뉴명을 `전자계약`으로 바꾸고 프랜차이즈 하위 메뉴 하단에 배치한다. 개인정보 수정 화면의 개인 UCanSign 서비스 연동 영역은 삭제한다.
+- 남은 UCanSign 검토: `내용 확인 후 서명`과 `서명취소`는 UCanSign API/문서별 URL 지원 여부 확인이 필요하다. 지원되면 ERP 문서함 액션으로 연결하고, 취소는 ERP 상태와 webhook idempotency까지 검증한다.
+- 남은 어드민 작업: 회사별 전자계약 사용량 집계와 사용자별 `login_id` 노출을 추가한다. 우선 기존 테이블 조회 기반으로 구현하고, 별도 집계 테이블이 필요하면 SQL 작성 후 사용자가 직접 등록한다.
+- 운영 설정 체크: production UCanSign은 `UCANSIGN_API_KEY`, webhook secret, UCanSign 개발자센터 webhook URL `https://naeilsajang.vercel.app/api/electronic-contracts/webhooks/ucansign` 등록 상태를 확인해야 한다.
+- 다음 QA 포인트: 메뉴 위치, 개인정보 수정 화면 노출 여부, 어드민 사용량/아이디 표, 문서함 상태 동기화, webhook 수신 후 완료 상태 반영, 권한별 문서 조회 범위를 확인한다.
+
+## 2026-06-23 전자계약/어드민 후속 구현 QA
+
+- 메뉴 정리: 사이드바와 회사별 메뉴 권한 정의에서 `전자계약`을 프랜차이즈 하위 메뉴 가장 하단으로 이동했다. `/contracts/electronic` breadcrumb도 `프랜차이즈 > 전자계약`으로 맞췄다.
+- 개인 UCanSign 정리: 개인정보 수정의 개인 UCanSign 연동 컴포넌트를 제거하고, 로그아웃 시 `/api/ucansign/disconnect`를 호출하던 개인 연동 해제 흐름도 제거했다. 대시보드 전자계약 클릭은 개인 연동 상태 확인 없이 `/contracts/electronic`로 이동한다.
+- UCanSign 액션: 공식 Postman 문서 기준 `POST /embedding/view/:documentId`로 `내용 확인 후 서명` 접근 URL을 만들고, `POST /documents/:documentId/request/cancellation`로 `서명 요청 취소`를 호출한다. 취소 요청은 발송 중/서명 대기 문서와 발송자 또는 관리자만 가능하며, 성공 시 ERP 상태를 `canceled`로 갱신한다.
+- 어드민: `/api/admin/electronic-contract-usage`를 추가해 회사별 전체/초안/진행/완료/실패·취소/최근 발송/최근 완료 사용량을 표시한다. 회원 및 권한 관리 표에는 `login_id`를 `로그인 ID` 줄로 노출한다.
+- UI 문구: 전자계약 문서함 상태를 `서명 대기`, `요청 취소` 등 실무 상태 중심으로 정리했고, 회사 템플릿 상태와 버튼도 `발송 가능`, `UCanSign 연결 필요`, `문서 작성`, `연결 후 작성`, `수정/연결하기`로 정리했다.
+- 관리자 모바일 보정: 기존 어드민 레이아웃의 고정 사이드바/고정 3열 grid로 본문이 좁아지는 문제를 함께 보정했다. 모바일에서 어드민 사이드바는 상단 가로 메뉴가 되고 대시보드 grid는 `auto-fit`으로 정렬된다.
+- 검증: `npx tsx --test src/lib/company-menu-features.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/usage-summary.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/platform-document-actions.test.mts` 25건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 `http://localhost:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic`, `/profile`, `/admin`, `/admin/users`를 확인했다. 전자계약 메뉴는 `가맹 운영` 다음, 문서함에는 `내용 확인 후 서명`과 `서명 요청 취소`가 표시됐고 취소 후 상태가 `요청 취소`로 바뀌었다. `/profile`에는 `서비스 연동`/`유캔싸인` 문구가 없었고, `/admin` 사용량 패널과 `/admin/users`의 `로그인 ID: manager01` 표시를 확인했다. 모바일 page-level horizontal overflow는 `/contracts/electronic`, `/admin`, `/admin/users` 모두 0건이었다. 전자계약 모바일 표의 `내일사장`, `양도인` 같은 한글 단어가 음절 단위로 쪼개지지 않도록 표 셀 nowrap도 확인했다.
+- 신규 SQL은 없다. 기존 `electronic_contracts`, `contract_events`, `companies`, `profiles.login_id` 기준으로 동작한다.
+- 남은 운영 확인: 실제 UCanSign 운영 키로 문서 접근 URL이 서명자별 기대 화면을 여는지, 취소 API 성공 후 UCanSign webhook `signing_canceled`가 ERP `canceled` 상태와 idempotent하게 맞물리는지 운영 샘플로 확인한다.
+
+## 2026-06-23 전자계약 사이드바/템플릿 버튼 후속 QA
+
+- 사이드바 프랜차이즈 하단의 `전자계약` 항목에 `FileSignature` 아이콘을 추가했다. 회사별 메뉴 권한 테스트에는 전자계약 메뉴가 프랜차이즈 하단에 있고 `fileSignature` 아이콘을 갖는지 회귀 assertion을 추가했다.
+- 회사 템플릿 관리 테이블의 UCanSign 편집 액션 버튼 라벨은 화면 밀도를 위해 `UCanSign 수정`에서 `수정`으로 줄였다. 버튼 아이콘과 동작은 기존 UCanSign 수정 진입 흐름을 유지한다.
+- 검증: `npx tsx --test src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check` 통과.
+- 브라우저 QA: 기존 `http://localhost:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic`를 확인했다. `aside a[href="/contracts/electronic"]` 안에 SVG 아이콘이 있고, 템플릿 관리 탭에는 `수정` 버튼 1개가 표시되며 `UCanSign 수정` 라벨은 남아 있지 않았다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-sidebar-icon-and-template-edit-label.png`.
+- 신규 SQL은 없다.
+
+## 2026-06-23 회사 템플릿 UCanSign 연결 문구 QA
+
+- 회사 템플릿 관리 테이블의 `설정 필요` 문구가 의미를 바로 알기 어려워, 연결 전 템플릿 상태를 `UCanSign 연결 필요`로 바꾸고 작성 버튼은 `연결 후 작성`, UCanSign 설정 진입 버튼은 `연결하기`로 분리했다. 이미 연결된 템플릿은 기존처럼 `발송 가능`, `문서 작성`, `수정`을 표시한다.
+- 상태/버튼 문구는 `getCompanyTemplateUsageState()`로 분리하고 `companyTemplateTableState.test.mts`에서 연결/미연결 템플릿 문구를 회귀 검증한다.
+- 검증: `npx tsx --test src/lib/company-menu-features.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateTableState.test.mts"`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과.
+- 브라우저 QA: 기존 `http://localhost:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic` 템플릿 관리 탭을 확인했다. 화면에 `UCanSign 연결 필요`, `연결 후 작성`, `연결하기`가 표시되고 `설정 필요`는 남아 있지 않았다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-template-ucansign-connection-copy.png`.
+- 신규 SQL은 없다.
+
+## 2026-06-23 회사 템플릿 미연결 초안 분리 QA
+
+- 미연결 템플릿이 존재하는 이유: 현재 회사 템플릿 만들기 흐름은 UCanSign 콜백 state를 검증하기 위해 ERP 템플릿/버전 row를 먼저 만들고 외부 UCanSign 설정 화면으로 이동한다. 사용자가 UCanSign 설정을 끝내지 않고 이탈하거나 콜백 저장이 실패하면 `ucansign_template_id`가 비어 있는 초안 row가 남는다.
+- 미연결 초안이 `회사 발송 템플릿`에 섞이면 실제 발송 가능한 템플릿처럼 보이므로, 목록을 `회사 발송 템플릿`, `연결 필요 템플릿`, `보관 템플릿`으로 분리했다. 발송 목록에는 `status='active'`이고 UCanSign 템플릿 ID가 있는 항목만 표시한다.
+- 분리 기준은 `getCompanyTemplateSections()`로 고정하고 `companyTemplateSections.test.mts`에서 연결 완료/미연결/보관 템플릿 분류를 회귀 검증한다.
+- 검증: `npx tsx --test "src/app/(main)/contracts/electronic/_components/companyTemplateSections.test.mts" "src/app/(main)/contracts/electronic/_components/companyTemplateTableState.test.mts" src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과.
+- 브라우저 QA: 기존 `http://localhost:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic` 템플릿 관리 탭을 확인했다. `회사 발송 템플릿`에는 연결 완료 템플릿만, `연결 필요 템플릿`에는 미연결 초안만 표시됐다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-template-sectioned-connection-required.png`.
+- 신규 SQL은 없다.
+
+## 2026-06-23 회사 템플릿 미연결 초안 숨김 QA
+
+- 사용자 피드백에 따라 `연결 필요 템플릿` 섹션도 기본 업무 화면에서는 노출하지 않도록 변경했다. 이제 템플릿 관리 탭의 `회사 발송 템플릿`에는 UCanSign 연결이 완료되어 실제 문서 작성이 가능한 회사 템플릿만 표시한다.
+- 미연결 초안 row는 UCanSign 외부 설정 이탈/콜백 실패 때문에 DB에는 남을 수 있지만, 운영자가 쓰는 기본 목록에는 보이지 않는다. 삭제/정리 정책은 별도 운영 도구가 필요해질 때 다룬다.
+- 검증: `npx tsx --test "src/app/(main)/contracts/electronic/_components/companyTemplateSections.test.mts" "src/app/(main)/contracts/electronic/_components/companyTemplateTableState.test.mts" src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과.
+- 브라우저 QA: 기존 `http://localhost:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic` 템플릿 관리 탭을 확인했다. 연결 완료 템플릿은 표시되고, 미연결 템플릿 이름, `연결 필요 템플릿` 섹션, `UCanSign 연결 필요`/`연결 후 작성`/`연결하기` 문구는 화면에 없었다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-template-unlinked-hidden.png`.
+- 신규 SQL은 없다.
+
 ## 다음 QA 체크리스트
 
 ### P0

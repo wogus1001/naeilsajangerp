@@ -35,7 +35,7 @@ test('Given dashboard and franchise paths When resolving company menu feature Th
     assert.equal(franchiseOperations?.category, '프랜차이즈');
 });
 
-test('Given sidebar sections When reading navigation Then dashboard is top-level and franchise owns the three franchise links', () => {
+test('Given sidebar sections When reading navigation Then dashboard is top-level and franchise owns the franchise links', () => {
     const dashboardSection = SIDEBAR_SECTIONS[0];
     const franchiseSection = SIDEBAR_SECTIONS[1];
 
@@ -43,7 +43,7 @@ test('Given sidebar sections When reading navigation Then dashboard is top-level
     assert.equal(dashboardSection?.direct, true);
     assert.deepEqual(dashboardSection?.items.map(item => item.title), ['대시보드']);
     assert.equal(franchiseSection?.key, 'franchise');
-    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영']);
+    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영', '전자계약']);
 });
 
 test('Given a saved company dashboard mode When normalizing Then only A and B are accepted', () => {
@@ -65,9 +65,11 @@ test('Given default company menu flags When reading franchise intake features Th
 
 test('Given electronic premium contract route When resolving company menu feature Then new contract feature owns it', () => {
     const feature = getCompanyMenuFeatureForPath('/contracts/electronic/create');
-    const contractSection = SIDEBAR_SECTIONS.find(section => section.key === 'contracts');
+    const franchiseSection = SIDEBAR_SECTIONS.find(section => section.key === 'franchise');
 
     assert.equal(feature?.key, 'electronicPremiumContracts');
+    assert.equal(feature?.category, '프랜차이즈');
     assert.equal(feature?.title, '전자계약');
-    assert.equal(contractSection?.items.some(item => item.featureKey === 'electronicPremiumContracts'), true);
+    assert.equal(franchiseSection?.items.at(-1)?.featureKey, 'electronicPremiumContracts');
+    assert.equal(franchiseSection?.items.at(-1)?.icon, 'fileSignature');
 });
