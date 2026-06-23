@@ -1,11 +1,15 @@
 "use client";
 
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { CircleX, Trash2 } from 'lucide-react';
 import { getRequesterId, getStoredUser, isAdminStoredUser } from '@/utils/userUtils';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { CompanyContractTemplatesPanel } from './CompanyContractTemplatesPanel';
 import { ElectronicContractsTable } from './ElectronicContractsTable';
+import {
+    cancelElectronicContract,
+    deleteElectronicContract
+} from './electronicContractDocumentActionsClient';
 import type {
     ContractScope,
     ContractsResponse,
@@ -14,26 +18,10 @@ import type {
 } from './electronicContractDocumentsModel';
 import styles from './electronicContracts.module.css';
 
-type DeleteResponse = {
-    readonly data?: {
-        readonly deleted?: boolean;
-    };
-    readonly message?: string;
-};
-
 type DocumentNotice = {
     readonly kind: 'success';
     readonly text: string;
 };
-
-async function deleteElectronicContract(contractId: string): Promise<void> {
-    const response = await fetch(`/api/electronic-contracts/${encodeURIComponent(contractId)}`, {
-        method: 'DELETE',
-        headers: await getApiAuthHeaders()
-    });
-    const payload: DeleteResponse = await response.json();
-    if (!response.ok) throw new Error(payload.message || '문서를 삭제하지 못했습니다.');
-}
 
 export default function ElectronicContractsPage() {
     const [mode, setMode] = React.useState<PageMode>('documents');
@@ -45,7 +33,9 @@ export default function ElectronicContractsPage() {
     const [isAdmin, setIsAdmin] = React.useState(false);
     const [notice, setNotice] = React.useState<DocumentNotice | null>(null);
     const [pendingDelete, setPendingDelete] = React.useState<ElectronicContract | null>(null);
+    const [pendingCancel, setPendingCancel] = React.useState<ElectronicContract | null>(null);
     const [deletingContractId, setDeletingContractId] = React.useState('');
+    const [cancelingContractId, setCancelingContractId] = React.useState('');
 
     React.useEffect(() => {
         const user = getStoredUser();
@@ -101,6 +91,24 @@ export default function ElectronicContractsPage() {
         }
     }
 
+    async function confirmCancel() {
+        if (!pendingCancel) return;
+        setCancelingContractId(pendingCancel.id);
+        setError('');
+        try {
+            const updatedContract = await cancelElectronicContract(pendingCancel.id);
+            setContracts(current => current.map(contract => (
+                contract.id === updatedContract.id ? updatedContract : contract
+            )));
+            setNotice({ kind: 'success', text: '서명 요청을 취소했습니다.' });
+            setPendingCancel(null);
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : '서명 요청을 취소하지 못했습니다.');
+        } finally {
+            setCancelingContractId('');
+        }
+    }
+
     return (
         <main className={styles.container}>
             <section className={`${styles.panel} ${styles.header}`}>
@@ -148,9 +156,44 @@ export default function ElectronicContractsPage() {
                             requesterId={requesterId}
                             isAdmin={isAdmin}
                             deletingContractId={deletingContractId}
+                            cancelingContractId={cancelingContractId}
                             onDeleteRequest={setPendingDelete}
+                            onCancelRequest={setPendingCancel}
                         />
                     </section>
+
+                    {pendingCancel && (
+                        <div className={styles.dialogBackdrop} role="presentation">
+                            <section className={styles.systemDialog} role="dialog" aria-modal="true" aria-labelledby="cancel-contract-title">
+                                <div className={styles.systemDialogIcon}><CircleX size={20} /></div>
+                                <h3 id="cancel-contract-title">서명 요청 취소</h3>
+                                <p>
+                                    <strong>{pendingCancel.name}</strong> 문서의 UCanSign 서명 요청을 취소할까요?
+                                </p>
+                                <p className={styles.dialogHelper}>
+                                    취소 후 문서함에는 요청 취소 상태로 남고, 이미 완료된 서명 요청은 취소할 수 없습니다.
+                                </p>
+                                <div className={styles.systemDialogActions}>
+                                    <button
+                                        className={styles.secondaryButton}
+                                        type="button"
+                                        onClick={() => setPendingCancel(null)}
+                                        disabled={Boolean(cancelingContractId)}
+                                    >
+                                        닫기
+                                    </button>
+                                    <button
+                                        className={styles.dangerButton}
+                                        type="button"
+                                        onClick={confirmCancel}
+                                        disabled={Boolean(cancelingContractId)}
+                                    >
+                                        서명 요청 취소
+                                    </button>
+                                </div>
+                            </section>
+                        </div>
+                    )}
 
                     {pendingDelete && (
                         <div className={styles.dialogBackdrop} role="presentation">

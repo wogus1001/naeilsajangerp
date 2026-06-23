@@ -194,20 +194,7 @@ export default function DashboardPage() {
 
     const handleContractClick = async (contract: any) => {
         if (contract.type === '전자계약') {
-            try {
-                const res = await fetch(`/api/user/status?userId=${userId}`);
-                const data = await res.json();
-                if (!data.connected) {
-                    // Alert for disconnected state
-                    showAlert('전자계약 서비스 연동이 해제되어 있습니다.\n[설정] > [외부 서비스 연동]에서 연동을 진행해주세요.', 'error');
-                    return;
-                }
-                // If connected, go to contracts (signatures tab)
-                router.push('/contracts?tab=signatures');
-            } catch (error) {
-                console.error('Failed to check connection status', error);
-                showAlert('연동 상태 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'error');
-            }
+            router.push('/contracts/electronic');
         } else {
             // Project based contract
             router.push(`/contracts?id=${contract.id}`);

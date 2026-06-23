@@ -35,6 +35,10 @@ function formatJoinedDate(value: string | null): string {
     return new Date(value).toLocaleDateString();
 }
 
+function displayLoginId(user: AdminUserRow): string {
+    return user.loginId || user.id || '-';
+}
+
 export function AdminUsersTable({
     users,
     updatingRoleUserId,
@@ -60,8 +64,9 @@ export function AdminUsersTable({
                     {users.length > 0 ? users.map(user => (
                         <tr key={user.uuid} style={styles.tr}>
                             <td style={styles.td}>
-                                <div style={{ fontWeight: 'bold', color: '#343a40' }}>{user.id}</div>
-                                <div style={{ fontSize: '12px', color: '#868e96' }}>{user.name}</div>
+                                <div style={{ fontWeight: 'bold', color: '#343a40' }}>{user.name || '-'}</div>
+                                <div style={{ fontSize: '12px', color: '#495057' }}>로그인 ID: {displayLoginId(user)}</div>
+                                <div style={{ fontSize: '12px', color: '#868e96' }}>{user.id || '-'}</div>
                             </td>
                             <td style={styles.td}>{user.companyName || '-'}</td>
                             <td style={styles.td}>

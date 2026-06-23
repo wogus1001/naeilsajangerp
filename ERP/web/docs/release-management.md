@@ -45,8 +45,30 @@ YYYY-MM-DD
 - 남은 이슈: env, migration, 외부 계정 승인 등
 ```
 
+## Pending Work Ledger
+
+### 2026-06-22 전자계약/관리자 후속 작업
+
+- 상태: 현재까지 구현된 전자계약 v2, 회사별 템플릿 관리, UCanSign API KEY 발송, 문서 다운로드, 회사별 아이디 로그인은 유지한다. 아래 항목은 다음 작업 범위로 남긴다.
+- 전자계약 메뉴 정리: 사이드바/메뉴 관리의 `권리금 전자계약` 표기를 `전자계약`으로 바꾸고, 프랜차이즈 하위 메뉴 가장 하단에 배치한다.
+- 개인정보 수정 정리: 개인정보 수정 화면의 `서비스 연동 > 유캔싸인` 영역은 사용자에게 노출하지 않는다. UCanSign은 내일사장 공용 API KEY 운영이므로 개인별 연결 UI가 필요 없다.
+- UCanSign 운영 설정: 실서버에는 `UCANSIGN_API_KEY`, `UCANSIGN_WEBHOOK_SECRET` 등 production env를 확인하고, UCanSign 개발자 설정에는 `https://naeilsajang.vercel.app/api/electronic-contracts/webhooks/ucansign` webhook URL을 등록한다.
+- 서명 상태 고도화: `내용 확인 후 서명`은 UCanSign이 문서별 서명/확인 URL을 API로 제공하는지 먼저 확인한 뒤 ERP 문서함 액션으로 연결한다.
+- 서명 취소 검토: UCanSign 문서 취소 API가 제공되면 ERP에서 `서명취소` 액션을 추가하고, 취소 성공 시 ERP 문서 상태를 `canceled` 계열로 동기화한다. API 미지원이면 UCanSign 관리자 화면 이동 또는 운영 안내로 처리한다.
+- 어드민 사용량: 어드민에서 회사별 전자계약 사용량을 볼 수 있게 한다. 우선 컬럼은 회사명, 전체 문서 수, 초안/발송/완료/실패/취소 건수, 최근 발송일, 최근 완료일을 검토한다.
+- 어드민 사용자 아이디: 어드민 회원 및 권한 관리 표에 `login_id`를 노출해 이메일과 별도로 실제 로그인 아이디를 확인할 수 있게 한다.
+- 신규 SQL: 위 후속 작업은 우선 기존 `electronic_contracts`, `profiles.login_id` 기준 조회/표시로 처리 가능하다. 추가 집계 테이블이나 audit column이 필요해지면 SQL 작성 후 사용자가 직접 Supabase SQL Editor에 등록한다.
+
 ## Current Release Baseline
 
+- 2026-06-23
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 전자계약 운영 후속 작업 커밋
+  - 주요 기능: `전자계약` 메뉴를 프랜차이즈 하단으로 이동하고 사이드바 아이콘 추가, 개인 UCanSign 프로필 연동 UI/로그아웃 disconnect 제거, UCanSign 문서 접근 링크와 서명 요청 취소 API 액션 추가, 회사별 전자계약 사용량 관리자 패널 추가, 관리자 회원 표 `login_id` 표시, 전자계약 문서함/템플릿 상태 문구 정리, 회사 템플릿 UCanSign 연결 전 상태/버튼 문구 명확화, 미연결 초안 템플릿을 기본 화면에서 숨김, 회사 템플릿 수정 버튼 라벨 축약, 어드민 모바일 레이아웃 보정
+  - dev 반영: none
+  - main 반영: none
+  - 검증: `npx tsx --test src/lib/company-menu-features.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/electronic-contracts/usage-summary.test.mts src/lib/ucansign/platform-client.test.mts src/lib/ucansign/platform-document-actions.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 후속 아이콘/라벨 변경 후 `npx tsx --test src/lib/company-menu-features.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateTableState.test.mts" "src/app/(main)/contracts/electronic/_components/companyTemplateSections.test.mts"`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check` 재통과. Playwright mock QA로 `/contracts/electronic`, `/profile`, `/admin`, `/admin/users`를 확인했고 `/contracts/electronic`, `/admin`, `/admin/users` 모바일 page-level overflow 0건과 전자계약 모바일 표의 한글 단어 nowrap, `전자계약` 사이드바 아이콘, 템플릿 관리 `수정` 버튼 라벨, UCanSign 미연결 템플릿이 기본 화면에 노출되지 않는 것을 확인
+  - 남은 이슈: 신규 SQL은 없다. 실제 UCanSign 운영 키로 `내용 확인 후 서명` 접근 URL과 `서명 요청 취소` 후 webhook idempotency를 운영 샘플 문서로 확인한다.
 - 2026-06-22
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 로그인 화면 저장 UX 커밋

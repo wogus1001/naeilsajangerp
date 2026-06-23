@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Briefcase, ChevronDown, ChevronRight, Contact, FileText, LayoutDashboard, ListChecks, MapPin, Store, Target, Users } from 'lucide-react';
+import { Briefcase, ChevronDown, ChevronRight, Contact, FileSignature, FileText, LayoutDashboard, ListChecks, MapPin, Store, Target, Users } from 'lucide-react';
 import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 import type { SidebarLinkIcon, SidebarMenuSection, SidebarSectionKey } from './SidebarMenuConfig';
 import styles from './Sidebar.module.css';
@@ -45,6 +45,8 @@ function renderLinkIcon(icon: SidebarLinkIcon | undefined) {
             return <Users size={14} />;
         case 'list':
             return <ListChecks size={14} />;
+        case 'fileSignature':
+            return <FileSignature size={14} />;
         default:
             return null;
     }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, Settings, LogOut, Home } from 'lucide-react';
 import styles from './Sidebar.module.css'; // Reusing base sidebar styles for consistency but with admin tweaks if needed
+import adminStyles from './AdminSidebar.module.css';
 
 interface AdminSidebarProps {
     isOpen: boolean;
@@ -21,27 +22,27 @@ const AdminSidebar = ({ isOpen, onToggle }: AdminSidebarProps) => {
     const pathname = usePathname();
 
     return (
-        <aside className={`${styles.sidebar} ${!isOpen ? styles.collapsed : ''} global-sidebar`} style={{ backgroundColor: '#212529', borderRight: 'none' }}>
+        <aside className={`${styles.sidebar} ${adminStyles.adminSidebar} ${!isOpen ? styles.collapsed : ''} global-sidebar`}>
             {/* Header / Logo */}
-            <div className={styles.contentContainer} style={{ opacity: 1, pointerEvents: 'auto' }}>
-                <Link href="/admin" className={styles.logo} style={{ textDecoration: 'none', color: '#fff' }}>
+            <div className={`${styles.contentContainer} ${adminStyles.adminContentContainer}`}>
+                <Link href="/admin" className={`${styles.logo} ${adminStyles.adminLogo}`} style={{ textDecoration: 'none', color: '#fff' }}>
                     <div className={styles.logoIcon}>
                         {/* Admin specific logo style or just icon */}
-                        <div style={{ width: 24, height: 24, borderRadius: 4, backgroundColor: '#fa5252', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white' }}>A</div>
+                        <div className={adminStyles.logoBadge}>A</div>
                     </div>
                     {isOpen && <span className={styles.logoText} style={{ color: '#fff' }}>ADMIN</span>}
                 </Link>
 
-                <nav className={styles.nav}>
-                    <div style={{ padding: '0 16px', marginBottom: '8px', fontSize: '12px', color: '#868e96', fontWeight: 600 }}>
+                <nav className={`${styles.nav} ${adminStyles.adminNav}`}>
+                    <div className={adminStyles.sectionLabel}>
                         {isOpen && 'MANAGEMENT'}
                     </div>
 
                     {MENU_ITEMS.map((item) => (
-                        <div key={item.url} className={styles.navItem}>
+                        <div key={item.url} className={`${styles.navItem} ${adminStyles.adminNavItem}`}>
                             <Link
                                 href={item.url}
-                                className={`${styles.navLink} ${pathname === item.url ? styles.active : ''}`}
+                                className={`${styles.navLink} ${adminStyles.adminNavLink} ${pathname === item.url ? styles.active : ''}`}
                                 style={{
                                     color: pathname === item.url ? '#fff' : '#adb5bd',
                                     backgroundColor: pathname === item.url ? '#343a40' : 'transparent'
@@ -53,10 +54,10 @@ const AdminSidebar = ({ isOpen, onToggle }: AdminSidebarProps) => {
                         </div>
                     ))}
 
-                    <div style={{ margin: '24px 0', borderTop: '1px solid #495057' }} />
+                    <div className={adminStyles.divider} />
 
-                    <div className={styles.navItem}>
-                        <Link href="/dashboard" className={styles.navLink} style={{ color: '#adb5bd' }}>
+                    <div className={`${styles.navItem} ${adminStyles.adminNavItem}`}>
+                        <Link href="/dashboard" className={`${styles.navLink} ${adminStyles.adminNavLink}`} style={{ color: '#adb5bd' }}>
                             <Home size={18} />
                             {isOpen && <span>메인 서비스로 이동</span>}
                         </Link>

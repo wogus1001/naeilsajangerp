@@ -6,15 +6,23 @@ import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus } f
 import Link from 'next/link';
 import { AlertModal } from '@/components/common/AlertModal';
 import { CompanyAccessManager } from '@/components/admin/company-access/CompanyAccessManager';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+import { ElectronicContractUsagePanel } from './ElectronicContractUsagePanel';
+
+type AdminUserStatsRow = {
+    readonly companyName?: string | null;
+    readonly role?: string | null;
+    readonly status?: string | null;
+};
 
 // Reusing dashboard styles + some admin specific ones
 const styles = {
-    container: { padding: '32px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'var(--font-pretendard)' },
+    container: { padding: 'clamp(16px, 3vw, 32px)', maxWidth: '1200px', margin: '0 auto', fontFamily: 'var(--font-pretendard)' },
     header: { marginBottom: '32px' },
     title: { fontSize: '24px', fontWeight: '800', color: '#212529', marginBottom: '8px' },
     subtitle: { fontSize: '16px', color: '#868e96' },
 
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '40px' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '40px' },
     card: { backgroundColor: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
     cardContent: { display: 'flex', flexDirection: 'column' as const },
     cardLabel: { fontSize: '14px', color: '#868e96', fontWeight: 600, marginBottom: '8px' },
@@ -22,7 +30,7 @@ const styles = {
     cardIcon: { width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
 
     sectionTitle: { fontSize: '18px', fontWeight: '700', color: '#343a40', marginBottom: '16px' },
-    menuList: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+    menuList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' },
     menuItem: {
         backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #f1f3f5',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer',
@@ -81,16 +89,19 @@ export default function AdminDashboardPage() {
             const requesterId = currentUser.uid || currentUser.id || '';
             const query = requesterId ? `?requesterId=${encodeURIComponent(requesterId)}` : '';
 
-            const res = await fetch(`/api/users${query}`);
+            const res = await fetch(`/api/users${query}`, {
+                cache: 'no-store',
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
-                const users = await res.json();
+                const users = await res.json() as readonly AdminUserStatsRow[];
 
                 const totalUsers = users.length;
                 // Count unique companies
-                const companies = new Set(users.map((u: any) => u.companyName).filter(Boolean));
+                const companies = new Set(users.map(user => user.companyName).filter(Boolean));
                 const activeCompanies = companies.size;
                 // Count pending
-                const pendingApprovals = users.filter((u: any) => u.status === 'pending_approval' && u.role !== 'admin').length;
+                const pendingApprovals = users.filter(user => user.status === 'pending_approval' && user.role !== 'admin').length;
 
                 setStats({ totalUsers, activeCompanies, pendingApprovals });
             }
@@ -142,6 +153,8 @@ export default function AdminDashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <ElectronicContractUsagePanel />
 
             {/* Quick Menu */}
             <h2 style={styles.sectionTitle}>관리 메뉴</h2>
