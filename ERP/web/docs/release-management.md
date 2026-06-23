@@ -63,11 +63,11 @@ YYYY-MM-DD
 
 - 2026-06-23
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-  - 기능 커밋: 이번 계약 전 체크/점주 문서함/가맹점 정보 연동 커밋
+  - 기능 커밋: `9322175 feat(franchise): refine contract readiness workflows`
   - 주요 기능: 계약 전 체크를 문서 기반 v2로 확장하고 `필수/내부보고/선택`, 해당 여부, 연결 문서, 문서 메모를 분리해 표시한다. 체크리스트 행은 한 줄형 `완료/완료됨` 버튼과 업로드/전자계약 문서 관리 모달 중심으로 정리했고, 필수 항목도 체크 메모 없이 `해당없음` 저장/해결 처리가 가능하다. 점주 문서함은 업로드, 완료 전자계약 문서 연결, 체크 항목 재연결/문서 삭제를 지원한다. 계약완료 점주 상세에는 `체크리스트 / 문서함 / 가맹점 정보` 탭을 추가하고, 연결 후보지 또는 직접 입력으로 운영 가맹점 마스터를 생성해 `/dashboard/franchise-operations?locationId=...`로 이어갈 수 있다.
   - dev 반영: none
   - main 반영: none
-  - 배포 URL: none
+  - 배포 URL: `https://naeilsajang.vercel.app` (`dpl_7b4n3rGnyENexpdjaS43X3gdVzxT`, READY; source `https://naeilsajang-2mn71bkxn-jaehyuns-projects-b4d20c6f.vercel.app`)
   - 검증: `npx tsx --test src/lib/franchise-contract-store.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`는 가맹점 정보 연동 직후 통과했다. 후속 체크리스트/문서함 UI 보정과 `PropertyCard` Recharts formatter/purity 정리 후 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-contract-store.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 20개 테스트, `git diff --check`, `npm run build` 통과. Playwright로 `/demo/manager` 계약 완료 요약을 1280px/390px에서 확인했고 page-level horizontal overflow 0건이었다. Supabase 실데이터에는 `contract_check_14day_seed_20260623` 태그로 `내일` 회사 관리자용 계약완료 샘플 3건을 생성/갱신했고, 정보공개서 발송일 `2026-06-01` 기준 14일 게이트 통과를 DB 재조회로 확인했다. 가맹점 정보 탭은 후보지 선택 주소가 폼에서 유지되도록 보정하고, 직접 입력 주소도 Kakao 주소 검색으로 선택하게 바꿨다. 보정 후 `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-contract-store.test.mts`, `git diff --check`, `npm run build`가 통과했고, Playwright mock QA로 1280px/390px에서 후보지 주소 복사와 `가맹 운영에 생성` 버튼을 확인했다.
   - 남은 이슈: `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql` SQL 등록 필요. SQL/로그인 세션 적용 후 실제 후보자 상세에서 체크리스트 저장, 해당없음 저장, 업로드 문서 등록, 완료 전자계약 연결/해제, 계약완료 후 가맹점 정보 생성, 교차 회사 접근 차단을 live QA한다. seed 샘플 생성 자체에는 신규 SQL이 없다.
 - 2026-06-23

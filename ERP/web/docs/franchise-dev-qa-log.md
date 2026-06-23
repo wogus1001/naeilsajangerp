@@ -622,6 +622,7 @@
 - 실데이터 QA 샘플: Supabase service role로 `내일` 회사(`92924bd6-b2a1-49bb-844b-05eabcc51bbf`) 관리자 계정(`7006b59c-031e-40f8-9041-e4255af22b1b`)에 `contract_check_14day_seed_20260623` 샘플을 생성/갱신했다. `QA_14일경과_문채원`, `QA_14일경과_강태오`, `QA_14일경과_이서준` 3건은 모두 `계약완료`, `leadStage=candidate`, 연결 후보지 1건, 정보공개서 발송 이력 `sent_at=2026-06-01 01:00:00+00`, `send_status=recorded`를 가진다. 2026-06-23 기준 21일 경과로 14일 계약 게이트 통과를 DB 재조회로 확인했다. 이번 seed용 신규 SQL은 없다.
 - 가맹점 정보 탭 보정: 연결 후보지 선택 후 기존 가맹점 조회가 끝나면서 폼이 기본값으로 덮여 후보지 주소가 비는 문제를 수정했다. 후보지 선택 주소/좌표는 가맹 운영 마스터 생성 폼에 유지되고, 직접 입력 주소도 자유입력이 아니라 Kakao 주소 검색 컴포넌트로 선택하도록 바꿨다. 생성 버튼 문구는 `후보지로 생성`에서 `가맹 운영에 생성`으로 변경했다.
 - 가맹점 정보 보정 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-contract-store.test.mts`, `git diff --check`, `npm run build` 통과. `npm run start -- --hostname 127.0.0.1 --port 3067` production build에 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads` 계약 완료 상세의 `가맹점 정보` 탭을 1280px/390px에서 확인했다. 후보지 주소 `서울 광진구 능동로50길 8`이 주소 필드에 유지되고, 지역 `서울 광진구`, `가맹 운영에 생성` 버튼, 후보지 주소 표시를 확인했다. 모바일 page-level overflow는 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-store-address-copy-desktop.png`, `ERP/web/.omo/evidence/contract-store-address-copy-mobile.png`.
+- 배포: `9322175 feat(franchise): refine contract readiness workflows`를 Vercel `naeilsajang` production에 CLI 직접 배포했다. `dpl_7b4n3rGnyENexpdjaS43X3gdVzxT`가 READY이고 `https://naeilsajang.vercel.app`에 alias 처리되었다. main/dev 브랜치 merge 또는 push는 하지 않았다.
 
 ## 다음 QA 체크리스트
 
