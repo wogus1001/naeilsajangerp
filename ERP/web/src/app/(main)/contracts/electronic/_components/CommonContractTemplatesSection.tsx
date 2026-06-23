@@ -4,6 +4,9 @@ import { COMMON_ELECTRONIC_CONTRACT_TEMPLATES } from '@/lib/electronic-contracts
 import styles from './electronicContracts.module.css';
 
 export function CommonContractTemplatesSection() {
+    const templates = COMMON_ELECTRONIC_CONTRACT_TEMPLATES;
+    if (templates.length === 0) return null;
+
     return (
         <section className={styles.panel}>
             <h3 className={styles.templateSectionTitle}>공통 템플릿</h3>
@@ -17,7 +20,7 @@ export function CommonContractTemplatesSection() {
                         </tr>
                     </thead>
                     <tbody>
-                        {COMMON_ELECTRONIC_CONTRACT_TEMPLATES.map(template => (
+                        {templates.map(template => (
                             <tr key={template.id}>
                                 <td>
                                     <div className={styles.mainText}>

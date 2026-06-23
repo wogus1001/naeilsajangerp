@@ -1,6 +1,9 @@
 import { getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { fail } from '@/lib/api-response';
-import { canViewElectronicContract } from '@/lib/electronic-contracts/document-permissions';
+import {
+    canViewElectronicContract,
+    isElectronicContractDownloadableStatus
+} from '@/lib/electronic-contracts/document-permissions';
 import type { ElectronicContractRow } from '@/lib/electronic-contracts/records';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
@@ -55,6 +58,9 @@ export async function GET(request: Request, context: RouteContext) {
         )) return fail(403, 'FORBIDDEN', 'Contract access denied');
         if (!data.ucansign_document_id) {
             return fail(400, 'VALIDATION_ERROR', '다운로드할 수 있는 전자계약 문서가 없습니다.');
+        }
+        if (!isElectronicContractDownloadableStatus(data.status)) {
+            return fail(400, 'VALIDATION_ERROR', '서명 완료 후 다운로드할 수 있습니다.');
         }
 
         const file = await downloadPlatformDocumentFullFile(data.ucansign_document_id, data.name || '전자계약');

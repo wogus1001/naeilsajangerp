@@ -4,6 +4,7 @@ import {
     canCancelElectronicContract,
     canDeleteElectronicContract,
     isElectronicContractCancelableStatus,
+    isElectronicContractDownloadableStatus,
     canViewElectronicContract
 } from './document-permissions.js';
 
@@ -77,4 +78,14 @@ test('Given document statuses When checking cancellation eligibility Then only a
     assert.equal(isElectronicContractCancelableStatus('canceled'), false);
     assert.equal(isElectronicContractCancelableStatus('draft'), false);
     assert.equal(isElectronicContractCancelableStatus(null), false);
+});
+
+test('Given document statuses When checking download eligibility Then only completed documents are downloadable', () => {
+    assert.equal(isElectronicContractDownloadableStatus('completed'), true);
+    assert.equal(isElectronicContractDownloadableStatus('sent'), false);
+    assert.equal(isElectronicContractDownloadableStatus('sending'), false);
+    assert.equal(isElectronicContractDownloadableStatus('canceled'), false);
+    assert.equal(isElectronicContractDownloadableStatus('send_failed'), false);
+    assert.equal(isElectronicContractDownloadableStatus('draft'), false);
+    assert.equal(isElectronicContractDownloadableStatus(null), false);
 });

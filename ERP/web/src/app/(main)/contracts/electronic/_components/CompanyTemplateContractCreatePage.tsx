@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Save, Send } from 'lucide-react';
 import { renderTemplateFormFromFields } from '@/lib/electronic-contracts/company-template';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -46,6 +47,7 @@ type SendResponse = {
 };
 
 export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: Props) {
+    const router = useRouter();
     const [detail, setDetail] = React.useState<CompanyTemplateDetail | null>(null);
     const [values, setValues] = React.useState<Record<string, string>>({});
     const [participants, setParticipants] = React.useState<Record<string, SignerParticipantInput>>({});
@@ -187,7 +189,7 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
             });
             const payload: SendResponse = await response.json();
             if (!response.ok) throw new Error(payload.message || '전자계약 발송에 실패했습니다.');
-            setMessage('전자계약 발송이 완료되었습니다.');
+            router.push('/contracts/electronic');
         } catch (caught) {
             setMessage(caught instanceof Error ? caught.message : '전자계약 발송에 실패했습니다.');
         } finally {

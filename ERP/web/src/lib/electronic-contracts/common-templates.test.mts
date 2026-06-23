@@ -9,9 +9,8 @@ test('Given common electronic templates When listing ids Then each id is unique'
     assert.equal(uniqueIds.size, ids.length);
 });
 
-test('Given the premium rights common template When rendering actions Then it opens the contract writer', () => {
-    const template = COMMON_ELECTRONIC_CONTRACT_TEMPLATES.find(row => row.id === 'premium-rights-contract');
+test('Given the premium rights common template is incomplete When listing common templates Then it is hidden', () => {
+    const isVisible = COMMON_ELECTRONIC_CONTRACT_TEMPLATES.some(row => row.id === 'premium-rights-contract');
 
-    assert.equal(template?.name, '권리금계약서');
-    assert.equal(template?.href, '/contracts/electronic/create');
+    assert.equal(isVisible, false);
 });

@@ -2,16 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { CircleX, Download, ExternalLink, FileText, Send, Trash2 } from 'lucide-react';
+import { CircleX, Download, FileText, Send, Trash2 } from 'lucide-react';
 import {
     canCancelElectronicContract,
     canDeleteElectronicContract,
-    isElectronicContractCancelableStatus
+    isElectronicContractCancelableStatus,
+    isElectronicContractDownloadableStatus
 } from '@/lib/electronic-contracts/document-permissions';
-import {
-    downloadElectronicContract,
-    openElectronicContractView
-} from './electronicContractDocumentActionsClient';
+import { downloadElectronicContract } from './electronicContractDocumentActionsClient';
 import {
     draftHref,
     formatDate,
@@ -43,7 +41,6 @@ export function ElectronicContractsTable({
 }: ElectronicContractsTableProps) {
     const [actionError, setActionError] = React.useState('');
     const [downloadingContractId, setDownloadingContractId] = React.useState('');
-    const [openingContractId, setOpeningContractId] = React.useState('');
 
     async function handleDownload(contract: ElectronicContract) {
         setActionError('');
@@ -54,18 +51,6 @@ export function ElectronicContractsTable({
             setActionError(caught instanceof Error ? caught.message : '문서를 다운로드하지 못했습니다.');
         } finally {
             setDownloadingContractId('');
-        }
-    }
-
-    async function handleOpenView(contract: ElectronicContract) {
-        setActionError('');
-        setOpeningContractId(contract.id);
-        try {
-            await openElectronicContractView(contract);
-        } catch (caught) {
-            setActionError(caught instanceof Error ? caught.message : '문서를 열지 못했습니다.');
-        } finally {
-            setOpeningContractId('');
         }
     }
 
@@ -94,8 +79,9 @@ export function ElectronicContractsTable({
                                 { id: requesterId, role: isAdmin ? 'admin' : null },
                                 { sentByProfileId: contract.sentByProfileId }
                             ) && isElectronicContractCancelableStatus(contract.status);
-                            const canDownload = Boolean(contract.ucansignDocumentId && contract.status !== 'draft');
-                            const canOpenView = Boolean(contract.ucansignDocumentId && contract.status !== 'draft' && contract.status !== 'send_failed' && contract.status !== 'canceled');
+                            const canDownload = Boolean(
+                                contract.ucansignDocumentId && isElectronicContractDownloadableStatus(contract.status)
+                            );
                             return (
                                 <tr key={contract.id}>
                                     <td>
@@ -115,17 +101,6 @@ export function ElectronicContractsTable({
                                             <Link className={styles.weakButton} href={draftHref(contract)}>
                                                 이어쓰기
                                             </Link>
-                                        )}
-                                        {canOpenView && (
-                                            <button
-                                                className={styles.weakButton}
-                                                type="button"
-                                                onClick={() => void handleOpenView(contract)}
-                                                disabled={openingContractId === contract.id}
-                                            >
-                                                <ExternalLink size={14} />
-                                                내용 확인 후 서명
-                                            </button>
                                         )}
                                         {canDownload && (
                                             <button
@@ -160,7 +135,7 @@ export function ElectronicContractsTable({
                                                 삭제
                                             </button>
                                         )}
-                                        {contract.status !== 'draft' && !canOpenView && !canDownload && !canCancel && !canDelete && <span className={styles.subText}>-</span>}
+                                        {contract.status !== 'draft' && !canDownload && !canCancel && !canDelete && <span className={styles.subText}>-</span>}
                                     </div>
                                 </td>
                             </tr>

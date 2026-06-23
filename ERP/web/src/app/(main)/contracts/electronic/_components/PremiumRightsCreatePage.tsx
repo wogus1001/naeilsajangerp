@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import React from 'react';
 import { ArrowLeft, Send } from 'lucide-react';
 import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
@@ -41,6 +42,7 @@ function validateBeforeSend(form: PremiumRightsFormValues): string[] {
 }
 
 export default function PremiumRightsCreatePage() {
+    const router = useRouter();
     const [requesterId, setRequesterId] = React.useState('');
     const [companyId, setCompanyId] = React.useState('');
     const [form, setForm] = React.useState<PremiumRightsFormValues>(() => createInitialPremiumRightsForm(''));
@@ -170,8 +172,7 @@ export default function PremiumRightsCreatePage() {
             });
             const payload: SendResponse = await response.json();
             if (!response.ok) throw new Error(payload.message || '전자계약 발송에 실패했습니다.');
-            if (payload.data?.contractId) setDraftContractId(payload.data.contractId);
-            setSuccess('전자계약 발송이 완료되었습니다.');
+            router.push('/contracts/electronic');
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : '전자계약 발송에 실패했습니다.');
         } finally {

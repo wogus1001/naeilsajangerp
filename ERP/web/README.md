@@ -268,7 +268,7 @@ The 모객 DB list also shows a `정보공개서` column and sort options for di
 
 ## Electronic Contract v2 Setup
 
-The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven electronic contract flow lives under `/contracts/electronic`; built-in forms such as 권리금계약서 are exposed as common templates, while company-created UCanSign templates stay under company templates.
+The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven electronic contract flow lives under `/contracts/electronic`; company-created UCanSign templates stay under company templates. Built-in forms such as 권리금계약서 are kept in the catalog but hidden from the common template list until they are production-ready.
 
 Run `supabase_electronic_contracts_platform_migration.sql` before enabling the new flow. The migration creates the platform UCANSIGN connection table, company-scoped `electronic_contracts`, webhook `contract_events`, and SafetyData license import tables.
 
@@ -285,7 +285,7 @@ SAFETYDATA_SERVICE_KEY=
 NEXT_PUBLIC_APP_URL=
 ```
 
-The new flow uses one Naeilsajang platform UCANSIGN API KEY. Users and companies do not connect personal UCANSIGN accounts for this flow; the server issues short-lived UCANSIGN access tokens from `UCANSIGN_API_KEY` and sends documents through the Naeilsajang shared account. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app. `UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID` is required only for the built-in Naeilsajang 권리금계약서 template. Company-uploaded templates remain company-scoped in ERP and are linked to UCANSIGN template/document IDs per active template version.
+The new flow uses one Naeilsajang platform UCANSIGN API KEY. Users and companies do not connect personal UCANSIGN accounts for this flow; the server issues short-lived UCANSIGN access tokens from `UCANSIGN_API_KEY` and sends documents through the Naeilsajang shared account. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app. `UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID` is required only when the hidden built-in Naeilsajang 권리금계약서 template is re-enabled. Company-uploaded templates remain company-scoped in ERP and are linked to UCANSIGN template/document IDs per active template version.
 
 `UCANSIGN_TEMPLATE_LINK_SECRET` signs temporary template-link callback state for company template embedding. If it is omitted, the app falls back to `UCANSIGN_WEBHOOK_SECRET` or `UCANSIGN_API_KEY`.
 

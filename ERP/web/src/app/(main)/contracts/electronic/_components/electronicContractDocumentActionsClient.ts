@@ -15,13 +15,6 @@ type CancelResponse = {
     readonly message?: string;
 };
 
-type ViewLinkResponse = {
-    readonly data?: {
-        readonly url?: string;
-    };
-    readonly message?: string;
-};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -96,18 +89,4 @@ export async function downloadElectronicContract(contract: ElectronicContract): 
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
-}
-
-export async function openElectronicContractView(contract: ElectronicContract): Promise<void> {
-    const response = await fetch(`/api/electronic-contracts/${encodeURIComponent(contract.id)}/view-link`, {
-        method: 'POST',
-        cache: 'no-store',
-        headers: await getApiAuthHeaders()
-    });
-    const payload: ViewLinkResponse = await response.json();
-    if (!response.ok || !payload.data?.url) {
-        throw new Error(payload.message || '문서 접근 링크를 만들지 못했습니다.');
-    }
-    const openedWindow = window.open(payload.data.url, '_blank', 'noopener,noreferrer');
-    if (!openedWindow) window.location.assign(payload.data.url);
 }

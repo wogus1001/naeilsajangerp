@@ -37,3 +37,7 @@ export function canViewElectronicContract(
 export function isElectronicContractCancelableStatus(status: string | null | undefined): boolean {
     return status === 'sent' || status === 'sending';
 }
+
+export function isElectronicContractDownloadableStatus(status: string | null | undefined): boolean {
+    return status === 'completed';
+}
