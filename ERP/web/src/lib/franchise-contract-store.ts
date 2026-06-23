@@ -75,6 +75,11 @@ export type ContractStoreLocationDraft = {
     };
 };
 
+export function getContractStoreDraftValidationError(draft: Pick<ContractStoreLocationDraft, 'address'>): string {
+    if (!cleanString(draft.address)) return '주소 검색으로 가맹점 주소를 선택해주세요.';
+    return '';
+}
+
 function cleanString(value: unknown): string {
     return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -145,6 +150,8 @@ export function buildContractStoreLocationDraft(input: {
                 status: input.source.status || '',
                 region: input.source.region || '',
                 address: input.source.address || '',
+                latitude: input.source.latitude ?? null,
+                longitude: input.source.longitude ?? null,
                 depositAmount: input.source.depositAmount ?? null,
                 monthlyRent: input.source.monthlyRent ?? null,
                 salePrice: input.source.salePrice ?? null,

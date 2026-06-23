@@ -3,6 +3,11 @@
 import React from 'react';
 import { ExternalLink, MapPin, Save, Store, Wand2 } from 'lucide-react';
 import KakaoAddressSearch, { type KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
+import {
+    buildContractStoreFormState,
+    readContractStoreFormStatus,
+    type ContractStoreFormState
+} from '@/lib/franchise-contract-store-form';
 import { readContractStoreSourceType } from '@/lib/franchise-contract-store';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
@@ -14,24 +19,13 @@ import type {
 } from './types';
 import styles from './LeadContractStoreSection.module.css';
 
-type StoreFormState = {
-    readonly name: string;
-    readonly brand: string;
-    readonly status: string;
-    readonly region: string;
-    readonly address: string;
-    readonly latitude: number | null;
-    readonly longitude: number | null;
-    readonly openedAt: string;
-    readonly memo: string;
-};
-
 type SourceOption = {
     readonly key: string;
     readonly sourceType: 'franchise_location' | 'external_property_listing';
     readonly targetId: string;
     readonly title: string;
     readonly meta: string;
+    readonly region: string;
     readonly address: string;
     readonly latitude: number | null;
     readonly longitude: number | null;
@@ -53,7 +47,7 @@ type LocationResponse = {
     readonly created?: boolean;
 };
 
-const STORE_STATUSES = ['오픈준비', '운영중', '휴점', '폐점'] as const;
+const STORE_STATUSES = ['오픈준비', '운영중', '휴점', '폐점'];
 
 function buildSourceKey(sourceType: SourceOption['sourceType'], targetId: string): string {
     return `${sourceType}:${targetId}`;
@@ -66,30 +60,12 @@ function parseSourceKey(value: string): Pick<SourceOption, 'sourceType' | 'targe
     return { sourceType, targetId };
 }
 
-function readStoreStatus(value: string): string {
-    return STORE_STATUSES.find(status => status === value) || '오픈준비';
-}
-
 function formatMoney(value?: number | null): string {
     if (!value || !Number.isFinite(value)) return '';
     return `${Math.round(value / 10_000).toLocaleString()}만원`;
 }
 
-function toStoreFormState(lead: FranchiseLead, location?: FranchiseLocation | null, source?: SourceOption | null): StoreFormState {
-    return {
-        name: location?.name || source?.title || `${lead.name} 가맹점`,
-        brand: location?.brand || lead.interestedBrand || '',
-        status: readStoreStatus(location?.status || '오픈준비'),
-        region: location?.region || lead.desiredRegion || '',
-        address: location?.address || source?.address || '',
-        latitude: location?.latitude ?? source?.latitude ?? null,
-        longitude: location?.longitude ?? source?.longitude ?? null,
-        openedAt: location?.openedAt || '',
-        memo: location?.memo || `${lead.name} 계약 완료 후 오픈준비 전환`
-    };
-}
-
-function updateAddressFromKakao(result: KakaoAddressResult): Pick<StoreFormState, 'address' | 'region' | 'latitude' | 'longitude'> {
+function updateAddressFromKakao(result: KakaoAddressResult): Pick<ContractStoreFormState, 'address' | 'region' | 'latitude' | 'longitude'> {
     return {
         address: result.address,
         region: result.region,
@@ -118,7 +94,8 @@ export function LeadContractStoreSection({
 }: LeadContractStoreSectionProps) {
     const [storeLocation, setStoreLocation] = React.useState<FranchiseLocation | null>(null);
     const [selectedSourceKey, setSelectedSourceKey] = React.useState('');
-    const [form, setForm] = React.useState<StoreFormState>(() => toStoreFormState(lead));
+    const [isDirectEntry, setIsDirectEntry] = React.useState(false);
+    const [form, setForm] = React.useState<ContractStoreFormState>(() => buildContractStoreFormState(lead));
     const [isLoading, setIsLoading] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
     const [message, setMessage] = React.useState('');
@@ -138,6 +115,7 @@ export function LeadContractStoreSection({
                     targetId: location.id,
                     title: location.name,
                     meta: [location.locationType || '예정점', location.status || '상태 미지정', location.brand || '브랜드 미지정'].join(' · '),
+                    region: location.region || '',
                     address: location.address || location.region || '',
                     latitude: location.latitude ?? null,
                     longitude: location.longitude ?? null
@@ -152,6 +130,7 @@ export function LeadContractStoreSection({
                 targetId: listing.id,
                 title: listing.title || listing.address || '외부 상가',
                 meta: formatListingMeta(listing),
+                region: listing.region || '',
                 address: listing.address || listing.region || '',
                 latitude: null,
                 longitude: null
@@ -176,7 +155,7 @@ export function LeadContractStoreSection({
             const data = unwrapApiData<LocationResponse>(payload);
             const [firstLocation] = data.locations || [];
             setStoreLocation(firstLocation || null);
-            if (firstLocation) setForm(toStoreFormState(lead, firstLocation));
+            if (firstLocation) setForm(buildContractStoreFormState(lead, firstLocation));
         } catch (error) {
             setStoreLocation(null);
             setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 불러오지 못했습니다.');
@@ -190,17 +169,28 @@ export function LeadContractStoreSection({
     }, [fetchStoreLocation]);
 
     React.useEffect(() => {
-        if (!selectedSourceKey && sourceOptions.length === 1) {
+        if (!isDirectEntry && !selectedSourceKey && sourceOptions.length === 1) {
             setSelectedSourceKey(sourceOptions[0]?.key || '');
         }
-    }, [selectedSourceKey, sourceOptions]);
+    }, [isDirectEntry, selectedSourceKey, sourceOptions]);
 
     React.useEffect(() => {
-        if (!storeLocation) setForm(toStoreFormState(lead, null, selectedSource));
+        if (!storeLocation) setForm(buildContractStoreFormState(lead, null, selectedSource));
     }, [lead, selectedSource, storeLocation]);
 
-    const updateForm = (patch: Partial<StoreFormState>) => {
+    const updateForm = (patch: Partial<ContractStoreFormState>) => {
         setForm(prev => ({ ...prev, ...patch }));
+    };
+
+    const selectSource = (sourceKey: string) => {
+        setIsDirectEntry(false);
+        setSelectedSourceKey(sourceKey);
+    };
+
+    const switchToDirectEntry = () => {
+        setIsDirectEntry(true);
+        setSelectedSourceKey('');
+        setForm(buildContractStoreFormState(lead));
     };
 
     const saveExistingStore = async () => {
@@ -290,7 +280,7 @@ export function LeadContractStoreSection({
                                         type="radio"
                                         name="contract-store-source"
                                         checked={selectedSourceKey === option.key}
-                                        onChange={() => setSelectedSourceKey(option.key)}
+                                        onChange={() => selectSource(option.key)}
                                     />
                                     <span>
                                         <strong>{option.title}</strong>
@@ -302,6 +292,11 @@ export function LeadContractStoreSection({
                         </div>
                     ) : (
                         <div className={styles.empty}>연결된 후보지가 없습니다. 직접 입력으로 먼저 등록할 수 있습니다.</div>
+                    )}
+                    {sourceOptions.length > 0 && (
+                        <button type="button" className={styles.directEntryButton} onClick={switchToDirectEntry} disabled={isSaving || isLoading}>
+                            직접 입력으로 전환
+                        </button>
                     )}
                 </div>
             )}
@@ -317,7 +312,7 @@ export function LeadContractStoreSection({
                 </label>
                 <label>
                     상태
-                    <select value={form.status} onChange={(event) => updateForm({ status: readStoreStatus(event.target.value) })} disabled={isSaving || isLoading}>
+                    <select value={form.status} onChange={(event) => updateForm({ status: readContractStoreFormStatus(event.target.value) })} disabled={isSaving || isLoading}>
                         {STORE_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
                     </select>
                 </label>
@@ -361,14 +356,16 @@ export function LeadContractStoreSection({
                     </>
                 ) : (
                     <>
-                        <button
-                            type="button"
-                            className={styles.secondaryAction}
-                            onClick={() => void createStore(false)}
-                            disabled={isSaving || isLoading}
-                        >
-                            직접 입력 생성
-                        </button>
+                        {(isDirectEntry || sourceOptions.length === 0) && (
+                            <button
+                                type="button"
+                                className={styles.secondaryAction}
+                                onClick={() => void createStore(false)}
+                                disabled={isSaving || isLoading}
+                            >
+                                직접 입력 생성
+                            </button>
+                        )}
                         <button
                             type="button"
                             className={styles.primaryAction}

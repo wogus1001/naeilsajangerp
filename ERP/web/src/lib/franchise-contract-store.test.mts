@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     buildContractStoreLocationDraft,
+    getContractStoreDraftValidationError,
     readContractStoreSourceType,
     type ContractStoreLeadInput,
     type ContractStoreSourceInput
@@ -53,6 +54,8 @@ test('Given a linked candidate location When building a contract store draft The
     assert.equal(draft.latitude, 37.1);
     assert.equal(draft.longitude, 127.1);
     assert.equal(draft.sourceCandidateSnapshot.locationType, '예정점');
+    assert.equal(draft.sourceCandidateSnapshot.latitude, 37.1);
+    assert.equal(draft.sourceCandidateSnapshot.longitude, 127.1);
 });
 
 test('Given no linked source When building a direct contract store draft Then lead defaults and manual edits are used', () => {
@@ -78,4 +81,17 @@ test('Given no linked source When building a direct contract store draft Then le
 test('Given an unknown source type When reading contract store source type Then direct is used', () => {
     assert.equal(readContractStoreSourceType('external_property_listing'), 'external_property_listing');
     assert.equal(readContractStoreSourceType('unknown'), 'direct');
+});
+
+test('Given a contract store draft without address When validating Then creation is blocked', () => {
+    const draft = buildContractStoreLocationDraft({
+        lead,
+        source: null,
+        draft: {
+            name: '주소 없는 가맹점'
+        },
+        nowIso: '2026-06-23T09:00:00.000Z'
+    });
+
+    assert.equal(getContractStoreDraftValidationError(draft), '주소 검색으로 가맹점 주소를 선택해주세요.');
 });

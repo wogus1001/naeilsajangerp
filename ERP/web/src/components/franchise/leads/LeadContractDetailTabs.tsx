@@ -78,6 +78,7 @@ export function LeadContractDetailTabs({
 
             {activeTab === 'checklist' && (
                 <LeadContractChecklistSection
+                    companyId={lead.companyId || ''}
                     leadId={lead.id}
                     userId={userId}
                     refreshKey={checklistRefreshKey}

@@ -8,6 +8,7 @@ import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import {
     buildContractStoreLocationDraft,
+    getContractStoreDraftValidationError,
     readContractStoreSourceType,
     type ContractStoreDraftInput,
     type ContractStoreLeadInput,
@@ -277,6 +278,9 @@ export async function POST(request: Request) {
             draft: readDraftInput(bodyRaw),
             nowIso: new Date().toISOString()
         });
+        const validationError = getContractStoreDraftValidationError(draft);
+        if (validationError) return fail(400, 'VALIDATION_ERROR', validationError);
+
         const locationBody: LocationRequestBody = { ...draft };
         const insert = buildInsertPayload(locationBody, lead.company_id, lead.manager_id, requester.id);
         if (insert.error) return insert.error;
