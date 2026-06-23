@@ -26,12 +26,15 @@ test('Given dashboard and franchise paths When resolving company menu feature Th
     const dashboard = getCompanyMenuFeatureForPath('/dashboard');
     const franchiseLeads = getCompanyMenuFeatureForPath('/dashboard/franchise-leads');
     const marketInsights = getCompanyMenuFeatureForPath('/dashboard/franchise-leads/market-insights');
+    const franchiseLocations = getCompanyMenuFeatureForPath('/dashboard/franchise-locations');
     const franchiseOperations = getCompanyMenuFeatureForPath('/dashboard/franchise-operations');
 
     assert.equal(dashboard?.category, '대시보드');
     assert.equal(dashboard?.title, '대시보드');
     assert.equal(franchiseLeads?.category, '프랜차이즈');
     assert.equal(marketInsights?.category, '프랜차이즈');
+    assert.equal(franchiseLocations?.category, '가맹 운영');
+    assert.equal(franchiseLocations?.title, '물건지 지도');
     assert.equal(franchiseOperations?.category, '프랜차이즈');
 });
 
@@ -43,7 +46,9 @@ test('Given sidebar sections When reading navigation Then dashboard is top-level
     assert.equal(dashboardSection?.direct, true);
     assert.deepEqual(dashboardSection?.items.map(item => item.title), ['대시보드']);
     assert.equal(franchiseSection?.key, 'franchise');
-    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영', '전자계약']);
+    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영', '물건지 지도', '전자계약']);
+    assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.depth, 1);
+    assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.category, '가맹 운영');
 });
 
 test('Given a saved company dashboard mode When normalizing Then only A and B are accepted', () => {

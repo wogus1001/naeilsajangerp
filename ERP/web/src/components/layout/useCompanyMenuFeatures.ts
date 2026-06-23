@@ -48,6 +48,7 @@ function parseFlagMap(value: unknown): CompanyMenuFlagMap | null {
         franchiseMatchingRequest: flags.franchiseMatchingRequest !== false,
         franchisePropertyRegistration: flags.franchisePropertyRegistration !== false,
         marketInsights: flags.marketInsights !== false,
+        franchiseLocations: flags.franchiseLocations !== false,
         franchiseOperations: flags.franchiseOperations !== false,
         properties: flags.properties !== false,
         propertyRegister: flags.propertyRegister !== false,
