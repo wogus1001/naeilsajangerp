@@ -1,18 +1,18 @@
-import { AlertTriangle, Building2, CheckCircle2, Store } from 'lucide-react';
+import { AlertTriangle, Building2, MapPin, Store } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
 type OperationsSummaryProps = {
     readonly activeCount: number;
     readonly openingCount: number;
     readonly pausedCount: number;
-    readonly scannedCount: number;
+    readonly addressedCount: number;
 };
 
 export function OperationsSummary({
     activeCount,
     openingCount,
     pausedCount,
-    scannedCount
+    addressedCount
 }: OperationsSummaryProps) {
     return (
         <div className={styles.marketSummaryCards}>
@@ -35,10 +35,10 @@ export function OperationsSummary({
                 <small>휴점 상태로 확인이 필요한 매장</small>
             </article>
             <article>
-                <CheckCircle2 size={18} />
-                <span>경쟁스캔</span>
-                <strong>{scannedCount.toLocaleString()}개</strong>
-                <small>주변 경쟁업체 수집 완료</small>
+                <MapPin size={18} />
+                <span>주소 등록</span>
+                <strong>{addressedCount.toLocaleString()}개</strong>
+                <small>지도화 가능한 주소 보유 매장</small>
             </article>
         </div>
     );

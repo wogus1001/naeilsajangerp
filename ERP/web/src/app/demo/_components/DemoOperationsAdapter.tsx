@@ -51,7 +51,7 @@ export function DemoOperationsAdapter({ onSimulate }: DemoOperationsAdapterProps
                         activeCount={activeCount}
                         openingCount={openingCount}
                         pausedCount={pausedCount}
-                        scannedCount={0}
+                        addressedCount={locations.filter(location => location.address).length}
                     />
                     <div className={pageStyles.locationMasterPanel}>
                         <div className={pageStyles.locationMasterHeader}>
@@ -63,14 +63,12 @@ export function DemoOperationsAdapter({ onSimulate }: DemoOperationsAdapterProps
                         <FranchiseLocationList
                             locations={locations}
                             updatingStatusId=""
-                            scanningLocationId=""
                             deletingLocationId=""
                             onEdit={location => onSimulate(`${location.name} 샘플 수정`)}
                             onDelete={location => {
                                 setLocations(current => current.filter(item => item.id !== location.id));
                                 onSimulate(`${location.name} 샘플 삭제`);
                             }}
-                            onScan={location => onSimulate(`${location.name} 샘플 경쟁스캔`)}
                             onStatusChange={updateStatus}
                         />
                     </div>
