@@ -586,6 +586,17 @@
 - 브라우저 QA: 기존 `http://localhost:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic` 템플릿 관리 탭을 확인했다. 연결 완료 템플릿은 표시되고, 미연결 템플릿 이름, `연결 필요 템플릿` 섹션, `UCanSign 연결 필요`/`연결 후 작성`/`연결하기` 문구는 화면에 없었다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-template-unlinked-hidden.png`.
 - 신규 SQL은 없다.
 
+## 2026-06-23 전자계약 발송 후 이동/다운로드 상태 QA
+
+- 운영 증상: `서명 대기` 문서에서 다운로드를 누르면 UCanSign `full-file` API가 500을 반환했고, `내용 확인 후 서명`으로 만든 UCanSign read URL은 실서버에서 빈 화면, `reason=1docError`, 또는 UCanSign 로그인 페이지를 보였다.
+- 조치: ERP 문서함에서 `내용 확인 후 서명` 액션과 `/api/electronic-contracts/[id]/view-link` route를 제거했다. 서명자는 UCanSign이 발송한 이메일/카카오톡 링크로 서명하고, ERP 문서함은 문서 상태 확인, 서명 요청 취소, 삭제, 완료 문서 다운로드만 제공한다.
+- 다운로드 노출 기준은 `completed` 상태로 제한했다. 직접 다운로드 API를 호출해도 완료 전 문서는 UCanSign까지 호출하지 않고 `서명 완료 후 다운로드할 수 있습니다.` validation error를 반환한다.
+- 공통 권리금 작성과 회사 템플릿 작성 모두 발송 성공 후 작성 화면에 머물지 않고 `/contracts/electronic` 문서함으로 즉시 이동한다.
+- 아직 완성 전인 기본 제공 `권리금계약서`도 공통 템플릿 목록에서 숨겼다. 숨김 상태에서는 `공통 템플릿` 섹션 자체가 렌더되지 않고, 회사 템플릿 목록만 표시된다.
+- 검증: `npx tsx --test src/lib/electronic-contracts/common-templates.test.mts src/lib/electronic-contracts/document-permissions.test.mts src/lib/ucansign/platform-document-actions.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 `http://127.0.0.1:3000` dev 서버에 Playwright auth/API mock을 주입해 `/contracts/electronic`를 1280px/390px에서 확인했다. `내용 확인 후 서명`은 0건, 다운로드 버튼은 완료 문서 1건에만 표시, 서명 대기 문서는 취소/삭제만 표시, 템플릿 관리 탭에는 `권리금계약서`와 `공통 템플릿` 섹션이 없었다. 두 viewport 모두 page-level horizontal overflow 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/electronic-contract-actions-template-hidden-desktop.png`, `ERP/web/.omo/evidence/electronic-contract-actions-template-hidden-mobile.png`.
+- 신규 SQL은 없다.
+
 ## 다음 QA 체크리스트
 
 ### P0
