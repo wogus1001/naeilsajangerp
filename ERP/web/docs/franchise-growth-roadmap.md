@@ -139,7 +139,18 @@
 
 ### 본사 운영관리
 
-- `/dashboard/franchise-operations`는 운영 가맹점 마스터, 수동 승격 외부 상가 운영 전환, 오픈 준비 프로젝트를 본사 운영 화면으로 묶는다.
+- 프랜차이즈 하위 서비스는 `물건지 지도` 축을 둔다. 2026-06-23 1차로 `가맹 운영` 하위에 `/dashboard/franchise-locations`를 추가해 `franchise_locations`의 `가맹 운영점`과 `출점 후보지`를 Kakao 지도 위에 함께 표시한다.
+- `물건지 지도` 서비스의 장기 구조는 `가맹 운영점`, `출점 후보지`, `외부 상가 수집`을 탭처럼 분리해 같은 지도/목록 UX를 공유하되 업무 목적은 분리한다.
+- `가맹 운영점`은 기존 `/dashboard/franchise-operations` 역할로, 계약 후 실제 운영점과 오픈준비 매장의 상태, 리뷰, 매출, 운영 이슈를 본다.
+- `출점 후보지`는 기존 `/dashboard/franchise-leads/market-insights`의 후보지 마스터 역할로, 임대조건, 권리금, 입지, 후보자 연결, 검토 메모를 본다.
+- `외부 상가 수집`은 기존 `realty-import` 탭 역할로, 후보 원천을 수집하고 선별하는 영역이다. 외부 원본에서 운영점으로 바로 전환하는 패널은 당분간 숨김 유지하고, 계약완료 인계 흐름과 충돌하지 않게 재설계한다.
+- 지도 기반 화면은 `물건지 지도` 공통 대시보드 v1로 시작했다. 현재는 `전체 / 가맹 운영점 / 출점 후보지` 필터, 상태 필터, 검색, 지도 마커, 선택 물건지 상세 패널을 제공한다. 저장 좌표는 한국 범위 검증 후 사용하고 위도/경도 반전 좌표는 자동 보정한다. 저장 좌표가 없거나 범위 밖이고 주소가 있는 항목은 브라우저 Kakao geocoder로 임시 좌표를 조회해 표시하되, 저장 좌표가 있는 물건지는 주소 지오코딩 상한과 무관하게 모두 지도에 표시한다.
+- 다음 단계에서는 외부 상가 수집 원본도 같은 지도 축으로 묶고, 좌표는 서버 Kakao/Naver 주소 API 또는 저장 시점 지오코딩으로 `franchise_locations`에 영구 저장한다.
+- `/dashboard/franchise-operations`는 운영 가맹점 마스터를 중심으로 본사 운영 현황을 본다. 2026-06-23 기준 화면은 `대시보드 / 가맹점 목록 / 가맹점 등록`으로 분리해, 등록 폼과 목록이 한 화면에서 섞이지 않게 정리했다.
+- 가맹 운영 대시보드는 운영 상태 그래프와 시도 단위 한국 지도형 분포, 주소 등록 현황을 먼저 제공한다. 시도 분포는 저장된 `franchise_locations`의 상태/주소/지역 문자열을 기준으로 집계하며, 실제 지도 핀 탐색은 `/dashboard/franchise-locations`에서 담당한다.
+- 가맹 운영 화면의 경쟁스캔 UI는 임시 숨김 상태다. `competitionScan` 데이터 구조와 API는 유지하되, provider 비용/정책과 지도 UX가 정리될 때 출점 후보지/가맹 운영 공통 대시보드로 다시 노출한다.
+- `manual-promoted` 외부 승격 물건지의 운영 전환 패널도 임시 숨김 상태다. 외부 상가 원본에서 바로 운영 가맹점으로 넘기는 흐름은 후보지 검토/계약완료 인계와 중복될 수 있어, 향후 `모객 DB > 계약 완료 > 가맹점 정보` 흐름과 연결해 재설계한다.
+- 오픈 준비 프로젝트 UI는 현재 가맹 운영 화면에서 숨기고, 계약완료 점주 상세의 가맹점 정보/구비서류 체크리스트와 이어지는 별도 고도화 범위로 이관한다. 기존 `franchise_opening_projects` 테이블/API는 보존한다.
 - 2026-06-11 `franchise_opening_projects` 전용 테이블/API/UI MVP를 추가했다. 프로젝트는 `오픈준비` 상태의 `franchise_locations`에만 연결하고, 상태/목표 오픈일/메모/계약-인테리어-교육-초도물류-홍보-오픈일 checklist를 별도 저장한다.
 - 오픈 준비 프로젝트는 회사 범위가 확인된 requester만 생성/수정/삭제할 수 있다. 회사 없는 requester나 교차 회사 requester는 mutation을 차단한다.
 - 로컬 브라우저 QA에서 `/dashboard/franchise-leads`, `/dashboard/franchise-leads/market-insights?tab=realty-import`, `/dashboard/franchise-operations` 390px 모바일 진입 시 전역 사이드바가 기본 접힘 상태로 시작하고, 1440px 데스크톱에서는 기본 열림 상태를 유지함을 확인했다.
@@ -165,6 +176,12 @@
 - 브랜드 감시목록, 최근 스냅샷 KPI, 네이버 지역검색 TOP5, 위험 키워드 감지, 수집 이력 테이블 구조를 만들었다.
 - Naver 공식 API 키가 없으면 감시목록 저장과 설정 상태 표시만 가능하다.
 - 실수집 검증은 Naver 공식 API env 준비 후 진행한다.
+- 브랜드 인사이트 고도화는 본사 브랜드명 기준으로 확장한다. 예를 들어 본사 브랜드가 `애플치킨`이면 검색량 추이, 블로그/뉴스/카페/웹 언급, Threads 공개 글, 위험 키워드, 경쟁 브랜드 비교를 같은 브랜드 스냅샷 흐름에서 본다.
+- 검색량 추이는 Naver DataLab 검색어 트렌드 API를 우선 후보로 둔다. 공식 Naver Search API는 블로그/뉴스/지역검색/웹문서 언급 수집 후보로 유지한다.
+- Threads 공개 글은 Meta Threads API의 keyword search, public profile/post 조회 가능 범위와 권한 심사를 별도 검토한다. 수집 가능 범위가 제한되면 수동 키워드 리포트 또는 검증된 social listening provider를 보조 후보로 둔다.
+- 매장 평판 모니터링은 운영점 단위 고도화 범위로 둔다. 각 가맹점별 네이버, 카카오맵, 배달앱 리뷰와 별점/리뷰 수/최근 부정 키워드를 최신화해 운영점 상세와 SV 점검으로 연결한다.
+- 공식 API로 리뷰 본문이나 리뷰 수량을 안정적으로 제공하지 않는 채널은 `공식 연동/제휴 -> 수동 업로드 -> 검증된 SERP provider` 순서로 검토한다. 각 수집 결과에는 `source`, `collectedAt`, `freshness`, `providerStatus`, `externalUrl`을 남겨 최신성/출처를 구분한다.
+- 참고 공식 문서: [Naver DataLab 검색어 트렌드 API](https://developers.naver.com/docs/serviceapi/datalab/search/search.md), [Naver Search API](https://developers.naver.com/docs/serviceapi/search/blog/blog.md), [Meta Threads API](https://developers.facebook.com/docs/threads/), [Threads keyword search](https://developers.facebook.com/docs/threads/keyword-search/), [Kakao REST API reference](https://developers.kakao.com/docs/latest/en/rest-api/reference).
 
 ### 정보공개서/브랜드 마스터
 
