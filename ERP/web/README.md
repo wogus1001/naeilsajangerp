@@ -33,7 +33,8 @@ npm run start -- -p 3000
 
 ## Documentation Map
 
-- `../../MAC_CONTEXT.md`: 맥북 worktree 운영, 최근 작업 상태, 세션 시작 체크리스트.
+- `../../MAC_CONTEXT.md`: 맥북 worktree 운영, 배포 방식, 세션 시작 체크리스트.
+- `docs/franchise-current-status.md`: 프랜차이즈 최신 구현/배포/SQL/샘플/live QA 상태 요약.
 - `docs/release-management.md`: 브랜치, 커밋, dev/main 반영, 배포 이력 관리 규칙.
 - `docs/franchise-growth-roadmap.md`: 프랜차이즈 고도화 우선순위, API 정책, 다음 작업 목록.
 - `docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크.
@@ -47,7 +48,7 @@ npm run start -- -p 3000
 
 ## Database Migrations
 
-프랜차이즈 고도화 기능을 실데이터로 확인하기 전에 아래 SQL을 필요한 환경에 적용한다.
+프랜차이즈 고도화 기능을 실데이터로 확인하기 전에 아래 SQL을 필요한 환경에 적용한다. 환경별 적용 여부와 최근 사용자 확인 상태는 `docs/franchise-current-status.md`와 `docs/release-management.md`에 기록한다.
 
 ```text
 supabase_franchise_locations_migration.sql
@@ -64,7 +65,11 @@ supabase_franchise_property_promotion_migration.sql
 supabase_partner_vendor_access_migration.sql
 supabase_login_id_migration.sql
 supabase_company_menu_features_migration.sql
+supabase_company_logo_migration.sql
 supabase_electronic_contracts_platform_migration.sql
+supabase_company_contract_templates_migration.sql
+supabase_franchise_lead_documents_migration.sql
+supabase_franchise_contract_store_linkage_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
@@ -268,11 +273,15 @@ The 모객 DB list also shows a `정보공개서` column and sort options for di
 
 ## Electronic Contract v2 Setup
 
-The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven electronic contract flow lives under `/contracts/electronic`; built-in forms such as 권리금계약서 are exposed as common templates, while company-created UCanSign templates stay under company templates.
+The legacy `/contracts`, `/contracts/create`, and `/contracts/builder` flows remain available. The new ERP-driven electronic contract flow lives under `/contracts/electronic`; company-created UCanSign templates stay under company templates. Built-in forms such as 권리금계약서 are kept in the catalog but hidden from the common template list until they are production-ready.
 
 Run `supabase_electronic_contracts_platform_migration.sql` before enabling the new flow. The migration creates the platform UCANSIGN connection table, company-scoped `electronic_contracts`, webhook `contract_events`, and SafetyData license import tables.
 
 Run `supabase_company_contract_templates_migration.sql` before enabling company-uploaded contract templates. It creates company-scoped PDF template tables, roles, fields, version metadata, and extends `electronic_contracts` with `template_source`, `company_template_id`, and `company_template_version_id`. The SQL must be applied manually in Supabase SQL Editor.
+
+Run `supabase_franchise_lead_documents_migration.sql` before enabling the checklist document hub. It adds the v2 checklist columns, lead-linked electronic contracts, franchise lead documents, and checklist-document links.
+
+Run `supabase_franchise_contract_store_linkage_migration.sql` before enabling contract-completed lead to franchise operation creation. It links `franchise_locations` back to the contract lead and source candidate/external listing.
 
 Required environment variables:
 
@@ -285,7 +294,7 @@ SAFETYDATA_SERVICE_KEY=
 NEXT_PUBLIC_APP_URL=
 ```
 
-The new flow uses one Naeilsajang platform UCANSIGN API KEY. Users and companies do not connect personal UCANSIGN accounts for this flow; the server issues short-lived UCANSIGN access tokens from `UCANSIGN_API_KEY` and sends documents through the Naeilsajang shared account. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app. `UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID` is required only for the built-in Naeilsajang 권리금계약서 template. Company-uploaded templates remain company-scoped in ERP and are linked to UCANSIGN template/document IDs per active template version.
+The new flow uses one Naeilsajang platform UCANSIGN API KEY. Users and companies do not connect personal UCANSIGN accounts for this flow; the server issues short-lived UCANSIGN access tokens from `UCANSIGN_API_KEY` and sends documents through the Naeilsajang shared account. ERP separates document visibility by `company_id` and `sent_by_profile_id` so `내가 발송`, `회사 문서`, and admin `전체 문서` scopes are controlled inside the app. `UCANSIGN_PREMIUM_RIGHTS_TEMPLATE_ID` is required only when the hidden built-in Naeilsajang 권리금계약서 template is re-enabled. Company-uploaded templates remain company-scoped in ERP and are linked to UCANSIGN template/document IDs per active template version.
 
 `UCANSIGN_TEMPLATE_LINK_SECRET` signs temporary template-link callback state for company template embedding. If it is omitted, the app falls back to `UCANSIGN_WEBHOOK_SECRET` or `UCANSIGN_API_KEY`.
 

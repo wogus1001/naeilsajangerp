@@ -1,0 +1,78 @@
+.adminSidebar {
+    background-color: #212529;
+    border-right: 0;
+}
+
+.adminContentContainer {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sectionLabel {
+    padding: 0 16px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #868e96;
+    font-weight: 600;
+}
+
+.divider {
+    margin: 24px 0;
+    border-top: 1px solid #495057;
+}
+
+.logoBadge {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    background-color: #fa5252;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+@media (max-width: 720px) {
+    .adminSidebar {
+        width: 100%;
+        height: auto;
+        min-height: 0;
+    }
+
+    .adminContentContainer {
+        width: 100%;
+        height: auto;
+    }
+
+    .adminLogo {
+        min-height: 44px;
+        padding: 10px 16px;
+    }
+
+    .sectionLabel {
+        display: none;
+    }
+
+    .adminNav {
+        display: flex;
+        flex: none;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 0 12px 12px;
+    }
+
+    .adminNavItem {
+        flex: 0 0 auto;
+        margin-bottom: 0;
+    }
+
+    .adminNavLink {
+        min-height: 38px;
+        padding: 8px 12px;
+    }
+
+    .divider {
+        display: none;
+    }
+}

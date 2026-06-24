@@ -68,10 +68,6 @@ export function FranchiseLocationForm({
                 }}
             />
             <label>
-                경쟁검색 키워드
-                <input value={form.competitionKeyword} onChange={(event) => onChange({ competitionKeyword: event.target.value })} placeholder="예: 한식, 고기집, 카페" />
-            </label>
-            <label>
                 지역
                 <input value={form.region} onChange={(event) => onChange({ region: event.target.value })} placeholder="예: 서울 강남구" />
             </label>

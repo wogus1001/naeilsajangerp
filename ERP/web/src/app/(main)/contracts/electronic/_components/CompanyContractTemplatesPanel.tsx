@@ -11,6 +11,7 @@ import {
     startCompanyTemplateUcansignLink,
     type CompanyTemplateSummary
 } from './companyTemplatesClient';
+import { getCompanyTemplateSections } from './companyTemplateSections';
 import { CommonContractTemplatesSection } from './CommonContractTemplatesSection';
 import { CompanyTemplateTable } from './CompanyTemplateTable';
 import styles from './electronicContracts.module.css';
@@ -30,15 +31,12 @@ type TemplateNotice = {
 export function CompanyContractTemplatesPanel() {
     const [templates, setTemplates] = React.useState<readonly CompanyTemplateSummary[]>([]);
     const [busy, setBusy] = React.useState(false);
+    const [createContext, setCreateContext] = React.useState<{ readonly checklistStepKey?: string; readonly leadId?: string }>({});
     const [notice, setNotice] = React.useState<TemplateNotice | null>(null);
     const [pendingDelete, setPendingDelete] = React.useState<CompanyTemplateSummary | null>(null);
 
-    const activeTemplates = React.useMemo(
-        () => templates.filter(template => template.status !== 'archived'),
-        [templates]
-    );
-    const archivedTemplates = React.useMemo(
-        () => templates.filter(template => template.status === 'archived'),
+    const templateSections = React.useMemo(
+        () => getCompanyTemplateSections(templates),
         [templates]
     );
 
@@ -65,10 +63,18 @@ export function CompanyContractTemplatesPanel() {
 
     React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
+        setCreateContext({
+            leadId: params.get('leadId') || undefined,
+            checklistStepKey: params.get('checklistStepKey') || undefined
+        });
+    }, []);
+
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
         const status = params.get('ucansignTemplate');
         if (!status) return;
         if (status === 'connected') {
-            showSuccess('연결했습니다.');
+            showSuccess('템플릿 연결을 저장했습니다.');
         } else {
             showError('템플릿 연결을 완료하지 못했습니다.');
         }
@@ -120,7 +126,7 @@ export function CompanyContractTemplatesPanel() {
         try {
             await copyCompanyTemplate(template.id);
             await loadTemplates();
-            showSuccess('복사했습니다.');
+            showSuccess('템플릿을 복사했습니다.');
         } catch (caught) {
             showError(caught instanceof Error ? caught.message : '템플릿 복사에 실패했습니다.');
         } finally {
@@ -139,7 +145,7 @@ export function CompanyContractTemplatesPanel() {
                 pendingDelete.status === 'archived'
                     ? '삭제했습니다.'
                     : result.archived
-                        ? '보관했습니다.'
+                        ? '보관 템플릿으로 이동했습니다.'
                         : '삭제했습니다.'
             );
             setPendingDelete(null);
@@ -157,7 +163,7 @@ export function CompanyContractTemplatesPanel() {
             const nextStatus = template.latestVersion?.ucansignTemplateId ? 'active' : 'draft';
             await restoreCompanyTemplate(template.id, nextStatus);
             await loadTemplates();
-            showSuccess('복원했습니다.');
+            showSuccess('템플릿을 복원했습니다.');
         } catch (caught) {
             showError(caught instanceof Error ? caught.message : '템플릿 복원에 실패했습니다.');
         } finally {
@@ -174,7 +180,7 @@ export function CompanyContractTemplatesPanel() {
                     </div>
                     <button className={styles.primaryButton} type="button" onClick={createTemplateAndOpenSetup} disabled={busy}>
                         <ExternalLink size={16} />
-                        템플릿 만들기
+                        회사 템플릿 만들기
                     </button>
                 </div>
             </section>
@@ -189,22 +195,23 @@ export function CompanyContractTemplatesPanel() {
             <CommonContractTemplatesSection />
 
             <section className={styles.panel}>
-                <h3 className={styles.templateSectionTitle}>회사 템플릿</h3>
+                <h3 className={styles.templateSectionTitle}>회사 발송 템플릿</h3>
                 <CompanyTemplateTable
-                    templates={activeTemplates}
-                    emptyText="사용 중인 회사 템플릿이 없습니다."
+                    templates={templateSections.readyTemplates}
+                    emptyText="발송 가능한 회사 템플릿이 없습니다."
                     busy={busy}
+                    createContext={createContext}
                     onEdit={editTemplate}
                     onCopy={copyTemplate}
                     onDelete={setPendingDelete}
                 />
             </section>
 
-            {archivedTemplates.length > 0 && (
+            {templateSections.archivedTemplates.length > 0 && (
                 <section className={styles.panel}>
                     <h3 className={styles.templateSectionTitle}>보관 템플릿</h3>
                     <CompanyTemplateTable
-                        templates={archivedTemplates}
+                        templates={templateSections.archivedTemplates}
                         emptyText="보관된 템플릿이 없습니다."
                         busy={busy}
                         archived

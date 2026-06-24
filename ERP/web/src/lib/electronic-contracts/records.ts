@@ -1,6 +1,7 @@
 export type ElectronicContractRow = {
     readonly id: string;
     readonly company_id: string | null;
+    readonly lead_id: string | null;
     readonly sent_by_profile_id: string | null;
     readonly ucansign_document_id: string | null;
     readonly template_key: string | null;
@@ -22,6 +23,7 @@ export type ElectronicContractRow = {
 export type ElectronicContractView = {
     readonly id: string;
     readonly companyId: string;
+    readonly leadId: string;
     readonly sentByProfileId: string;
     readonly ucansignDocumentId: string;
     readonly templateKey: string;
@@ -61,6 +63,7 @@ export function toElectronicContractView(row: ElectronicContractRow): Electronic
     return {
         id: row.id,
         companyId: row.company_id || '',
+        leadId: row.lead_id || '',
         sentByProfileId: row.sent_by_profile_id || '',
         ucansignDocumentId: row.ucansign_document_id || '',
         templateKey: row.template_key || '',

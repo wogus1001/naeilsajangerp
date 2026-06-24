@@ -18,6 +18,7 @@ The agent keeps project documents current while product and engineering work mov
 
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/MAC_CONTEXT.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/README.md`
+- `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-current-status.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-growth-roadmap.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-dev-qa-log.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/fdam-reference.md`
@@ -27,8 +28,9 @@ The agent keeps project documents current while product and engineering work mov
 
 - Check whether development changes are reflected in the right document.
 - Keep roadmap, QA status, implementation notes, and external API limitations aligned.
+- Keep `franchise-current-status.md` as the shortest current-state source for deployment, SQL, sample data, and live QA.
 - Record verification status, blocked QA, and provider-limit issues in the QA log.
-- Keep `MAC_CONTEXT.md` concise enough for a new session to resume work.
+- Keep the top resume section of `MAC_CONTEXT.md` concise enough for a new session to resume work.
 - Keep `README.md` focused on setup, env, SQL, and operational instructions.
 - Keep reference documents separate from live status documents.
 - Keep external listing import scope, limits, source behavior, QA status, and promotion flow aligned between the roadmap and QA log.
@@ -76,6 +78,7 @@ Doc Update Brief
 항상 확인할 문서:
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/MAC_CONTEXT.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/README.md
+- /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-current-status.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-growth-roadmap.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-dev-qa-log.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/fdam-reference.md

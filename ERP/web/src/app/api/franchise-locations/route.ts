@@ -30,6 +30,24 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function readErrorText(error: unknown, key: 'code' | 'message'): string {
+    if (!error || typeof error !== 'object') return '';
+    if (key === 'code' && 'code' in error) {
+        return typeof error.code === 'string' ? error.code : '';
+    }
+    if (key === 'message' && 'message' in error) {
+        return typeof error.message === 'string' ? error.message : '';
+    }
+    return '';
+}
+
+function isMissingContractLocationSchemaError(error: unknown): boolean {
+    const code = readErrorText(error, 'code');
+    const message = readErrorText(error, 'message');
+    return ['PGRST204', '42703'].includes(code)
+        && /contract_lead_id|source_location_id|source_external_listing_id|contracted_at/i.test(message);
+}
+
 async function readLocationRequestBody(request: Request) {
     const parsed: unknown = await request.json().catch(() => null);
     if (!isRecord(parsed)) return { body: null, error: fail(400, 'VALIDATION_ERROR', 'Invalid request body') };
@@ -97,6 +115,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
         const company = searchParams.get('company');
+        const contractLeadId = cleanString(searchParams.get('contractLeadId') || searchParams.get('contract_lead_id'));
 
         const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requesterProfile) {
@@ -131,6 +150,7 @@ export async function GET(request: Request) {
 
         if (scope.companyId) query = query.eq('company_id', scope.companyId);
         if (scope.managerId) query = query.eq('manager_id', scope.managerId);
+        if (contractLeadId) query = query.eq('contract_lead_id', contractLeadId);
         if (shouldRestrictFranchiseLocationListToCreator(requesterProfile)) query = query.eq('created_by', requesterProfile.id);
 
         const { data, error } = await query;
@@ -140,6 +160,13 @@ export async function GET(request: Request) {
         return ok({ locations: (data || []).map(row => transformLocation(row, managerNames)).filter(Boolean) });
     } catch (error) {
         console.error('Franchise locations GET error:', error);
+        if (isMissingContractLocationSchemaError(error)) {
+            return fail(
+                424,
+                'VALIDATION_ERROR',
+                '계약 완료 점주 가맹점 연동 SQL이 아직 적용되지 않았습니다. supabase_franchise_contract_store_linkage_migration.sql 적용 후 다시 시도해주세요.'
+            );
+        }
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise locations');
     }
 }

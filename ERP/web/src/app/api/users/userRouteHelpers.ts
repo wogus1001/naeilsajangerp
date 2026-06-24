@@ -17,6 +17,7 @@ export type ProfileIdRow = {
 export type UserListProfileRow = {
     readonly id: string;
     readonly email: string | null;
+    readonly login_id: string | null;
     readonly name: string | null;
     readonly company_id: string | null;
     readonly role: string | null;

@@ -223,17 +223,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
     const handleLogout = async () => {
         try {
-            const userId = authUser?.uid || authUser?.id;
-            if (userId) {
-                await fetch(`/api/ucansign/disconnect?userId=${encodeURIComponent(userId)}`, {
-                    method: 'DELETE'
-                });
-            }
-        } catch (error) {
-            console.error('Failed to disconnect uCanSign on logout:', error);
-        }
-
-        try {
             const supabase = getSupabase();
             await supabase.auth.signOut();
         } catch (error) {

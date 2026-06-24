@@ -1,12 +1,12 @@
 "use client";
 
 import { CheckCircle2 } from 'lucide-react';
-import { LeadContractChecklistSection } from '@/components/franchise/LeadContractChecklistSection';
 import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import { LeadLocationLinkSection } from '@/components/franchise/LeadLocationLinkSection';
 import { LeadWorkflowSection, type LeadNextContactPresetOption } from '@/components/franchise/LeadWorkflowSection';
 import { LeadActivitySection } from './LeadActivitySection';
 import { LeadBasicInfoSection } from './LeadBasicInfoSection';
+import { LeadContractDetailTabs } from './LeadContractDetailTabs';
 import { LeadDetailHeader } from './LeadDetailHeader';
 import { LeadDetailQuickActions } from './LeadDetailQuickActions';
 import { LeadRelatedRecordsSection } from './LeadRelatedRecordsSection';
@@ -146,13 +146,16 @@ export function LeadDetailPanel({
                 />
 
                 {isContractChecklistOnly ? (
-                    <div className={styles.contractChecklistOnlyContent}>
-                        <LeadContractChecklistSection
-                            leadId={lead.id}
-                            userId={userId}
-                            onSaved={onContractChecklistSavedAction}
-                        />
-                    </div>
+                    <LeadContractDetailTabs
+                        lead={lead}
+                        userId={userId}
+                        companyName={companyName}
+                        selectedLocationLinks={selectedLocationLinks}
+                        franchiseLocations={franchiseLocations}
+                        externalListings={externalListings}
+                        isLocationMatchLoading={isLocationMatchLoading}
+                        onContractChecklistSavedAction={onContractChecklistSavedAction}
+                    />
                 ) : (
                     <>
                         {ENABLE_LEAD_CUSTOMER_DB_LINKING && lead.convertedCustomerId && (

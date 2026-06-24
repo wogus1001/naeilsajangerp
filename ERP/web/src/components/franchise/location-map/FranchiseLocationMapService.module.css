@@ -1,0 +1,845 @@
+.pageShell {
+    min-height: 100dvh;
+    padding: 24px;
+    background: #f2f4f6;
+    color: #191f28;
+}
+
+.mapHeader {
+    display: grid;
+    grid-template-columns: minmax(240px, 340px) 1fr;
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 12px;
+}
+
+.mapTitleBlock,
+.mapToolbar,
+.mapPanel,
+.errorBanner {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.mapTitleBlock {
+    padding: 18px 20px;
+}
+
+.mapTitleBlock h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.35;
+}
+
+.mapTitleBlock p {
+    margin: 6px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+    word-break: keep-all;
+}
+
+.mapToolbar {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+}
+
+.modeTabs,
+.statusFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.filterSearchRow {
+    display: grid;
+    grid-template-columns: max-content minmax(320px, 420px);
+    gap: 12px;
+    align-items: center;
+    justify-content: start;
+}
+
+.modeTab,
+.modeTabActive,
+.statusChip,
+.statusChipActive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    gap: 6px;
+    border-radius: 8px;
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.modeTab,
+.modeTabActive {
+    padding: 0 12px;
+}
+
+.modeTab span,
+.modeTabActive span {
+    color: #8b95a1;
+    font-variant-numeric: tabular-nums;
+}
+
+.modeTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.statusChip,
+.statusChipActive {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.statusChipActive {
+    border-color: #d1d6db;
+    background: #f9fafb;
+    color: #191f28;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #8b95a1;
+}
+
+.searchBox:focus-within {
+    border-color: #3182f6;
+}
+
+.searchBox input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    color: #191f28;
+    font: inherit;
+}
+
+.modeTab:hover,
+.statusChip:hover {
+    border-color: #d1d6db;
+    background: #f9fafb;
+}
+
+.errorBanner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    color: #e42939;
+    background: #fff1f2;
+    border-color: #fecdd3;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.mapWorkspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 12px;
+    height: min(720px, calc(100dvh - 220px));
+    min-height: 620px;
+}
+
+.mapCanvas {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.mapInner {
+    position: absolute;
+    inset: 0;
+}
+
+.mapInnerPicking {
+    cursor: crosshair;
+}
+
+.mapFallback {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 32px;
+    color: #6b7684;
+    text-align: center;
+}
+
+.mapFallback strong {
+    color: #191f28;
+    font-size: 16px;
+}
+
+.operationMarker,
+.candidateMarker {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    max-width: 180px;
+    gap: 4px 6px;
+    padding: 7px 9px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    box-shadow: 0 4px 14px rgb(25 31 40 / 14%);
+    cursor: pointer;
+}
+
+.candidateMarker {
+    border-color: #fed7aa;
+    background: #fff7ed;
+}
+
+.mapMarkerActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+}
+
+.markerDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+.operationMarker strong,
+.candidateMarker strong {
+    font-size: 12px;
+}
+
+.operationMarker small,
+.candidateMarker small {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.manualRadiusMarker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid #3182f6;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #2272eb;
+    box-shadow: 0 4px 14px rgb(25 31 40 / 14%);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.measurementPoint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #0f766e;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0f766e;
+    box-shadow: 0 4px 14px rgb(25 31 40 / 14%);
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.mapPanel {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 12px;
+}
+
+.panelStats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.panelStats div {
+    padding: 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.panelStats span,
+.activeCard dt {
+    display: block;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.panelStats strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 18px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.activeCard {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+}
+
+.activeCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.operationBadge,
+.candidateBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.operationBadge {
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.candidateBadge {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.activeCard h2 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.activeCard dl {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 0;
+}
+
+.activeCard dd {
+    margin: 2px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.addressLine {
+    margin: 0;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.addressLine {
+    display: flex;
+    gap: 6px;
+}
+
+.primaryLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    gap: 6px;
+    border-radius: 8px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.analysisCard {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.measureHeader strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    color: #2272eb;
+    font-size: 18px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.measureHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.measureHeader h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.measureHeader p {
+    margin: 2px 0 0;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: keep-all;
+}
+
+.analysisTabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.measureTab,
+.measureTabActive {
+    min-height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.measureTabActive {
+    border-color: #0f766e;
+    background: #ecfdf5;
+    color: #0f766e;
+}
+
+.measureResult {
+    display: grid;
+    gap: 2px;
+    min-height: 54px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.measureResult span,
+.measureResult small {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.measureResult strong {
+    color: #191f28;
+    font-size: 18px;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+}
+
+.measureActions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.measureActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    gap: 5px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.measureActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+.radiusActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.radiusPickButton,
+.radiusPickButtonActive,
+.radiusResetButton {
+    min-height: 34px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.radiusPickButton,
+.radiusResetButton {
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.radiusPickButtonActive {
+    border: 1px solid #3182f6;
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.radiusResetButton {
+    padding: 0 10px;
+}
+
+.radiusPickNotice {
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #2272eb;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.radiusTabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.radiusTab,
+.radiusTabActive {
+    min-height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.radiusTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.radiusSummary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.radiusSummary div {
+    min-width: 0;
+    padding: 8px;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.radiusSummary span {
+    display: block;
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.radiusSummary strong {
+    display: block;
+    margin-top: 2px;
+    color: #191f28;
+    font-size: 16px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.nearbyList {
+    display: grid;
+    max-height: 174px;
+    overflow: hidden;
+    overflow-y: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+}
+
+.nearbyRow {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 2px 8px;
+    padding: 9px 10px;
+    border: 0;
+    border-bottom: 1px solid #e5e8eb;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.nearbyRow:last-child {
+    border-bottom: 0;
+}
+
+.nearbyRow:hover {
+    background: #f9fafb;
+}
+
+.nearbyRow span {
+    grid-row: span 2;
+    align-self: center;
+    color: #2272eb;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.nearbyRow strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nearbyRow small {
+    overflow: hidden;
+    color: #8b95a1;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.emptyRadius {
+    padding: 14px 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #6b7684;
+    font-size: 13px;
+    text-align: center;
+}
+
+.emptyPanel {
+    padding: 24px 12px;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #6b7684;
+    text-align: center;
+    font-size: 13px;
+}
+
+.pointListSection {
+    display: grid;
+    min-height: 260px;
+    min-width: 0;
+}
+
+.pointListHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 2px 8px;
+}
+
+.pointListHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.pointListHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.pointList {
+    display: grid;
+    align-content: start;
+    max-height: 420px;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+}
+
+.pointRow,
+.pointRowActive {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 2px 8px;
+    min-height: 58px;
+    padding: 11px 10px;
+    border: 0;
+    border-bottom: 1px solid #e5e8eb;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pointRow:last-child,
+.pointRowActive:last-child {
+    border-bottom: 0;
+}
+
+.pointRowActive {
+    background: #e8f3ff;
+}
+
+.pointRow span,
+.pointRowActive span {
+    grid-row: span 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pointRow strong,
+.pointRowActive strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pointRow small,
+.pointRowActive small {
+    overflow: hidden;
+    color: #8b95a1;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+    .mapHeader,
+    .mapWorkspace {
+        grid-template-columns: 1fr;
+    }
+
+    .mapWorkspace {
+        height: auto;
+        min-height: 0;
+    }
+
+    .mapCanvas {
+        height: min(620px, calc(100dvh - 240px));
+        min-height: 560px;
+    }
+}
+
+@media (max-width: 640px) {
+    .pageShell {
+        padding: 12px;
+    }
+
+    .mapTitleBlock h1 {
+        font-size: 24px;
+    }
+
+    .mapToolbar {
+        padding: 12px;
+    }
+
+    .filterSearchRow {
+        grid-template-columns: 1fr;
+    }
+
+    .searchBox {
+        justify-self: stretch;
+        width: 100%;
+    }
+
+    .mapCanvas {
+        height: min(580px, calc(100dvh - 220px));
+        min-height: 520px;
+    }
+
+    .panelStats,
+    .activeCard dl {
+        grid-template-columns: 1fr;
+    }
+
+    .mapPanel {
+        grid-template-rows: auto;
+    }
+
+    .pointListSection {
+        min-height: 240px;
+    }
+
+    .radiusActions {
+        grid-template-columns: 1fr;
+    }
+}

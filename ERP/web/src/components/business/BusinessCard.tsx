@@ -62,6 +62,10 @@ const INITIAL_DATA: BusinessCardData = {
     promotedProperties: []
 };
 
+function createClientTimestamp() {
+    return Date.now();
+}
+
 interface BusinessCardProps {
     id?: string | null;
     onClose: () => void;
@@ -422,7 +426,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
         } else {
             // Add Mode
             const newHistory = {
-                id: Date.now(),
+                id: createClientTimestamp(),
                 ...data,
                 manager: managerName,
                 relatedProperty: data.targetName || ''
@@ -1384,4 +1388,3 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
         </div >
     );
 }
-

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Save, Send } from 'lucide-react';
 import { renderTemplateFormFromFields } from '@/lib/electronic-contracts/company-template';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -35,6 +36,8 @@ import styles from './electronicContracts.module.css';
 type Props = {
     readonly templateId: string;
     readonly draftId?: string;
+    readonly checklistStepKey?: string;
+    readonly leadId?: string;
 };
 
 type SendResponse = {
@@ -45,19 +48,31 @@ type SendResponse = {
     readonly message?: string;
 };
 
-export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: Props) {
+export function CompanyTemplateContractCreatePage({
+    templateId,
+    draftId = '',
+    checklistStepKey = '',
+    leadId = ''
+}: Props) {
+    const router = useRouter();
     const [detail, setDetail] = React.useState<CompanyTemplateDetail | null>(null);
     const [values, setValues] = React.useState<Record<string, string>>({});
     const [participants, setParticipants] = React.useState<Record<string, SignerParticipantInput>>({});
     const [sending, setSending] = React.useState(false);
     const [savingDraft, setSavingDraft] = React.useState(false);
     const [draftContractId, setDraftContractId] = React.useState('');
+    const [effectiveChecklistStepKey, setEffectiveChecklistStepKey] = React.useState(checklistStepKey);
+    const [effectiveLeadId, setEffectiveLeadId] = React.useState(leadId);
     const [message, setMessage] = React.useState('');
     const [participantIssues, setParticipantIssues] = React.useState<SignerParticipantIssueMap>({});
 
     React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const requestedDraftId = draftId || params.get('draftId') || params.get('contractId') || '';
+        const requestedChecklistStepKey = checklistStepKey || params.get('checklistStepKey') || '';
+        const requestedLeadId = leadId || params.get('leadId') || '';
+        setEffectiveChecklistStepKey(requestedChecklistStepKey);
+        setEffectiveLeadId(requestedLeadId);
         fetchCompanyTemplateDetail(templateId, { source: 'ucansign' })
             .then(nextDetail => {
                 setDetail(nextDetail);
@@ -73,7 +88,7 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                 }
             })
             .catch(caught => setMessage(caught instanceof Error ? caught.message : '템플릿을 불러오지 못했습니다.'));
-    }, [draftId, templateId]);
+    }, [checklistStepKey, draftId, leadId, templateId]);
 
     async function loadDraft(
         requestedDraftId: string,
@@ -94,6 +109,14 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                 ...initialParticipants,
                 ...signerParticipantsFromRecord(snapshotParticipants(snapshot.participants))
             });
+            const snapshotLeadId = typeof snapshot.leadId === 'string'
+                ? snapshot.leadId
+                : payload.data?.contract?.leadId || '';
+            const snapshotChecklistStepKey = typeof snapshot.checklistStepKey === 'string'
+                ? snapshot.checklistStepKey
+                : payload.data?.contract?.checklistStepKey || '';
+            if (snapshotLeadId) setEffectiveLeadId(snapshotLeadId);
+            if (snapshotChecklistStepKey) setEffectiveChecklistStepKey(snapshotChecklistStepKey);
             setDraftContractId(payload.data?.contract?.id || requestedDraftId);
             setMessage('저장된 초안을 불러왔습니다.');
         } catch (caught) {
@@ -145,6 +168,8 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                 templateId: currentDetail.template.id,
                 versionId: version.id,
                 contractId: draftContractId,
+                leadId: effectiveLeadId,
+                checklistStepKey: effectiveChecklistStepKey,
                 inputMode: 'erp',
                 values,
                 participants: Object.values(participants)
@@ -180,6 +205,8 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
                     templateId: currentDetail.template.id,
                     versionId: version.id,
                     contractId: draftContractId,
+                    leadId: effectiveLeadId,
+                    checklistStepKey: effectiveChecklistStepKey,
                     inputMode: 'erp',
                     values,
                     participants: participantValidation.participants
@@ -187,7 +214,7 @@ export function CompanyTemplateContractCreatePage({ templateId, draftId = '' }: 
             });
             const payload: SendResponse = await response.json();
             if (!response.ok) throw new Error(payload.message || '전자계약 발송에 실패했습니다.');
-            setMessage('전자계약 발송이 완료되었습니다.');
+            router.push('/contracts/electronic');
         } catch (caught) {
             setMessage(caught instanceof Error ? caught.message : '전자계약 발송에 실패했습니다.');
         } finally {

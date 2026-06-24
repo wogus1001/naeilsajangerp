@@ -121,6 +121,10 @@ const INITIAL_DATA: Customer = {
     promotedProperties: []
 };
 
+function createClientTimestamp() {
+    return Date.now();
+}
+
 interface CustomerCardProps {
     id?: string | null;
     onClose: () => void;
@@ -386,7 +390,7 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
         } else {
             // Add Mode
             const newHistory = {
-                id: Date.now(),
+                id: createClientTimestamp(),
                 ...data,
                 manager: managerName,
                 relatedProperty: data.targetName || '' // Mapped from WorkHistoryModal's targetName

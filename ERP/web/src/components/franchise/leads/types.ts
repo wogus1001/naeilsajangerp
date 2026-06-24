@@ -79,8 +79,19 @@ export type RelatedBusinessCard = {
 export type FranchiseLocation = LeadLocationMatchLocation & {
     readonly companyId?: string;
     readonly managerId?: string | null;
+    readonly managerName?: string;
     readonly createdAt?: string;
     readonly updatedAt?: string;
+    readonly locationType?: string | null;
+    readonly openedAt?: string | null;
+    readonly contractLeadId?: string;
+    readonly sourceLocationId?: string;
+    readonly sourceExternalListingId?: string;
+    readonly contractedAt?: string;
+    readonly latitude?: number | null;
+    readonly longitude?: number | null;
+    readonly sourcePropertyId?: string | null;
+    readonly memo?: string | null;
 };
 
 export type ExternalPropertyListing = {

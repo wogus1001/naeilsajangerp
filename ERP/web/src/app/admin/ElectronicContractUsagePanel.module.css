@@ -1,0 +1,157 @@
+.panel {
+    margin: 32px 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.titleGroup {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.titleIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #1c64d1;
+}
+
+.title {
+    margin: 0;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.refreshButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.summaryLine {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.summaryChip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.tableWrap {
+    overflow-x: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+}
+
+.table {
+    width: 100%;
+    min-width: 840px;
+    border-collapse: collapse;
+}
+
+.table th {
+    background: #f9fafb;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: left;
+    padding: 12px;
+    white-space: nowrap;
+}
+
+.table td {
+    border-top: 1px solid #e5e8eb;
+    color: #333d4b;
+    font-size: 13px;
+    padding: 12px;
+    vertical-align: top;
+}
+
+.table td:not(:first-child) {
+    white-space: nowrap;
+}
+
+.companyName {
+    color: #191f28;
+    font-weight: 800;
+}
+
+.subtleText {
+    margin-top: 4px;
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.metric {
+    font-weight: 800;
+}
+
+.error {
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #e42939;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.empty {
+    padding: 36px 16px;
+    color: #8b95a1;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .panel {
+        padding: 16px;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

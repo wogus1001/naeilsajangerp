@@ -110,6 +110,10 @@ export function useLeadDisclosureWorkflow({
 
     const uploadDisclosureFile = async (file: File | null) => {
         if (!file) return;
+        if (!companyId) {
+            setErrorMessage('회사 정보를 확인할 수 없습니다.');
+            return;
+        }
         setIsUploadingDocument(true);
         setMessage('');
         setErrorMessage('');
@@ -117,7 +121,8 @@ export function useLeadDisclosureWorkflow({
             const upload = await uploadDisclosureFileRequest({
                 companyId,
                 companyName,
-                file
+                file,
+                requesterId: userId
             });
             setDraft(prev => ({ ...prev, fileUrl: upload.publicUrl, fileName: upload.fileName }));
             setMessage('정보공개서 파일을 업로드했습니다.');

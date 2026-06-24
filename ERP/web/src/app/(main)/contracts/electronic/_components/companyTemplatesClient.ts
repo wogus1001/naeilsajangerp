@@ -193,6 +193,8 @@ export async function saveCompanyTemplateDraft(input: {
     readonly templateId: string;
     readonly versionId: string;
     readonly contractId: string;
+    readonly leadId?: string;
+    readonly checklistStepKey?: string;
     readonly inputMode: 'erp' | 'template';
     readonly values: Record<string, string>;
     readonly participants: readonly { readonly roleKey: string; readonly name: string; readonly contact: string }[];

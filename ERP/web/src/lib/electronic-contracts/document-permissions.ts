@@ -17,6 +17,14 @@ export function canDeleteElectronicContract(
     return Boolean(contract.sentByProfileId && contract.sentByProfileId === actor.id);
 }
 
+export function canCancelElectronicContract(
+    actor: ElectronicContractActor,
+    contract: ElectronicContractOwnership
+): boolean {
+    if (actor.role === 'admin') return true;
+    return Boolean(contract.sentByProfileId && contract.sentByProfileId === actor.id);
+}
+
 export function canViewElectronicContract(
     actor: ElectronicContractActor,
     contract: ElectronicContractOwnership
@@ -24,4 +32,12 @@ export function canViewElectronicContract(
     if (actor.role === 'admin') return true;
     if (contract.sentByProfileId && contract.sentByProfileId === actor.id) return true;
     return Boolean(actor.companyId && contract.companyId && actor.companyId === contract.companyId);
+}
+
+export function isElectronicContractCancelableStatus(status: string | null | undefined): boolean {
+    return status === 'sent' || status === 'sending';
+}
+
+export function isElectronicContractDownloadableStatus(status: string | null | undefined): boolean {
+    return status === 'completed';
 }

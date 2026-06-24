@@ -1,5 +1,6 @@
 import React from 'react';
 import type {
+    LeadContractApplicability,
     LeadContractChecklistStep,
     LeadContractChecklistSummary
 } from '@/lib/franchise-lead-contract-checklist';
@@ -20,13 +21,21 @@ type ChecklistResponse = {
 type SaveStepPatch = {
     readonly completed?: boolean;
     readonly memo?: string;
+    readonly applicability?: LeadContractApplicability;
 };
 
 const EMPTY_SUMMARY: LeadContractChecklistSummary = {
     total: 0,
     completed: 0,
+    resolved: 0,
     remaining: 0,
-    progressPercent: 0
+    progressPercent: 0,
+    missingRequiredCount: 0,
+    groups: {
+        required: { total: 0, completed: 0, resolved: 0, remaining: 0, progressPercent: 0, missingDocumentCount: 0 },
+        report: { total: 0, completed: 0, resolved: 0, remaining: 0, progressPercent: 0, missingDocumentCount: 0 },
+        optional: { total: 0, completed: 0, resolved: 0, remaining: 0, progressPercent: 0, missingDocumentCount: 0 }
+    }
 };
 
 export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadContractChecklistInput) {

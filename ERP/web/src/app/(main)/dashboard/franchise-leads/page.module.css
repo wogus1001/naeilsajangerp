@@ -1913,6 +1913,38 @@
     cursor: not-allowed;
 }
 
+.operationWorkspace {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.locationMasterToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.locationMasterToolbarActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.operationWorkspaceBody {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
 .locationMasterPanel {
     margin-top: 0;
     border: 1px solid #e5e7eb;
@@ -1962,7 +1994,11 @@
 
 .locationModeTab,
 .locationModeTabActive {
+    display: inline-flex;
     height: 30px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     padding: 0 11px;
     border: 1px solid transparent;
     border-radius: 6px;
@@ -1981,6 +2017,195 @@
 
 .locationMasterBody {
     padding: 12px;
+}
+
+.operationDashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    min-width: 0;
+}
+
+.operationChartPanel {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.operationChartHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.operationChartHeader h4 {
+    margin: 0;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.operationChartHeader p {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 12px;
+}
+
+.operationChartHeader span,
+.operationChartHeader svg {
+    flex: 0 0 auto;
+    color: #3182f6;
+    font-weight: 900;
+}
+
+.operationBarList {
+    display: grid;
+    gap: 8px;
+}
+
+.operationBarRow {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr) 42px;
+    gap: 9px;
+    align-items: center;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.operationBarRow > div {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eef2f7;
+}
+
+.operationBarRow i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #3182f6;
+}
+
+.operationBarRow strong {
+    color: #191f28;
+    font-size: 12px;
+    text-align: right;
+}
+
+.operationKoreaMap {
+    display: flex;
+    min-height: 320px;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+.operationKoreaSvg {
+    width: min(100%, 420px);
+    height: auto;
+    overflow: visible;
+}
+
+.operationMapRegion {
+    stroke: #ffffff;
+    stroke-width: 1.4;
+    vector-effect: non-scaling-stroke;
+}
+
+.operationMapRegionEmpty {
+    fill: #edf1f5;
+}
+
+.operationMapRegionLight {
+    fill: #d9e8ff;
+}
+
+.operationMapRegionMedium {
+    fill: #9fc7f8;
+}
+
+.operationMapRegionStrong {
+    fill: #3182f6;
+}
+
+.operationMapLabel {
+    fill: #191f28;
+    font-size: 9px;
+    font-weight: 800;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+.operationMapLabelCompact {
+    font-size: 7px;
+}
+
+.operationMapLabelCount {
+    fill: #4e5968;
+    font-size: 8px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.operationMapLabelStrong,
+.operationMapLabelStrong .operationMapLabelCount {
+    fill: #ffffff;
+}
+
+.operationSidoSummaryList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.operationSidoSummaryChip,
+.operationSidoUncategorized {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 0 9px;
+    border: 1px solid #e5e8eb;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.operationSidoSummaryChip strong,
+.operationSidoUncategorized strong {
+    color: #191f28;
+    font-variant-numeric: tabular-nums;
+}
+
+.operationSidoUncategorized {
+    background: #f9fafb;
+    color: #6b7684;
+}
+
+.operationDashboardEmpty {
+    display: flex;
+    min-height: 110px;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #d8dee8;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
 }
 
 .locationMasterFormPane {
@@ -5693,11 +5918,57 @@
 }
 
 .contractChecklistOnlyPanel {
-    width: min(760px, calc(100vw - 32px));
+    width: min(1180px, calc(100vw - 32px));
 }
 
-.contractChecklistOnlyContent .contractChecklistSection {
-    margin-top: 0;
+.contractChecklistOnlyContent {
+    display: grid;
+    gap: 16px;
+}
+
+.contractDetailTabs {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    padding: 4px;
+    overflow-x: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.contractDetailTab,
+.contractDetailTabActive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 132px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.contractDetailTab {
+    background: transparent;
+    color: #4e5968;
+}
+
+.contractDetailTab:hover {
+    background: #ffffff;
+    color: #191f28;
+}
+
+.contractDetailTabActive {
+    background: #ffffff;
+    border-color: #cce5ff;
+    color: #0064d9;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .detailHeader {
@@ -7849,6 +8120,41 @@
 
     .marketSummaryCards {
         grid-template-columns: 1fr;
+    }
+
+    .locationMasterHeader,
+    .locationMasterHeaderActions,
+    .locationMasterToolbar,
+    .locationMasterToolbarActions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .locationModeTabs {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .locationModeTab,
+    .locationModeTabActive {
+        flex: 1 0 120px;
+    }
+
+    .operationDashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .operationChartPanel {
+        padding: 12px;
+    }
+
+    .operationBarRow {
+        grid-template-columns: minmax(72px, 0.7fr) minmax(0, 1fr) 42px;
+    }
+
+    .operationKoreaMap {
+        min-height: 280px;
+        padding: 10px;
     }
 
     .realtySummaryCards {

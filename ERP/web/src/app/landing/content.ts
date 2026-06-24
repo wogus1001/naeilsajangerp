@@ -112,7 +112,7 @@ export const FEATURE_DETAILS = [
         }
     },
     {
-        title: '권리금 전자계약',
+        title: '전자계약',
         situation: 'ERP 양식에 계약 내용을 입력하면 권리금계약서 미리보기와 유캔싸인 발송 데이터로 연결합니다.',
         capabilities: ['인허가번호 내부 DB 조회', '계약서 미리보기', '내일사장 공용 유캔싸인 발송'],
         outcome: '담당자별 발송 문서와 회사 문서를 ERP 기준으로 분리해 확인합니다.',
