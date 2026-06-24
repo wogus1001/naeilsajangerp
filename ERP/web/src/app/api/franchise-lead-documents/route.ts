@@ -1,4 +1,8 @@
-import { canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
+import {
+    canAccessCompanyScope,
+    getAuthenticatedRequesterProfile,
+    type RequesterProfile
+} from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
@@ -12,11 +16,19 @@ import {
     type FranchiseLeadDocumentInput
 } from '@/lib/franchise-lead-documents';
 import { normalizeLeadContractChecklistStepKey } from '@/lib/franchise-lead-contract-checklist';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin as createSupabaseAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
 type JsonRecord = Record<string, unknown>;
+type SupabaseAdminClient = ReturnType<typeof createSupabaseAdminClient>;
+type LeadDocumentRouteDependencies = {
+    readonly getSupabaseAdmin: () => SupabaseAdminClient;
+    readonly resolveRequester: (
+        supabaseAdmin: SupabaseAdminClient,
+        request: Request
+    ) => Promise<RequesterProfile | null>;
+};
 
 type LeadAccessRow = {
     readonly id: string;
@@ -24,6 +36,13 @@ type LeadAccessRow = {
     readonly manager_id: string | null;
     readonly created_by: string | null;
 };
+
+function createDefaultRouteDependencies(): LeadDocumentRouteDependencies {
+    return {
+        getSupabaseAdmin: createSupabaseAdminClient,
+        resolveRequester: getAuthenticatedRequesterProfile
+    };
+}
 
 function isRecord(value: unknown): value is JsonRecord {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -40,10 +59,6 @@ function getFirst(body: JsonRecord, keys: readonly string[]) {
         if (Object.prototype.hasOwnProperty.call(body, key)) return body[key];
     }
     return undefined;
-}
-
-function requesterFallback(body: JsonRecord) {
-    return cleanString(getFirst(body, ['requesterId', 'userId', 'managerId', 'manager_id']));
 }
 
 async function readBody(request: Request): Promise<JsonRecord> {
@@ -137,7 +152,7 @@ function handleLeadDocumentError(error: unknown, action: string) {
 }
 
 async function fetchLead(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    supabaseAdmin: SupabaseAdminClient,
     leadId: string
 ) {
     const { data, error } = await supabaseAdmin
@@ -149,7 +164,7 @@ async function fetchLead(
 }
 
 async function fetchDocument(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    supabaseAdmin: SupabaseAdminClient,
     documentId: string
 ) {
     const { data, error } = await supabaseAdmin
@@ -161,7 +176,7 @@ async function fetchDocument(
 }
 
 async function fetchLeadDocumentState(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    supabaseAdmin: SupabaseAdminClient,
     leadId: string,
     companyId: string
 ) {
@@ -191,13 +206,13 @@ async function fetchLeadDocumentState(
 }
 
 async function assertLeadAccess(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    supabaseAdmin: SupabaseAdminClient,
     request: Request,
-    body: JsonRecord,
-    leadId: string
+    leadId: string,
+    dependencies: LeadDocumentRouteDependencies
 ) {
-    const requester = await getRequesterProfile(supabaseAdmin, request, requesterFallback(body));
-    if (!requester) return { requester: null, lead: null, response: fail(401, 'AUTH_REQUIRED', 'requesterId is required') };
+    const requester = await dependencies.resolveRequester(supabaseAdmin, request);
+    if (!requester) return { requester: null, lead: null, response: fail(401, 'AUTH_REQUIRED', 'authenticated session is required') };
 
     const { lead, error: leadError } = await fetchLead(supabaseAdmin, leadId);
     if (leadError || !lead) return { requester, lead: null, response: fail(404, 'NOT_FOUND', 'Franchise lead not found') };
@@ -207,13 +222,75 @@ async function assertLeadAccess(
     return { requester, lead, response: null };
 }
 
-export async function GET(request: Request) {
+async function assertElectronicContractDocumentAccess(
+    supabaseAdmin: SupabaseAdminClient,
+    sourceId: string,
+    scope: {
+        readonly companyId: string;
+        readonly leadId: string;
+    }
+) {
+    if (!sourceId) return fail(400, 'VALIDATION_ERROR', 'electronic contract sourceId is required');
+    const { data, error } = await supabaseAdmin
+        .from('electronic_contracts')
+        .select('id, company_id, lead_id')
+        .eq('id', sourceId)
+        .maybeSingle();
+    if (error) throw error;
+    if (!isRecord(data)) return fail(400, 'VALIDATION_ERROR', '전자계약 문서를 확인할 수 없습니다.');
+    if (cleanString(data.company_id) !== scope.companyId || cleanString(data.lead_id) !== scope.leadId) {
+        return fail(403, 'FORBIDDEN', '전자계약 문서의 후보자 범위가 일치하지 않습니다.');
+    }
+    return null;
+}
+
+async function openLeadDocument(
+    supabaseAdmin: SupabaseAdminClient,
+    request: Request,
+    documentId: string,
+    dependencies: LeadDocumentRouteDependencies
+) {
+    const { document, error: documentError } = await fetchDocument(supabaseAdmin, documentId);
+    if (documentError || !document) return fail(404, 'NOT_FOUND', 'Document not found');
+    if (cleanString(document.status) === 'archived') return fail(404, 'NOT_FOUND', 'Document not found');
+    const leadId = cleanString(document.lead_id);
+    if (!leadId) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
+
+    const access = await assertLeadAccess(supabaseAdmin, request, leadId, dependencies);
+    if (access.response) return access.response;
+    if (!access.lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
+
+    const storageTarget = readLeadDocumentScopedStorageTarget(document, {
+        companyId: access.lead.company_id,
+        leadId: access.lead.id
+    });
+    if (!storageTarget) return fail(400, 'VALIDATION_ERROR', '열람할 업로드 문서 경로를 확인할 수 없습니다.');
+
+    const expiresIn = 300;
+    const { data, error } = await supabaseAdmin.storage
+        .from(storageTarget.bucket)
+        .createSignedUrl(storageTarget.path, expiresIn);
+    if (error || !data?.signedUrl) throw error || new Error('Signed URL is missing');
+    return ok({ expiresIn, url: data.signedUrl });
+}
+
+export async function handleLeadDocumentsGET(
+    request: Request,
+    dependencies: LeadDocumentRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
-        const requester = await getRequesterProfile(supabaseAdmin, request);
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
+        const requester = await dependencies.resolveRequester(supabaseAdmin, request);
+        if (!requester) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
 
         const { searchParams } = new URL(request.url);
+        const action = searchParams.get('action') || '';
+        const documentId = searchParams.get('documentId') || searchParams.get('document_id') || searchParams.get('id') || '';
+        if (action === 'open') {
+            if (!documentId) return fail(400, 'VALIDATION_ERROR', 'documentId is required');
+            return openLeadDocument(supabaseAdmin, request, documentId, dependencies);
+        }
+
         const leadId = searchParams.get('leadId') || searchParams.get('lead_id');
         if (!leadId) return fail(400, 'VALIDATION_ERROR', 'leadId is required');
 
@@ -227,16 +304,19 @@ export async function GET(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+export async function handleLeadDocumentsPOST(
+    request: Request,
+    dependencies: LeadDocumentRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
         const body = await readBody(request);
         const leadId = cleanString(getFirst(body, ['leadId', 'lead_id']));
         if (!leadId) return fail(400, 'VALIDATION_ERROR', 'leadId is required');
 
-        const supabaseAdmin = getSupabaseAdmin();
-        const access = await assertLeadAccess(supabaseAdmin, request, body, leadId);
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
+        const access = await assertLeadAccess(supabaseAdmin, request, leadId, dependencies);
         if (access.response) return access.response;
-        if (!access.requester || !access.lead) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        if (!access.requester || !access.lead) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         if (!canAccessCompanyScope(access.requester, access.lead.company_id)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied');
         }
@@ -245,10 +325,20 @@ export async function POST(request: Request) {
         if (!title) return fail(400, 'VALIDATION_ERROR', 'title is required');
         const sourceType = normalizeFranchiseLeadDocumentSourceType(getFirst(body, ['sourceType', 'source_type']));
         const sourceId = cleanString(getFirst(body, ['sourceId', 'source_id']));
+        if (sourceType === 'electronic_contract') {
+            const sourceAccessError = await assertElectronicContractDocumentAccess(supabaseAdmin, sourceId || '', {
+                companyId: access.lead.company_id,
+                leadId: access.lead.id
+            });
+            if (sourceAccessError) return sourceAccessError;
+        }
         const storageData = buildLeadDocumentStorageData({
             storageBucket: getFirst(body, ['storageBucket', 'storage_bucket']),
             storagePath: getFirst(body, ['storagePath', 'storage_path'])
         });
+        if (sourceType === 'upload' && !storageData) {
+            return fail(400, 'VALIDATION_ERROR', 'Upload document storage path is required');
+        }
         if (storageData && !readLeadDocumentScopedStorageTarget({
             source_type: sourceType,
             data: storageData
@@ -269,7 +359,7 @@ export async function POST(request: Request) {
                 source_id: sourceId,
                 title,
                 document_status: cleanString(getFirst(body, ['documentStatus', 'document_status'])) || 'stored',
-                file_url: cleanString(getFirst(body, ['fileUrl', 'file_url'])),
+                file_url: sourceType === 'upload' ? '' : cleanString(getFirst(body, ['fileUrl', 'file_url'])),
                 file_name: cleanString(getFirst(body, ['fileName', 'file_name'])),
                 memo: cleanString(body.memo),
                 status: 'active',
@@ -307,21 +397,24 @@ export async function POST(request: Request) {
     }
 }
 
-export async function PATCH(request: Request) {
+export async function handleLeadDocumentsPATCH(
+    request: Request,
+    dependencies: LeadDocumentRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
         const body = await readBody(request);
         const documentId = cleanString(getFirst(body, ['id', 'documentId', 'document_id']));
         if (!documentId) return fail(400, 'VALIDATION_ERROR', 'documentId is required');
 
-        const supabaseAdmin = getSupabaseAdmin();
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
         const { document, error: documentError } = await fetchDocument(supabaseAdmin, documentId);
         if (documentError || !document) return fail(404, 'NOT_FOUND', 'Document not found');
         const leadId = cleanString(document.lead_id);
         if (!leadId) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
 
-        const access = await assertLeadAccess(supabaseAdmin, request, body, leadId);
+        const access = await assertLeadAccess(supabaseAdmin, request, leadId, dependencies);
         if (access.response) return access.response;
-        if (!access.requester || !access.lead) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        if (!access.requester || !access.lead) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         if (!canAccessCompanyScope(access.requester, access.lead.company_id)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied');
         }
@@ -334,7 +427,7 @@ export async function PATCH(request: Request) {
         const nextFileName = cleanString(getFirst(body, ['fileName', 'file_name']));
         if (nextTitle) updatePayload.title = nextTitle;
         if (nextDocumentStatus) updatePayload.document_status = nextDocumentStatus;
-        if (nextFileUrl) updatePayload.file_url = nextFileUrl;
+        if (nextFileUrl && cleanString(document.source_type) !== 'upload') updatePayload.file_url = nextFileUrl;
         if (nextFileName) updatePayload.file_name = nextFileName;
         if (Object.prototype.hasOwnProperty.call(body, 'memo')) updatePayload.memo = cleanString(body.memo) || '';
         const storageData = buildLeadDocumentStorageData({
@@ -384,9 +477,12 @@ export async function PATCH(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+export async function handleLeadDocumentsDELETE(
+    request: Request,
+    dependencies: LeadDocumentRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
         const { searchParams } = new URL(request.url);
         const body = request.headers.get('content-type')?.includes('application/json')
             ? await readBody(request)
@@ -401,9 +497,9 @@ export async function DELETE(request: Request) {
         const leadId = cleanString(document.lead_id);
         if (!leadId) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
 
-        const access = await assertLeadAccess(supabaseAdmin, request, body, leadId);
+        const access = await assertLeadAccess(supabaseAdmin, request, leadId, dependencies);
         if (access.response) return access.response;
-        if (!access.requester || !access.lead) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        if (!access.requester || !access.lead) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
         if (!canAccessCompanyScope(access.requester, access.lead.company_id)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company write denied');
         }
@@ -451,4 +547,20 @@ export async function DELETE(request: Request) {
     } catch (error) {
         return handleLeadDocumentError(error, 'DELETE');
     }
+}
+
+export async function GET(request: Request) {
+    return handleLeadDocumentsGET(request);
+}
+
+export async function POST(request: Request) {
+    return handleLeadDocumentsPOST(request);
+}
+
+export async function PATCH(request: Request) {
+    return handleLeadDocumentsPATCH(request);
+}
+
+export async function DELETE(request: Request) {
+    return handleLeadDocumentsDELETE(request);
 }

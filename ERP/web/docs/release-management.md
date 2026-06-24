@@ -65,12 +65,21 @@ YYYY-MM-DD
 
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 문서함/업로드 보안 핫픽스 커밋
+  - 주요 기능: `/api/franchise-lead-documents` GET/POST/PATCH/DELETE에서 `requesterId`/`userId`/`managerId` fallback 경로를 제거하고 bearer 세션 기반 `getAuthenticatedRequesterProfile`만 사용한다. 업로드 문서 열람은 `/api/franchise-lead-documents?action=open&documentId=...` 인증 경로에서 lead/company 권한 확인 후 짧은 TTL signed URL을 발급한다. 점주 문서함 UI와 구비서류 체크리스트 빠른 등록/삭제는 `getApiAuthHeaders()`로 요청하고, 점주 문서함 업로드 문서는 `publicUrl` 대신 Storage `path`를 저장한다. `/api/upload`는 권한 확인 후 파일을 메모리에 읽기 전에 20MB 초과를 먼저 차단하고, MIME/확장자/매직바이트 검증, 허용 bucket/path/권한 검증을 통과한 파일만 Storage에 쓴다. 기존 매물/정보공개서 공개 URL 소비 흐름은 유지하되, 점주 문서함 업로드는 공개 URL을 반환·저장하지 않는다. 전자계약 문서함 연결은 현재 lead/company에 속한 전자계약 `sourceId`만 허용하고, UCanSign 발송 성공 후 문서함 링크 저장만 실패하면 계약 상태를 `send_failed`로 덮지 않고 응답 warning과 서버 로그로 분리한다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: 코드품질 재리뷰에서 지적된 라우트 직접 테스트 부족과 대용량 파일 선검사 위치를 보정했다. `npx tsx --test src/app/api/franchise-lead-documents/route.test.mts src/lib/upload-file-validation.test.mts src/app/api/upload/route.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts` 25건 통과. 확장 회귀로 `npx tsx --test src/app/api/franchise-lead-documents/route.test.mts src/lib/upload-file-validation.test.mts src/app/api/upload/route.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts src/lib/api-auth.test.mts src/lib/franchise-lead-access.test.mts src/lib/upload-storage-access.test.mts src/lib/upload-storage-policy.test.mts src/lib/franchise-lead-contract-checklist.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 51건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3079`에 Playwright auth/API mock을 주입해 `/dashboard/franchise-locations`, `/contracts/electronic`를 1280px/390px에서 smoke 확인했다. 두 화면 모두 page-level overflow 0건, console/page error 0건이며, 로컬 도메인은 Kakao JavaScript 키 제한으로 지도 타일 대신 도메인 설정 안내가 표시됐다.
+  - 남은 이슈: 신규 SQL 없음. 실제 운영 세션에서 점주 문서함 signed 열람/삭제, 완료 전자계약 연결, UCanSign 발송 후 링크 warning 케이스를 live QA한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 물건지 지도 반경분석/측정 도구 커밋
   - 주요 기능: `/dashboard/franchise-locations`의 우측 목록 클릭과 지도 마커 클릭을 같은 선택 로직으로 묶어 선택 물건지로 지도 중심을 이동한다. `지도 분석` 패널 안에 `반경분석 / 거리재기 / 면적재기` 탭을 통합하고, 반경 500m/1km/2km 요약, 직접 반경 기준점 지정, 거리 polyline, 면적 polygon, 되돌리기/초기화를 제공한다. 내일 회사 실데이터 확인용으로 `지도QA_20260624_01`부터 `지도QA_20260624_30`까지 30개 샘플 물건지를 기존 API로 생성했다. 사이드바 `물건지 지도`는 `가맹 운영` 바로 아래 같은 레벨 메뉴로 표시하고, 아이콘 왼쪽 하위 표시 선을 제거했다.
   - dev 반영: none
   - main 반영: none
   - 배포 URL: none
-  - 검증: `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts` 19건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. Playwright/Chrome으로 `내일 / admin / 1234` 로그인 후 데스크톱 메뉴 표시와 모바일 390px `지도 분석` 패널 탭 전환을 확인했고 console error 0건이었다.
+  - 검증: `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts` 19건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. Playwright/Chrome으로 내일 회사 관리자 테스트 세션(자격증명 마스킹)에서 데스크톱 메뉴 표시와 모바일 390px `지도 분석` 패널 탭 전환을 확인했고 console error 0건이었다.
   - 남은 이슈: 이번 변경의 신규 SQL은 없다. 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 SQL 등록 완료 상태다. 물건지 지도 샘플 30건은 QA용 prefix/tag로 식별 가능하므로 운영 데이터 정리 시 같은 기준으로 제거한다.
 - 2026-06-23
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
