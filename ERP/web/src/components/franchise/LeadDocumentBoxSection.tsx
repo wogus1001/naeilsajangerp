@@ -24,7 +24,10 @@ type LeadDocumentsResponse = {
 
 type UploadResponse = {
     readonly path?: string;
-    readonly publicUrl?: string;
+};
+
+type OpenDocumentResponse = {
+    readonly url?: string;
 };
 
 type ElectronicContractOption = {
@@ -113,7 +116,6 @@ function electronicContractLabel(contract: ElectronicContractOption): string {
 
 export function LeadDocumentBoxSection({
     leadId,
-    userId,
     companyId,
     leadName,
     onSaved,
@@ -151,12 +153,15 @@ export function LeadDocumentBoxSection({
     }, [leadId]);
 
     const fetchDocuments = React.useCallback(async () => {
-        if (!leadId || !userId) return;
+        if (!leadId) return;
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ requesterId: userId, leadId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, { cache: 'no-store' });
+            const params = new URLSearchParams({ leadId });
+            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
+                cache: 'no-store',
+                headers: await getApiAuthHeaders()
+            });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<LeadDocumentsResponse>(payload);
@@ -167,7 +172,7 @@ export function LeadDocumentBoxSection({
         } finally {
             setIsLoading(false);
         }
-    }, [leadId, userId]);
+    }, [leadId]);
 
     React.useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -206,7 +211,7 @@ export function LeadDocumentBoxSection({
         const payload = await response.json();
         if (!response.ok) throw new Error(readApiError(payload));
         const data = unwrapApiData<UploadResponse>(payload);
-        if (!data.publicUrl || !data.path) throw new Error('업로드 URL을 확인할 수 없습니다.');
+        if (!data.path) throw new Error('업로드 경로를 확인할 수 없습니다.');
         return data;
     };
 
@@ -238,15 +243,13 @@ export function LeadDocumentBoxSection({
             const selectedContract = electronicContracts.find(contract => contract.id === electronicContractId.trim());
             const response = await fetch('/api/franchise-lead-documents', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
-                    requesterId: userId,
                     leadId,
                     title: cleanTitle || selectedFile?.name || selectedContract?.name || '전자계약 문서',
                     sourceType: formMode,
                     sourceId: formMode === 'electronic_contract' ? electronicContractId.trim() : '',
                     documentStatus: 'stored',
-                    fileUrl: uploadResult?.publicUrl || '',
                     fileName: selectedFile?.name || '',
                     storageBucket: uploadResult ? UPLOAD_BUCKET : '',
                     storagePath: uploadResult?.path || '',
@@ -276,11 +279,13 @@ export function LeadDocumentBoxSection({
         setErrorMessage('');
         try {
             const params = new URLSearchParams({
-                requesterId: userId,
                 id: documentId,
                 checklistStepKey: stepKey
             });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, { method: 'DELETE' });
+            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
+                method: 'DELETE',
+                headers: await getApiAuthHeaders()
+            });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<LeadDocumentsResponse>(payload);
@@ -305,9 +310,8 @@ export function LeadDocumentBoxSection({
         try {
             const response = await fetch('/api/franchise-lead-documents', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
-                    requesterId: userId,
                     id: documentId,
                     checklistStepKey: stepKey
                 })
@@ -336,8 +340,11 @@ export function LeadDocumentBoxSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ requesterId: userId, id: documentId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, { method: 'DELETE' });
+            const params = new URLSearchParams({ id: documentId });
+            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
+                method: 'DELETE',
+                headers: await getApiAuthHeaders()
+            });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<LeadDocumentsResponse>(payload);
@@ -348,6 +355,26 @@ export function LeadDocumentBoxSection({
             setErrorMessage(error instanceof Error ? error.message : '문서를 삭제하지 못했습니다.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const openUploadedDocument = async (documentId: string) => {
+        if (!documentId) return;
+        setMessage('');
+        setErrorMessage('');
+        try {
+            const params = new URLSearchParams({ action: 'open', documentId });
+            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
+                cache: 'no-store',
+                headers: await getApiAuthHeaders()
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(readApiError(payload));
+            const data = unwrapApiData<OpenDocumentResponse>(payload);
+            if (!data.url) throw new Error('문서 열람 URL을 확인하지 못했습니다.');
+            window.open(data.url, '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : '문서를 열지 못했습니다.');
         }
     };
 
@@ -507,11 +534,11 @@ export function LeadDocumentBoxSection({
                                 )}
                         </div>
                         <div className={styles.documentActions}>
-                            {document.fileUrl ? (
-                                <a href={document.fileUrl} target="_blank" rel="noreferrer">
+                            {document.sourceType === 'upload' ? (
+                                <button type="button" onClick={() => void openUploadedDocument(document.id)} disabled={isSaving}>
                                     <ExternalLink size={15} />
                                     열기
-                                </a>
+                                </button>
                             ) : document.sourceType === 'electronic_contract' && document.sourceId ? (
                                 <a href={`/contracts/electronic?contractId=${encodeURIComponent(document.sourceId)}`}>
                                     <ExternalLink size={15} />

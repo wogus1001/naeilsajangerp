@@ -14,10 +14,10 @@
 ## 2026-06-24 기준 현재 상태
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 최신 작업 커밋: `e208e08 feat(franchise): enhance location map analysis`
-- 최근 작업 범위: `/dashboard/franchise-locations` 물건지 지도 1차 고도화. 우측 목록/마커 선택 동기화, 반경분석, 직접 기준점, 거리재기, 면적재기, 지도 분석 패널 통합을 포함한다.
-- 배포 상태: 위 물건지 지도 고도화 커밋은 `release-management.md` 기준 dev/main 반영 없음. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
-- 신규 SQL: 2026-06-24 물건지 지도 고도화에는 신규 SQL 없음.
+- 최신 작업 커밋: `e208e08 feat(franchise): enhance location map analysis` 이후 문서함/업로드 보안 핫픽스 커밋 준비 중.
+- 최근 작업 범위: 점주 문서함 인증 우회 제거, 업로드 문서 signed URL 열람, 민감 문서 공개 URL 저장 제거, 업로드 MIME/확장자/매직바이트 검증, 20MB 초과 파일 선차단, UCanSign 발송 후 문서함 링크 실패 격리. 재리뷰 차단점 보정으로 `/api/franchise-lead-documents` 라우트 직접 테스트를 추가했다. 직전 범위는 `/dashboard/franchise-locations` 물건지 지도 1차 고도화다.
+- 배포 상태: 이번 보안 핫픽스와 직전 물건지 지도 고도화 커밋은 `release-management.md` 기준 dev/main 반영 없음. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
+- 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스와 물건지 지도 고도화에는 신규 SQL 없음.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:
   - 계약 체크 14일 경과 샘플: `contract_check_14day_seed_20260623`
@@ -25,10 +25,10 @@
 
 ## 현재 확인할 Live QA
 
-- 계약 완료 후보자 상세에서 구비서류 체크리스트 저장, 해당없음 저장, 업로드 문서 등록, 완료 전자계약 연결/해제 확인.
+- 계약 완료 후보자 상세에서 구비서류 체크리스트 저장, 해당없음 저장, 업로드 문서 등록, signed URL 문서 열기, 완료 전자계약 연결/해제 확인.
 - 계약 완료 후 가맹점 정보 생성이 후보지 주소/지역/좌표를 보존하는지 실계정으로 확인.
 - 점주 문서함 삭제가 문서 레코드와 Storage 파일을 의도대로 정리하는지 확인.
-- 교차 회사 접근 차단과 협력업체 권한 범위 회귀 확인.
+- 문서함 인증 만료/무인증 401, `requesterId` 사칭 차단, 교차 회사 접근 차단과 협력업체 권한 범위 회귀 확인. 라우트 단위 사칭/범위 테스트는 로컬 자동화로 통과했으며, 실계정 UI 세션에서 한 번 더 확인한다.
 - 물건지 지도는 실서버 Kakao 도메인에서 타일/마커/반경 원/측정 도구를 확인.
 
 ## 주요 문서 역할

@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedRequesterProfile, type RequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { canUploadToTarget, type UploadAccessSupabase } from '@/lib/upload-storage-access';
+import {
+    MAX_UPLOAD_FILE_BYTES,
+    shouldReturnUploadPublicUrl,
+    validateUploadFileForTarget
+} from '@/lib/upload-file-validation';
 import { parseUploadStorageTarget, type UploadStorageTarget } from '@/lib/upload-storage-policy';
 
 type UploadStorageResponse = {
@@ -91,9 +96,19 @@ export async function handleUploadRequest(
         if (!await dependencies.canUploadToResolvedTarget(requester, parsedTarget.target)) {
             return uploadError('Forbidden: upload target is outside your scope', 403);
         }
+        if (file.size > MAX_UPLOAD_FILE_BYTES) {
+            return uploadError('File size must be 20MB or less', 413);
+        }
 
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        const validation = validateUploadFileForTarget(parsedTarget.target, {
+            bytes: buffer,
+            fileName: file.name,
+            mimeType: file.type,
+            size: file.size
+        });
+        if (!validation.ok) return uploadError(validation.error, validation.status);
 
         const { data, error } = await dependencies.uploadFile(parsedTarget.target, buffer, file.type);
 
@@ -102,10 +117,14 @@ export async function handleUploadRequest(
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
+        const publicUrl = shouldReturnUploadPublicUrl(parsedTarget.target)
+            ? dependencies.getPublicUrl(parsedTarget.target)
+            : '';
+
         return NextResponse.json({
             success: true,
             path: data?.path || parsedTarget.target.path,
-            publicUrl: dependencies.getPublicUrl(parsedTarget.target)
+            ...(publicUrl ? { publicUrl } : {})
         });
 
     } catch (error) {
