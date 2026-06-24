@@ -126,7 +126,7 @@ export function LeadDetailPanel({
     onLinkRelatedCardAction
 }: LeadDetailPanelProps) {
     const isContractChecklistOnly = mode === 'contractChecklist';
-    const detailTitle = isContractChecklistOnly ? '계약 전 체크' : '가맹 희망자 상세';
+    const detailTitle = isContractChecklistOnly ? '구비서류' : '가맹 희망자 상세';
     const managerName = getManagerNameAction(lead.managerId);
 
     return (

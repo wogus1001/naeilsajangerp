@@ -61,7 +61,7 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
         } catch (error) {
             setSteps([]);
             setSummary(EMPTY_SUMMARY);
-            setErrorMessage(error instanceof Error ? error.message : '계약 전 체크리스트를 불러오지 못했습니다.');
+            setErrorMessage(error instanceof Error ? error.message : '구비서류를 불러오지 못했습니다.');
         } finally {
             setIsLoading(false);
         }
@@ -96,10 +96,10 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
             const data = unwrapApiData<ChecklistResponse>(payload);
             setSteps(data.steps || []);
             setSummary(data.summary || EMPTY_SUMMARY);
-            setMessage('계약 전 체크리스트를 저장했습니다.');
+            setMessage('구비서류를 저장했습니다.');
             onSaved?.();
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : '계약 전 체크리스트 저장에 실패했습니다.');
+            setErrorMessage(error instanceof Error ? error.message : '구비서류 저장에 실패했습니다.');
         } finally {
             setSavingStepKey('');
         }

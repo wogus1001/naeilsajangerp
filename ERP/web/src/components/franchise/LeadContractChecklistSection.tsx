@@ -369,7 +369,7 @@ export function LeadContractChecklistSection({
         <section className={styles.section}>
             <div className={styles.header}>
                 <div>
-                    <h3><ListChecks size={16} /> 구비서류 체크리스트</h3>
+                    <h3><ListChecks size={16} /> 구비서류</h3>
                     <p>필수는 계약 가능 게이트, 내부보고는 경고, 선택은 관리 편의 항목입니다.</p>
                 </div>
                 <span className={summary.missingRequiredCount > 0 ? styles.blockingPill : styles.readyPill}>
@@ -390,7 +390,7 @@ export function LeadContractChecklistSection({
                 })}
             </div>
 
-            <div className={styles.progress} aria-label={`필수 구비서류 체크리스트 진행률 ${summary.groups.required.progressPercent}%`}>
+            <div className={styles.progress} aria-label={`필수 구비서류 진행률 ${summary.groups.required.progressPercent}%`}>
                 <span style={{ width: `${summary.groups.required.progressPercent}%` }} />
             </div>
 
@@ -401,7 +401,7 @@ export function LeadContractChecklistSection({
 
             <div className={styles.groupList}>
                 {isLoading && steps.length === 0 ? (
-                    <div className={styles.empty}>체크리스트를 불러오는 중입니다.</div>
+                    <div className={styles.empty}>구비서류를 불러오는 중입니다.</div>
                 ) : CHECKLIST_GROUPS.map(group => {
                     const groupedSteps = groupSteps(steps, group.requirementType);
                     const groupSummary = summary.groups[group.requirementType];

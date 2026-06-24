@@ -3564,15 +3564,74 @@
     resize: vertical;
 }
 
+.openingTaskGroupList,
 .openingTaskList {
     display: grid;
-    gap: 6px;
+    gap: 8px;
+}
+
+.openingTaskGroup {
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.openingTaskGroupSummary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.openingTaskGroupSummary::-webkit-details-marker {
+    display: none;
+}
+
+.openingTaskGroupSummary span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.openingTaskGroupSummary strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.openingTaskGroupSummary small {
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.openingTaskGroupSummary b {
+    color: #3182f6;
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.openingTaskGroup[open] .openingTaskGroupSummary {
+    border-bottom: 1px solid #eef2f7;
+}
+
+.openingTaskGroup .openingTaskList {
+    padding: 8px;
 }
 
 .openingTaskHeader,
 .openingTaskRow {
     display: grid;
-    grid-template-columns: minmax(74px, 0.7fr) minmax(102px, 0.7fr) minmax(92px, 0.7fr) minmax(130px, 0.8fr) minmax(160px, 1.2fr);
+    grid-template-columns: minmax(220px, 1.45fr) minmax(112px, 0.55fr) minmax(108px, 0.55fr) minmax(138px, 0.65fr) minmax(160px, 1fr);
     gap: 6px;
     align-items: center;
 }
@@ -3594,6 +3653,36 @@
     color: #334155;
     font-size: 12px;
     font-weight: 950;
+}
+
+.openingTaskInfo {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.openingTaskInfo strong,
+.openingTaskInfo span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.openingTaskInfo span {
+    color: #6b7684;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.openingTaskInfo em {
+    width: fit-content;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1b64da;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 800;
 }
 
 .openingProjectActions {
@@ -9963,5 +10052,29 @@
     .detailContentGrid > .detailSection:nth-child(6),
     .contractChecklistSection {
         grid-column: auto;
+    }
+}
+
+@media (max-width: 960px) {
+    .openingTaskRow {
+        grid-template-columns: minmax(0, 1fr) minmax(112px, 0.65fr) minmax(112px, 0.65fr);
+    }
+
+    .openingTaskInfo {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .openingTaskGroupSummary {
+        align-items: flex-start;
+    }
+
+    .openingTaskGroupSummary small {
+        white-space: normal;
+    }
+
+    .openingTaskRow {
+        grid-template-columns: 1fr;
     }
 }

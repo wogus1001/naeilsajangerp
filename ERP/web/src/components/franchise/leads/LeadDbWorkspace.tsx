@@ -29,7 +29,7 @@ import type { LeadDbLayer, LeadViewMode } from './types';
 import type { LeadDbWorkspaceProps } from './LeadDbWorkspace.types';
 
 function getTableTitle(leadDbLayer: LeadDbLayer, viewMode: LeadViewMode, isContractOwnersWorkspace: boolean) {
-    if (isContractOwnersWorkspace) return '계약 전 체크리스트';
+    if (isContractOwnersWorkspace) return '구비서류';
     if (leadDbLayer === 'raw_intake') return '1차 유입 DB';
     if (viewMode === 'pipeline') return '상태별 파이프라인';
     if (viewMode === 'tasks') return '연락 관리';

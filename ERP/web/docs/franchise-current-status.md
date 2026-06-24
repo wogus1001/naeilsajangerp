@@ -15,8 +15,8 @@
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
 - 최신 배포 기준 커밋: `58363c9 fix(franchise): harden lead document uploads`.
-- 최근 작업 범위: 계약완료 점주 상세에 `오픈 준비` 탭을 추가했다. 기존 `franchise_opening_projects` 테이블/API를 재사용하고, 프로젝트는 연결된 `franchise_locations.id` 기준으로 시작/저장한다. UI는 `오픈 준비 / 체크리스트 / 점주 문서함 / 가맹점 정보` 순서로 정리하고, 체크리스트 필수 그룹 헤더와 오픈 준비 상태 문구를 압축했다.
-- 최근 커밋 범위: 점주 문서함 인증 우회 제거, 업로드 문서 signed URL 열람, 민감 문서 공개 URL 저장 제거, 업로드 MIME/확장자/매직바이트 검증, 20MB 초과 파일 선차단, UCanSign 발송 후 문서함 링크 실패 격리. 재리뷰 차단점 보정으로 `/api/franchise-lead-documents` 라우트 직접 테스트를 추가했다. 직전 범위는 `/dashboard/franchise-locations` 물건지 지도 1차 고도화다.
+- 최근 작업 범위: 오픈 준비 체크리스트 1차 고도화. 기존 `franchise_opening_projects.tasks` JSON을 확장해 계약/행정, 인테리어, 교육, 초도물류, 홍보, 오픈일 6단계 25개 하위 항목을 제공하고, `확인요청`, 오늘 처리, 기한 임박, 진행 이슈, 오픈 가능도 요약을 추가했다. 계약완료 상세의 계약 전 서류 탭/버튼 표기는 `구비서류`로 통일했다. 신규 SQL은 없다.
+- 최근 커밋 범위: `0e336e2 feat(franchise): add contract opening preparation tab`로 계약완료 점주 상세 `오픈 준비` 탭과 문서 정리를 커밋했다. 직전 배포 범위는 점주 문서함/업로드 보안 핫픽스다.
 - 배포 상태: 문서함/업로드 보안 핫픽스는 `dev`에 `0e4ad3f`로 반영했고 Vercel Dev deployment `dpl_GkjHTqcgdaP8ARfUXBvS6An4X4yd`가 READY다. main 반영은 아직 없다. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
 - 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스, 물건지 지도 고도화, 계약완료 상세 오픈 준비 탭에는 신규 SQL 없음.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
@@ -26,7 +26,7 @@
 
 ## 현재 확인할 Live QA
 
-- 계약 완료 후보자 상세에서 구비서류 체크리스트 저장, 해당없음 저장, 업로드 문서 등록, signed URL 문서 열기, 완료 전자계약 연결/해제 확인.
+- 계약 완료 후보자 상세에서 구비서류 저장, 해당없음 저장, 업로드 문서 등록, signed URL 문서 열기, 완료 전자계약 연결/해제 확인.
 - 계약 완료 후 가맹점 정보 생성이 후보지 주소/지역/좌표를 보존하는지 실계정으로 확인.
 - 계약완료 상세 `오픈 준비` 탭에서 프로젝트 저장 후 새로고침 persistence를 실운영 세션으로 확인.
 - 점주 문서함 삭제가 문서 레코드와 Storage 파일을 의도대로 정리하는지 확인.

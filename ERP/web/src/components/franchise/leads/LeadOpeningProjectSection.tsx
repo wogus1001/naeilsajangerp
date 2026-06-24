@@ -102,6 +102,8 @@ export function LeadOpeningProjectSection({
     const canManageProject = storeLocation?.status === '오픈준비';
     const normalizedTasks = mergeOpeningProjectTasks(draft?.tasks);
     const summary = summarizeOpeningProjectTasks(normalizedTasks);
+    const dueAttentionCount = summary.overdue + summary.dueSoon;
+    const issueAttentionCount = summary.blocked + summary.reviewRequested;
     const disabled = isLoading || isSaving || !canManageProject;
 
     return (
@@ -133,20 +135,20 @@ export function LeadOpeningProjectSection({
 
                     <div className={styles.summaryGrid}>
                         <div className={styles.metric}>
-                            <span>진행률</span>
-                            <strong>{summary.progressPercent}%</strong>
+                            <span>오늘 처리</span>
+                            <strong>{summary.dueToday}건</strong>
                         </div>
                         <div className={styles.metric}>
-                            <span>완료</span>
-                            <strong>{summary.done}/{summary.total}</strong>
+                            <span>기한 임박</span>
+                            <strong>{dueAttentionCount}건</strong>
                         </div>
                         <div className={styles.metric}>
                             <span>진행 이슈</span>
-                            <strong>{summary.blocked}건</strong>
+                            <strong>{issueAttentionCount}건</strong>
                         </div>
                         <div className={styles.metric}>
-                            <span>기한임박</span>
-                            <strong>{summary.dueSoon}건</strong>
+                            <span>오픈 가능도</span>
+                            <strong>{summary.progressPercent}%</strong>
                         </div>
                     </div>
 
@@ -192,7 +194,7 @@ export function LeadOpeningProjectSection({
                             </div>
 
                             <div className={styles.taskWrap}>
-                                <strong>오픈 준비 체크리스트</strong>
+                                <strong>오픈 준비 체크리스트 <span>{summary.done}/{summary.total} 완료</span></strong>
                                 <OpeningProjectTaskList
                                     tasks={normalizedTasks}
                                     disabled={disabled}

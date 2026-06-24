@@ -165,9 +165,20 @@
 }
 
 .taskWrap > strong {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     color: #191f28;
     font-size: 14px;
     font-weight: 700;
+}
+
+.taskWrap > strong span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 
 .primaryAction,

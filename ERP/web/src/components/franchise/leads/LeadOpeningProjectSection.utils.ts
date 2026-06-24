@@ -1,6 +1,7 @@
 import {
     OPENING_PROJECT_STATUSES,
     buildDefaultOpeningProjectTasks,
+    mergeOpeningProjectTasks,
     updateOpeningProjectTask,
     type OpeningProjectStatus,
     type OpeningProjectTask
@@ -30,7 +31,7 @@ export function toOpeningProjectDraft(location: FranchiseLocation, project?: Fra
         status: project?.status || '준비중',
         targetOpenDate: project?.targetOpenDate || location.openedAt || '',
         memo: project?.memo || '',
-        tasks: project?.tasks || buildDefaultOpeningProjectTasks()
+        tasks: project?.tasks ? mergeOpeningProjectTasks(project.tasks) : buildDefaultOpeningProjectTasks()
     };
 }
 
