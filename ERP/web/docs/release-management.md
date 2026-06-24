@@ -65,12 +65,12 @@ YYYY-MM-DD
 
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-  - 기능 커밋: 이번 커밋
+  - 기능 커밋: `c65bdf8 feat(franchise): refine opening readiness checklist`
   - 주요 기능: 오픈 준비 체크리스트 1차 고도화. 기존 `franchise_opening_projects.tasks` JSON을 확장해 6단계 25개 하위 체크를 제공하고, `확인요청`, 오늘 처리, 기한 임박, 진행 이슈, 오픈 가능도 요약을 추가했다. 단계별 접힘 섹션에서 항목 설명, 필수 배지, 상태, 담당, 기한, 메모를 관리한다. 계약완료 상세의 계약 전 서류 탭/버튼 표기는 `구비서류`로 통일했다. 기존 저장 데이터는 task `id` 기준으로 병합하므로 신규 SQL은 없다.
-  - dev 반영: none
+  - dev 반영: `e4ad21d feat(franchise): refine opening readiness checklist`
   - main 반영: none
-  - 배포 URL: none
-  - 검증 진행: `npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-contract-store.test.mts` 15건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 기존 dev 서버 `localhost:3000`에서 내일 회사 관리자 세션으로 계약완료 상세 `구비서류` 탭 표기와 1280px/390px overflow 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 배포 URL: `https://naeilsajang-dev.vercel.app` (`dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`, READY; source `https://naeilsajang-chtpaq0ki-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증 진행: `npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-contract-store.test.mts` 15건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 기존 dev 서버 `localhost:3000`에서 내일 회사 관리자 세션으로 계약완료 상세 `구비서류` 탭 표기와 1280px/390px overflow 0건을 확인했다. dev worktree 반영 후 같은 15건 테스트, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했다. Vercel API로 최신 dev deployment가 `e4ad21d`와 매칭되고 `READY`이며 `naeilsajang-dev.vercel.app` alias가 연결됐음을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `0e336e2 feat(franchise): add contract opening preparation tab`

@@ -14,10 +14,10 @@
 ## 2026-06-24 기준 현재 상태
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 최신 배포 기준 커밋: `58363c9 fix(franchise): harden lead document uploads`.
+- 최신 dev 배포 기준 커밋: `e4ad21d feat(franchise): refine opening readiness checklist`.
 - 최근 작업 범위: 오픈 준비 체크리스트 1차 고도화. 기존 `franchise_opening_projects.tasks` JSON을 확장해 계약/행정, 인테리어, 교육, 초도물류, 홍보, 오픈일 6단계 25개 하위 항목을 제공하고, `확인요청`, 오늘 처리, 기한 임박, 진행 이슈, 오픈 가능도 요약을 추가했다. 계약완료 상세의 계약 전 서류 탭/버튼 표기는 `구비서류`로 통일했다. 신규 SQL은 없다.
-- 최근 커밋 범위: `0e336e2 feat(franchise): add contract opening preparation tab`로 계약완료 점주 상세 `오픈 준비` 탭과 문서 정리를 커밋했다. 직전 배포 범위는 점주 문서함/업로드 보안 핫픽스다.
-- 배포 상태: 문서함/업로드 보안 핫픽스는 `dev`에 `0e4ad3f`로 반영했고 Vercel Dev deployment `dpl_GkjHTqcgdaP8ARfUXBvS6An4X4yd`가 READY다. main 반영은 아직 없다. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
+- 최근 커밋 범위: `0e336e2 feat(franchise): add contract opening preparation tab`, `c65bdf8 feat(franchise): refine opening readiness checklist`로 계약완료 점주 상세 `오픈 준비` 탭과 1차 고도화를 커밋했다.
+- 배포 상태: 오픈 준비 탭/체크리스트 1차 고도화는 `dev`에 `6859dca`, `e4ad21d`로 반영했고 Vercel Dev deployment `dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`가 READY다. Dev alias는 `https://naeilsajang-dev.vercel.app`이다. main 반영은 아직 없다. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
 - 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스, 물건지 지도 고도화, 계약완료 상세 오픈 준비 탭에는 신규 SQL 없음.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:

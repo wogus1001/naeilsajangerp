@@ -682,6 +682,7 @@
 - 계약완료 상세 `오픈 준비` 상단 요약은 `오늘 처리`, `기한 임박`, `진행 이슈`, `오픈 가능도`로 바꿨다. 체크리스트 본문은 단계별 접힘 섹션으로 정리하고 각 하위 항목에 설명, 필수 배지, 상태, 담당, 기한, 메모를 표시한다.
 - 검증: `npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-contract-store.test.mts` 15건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: 기존 dev 서버 `localhost:3000`에서 내일 회사 관리자 세션으로 `/dashboard/franchise-leads` 계약완료 상세를 열고 1280px/390px를 확인했다. 탭은 `오픈 준비 / 구비서류 / 점주 문서함 / 가맹점 정보`로 표시되고, `체크리스트 열기` 문구가 남지 않으며 page-level horizontal overflow 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-owner-supplies-label-desktop.png`, `ERP/web/.omo/evidence/contract-owner-supplies-label-mobile.png`.
+- Dev 배포: 선행 오픈 준비 탭 커밋과 1차 고도화 커밋을 dev worktree에 각각 `6859dca`, `e4ad21d`로 cherry-pick했다. dev worktree에서 같은 15건 테스트, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했고, Vercel Dev deployment `dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`가 `READY`이며 `e4ad21d`와 매칭됨을 확인했다. Dev alias는 `https://naeilsajang-dev.vercel.app`이다.
 - 신규 SQL은 없다.
 
 ## 다음 QA 체크리스트
