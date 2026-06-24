@@ -153,7 +153,7 @@
 - 가맹 운영 대시보드는 운영 상태 그래프와 지역별 운영 분포 분석을 먼저 제공한다. 한국 지도 SVG는 라벨이 겹쳐 가독성이 낮아 제거하고, 시도별 점포 수/비중/상태 구성을 Mixpanel식 분석 카드로 본다. 지역 분포는 실제 시도명 기준 상위 5개를 기본 노출하고, 나머지는 중앙 정렬된 `더보기` 버튼으로 확장한다. 상단 요약은 `운영중 / 오픈준비 / 운영주의 / 운영 안정률` 중심으로 두며, 실제 지도 핀 탐색은 `/dashboard/franchise-locations`에서 담당한다.
 - 가맹 운영 화면의 경쟁스캔 UI는 임시 숨김 상태다. `competitionScan` 데이터 구조와 API는 유지하되, provider 비용/정책과 지도 UX가 정리될 때 출점 후보지/가맹 운영 공통 대시보드로 다시 노출한다.
 - `manual-promoted` 외부 승격 물건지의 운영 전환 패널도 임시 숨김 상태다. 외부 상가 원본에서 바로 운영 가맹점으로 넘기는 흐름은 후보지 검토/계약완료 인계와 중복될 수 있어, 향후 `모객 DB > 계약 완료 > 가맹점 정보` 흐름과 연결해 재설계한다.
-- 오픈 준비 프로젝트 UI는 현재 가맹 운영 화면에서 숨기고, 계약완료 점주 상세의 가맹점 정보/구비서류 체크리스트와 이어지는 별도 고도화 범위로 이관한다. 기존 `franchise_opening_projects` 테이블/API는 보존한다.
+- 오픈 준비 프로젝트 UI는 가맹 운영 화면에서는 숨김 유지하고, 계약완료 점주 상세의 `오픈 준비` 탭으로 이관했다. 기존 `franchise_opening_projects` 테이블/API를 재사용하며, 프로젝트는 계약 lead가 아니라 해당 lead에서 생성된 `franchise_locations.id` 기준으로 저장한다. 가맹점 정보가 없으면 `가맹점 정보` 탭 이동 CTA를 먼저 보여주고, `오픈준비` 상태의 가맹점에서만 프로젝트 시작/저장을 허용한다.
 - 2026-06-11 `franchise_opening_projects` 전용 테이블/API/UI MVP를 추가했다. 프로젝트는 `오픈준비` 상태의 `franchise_locations`에만 연결하고, 상태/목표 오픈일/메모/계약-인테리어-교육-초도물류-홍보-오픈일 checklist를 별도 저장한다.
 - 오픈 준비 프로젝트는 회사 범위가 확인된 requester만 생성/수정/삭제할 수 있다. 회사 없는 requester나 교차 회사 requester는 mutation을 차단한다.
 - 로컬 브라우저 QA에서 `/dashboard/franchise-leads`, `/dashboard/franchise-leads/market-insights?tab=realty-import`, `/dashboard/franchise-operations` 390px 모바일 진입 시 전역 사이드바가 기본 접힘 상태로 시작하고, 1440px 데스크톱에서는 기본 열림 상태를 유지함을 확인했다.

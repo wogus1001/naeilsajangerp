@@ -65,6 +65,15 @@ YYYY-MM-DD
 
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 커밋
+  - 주요 기능: 계약완료 점주 상세 탭을 `오픈 준비 / 체크리스트 / 점주 문서함 / 가맹점 정보`로 확장했다. `오픈 준비` 탭은 기존 `franchise_opening_projects` 테이블과 `/api/franchise-opening-projects` API를 재사용하고, 프로젝트는 lead가 아니라 해당 lead에서 생성된 `franchise_locations.id`에 연결한다. 연결 가맹점이 없으면 `가맹점 정보` 탭 이동 CTA를 보여주며, `오픈준비` 상태 가맹점에서만 프로젝트 시작/저장을 허용한다. 체크리스트 필수 그룹 헤더는 한 줄형으로 압축하고, 오픈 준비 화면의 별도 우측 상단 상태 배지는 제거했다. `막힘` 상태는 데이터 값으로 유지하되 화면 표기는 `진행 이슈`/`이슈`로 정리했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-opening-projects.test.mts src/lib/franchise-contract-store.test.mts` 13건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3081`에서 내일 회사 관리자 세션으로 계약완료 상세 `오픈 준비` 탭을 1280px/390px에서 확인했고, page-level horizontal overflow 0건, console/page error 0건이었다. 추가 QA로 탭 첫 항목 `오픈 준비`, 오픈 준비 상단 상태 배지 제거, 본문 `막힘` 문구 미노출, 체크리스트 필수 헤더 한 줄 압축을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. 실운영 세션에서 오픈 준비 프로젝트 저장 후 새로고침 persistence를 한 번 더 확인한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `58363c9 fix(franchise): harden lead document uploads`
   - 주요 기능: `/api/franchise-lead-documents` GET/POST/PATCH/DELETE에서 `requesterId`/`userId`/`managerId` fallback 경로를 제거하고 bearer 세션 기반 `getAuthenticatedRequesterProfile`만 사용한다. 업로드 문서 열람은 `/api/franchise-lead-documents?action=open&documentId=...` 인증 경로에서 lead/company 권한 확인 후 짧은 TTL signed URL을 발급한다. 점주 문서함 UI와 구비서류 체크리스트 빠른 등록/삭제는 `getApiAuthHeaders()`로 요청하고, 점주 문서함 업로드 문서는 `publicUrl` 대신 Storage `path`를 저장한다. `/api/upload`는 권한 확인 후 파일을 메모리에 읽기 전에 20MB 초과를 먼저 차단하고, MIME/확장자/매직바이트 검증, 허용 bucket/path/권한 검증을 통과한 파일만 Storage에 쓴다. 기존 매물/정보공개서 공개 URL 소비 흐름은 유지하되, 점주 문서함 업로드는 공개 URL을 반환·저장하지 않는다. 전자계약 문서함 연결은 현재 lead/company에 속한 전자계약 `sourceId`만 허용하고, UCanSign 발송 성공 후 문서함 링크 저장만 실패하면 계약 상태를 `send_failed`로 덮지 않고 응답 warning과 서버 로그로 분리한다.
   - dev 반영: `0e4ad3f fix(franchise): harden lead document uploads`

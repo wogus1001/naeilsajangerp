@@ -5,6 +5,13 @@ import {
 } from '@/lib/franchise-opening-projects';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
+const OPENING_PROJECT_TASK_STATUS_LABELS = {
+    대기: '대기',
+    진행중: '진행중',
+    완료: '완료',
+    막힘: '이슈'
+} as const satisfies Record<OpeningProjectTaskStatus, string>;
+
 type TaskPatch = {
     readonly status?: OpeningProjectTaskStatus;
     readonly owner?: string;
@@ -37,7 +44,7 @@ export function OpeningProjectTaskList({ tasks, disabled, onChange }: OpeningPro
                         onChange={event => onChange(task.id, { status: event.target.value as OpeningProjectTaskStatus })}
                     >
                         {OPENING_PROJECT_TASK_STATUSES.map(status => (
-                            <option key={status} value={status}>{status}</option>
+                            <option key={status} value={status}>{OPENING_PROJECT_TASK_STATUS_LABELS[status]}</option>
                         ))}
                     </select>
                     <input

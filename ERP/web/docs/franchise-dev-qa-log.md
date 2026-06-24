@@ -667,6 +667,14 @@
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3079`에 Playwright auth/API mock을 주입해 `/dashboard/franchise-locations`, `/contracts/electronic`를 1280px/390px에서 smoke 확인했다. 두 화면 모두 page-level overflow 0건, console/page error 0건이었다. 로컬 도메인은 Kakao JavaScript 키 제한으로 지도 타일 대신 도메인 설정 안내가 표시됐다.
 - 신규 SQL은 없다.
 
+## 2026-06-24 계약완료 상세 오픈 준비 탭 QA
+
+- 계약완료 점주 상세 탭을 `오픈 준비 / 체크리스트 / 점주 문서함 / 가맹점 정보`로 확장했다. `오픈 준비` 탭은 `lead.status === '계약완료'`일 때만 노출하며, 기존 `franchise_opening_projects` 테이블과 `/api/franchise-opening-projects` API를 재사용한다. 신규 SQL은 없다.
+- 오픈 준비 프로젝트는 lead id가 아니라 해당 lead에서 생성된 `franchise_locations.id`에 연결한다. 탭 진입 시 `/api/franchise-locations?contractLeadId=...`로 연결 가맹 운영점을 찾고, 연결 가맹점이 없으면 `가맹점 정보` 탭 이동 CTA를 보여준다. 연결 가맹점이 `오픈준비`이면 프로젝트 상태/목표 오픈일/메모와 `계약 / 인테리어 / 교육 / 초도물류 / 홍보 / 오픈일` 체크리스트를 시작/저장할 수 있다. `운영중/휴점/폐점` 상태에서는 읽기 중심 안내로 제한한다.
+- UI 보정: 오픈 준비 섹션 우측 상단의 별도 `오픈준비` 상태 배지를 제거했다. 프로젝트 요약의 `막힘` 표기는 사용자 화면에서 `진행 이슈`/`이슈`로 바꾸고, 내부 저장 상태값은 기존 `막힘`을 유지한다. 구비서류 체크리스트의 필수 그룹 헤더는 `필수 / 계약 전 필수 서류 / 미완료 또는 문서 누락 시 계약 진행을 막습니다.`가 데스크톱에서 한 줄로 보이도록 압축했다.
+- 검증: `npx tsx --test src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-opening-projects.test.mts src/lib/franchise-contract-store.test.mts` 13건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3081`에서 내일 회사 관리자 세션으로 `/dashboard/franchise-leads` 계약완료 상세를 열고 `오픈 준비` 탭을 확인했다. 1280px/390px 모두 `오픈 준비` 탭과 프로젝트 체크리스트가 표시되고 page-level horizontal overflow 0건, console/page error 0건이었다. 추가 QA에서 탭 첫 항목이 `오픈 준비`인 것, 오픈 준비 섹션 상단 배지가 제거된 것, 화면 본문에 `막힘` 문구가 남지 않은 것, 체크리스트 필수 그룹 설명이 데스크톱에서 한 줄로 압축된 것을 확인했다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-owner-opening-tab-final-desktop.png`, `ERP/web/.omo/evidence/contract-owner-opening-tab-final-mobile.png`, `ERP/web/.omo/evidence/contract-owner-opening-checklist-compact-desktop.png`.
+
 ## 다음 QA 체크리스트
 
 ### P0
@@ -674,7 +682,7 @@
 - Meta 실제 유입은 계정/env 준비 전까지 HOLD. 엑셀 업로드 runner 기준 `1차 유입 DB` 저장과 후보자 승격은 2026-06-11 통과했으며, 실제 운영 엑셀 샘플 파일이 생기면 같은 runner로 추가 회귀한다.
 - 실운영 계정 role matrix 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
-- 오픈 준비 프로젝트 브라우저 UI 저장과 새로고침 persistence 확인
+- 계약완료 상세 `오픈 준비` 탭에서 프로젝트 저장 후 새로고침 persistence를 실운영 세션으로 한 번 더 확인
 - Gmail OAuth 운영 env(`GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_APP_URL`) 준비 후 dev 서버 재시작, Google Cloud OAuth client에 `localhost`/`127.0.0.1` callback URI 모두 등록, 테스트 모드라면 실제 담당자 Gmail을 테스트 사용자에 추가, 실제 담당자 계정 연결, 저장 문서 발송, 고객 확인 링크 클릭, 중복 클릭 idempotency, 14일 잠금 기준 유지 확인
 - `supabase_franchise_gmail_disclosures_migration.sql`을 대상 Supabase 환경에 적용한 뒤 `profile_gmail_connections`와 확장된 `franchise_lead_disclosure_deliveries` schema cache가 반영됐는지 확인
 
@@ -703,7 +711,7 @@
 - 가맹 운영 화면에서도 같은 `LocationCompetitionPanel`이 깨지지 않는지 확인
 - 정보공개서 브랜드 검색이 공식 API 지연/실패 시 로컬 캐시로 fallback 되는지 확인
 - 계약 전 준비 체크리스트 MVP와 목록 진행률, `계약 점주` 탭은 2026-06-12 구현했다. 남은 live QA는 로그인 세션에서 후보자별 체크 저장/새로고침 유지, 완료일/처리자/메모 저장, 다른 담당자/회사 범위 접근 차단, 14일 계약 잠금 기준이 수령 체크가 아니라 발송 이력 기준으로 유지되는지 확인하는 것이다.
-- 계약 전 준비 체크리스트의 미완료 필수 스텝 필터, 계약 준비 완료 필터, 계약 점주 상세 오픈 준비 체크리스트 통합은 후속 UI 범위로 남김
+- 계약 전 준비 체크리스트의 미완료 필수 스텝 필터와 계약 준비 완료 필터는 후속 UI 범위로 남김
 - 브랜드 모니터링에서 Naver 공식 API 키 설정 후 스냅샷 저장/조회 확인
 
 ### P2

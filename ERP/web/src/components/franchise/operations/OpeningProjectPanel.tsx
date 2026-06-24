@@ -180,7 +180,7 @@ export function OpeningProjectPanel({ userId, companyName, locations }: OpeningP
                                     onChange={event => updateDraft(location, { targetOpenDate: event.target.value })}
                                 />
                                 <span>완료 {summary.done}/{summary.total}</span>
-                                <span>막힘 {summary.blocked}</span>
+                                <span>이슈 {summary.blocked}</span>
                                 <span>기한임박 {summary.dueSoon}</span>
                             </div>
                             <textarea

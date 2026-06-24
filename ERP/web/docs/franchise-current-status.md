@@ -14,10 +14,11 @@
 ## 2026-06-24 기준 현재 상태
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 최신 작업 커밋: `58363c9 fix(franchise): harden lead document uploads`.
-- 최근 작업 범위: 점주 문서함 인증 우회 제거, 업로드 문서 signed URL 열람, 민감 문서 공개 URL 저장 제거, 업로드 MIME/확장자/매직바이트 검증, 20MB 초과 파일 선차단, UCanSign 발송 후 문서함 링크 실패 격리. 재리뷰 차단점 보정으로 `/api/franchise-lead-documents` 라우트 직접 테스트를 추가했다. 직전 범위는 `/dashboard/franchise-locations` 물건지 지도 1차 고도화다.
+- 최신 배포 기준 커밋: `58363c9 fix(franchise): harden lead document uploads`.
+- 최근 작업 범위: 계약완료 점주 상세에 `오픈 준비` 탭을 추가했다. 기존 `franchise_opening_projects` 테이블/API를 재사용하고, 프로젝트는 연결된 `franchise_locations.id` 기준으로 시작/저장한다. UI는 `오픈 준비 / 체크리스트 / 점주 문서함 / 가맹점 정보` 순서로 정리하고, 체크리스트 필수 그룹 헤더와 오픈 준비 상태 문구를 압축했다.
+- 최근 커밋 범위: 점주 문서함 인증 우회 제거, 업로드 문서 signed URL 열람, 민감 문서 공개 URL 저장 제거, 업로드 MIME/확장자/매직바이트 검증, 20MB 초과 파일 선차단, UCanSign 발송 후 문서함 링크 실패 격리. 재리뷰 차단점 보정으로 `/api/franchise-lead-documents` 라우트 직접 테스트를 추가했다. 직전 범위는 `/dashboard/franchise-locations` 물건지 지도 1차 고도화다.
 - 배포 상태: 문서함/업로드 보안 핫픽스는 `dev`에 `0e4ad3f`로 반영했고 Vercel Dev deployment `dpl_GkjHTqcgdaP8ARfUXBvS6An4X4yd`가 READY다. main 반영은 아직 없다. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
-- 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스와 물건지 지도 고도화에는 신규 SQL 없음.
+- 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스, 물건지 지도 고도화, 계약완료 상세 오픈 준비 탭에는 신규 SQL 없음.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:
   - 계약 체크 14일 경과 샘플: `contract_check_14day_seed_20260623`
@@ -27,6 +28,7 @@
 
 - 계약 완료 후보자 상세에서 구비서류 체크리스트 저장, 해당없음 저장, 업로드 문서 등록, signed URL 문서 열기, 완료 전자계약 연결/해제 확인.
 - 계약 완료 후 가맹점 정보 생성이 후보지 주소/지역/좌표를 보존하는지 실계정으로 확인.
+- 계약완료 상세 `오픈 준비` 탭에서 프로젝트 저장 후 새로고침 persistence를 실운영 세션으로 확인.
 - 점주 문서함 삭제가 문서 레코드와 Storage 파일을 의도대로 정리하는지 확인.
 - 문서함 인증 만료/무인증 401, `requesterId` 사칭 차단, 교차 회사 접근 차단과 협력업체 권한 범위 회귀 확인. 라우트 단위 사칭/범위 테스트는 로컬 자동화로 통과했으며, 실계정 UI 세션에서 한 번 더 확인한다.
 - 물건지 지도는 실서버 Kakao 도메인에서 타일/마커/반경 원/측정 도구를 확인.
