@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { DEMO_SCENARIOS } from '../demoContent';
 import type { DemoRole, DemoScreenId } from '../demoTypes';
 import { useDemoApiGuard } from './DemoApiGuard';
@@ -15,6 +16,7 @@ type DemoShellProps = {
 export function DemoShell({ role }: DemoShellProps) {
     useDemoApiGuard();
 
+    const router = useRouter();
     const scenario = DEMO_SCENARIOS[role];
     const defaultScreen = scenario.defaultScreen;
     const [activeScreen, setActiveScreen] = useState<DemoScreenId>(defaultScreen);
@@ -25,6 +27,13 @@ export function DemoShell({ role }: DemoShellProps) {
         () => scenario.navItems.find(item => item.id === activeScreen) ?? scenario.navItems[0],
         [activeScreen, scenario.navItems]
     );
+    const handleLogout = async () => {
+        const response = await fetch('/api/demo/access', { method: 'DELETE' });
+        if (response.ok) {
+            router.replace('/demo');
+            router.refresh();
+        }
+    };
 
     return (
         <>
@@ -32,6 +41,7 @@ export function DemoShell({ role }: DemoShellProps) {
                 scenario={scenario}
                 activeScreen={activeScreen}
                 notice={`${activeNav?.description ?? '프랜차이즈 샘플 화면'} · ${notice}`}
+                onLogout={handleLogout}
                 onScreenChange={setActiveScreen}
                 onRestartTour={() => {
                     setTourRun(run => run + 1);
