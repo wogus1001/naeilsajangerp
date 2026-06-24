@@ -14,9 +14,9 @@
 ## 2026-06-24 기준 현재 상태
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 최신 작업 커밋: `e208e08 feat(franchise): enhance location map analysis` 이후 문서함/업로드 보안 핫픽스 커밋 준비 중.
+- 최신 작업 커밋: `58363c9 fix(franchise): harden lead document uploads`.
 - 최근 작업 범위: 점주 문서함 인증 우회 제거, 업로드 문서 signed URL 열람, 민감 문서 공개 URL 저장 제거, 업로드 MIME/확장자/매직바이트 검증, 20MB 초과 파일 선차단, UCanSign 발송 후 문서함 링크 실패 격리. 재리뷰 차단점 보정으로 `/api/franchise-lead-documents` 라우트 직접 테스트를 추가했다. 직전 범위는 `/dashboard/franchise-locations` 물건지 지도 1차 고도화다.
-- 배포 상태: 이번 보안 핫픽스와 직전 물건지 지도 고도화 커밋은 `release-management.md` 기준 dev/main 반영 없음. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
+- 배포 상태: 문서함/업로드 보안 핫픽스는 `dev`에 `0e4ad3f`로 반영했고 Vercel Dev deployment `dpl_GkjHTqcgdaP8ARfUXBvS6An4X4yd`가 READY다. main 반영은 아직 없다. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
 - 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스와 물건지 지도 고도화에는 신규 SQL 없음.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:
