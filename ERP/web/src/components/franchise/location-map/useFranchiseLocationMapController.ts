@@ -12,18 +12,27 @@ import {
 } from '@/components/franchise/operations/requests';
 import {
     buildLocationMapCounts,
+    buildRadiusAnalysis,
+    buildRadiusAnalysisFromPosition,
     EMPTY_LOCATION_MAP_FILTERS,
     filterLocationMapItems,
     getLocationMapCenter,
     getLocationMapKind,
+    getLocationPathDistanceMeters,
+    getLocationPolygonAreaSquareMeters,
     getStoredPosition,
     toggleLocationMapStatus
 } from './mapUtils';
 import type {
     LocationMapFilters,
+    LocationMapMeasurementMode,
     LocationMapMode,
-    LocationMapPoint
+    LocationMapPoint,
+    LocationMapPosition,
+    LocationMapRadiusBaseMode,
+    LocationMapRadiusMeters
 } from './types';
+import { LOCATION_MAP_RADIUS_OPTIONS } from './types';
 
 const MAX_GEOCODE_LOCATIONS = 160;
 
@@ -59,6 +68,14 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
     const [filters, setFilters] = React.useState<LocationMapFilters>(EMPTY_LOCATION_MAP_FILTERS);
     const [points, setPoints] = React.useState<readonly LocationMapPoint[]>([]);
     const [activeLocationId, setActiveLocationId] = React.useState('');
+    const [focusedLocationId, setFocusedLocationId] = React.useState('');
+    const [focusRequestId, setFocusRequestId] = React.useState(0);
+    const [radiusMeters, setRadiusMeters] = React.useState<LocationMapRadiusMeters>(LOCATION_MAP_RADIUS_OPTIONS[1]);
+    const [radiusBaseMode, setRadiusBaseMode] = React.useState<LocationMapRadiusBaseMode>('selected');
+    const [manualRadiusCenter, setManualRadiusCenter] = React.useState<LocationMapPosition | null>(null);
+    const [isRadiusPicking, setIsRadiusPicking] = React.useState(false);
+    const [measurementMode, setMeasurementModeState] = React.useState<LocationMapMeasurementMode>('none');
+    const [measurementPoints, setMeasurementPoints] = React.useState<readonly LocationMapPosition[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isGeocoding, setIsGeocoding] = React.useState(false);
     const [errorMessage, setErrorMessage] = React.useState('');
@@ -103,22 +120,31 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
 
     React.useEffect(() => {
         setPoints([]);
-        if (!kakaoReady || visibleLocations.length === 0) return;
+        const storedPoints = visibleLocations.flatMap(location => {
+            const storedPosition = getStoredPosition(location);
+            if (!storedPosition) return [];
+            return [{
+                location,
+                kind: getLocationMapKind(location),
+                position: storedPosition,
+                source: 'stored' as const
+            }];
+        });
+        if (!kakaoReady || visibleLocations.length === 0) {
+            setPoints(storedPoints);
+            return;
+        }
 
         let cancelled = false;
         const run = async () => {
             setIsGeocoding(true);
             try {
                 const geocoder = new kakao.maps.services.Geocoder();
-                const nextPoints: LocationMapPoint[] = [];
+                const nextPoints: LocationMapPoint[] = [...storedPoints];
+                const storedLocationIds = new Set(storedPoints.map(point => point.location.id));
                 let geocodeAttempts = 0;
                 for (const location of visibleLocations) {
-                    const storedPosition = getStoredPosition(location);
-                    const kind = getLocationMapKind(location);
-                    if (storedPosition) {
-                        nextPoints.push({ location, kind, position: storedPosition, source: 'stored' });
-                        continue;
-                    }
+                    if (storedLocationIds.has(location.id)) continue;
                     if (geocodeAttempts >= MAX_GEOCODE_LOCATIONS) continue;
                     geocodeAttempts += 1;
                     const point = await geocodeLocation(geocoder, location);
@@ -140,12 +166,16 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
     React.useEffect(() => {
         if (points.length === 0) {
             setActiveLocationId('');
+            setFocusedLocationId('');
             return;
         }
         if (!activeLocationId || !points.some(point => point.location.id === activeLocationId)) {
             setActiveLocationId(points[0]?.location.id || '');
         }
-    }, [activeLocationId, points]);
+        if (focusedLocationId && !points.some(point => point.location.id === focusedLocationId)) {
+            setFocusedLocationId('');
+        }
+    }, [activeLocationId, focusedLocationId, points]);
 
     const setMode = (mode: LocationMapMode) => setFilters(prev => ({ ...prev, mode }));
     const setQuery = (query: string) => setFilters(prev => ({ ...prev, query }));
@@ -153,10 +183,59 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
         setFilters(prev => ({ ...prev, statuses: toggleLocationMapStatus(prev.statuses, status) }));
     };
     const selectAllStatuses = () => setFilters(prev => ({ ...prev, statuses: new Set(FRANCHISE_LOCATION_STATUSES) }));
+    const selectPoint = (locationId: string) => {
+        setActiveLocationId(locationId);
+        setFocusedLocationId(locationId);
+        setFocusRequestId(prev => prev + 1);
+        setRadiusBaseMode('selected');
+        setIsRadiusPicking(false);
+    };
+    const setMeasurementMode = (mode: LocationMapMeasurementMode) => {
+        setMeasurementModeState(prev => (prev === mode ? 'none' : mode));
+        setMeasurementPoints([]);
+        setIsRadiusPicking(false);
+    };
+    const addMeasurementPoint = (position: LocationMapPosition) => {
+        if (measurementMode === 'none') return;
+        setMeasurementPoints(prev => [...prev, position]);
+    };
+    const undoMeasurementPoint = () => {
+        setMeasurementPoints(prev => prev.slice(0, -1));
+    };
+    const clearMeasurement = () => {
+        setMeasurementModeState('none');
+        setMeasurementPoints([]);
+    };
 
     const activePoint = points.find(point => point.location.id === activeLocationId) || points[0] || null;
+    const focusedPoint = points.find(point => point.location.id === focusedLocationId) || null;
+    const radiusCenter = radiusBaseMode === 'manual'
+        ? manualRadiusCenter
+        : activePoint?.position || null;
+    const radiusAnalysis = radiusBaseMode === 'manual'
+        ? buildRadiusAnalysisFromPosition(manualRadiusCenter, points, radiusMeters)
+        : buildRadiusAnalysis(activePoint, points, radiusMeters);
+    const measurementDistanceMeters = getLocationPathDistanceMeters(measurementPoints);
+    const measurementAreaSquareMeters = measurementMode === 'area'
+        ? getLocationPolygonAreaSquareMeters(measurementPoints)
+        : 0;
     const counts = buildLocationMapCounts(locations, visibleLocations, points);
     const center = getLocationMapCenter(points);
+    const startRadiusPicking = () => {
+        setRadiusBaseMode('manual');
+        setIsRadiusPicking(true);
+        setMeasurementModeState('none');
+        setMeasurementPoints([]);
+    };
+    const useSelectedRadius = () => {
+        setRadiusBaseMode('selected');
+        setIsRadiusPicking(false);
+    };
+    const pickRadiusCenter = (position: LocationMapPosition) => {
+        setManualRadiusCenter(position);
+        setRadiusBaseMode('manual');
+        setIsRadiusPicking(false);
+    };
 
     return {
         companyName,
@@ -168,14 +247,34 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
         isLoading,
         isGeocoding,
         errorMessage,
+        focusRequestId,
+        focusedPoint,
+        isRadiusPicking,
         locations,
+        manualRadiusCenter,
+        measurementAreaSquareMeters,
+        measurementDistanceMeters,
+        measurementMode,
+        measurementPoints,
         points,
+        radiusAnalysis,
+        radiusBaseMode,
+        radiusCenter,
+        radiusMeters,
         visibleLocations,
         loadLocations,
+        addMeasurementPoint,
+        clearMeasurement,
         selectAllStatuses,
-        setActiveLocationId,
         setMode,
+        setMeasurementMode,
         setQuery,
+        setRadiusMeters,
+        startRadiusPicking,
+        undoMeasurementPoint,
+        useSelectedRadius,
+        pickRadiusCenter,
+        selectPoint,
         toggleStatus
     };
 }

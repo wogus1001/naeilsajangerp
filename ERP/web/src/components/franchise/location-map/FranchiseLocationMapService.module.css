@@ -184,6 +184,10 @@
     inset: 0;
 }
 
+.mapInnerPicking {
+    cursor: crosshair;
+}
+
 .mapFallback {
     display: flex;
     min-height: 100%;
@@ -249,11 +253,44 @@
     white-space: nowrap;
 }
 
+.manualRadiusMarker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid #3182f6;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #2272eb;
+    box-shadow: 0 4px 14px rgb(25 31 40 / 14%);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.measurementPoint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #0f766e;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0f766e;
+    box-shadow: 0 4px 14px rgb(25 31 40 / 14%);
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
 .mapPanel {
     display: grid;
     align-content: start;
     gap: 12px;
-    overflow: hidden;
+    overflow-y: auto;
+    min-height: 0;
     padding: 12px;
 }
 
@@ -340,8 +377,7 @@
     font-weight: 700;
 }
 
-.addressLine,
-.memoLine {
+.addressLine {
     margin: 0;
     color: #4e5968;
     font-size: 13px;
@@ -351,12 +387,6 @@
 .addressLine {
     display: flex;
     gap: 6px;
-}
-
-.memoLine {
-    padding: 10px;
-    border-radius: 8px;
-    background: #f9fafb;
 }
 
 .primaryLink {
@@ -373,6 +403,283 @@
     text-decoration: none;
 }
 
+.analysisCard {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.measureHeader strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    color: #2272eb;
+    font-size: 18px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.measureHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.measureHeader h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.measureHeader p {
+    margin: 2px 0 0;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: keep-all;
+}
+
+.analysisTabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.measureTab,
+.measureTabActive {
+    min-height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.measureTabActive {
+    border-color: #0f766e;
+    background: #ecfdf5;
+    color: #0f766e;
+}
+
+.measureResult {
+    display: grid;
+    gap: 2px;
+    min-height: 54px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.measureResult span,
+.measureResult small {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.measureResult strong {
+    color: #191f28;
+    font-size: 18px;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+}
+
+.measureActions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.measureActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    gap: 5px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.measureActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+.radiusActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.radiusPickButton,
+.radiusPickButtonActive,
+.radiusResetButton {
+    min-height: 34px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.radiusPickButton,
+.radiusResetButton {
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.radiusPickButtonActive {
+    border: 1px solid #3182f6;
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.radiusResetButton {
+    padding: 0 10px;
+}
+
+.radiusPickNotice {
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #2272eb;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.radiusTabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.radiusTab,
+.radiusTabActive {
+    min-height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.radiusTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.radiusSummary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.radiusSummary div {
+    min-width: 0;
+    padding: 8px;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.radiusSummary span {
+    display: block;
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.radiusSummary strong {
+    display: block;
+    margin-top: 2px;
+    color: #191f28;
+    font-size: 16px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.nearbyList {
+    display: grid;
+    max-height: 174px;
+    overflow: hidden;
+    overflow-y: auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+}
+
+.nearbyRow {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 2px 8px;
+    padding: 9px 10px;
+    border: 0;
+    border-bottom: 1px solid #e5e8eb;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.nearbyRow:last-child {
+    border-bottom: 0;
+}
+
+.nearbyRow:hover {
+    background: #f9fafb;
+}
+
+.nearbyRow span {
+    grid-row: span 2;
+    align-self: center;
+    color: #2272eb;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.nearbyRow strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nearbyRow small {
+    overflow: hidden;
+    color: #8b95a1;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.emptyRadius {
+    padding: 14px 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #6b7684;
+    font-size: 13px;
+    text-align: center;
+}
+
 .emptyPanel {
     padding: 24px 12px;
     border-radius: 8px;
@@ -382,9 +689,38 @@
     font-size: 13px;
 }
 
+.pointListSection {
+    display: grid;
+    min-height: 260px;
+    min-width: 0;
+}
+
+.pointListHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 2px 8px;
+}
+
+.pointListHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.pointListHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
 .pointList {
     display: grid;
-    max-height: 260px;
+    align-content: start;
+    max-height: 420px;
+    min-height: 0;
     overflow: auto;
     border: 1px solid #e5e8eb;
     border-radius: 8px;
@@ -395,7 +731,8 @@
     display: grid;
     grid-template-columns: 28px 1fr;
     gap: 2px 8px;
-    padding: 10px;
+    min-height: 58px;
+    padding: 11px 10px;
     border: 0;
     border-bottom: 1px solid #e5e8eb;
     background: #ffffff;
@@ -491,6 +828,18 @@
 
     .panelStats,
     .activeCard dl {
+        grid-template-columns: 1fr;
+    }
+
+    .mapPanel {
+        grid-template-rows: auto;
+    }
+
+    .pointListSection {
+        min-height: 240px;
+    }
+
+    .radiusActions {
         grid-template-columns: 1fr;
     }
 }

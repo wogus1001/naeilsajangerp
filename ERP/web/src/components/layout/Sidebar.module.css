@@ -179,18 +179,8 @@
 }
 
 .navSubLinkChild {
-    position: relative;
-    padding-left: 74px;
+    padding-left: 58px;
     font-size: 13px;
-}
-
-.navSubLinkChild::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 52px;
-    width: 12px;
-    border-top: 1px solid #d1d6db;
 }
 
 .sidebar.collapsed .navSubLink {

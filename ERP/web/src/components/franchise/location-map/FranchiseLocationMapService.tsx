@@ -36,18 +36,43 @@ export function FranchiseLocationMapService() {
                 <div className={styles.mapCanvas}>
                     <FranchiseLocationMapCanvas
                         activeLocationId={controller.activeLocationId}
+                        activePoint={controller.activePoint}
                         center={controller.center}
+                        focusRequestId={controller.focusRequestId}
+                        focusedPoint={controller.focusedPoint}
                         isBusy={isBusy}
+                        isManualRadius={controller.radiusBaseMode === 'manual'}
+                        isRadiusPicking={controller.isRadiusPicking}
+                        measurementMode={controller.measurementMode}
+                        measurementPoints={controller.measurementPoints}
                         points={controller.points}
+                        radiusCenter={controller.radiusCenter}
+                        radiusMeters={controller.radiusMeters}
                         onKakaoReadyChange={setKakaoReady}
-                        onSelectPoint={controller.setActiveLocationId}
+                        onMeasurementPointAdd={controller.addMeasurementPoint}
+                        onRadiusCenterPick={controller.pickRadiusCenter}
+                        onSelectPoint={controller.selectPoint}
                     />
                 </div>
                 <FranchiseLocationMapPanel
                     activePoint={controller.activePoint}
                     counts={controller.counts}
+                    measurementAreaSquareMeters={controller.measurementAreaSquareMeters}
+                    measurementDistanceMeters={controller.measurementDistanceMeters}
+                    measurementMode={controller.measurementMode}
+                    measurementPoints={controller.measurementPoints}
                     points={controller.points}
-                    onSelectPoint={controller.setActiveLocationId}
+                    radiusAnalysis={controller.radiusAnalysis}
+                    radiusBaseMode={controller.radiusBaseMode}
+                    radiusMeters={controller.radiusMeters}
+                    isRadiusPicking={controller.isRadiusPicking}
+                    onMeasurementClear={controller.clearMeasurement}
+                    onMeasurementModeChange={controller.setMeasurementMode}
+                    onMeasurementUndo={controller.undoMeasurementPoint}
+                    onRadiusChange={controller.setRadiusMeters}
+                    onStartRadiusPicking={controller.startRadiusPicking}
+                    onUseSelectedRadius={controller.useSelectedRadius}
+                    onSelectPoint={controller.selectPoint}
                 />
             </section>
         </main>

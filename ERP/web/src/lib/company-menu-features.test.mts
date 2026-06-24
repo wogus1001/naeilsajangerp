@@ -47,7 +47,7 @@ test('Given sidebar sections When reading navigation Then dashboard is top-level
     assert.deepEqual(dashboardSection?.items.map(item => item.title), ['대시보드']);
     assert.equal(franchiseSection?.key, 'franchise');
     assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영', '물건지 지도', '전자계약']);
-    assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.depth, 1);
+    assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.depth, undefined);
     assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.category, '가맹 운영');
 });
 

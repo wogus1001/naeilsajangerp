@@ -9,10 +9,14 @@ import type {
     LocationMapKind,
     LocationMapMode,
     LocationMapPoint,
-    LocationMapPosition
+    LocationMapPosition,
+    LocationMapRadiusMeters,
+    LocationRadiusAnalysis,
+    LocationRadiusNearbyPoint
 } from './types';
 
 const DEFAULT_CENTER: LocationMapPosition = { lat: 37.5665, lng: 126.9780 };
+const EARTH_RADIUS_METERS = 6371000;
 const KOREA_LATITUDE_RANGE = { min: 32, max: 39.5 };
 const KOREA_LONGITUDE_RANGE = { min: 123, max: 132.5 };
 
@@ -138,6 +142,125 @@ export function getLocationMapLevel(points: readonly LocationMapPoint[]): number
     return 6;
 }
 
+export function getLocationDistanceMeters(
+    from: LocationMapPosition,
+    to: LocationMapPosition
+): number {
+    const fromLat = toRadians(from.lat);
+    const toLat = toRadians(to.lat);
+    const latDelta = toRadians(to.lat - from.lat);
+    const lngDelta = toRadians(to.lng - from.lng);
+    const halfChord = Math.sin(latDelta / 2) ** 2
+        + Math.cos(fromLat) * Math.cos(toLat) * Math.sin(lngDelta / 2) ** 2;
+    return EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(halfChord), Math.sqrt(1 - halfChord));
+}
+
+function toRadians(value: number): number {
+    return value * Math.PI / 180;
+}
+
+export function getLocationPathDistanceMeters(points: readonly LocationMapPosition[]): number {
+    if (points.length < 2) return 0;
+    return points.slice(1).reduce((total, point, index) => {
+        const previous = points[index];
+        if (!previous) return total;
+        return total + getLocationDistanceMeters(previous, point);
+    }, 0);
+}
+
+export function getLocationPolygonAreaSquareMeters(points: readonly LocationMapPosition[]): number {
+    if (points.length < 3) return 0;
+    const averageLatitude = points.reduce((total, point) => total + toRadians(point.lat), 0) / points.length;
+    const projected = points.map(point => ({
+        x: toRadians(point.lng) * EARTH_RADIUS_METERS * Math.cos(averageLatitude),
+        y: toRadians(point.lat) * EARTH_RADIUS_METERS
+    }));
+
+    const shoelace = projected.reduce((total, point, index) => {
+        const next = projected[(index + 1) % projected.length];
+        if (!next) return total;
+        return total + point.x * next.y - next.x * point.y;
+    }, 0);
+    return Math.abs(shoelace) / 2;
+}
+
+export function formatLocationArea(areaSquareMeters: number): string {
+    if (areaSquareMeters <= 0) return '0㎡';
+    const pyeong = Math.round(areaSquareMeters / 3.305785);
+    if (areaSquareMeters >= 1_000_000) {
+        const squareKilometers = Math.round(areaSquareMeters / 10_000) / 100;
+        return `${squareKilometers.toLocaleString()}㎢ · ${pyeong.toLocaleString()}평`;
+    }
+    return `${Math.round(areaSquareMeters).toLocaleString()}㎡ · ${pyeong.toLocaleString()}평`;
+}
+
+export function buildRadiusAnalysis(
+    activePoint: LocationMapPoint | null,
+    points: readonly LocationMapPoint[],
+    radiusMeters: LocationMapRadiusMeters
+): LocationRadiusAnalysis {
+    const nearbyPoints = activePoint
+        ? buildNearbyRadiusPoints(activePoint.position, points, radiusMeters, activePoint.location.id)
+        : [];
+    return buildRadiusSummary(radiusMeters, nearbyPoints);
+}
+
+export function buildRadiusAnalysisFromPosition(
+    center: LocationMapPosition | null,
+    points: readonly LocationMapPoint[],
+    radiusMeters: LocationMapRadiusMeters
+): LocationRadiusAnalysis {
+    const nearbyPoints = center
+        ? buildNearbyRadiusPoints(center, points, radiusMeters, '')
+        : [];
+    return buildRadiusSummary(radiusMeters, nearbyPoints);
+}
+
+function buildRadiusSummary(
+    radiusMeters: LocationMapRadiusMeters,
+    nearbyPoints: readonly LocationRadiusNearbyPoint[]
+): LocationRadiusAnalysis {
+    const statusCounts = buildEmptyStatusCounts();
+
+    for (const nearbyPoint of nearbyPoints) {
+        statusCounts[nearbyPoint.point.location.status] += 1;
+    }
+
+    return {
+        radiusMeters,
+        nearbyPoints,
+        operationCount: nearbyPoints.filter(item => item.point.kind === 'operation').length,
+        candidateCount: nearbyPoints.filter(item => item.point.kind === 'candidate').length,
+        statusCounts
+    };
+}
+
+function buildNearbyRadiusPoints(
+    center: LocationMapPosition,
+    points: readonly LocationMapPoint[],
+    radiusMeters: LocationMapRadiusMeters,
+    excludedLocationId: string
+): readonly LocationRadiusNearbyPoint[] {
+    return points
+        .filter(point => point.location.id !== excludedLocationId)
+        .map(point => ({
+            point,
+            distanceMeters: getLocationDistanceMeters(center, point.position)
+        }))
+        .filter(item => item.distanceMeters <= radiusMeters)
+        .sort((left, right) => left.distanceMeters - right.distanceMeters);
+}
+
+function buildEmptyStatusCounts(): Record<FranchiseLocationStatus, number> {
+    return {
+        운영중: 0,
+        오픈준비: 0,
+        검토중: 0,
+        휴점: 0,
+        폐점: 0
+    };
+}
+
 export function buildLocationMapLink(location: FranchiseLocation): string {
     if (getLocationMapKind(location) === 'operation') {
         return `/dashboard/franchise-operations?locationId=${encodeURIComponent(location.id)}`;
@@ -150,6 +273,11 @@ export function formatLocationMapDate(value?: string | null): string {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+export function formatLocationDistance(distanceMeters: number): string {
+    if (distanceMeters < 1000) return `${Math.round(distanceMeters).toLocaleString()}m`;
+    return `${(Math.round(distanceMeters / 100) / 10).toLocaleString()}km`;
 }
 
 export function toggleLocationMapStatus(

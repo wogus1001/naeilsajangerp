@@ -2,24 +2,37 @@
 
 import React from 'react';
 import { Building2, MapPin } from 'lucide-react';
-import { CustomOverlayMap, Map, MapMarker, useKakaoLoader } from 'react-kakao-maps-sdk';
+import { Circle, CustomOverlayMap, Map, MapMarker, Polygon, Polyline, useKakaoLoader } from 'react-kakao-maps-sdk';
 import { KAKAO_MAP_LOADER_OPTIONS } from '@/lib/kakao-map-config';
 import {
     getLocationMapLevel,
     LOCATION_MAP_STATUS_COLORS
 } from './mapUtils';
 import type {
+    LocationMapMeasurementMode,
     LocationMapPoint,
-    LocationMapPosition
+    LocationMapPosition,
+    LocationMapRadiusMeters
 } from './types';
 import styles from './FranchiseLocationMapService.module.css';
 
 type Props = {
     readonly activeLocationId: string;
+    readonly activePoint: LocationMapPoint | null;
     readonly center: LocationMapPosition;
+    readonly focusRequestId: number;
+    readonly focusedPoint: LocationMapPoint | null;
     readonly isBusy: boolean;
+    readonly isManualRadius: boolean;
+    readonly isRadiusPicking: boolean;
+    readonly measurementMode: LocationMapMeasurementMode;
+    readonly measurementPoints: readonly LocationMapPosition[];
     readonly points: readonly LocationMapPoint[];
+    readonly radiusCenter: LocationMapPosition | null;
+    readonly radiusMeters: LocationMapRadiusMeters;
     readonly onKakaoReadyChange: (ready: boolean) => void;
+    readonly onMeasurementPointAdd: (position: LocationMapPosition) => void;
+    readonly onRadiusCenterPick: (position: LocationMapPosition) => void;
     readonly onSelectPoint: (locationId: string) => void;
 };
 
@@ -35,12 +48,31 @@ function relayoutMap(map: kakao.maps.Map, center: LocationMapPosition) {
     window.setTimeout(update, 520);
 }
 
+function focusMapOnPoint(map: kakao.maps.Map, point: LocationMapPoint) {
+    const nextCenter = new kakao.maps.LatLng(point.position.lat, point.position.lng);
+    map.panTo(nextCenter);
+    if (map.getLevel() > 6) {
+        map.setLevel(6);
+    }
+}
+
 export function FranchiseLocationMapCanvas({
     activeLocationId,
+    activePoint,
     center,
+    focusRequestId,
+    focusedPoint,
     isBusy,
+    isManualRadius,
+    isRadiusPicking,
+    measurementMode,
+    measurementPoints,
     points,
+    radiusCenter,
+    radiusMeters,
     onKakaoReadyChange,
+    onMeasurementPointAdd,
+    onRadiusCenterPick,
     onSelectPoint
 }: Props) {
     const mapRef = React.useRef<kakao.maps.Map | null>(null);
@@ -48,11 +80,14 @@ export function FranchiseLocationMapCanvas({
     const [isKakaoLoading, kakaoLoadError] = useKakaoLoader(KAKAO_MAP_LOADER_OPTIONS);
     const kakaoReady = !isKakaoLoading && !kakaoLoadError;
     const mapLevel = getLocationMapLevel(points);
+    const displayCenter = focusedPoint?.position || center;
+    const isMeasuring = measurementMode !== 'none';
+    const measurementPath = measurementPoints.map(position => ({ lat: position.lat, lng: position.lng }));
     const relayoutCurrentMap = React.useCallback(() => {
         const map = mapRef.current;
         if (!map) return;
-        relayoutMap(map, center);
-    }, [center]);
+        relayoutMap(map, displayCenter);
+    }, [displayCenter]);
 
     React.useEffect(() => {
         onKakaoReadyChange(kakaoReady);
@@ -69,6 +104,12 @@ export function FranchiseLocationMapCanvas({
     React.useEffect(() => {
         relayoutCurrentMap();
     }, [mapLevel, points.length, relayoutCurrentMap]);
+
+    React.useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !focusedPoint) return;
+        focusMapOnPoint(map, focusedPoint);
+    }, [focusRequestId, focusedPoint]);
 
     if (kakaoLoadError) {
         return (
@@ -101,16 +142,71 @@ export function FranchiseLocationMapCanvas({
     }
 
     return (
-        <div ref={mapHostRef} className={styles.mapInner}>
+        <div
+            ref={mapHostRef}
+            className={`${styles.mapInner} ${isRadiusPicking || isMeasuring ? styles.mapInnerPicking : ''}`}
+        >
             <Map
-                center={center}
+                center={displayCenter}
                 level={mapLevel}
+                onClick={(_, mouseEvent) => {
+                    const latLng = mouseEvent.latLng;
+                    const position = { lat: latLng.getLat(), lng: latLng.getLng() };
+                    if (isRadiusPicking) {
+                        onRadiusCenterPick(position);
+                        return;
+                    }
+                    if (isMeasuring) onMeasurementPointAdd(position);
+                }}
                 onCreate={(map) => {
                     mapRef.current = map;
-                    relayoutMap(map, center);
+                    relayoutMap(map, displayCenter);
                 }}
                 style={{ width: '100%', height: '100%' }}
             >
+                {radiusCenter ? (
+                    <Circle
+                        center={radiusCenter}
+                        radius={radiusMeters}
+                        fillColor="#3182f6"
+                        fillOpacity={0.08}
+                        strokeColor="#3182f6"
+                        strokeOpacity={0.72}
+                        strokeWeight={2}
+                        zIndex={1}
+                    />
+                ) : null}
+                {radiusCenter && isManualRadius ? (
+                    <CustomOverlayMap position={radiusCenter} yAnchor={1.4}>
+                        <span className={styles.manualRadiusMarker}>기준점</span>
+                    </CustomOverlayMap>
+                ) : null}
+                {measurementMode === 'area' && measurementPoints.length >= 3 ? (
+                    <Polygon
+                        path={measurementPath}
+                        fillColor="#14b8a6"
+                        fillOpacity={0.14}
+                        strokeColor="#0f766e"
+                        strokeOpacity={0.82}
+                        strokeWeight={2}
+                        zIndex={2}
+                    />
+                ) : null}
+                {measurementPoints.length >= 2 && (measurementMode === 'distance' || measurementPoints.length < 3) ? (
+                    <Polyline
+                        path={measurementPath}
+                        endArrow={measurementMode === 'distance'}
+                        strokeColor="#0f766e"
+                        strokeOpacity={0.86}
+                        strokeWeight={3}
+                        zIndex={3}
+                    />
+                ) : null}
+                {measurementPoints.map((position, index) => (
+                    <CustomOverlayMap key={`${position.lat}-${position.lng}-${index}`} position={position} yAnchor={0.5}>
+                        <span className={styles.measurementPoint}>{index + 1}</span>
+                    </CustomOverlayMap>
+                ))}
                 {points.map((point, index) => {
                     const isActive = activeLocationId === point.location.id;
                     const markerClassName = point.kind === 'operation'
