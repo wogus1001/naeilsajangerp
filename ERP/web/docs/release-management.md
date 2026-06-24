@@ -1,6 +1,6 @@
 # Release Management
 
-이 문서는 ERP/web 업데이트를 브랜치, 커밋, 배포 이력과 함께 관리하기 위한 운영 규칙이다. 코드 구현 세부 로드맵은 `franchise-growth-roadmap.md`, QA 결과는 `franchise-dev-qa-log.md`, 로컬 worktree 상태는 `../../MAC_CONTEXT.md`에 기록한다.
+이 문서는 ERP/web 업데이트를 브랜치, 커밋, 배포 이력과 함께 관리하기 위한 운영 규칙이다. 현재 상태 요약은 `franchise-current-status.md`, 코드 구현 세부 로드맵은 `franchise-growth-roadmap.md`, QA 결과는 `franchise-dev-qa-log.md`, 로컬 worktree 운영 방식은 `../../MAC_CONTEXT.md`에 기록한다.
 
 ## Branch Policy
 
@@ -23,7 +23,7 @@
 
 1. 작업 브랜치 생성: `git switch -c codex/<topic>-YYYYMMDD origin/main`
 2. 구현 후 로컬 검증: lint, typecheck, tests, build, browser QA 중 변경 범위에 맞는 항목을 수행한다.
-3. 문서 갱신: README, roadmap, QA log, MAC_CONTEXT 중 변경 사실을 알 필요가 있는 문서만 수정한다.
+3. 문서 갱신: current status, README, roadmap, QA log, MAC_CONTEXT 중 변경 사실을 알 필요가 있는 문서만 수정한다.
    - 공개 설명/사용 흐름에 영향이 있으면 데모 페이지를 함께 갱신하고, 영향이 없으면 QA 로그에 `데모 영향 없음`으로 남긴다.
 4. 기능 커밋 생성: 커밋 해시와 메시지를 작업 요약에 남긴다.
 5. dev 배포 요청 시: `my_project_dev_deploy`에서 해당 커밋을 반영하고 `dev`로 push한다.
@@ -44,6 +44,8 @@ YYYY-MM-DD
 - 검증: lint/tsc/tests/build/browser QA 결과
 - 남은 이슈: env, migration, 외부 계정 승인 등
 ```
+
+상세 명령 출력과 긴 브라우저 QA 내역은 `franchise-dev-qa-log.md`에 남기고, 이 문서에는 릴리즈 판단에 필요한 요약과 링크 가능한 기준만 남긴다. 최신 한 장 요약은 `franchise-current-status.md`에 반영한다.
 
 ## Pending Work Ledger
 

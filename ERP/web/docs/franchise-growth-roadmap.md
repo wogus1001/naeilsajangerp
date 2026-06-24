@@ -9,6 +9,7 @@
 - `ERP/web/handoff.md`는 단일 작성자 규칙 때문에 Codex가 수정하지 않는다. 내용이 오래되어도 검토 참고만 하고 변경하지 않는다.
 - `MAC_CONTEXT.md`는 다음 세션이 바로 이어서 작업할 수 있도록 현재 상태와 로컬 운영 규칙을 짧게 갱신한다.
 - `ERP/web/README.md`는 실행, 환경변수, SQL 적용 순서처럼 개발자가 바로 따라야 하는 설정 정보를 관리한다.
+- `ERP/web/docs/franchise-current-status.md`는 현재 구현/배포/SQL/샘플/live QA 상태를 한 장으로 관리한다.
 - `ERP/web/docs/franchise-growth-roadmap.md`는 프랜차이즈 고도화 계획, API 정책, 다음 작업 목록을 관리한다.
 - `ERP/web/docs/franchise-dev-qa-log.md`는 개발 과정, 검증 결과, 미검증 리스크, 다음 QA 체크리스트를 관리한다.
 - `ERP/web/docs/franchise-product-direction.md`는 프랜차이즈 본사 임직원용 통합 운영 OS의 거시 제품 방향과 장기 모듈 구조를 관리한다.
@@ -365,4 +366,4 @@
 - `ERP/web/docs/franchise-ops-runbook.md`
   - 로컬 서버 실행, SQL 적용 순서, env 확인, 경쟁스캔 장애 대응, provider 한도 초과 대응 절차를 관리한다.
 
-위 세 문서는 지금 당장 모두 만들기보다, 다음 구현에서 실제 운영 이슈가 반복될 때 분리하는 것이 좋다. 현재는 이 로드맵, `franchise-dev-qa-log.md`, `documentation-agent.md`, `MAC_CONTEXT.md`, `README.md`만 갱신해도 충분하다.
+`franchise-current-status.md`는 2026-06-24에 현재 상태 요약 문서로 분리했다. 위 세 문서는 지금 당장 모두 만들기보다, 다음 구현에서 실제 운영 이슈가 반복될 때 분리하는 것이 좋다. 현재는 `franchise-current-status.md`, 이 로드맵, `franchise-dev-qa-log.md`, `documentation-agent.md`, `MAC_CONTEXT.md`, `README.md`만 갱신해도 충분하다.
