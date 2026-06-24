@@ -408,7 +408,7 @@ export function LeadContractChecklistSection({
                     return (
                         <section key={group.requirementType} className={`${styles.groupSection} ${styles[`${group.requirementType}Group`]}`}>
                             <div className={styles.groupHeader}>
-                                <div>
+                                <div className={styles.groupHeaderText}>
                                     <span>{group.label}</span>
                                     <strong>{group.title}</strong>
                                     <small>{group.description}</small>

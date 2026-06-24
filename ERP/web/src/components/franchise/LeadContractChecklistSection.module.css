@@ -166,9 +166,11 @@
     background: #f9fafb;
 }
 
-.groupHeader > div {
-    display: grid;
-    gap: 4px;
+.groupHeaderText {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
     min-width: 0;
 }
 
@@ -192,6 +194,7 @@
     color: #6b7684;
     font-size: 13px;
     line-height: 1.54;
+    white-space: nowrap;
 }
 
 .groupHeader em {
@@ -824,6 +827,15 @@
     .groupHeader {
         display: grid;
         gap: 8px;
+    }
+
+    .groupHeaderText {
+        display: grid;
+        gap: 4px;
+    }
+
+    .groupHeader small {
+        white-space: normal;
     }
 
     .summaryGrid {
