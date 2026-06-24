@@ -678,6 +678,17 @@
 - Dev 배포: 선행 오픈 준비 탭 커밋과 1차 고도화 커밋을 dev worktree에 각각 `6859dca`, `e4ad21d`로 cherry-pick했다. dev worktree에서 같은 15건 테스트, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했고, Vercel Dev deployment `dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`가 `READY`이며 `e4ad21d`와 매칭됨을 확인했다. Dev alias는 `https://naeilsajang-dev.vercel.app`이다.
 - 신규 SQL은 없다.
 
+## 2026-06-24 /demo 전용 접근 게이트 QA
+
+- `/demo`와 `/demo/[role]` 샘플 데이터 화면에 Supabase 로그인과 분리된 데모 전용 접근 게이트를 추가했다. `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`, `DEMO_ACCESS_COOKIE_SECRET`가 모두 설정되어야 진입할 수 있고, 환경변수가 없으면 fail-closed 상태로 `데모 접근 설정이 필요합니다.`를 표시한다.
+- `POST /api/demo/access`는 ID/PW 검증 후 8시간짜리 httpOnly `demo_access` 쿠키를 `/demo` 경로로 발급한다. `DELETE /api/demo/access`는 같은 쿠키를 삭제한다. 쿠키는 `sameSite=lax`, production에서 `secure`로 설정된다.
+- 기존 데모 API guard는 유지하되 `/api/demo/access`만 허용했다. 데모 화면 내부의 실제 ERP `/api/**` 호출 차단 정책은 그대로 유지한다.
+- 데모 헤더에 `데모 로그아웃` 액션을 추가했다. 모바일에서도 로그아웃 버튼은 노출하고, 설명 다시 보기와 샘플 배지는 작은 화면에서 숨긴다.
+- `ERP/web/README.md`에 데모 접근 환경변수와 운영 주의사항을 추가했다.
+- 검증: `npx tsx --test src/lib/demo-access.test.mts src/app/api/demo/access/route.test.mts src/app/demo/demoContent.test.mts` 12건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했고 `/demo`, `/demo/[role]`는 dynamic route로 확인했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3047`에서 임시 데모 env를 주입해 `/demo`, `/demo/manager`, `/demo/partner`를 확인했다. 로그인 전 접근 게이트, 잘못된 비밀번호 오류, 정상 로그인, 딥링크 유지, 로그아웃 후 로그인 화면 복귀, 모바일 390px 로그인 화면 horizontal overflow 0건을 확인했다.
+- 신규 SQL은 없다.
+
 ## 다음 QA 체크리스트
 
 ### P0

@@ -65,6 +65,15 @@ YYYY-MM-DD
 
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 `/demo` 접근 게이트 커밋
+  - 주요 기능: `/demo`와 `/demo/[role]` 샘플 데이터 화면을 데모 전용 ID/PW 접근 게이트로 보호했다. 실제 Supabase 로그인과 분리하고, `POST /api/demo/access`에서 httpOnly `/demo` 범위 쿠키를 발급하며 `DELETE /api/demo/access`에서 로그아웃한다. 기존 데모 API guard는 `/api/demo/access`만 예외로 허용하고 실제 ERP API 호출 차단을 유지한다. 데모 헤더에는 `데모 로그아웃` 액션을 추가했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/demo-access.test.mts src/app/api/demo/access/route.test.mts src/app/demo/demoContent.test.mts` 12건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3047`에서 `/demo`, `/demo/manager`, `/demo/partner` 로그인/오류/딥링크/로그아웃 흐름과 모바일 390px 접근 게이트 overflow 0건을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. Vercel Production, Development, Preview(dev) 환경에 `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`, `DEMO_ACCESS_COOKIE_SECRET` 등록은 완료했다. 기존 배포에는 자동 반영되지 않으므로 다음 dev/main 재배포 후 `/demo` 접근 게이트를 실서버에서 확인한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `c65bdf8 feat(franchise): refine opening readiness checklist`
   - 주요 기능: 오픈 준비 체크리스트 1차 고도화. 기존 `franchise_opening_projects.tasks` JSON을 확장해 6단계 25개 하위 체크를 제공하고, `확인요청`, 오늘 처리, 기한 임박, 진행 이슈, 오픈 가능도 요약을 추가했다. 단계별 접힘 섹션에서 항목 설명, 필수 배지, 상태, 담당, 기한, 메모를 관리한다. 계약완료 상세의 계약 전 서류 탭/버튼 표기는 `구비서류`로 통일했다. 기존 저장 데이터는 task `id` 기준으로 병합하므로 신규 SQL은 없다.
   - dev 반영: `e4ad21d feat(franchise): refine opening readiness checklist`

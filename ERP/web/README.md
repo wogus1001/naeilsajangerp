@@ -96,6 +96,20 @@ The admin page manages menu availability per company through `/api/admin/company
 
 If the migration is not applied, menu features fall back to enabled for the product screens and the admin save API returns a migration-required error instead of silently losing settings.
 
+## Public Demo Access Setup
+
+The `/demo` and `/demo/[role]` sample-data pages are protected by a lightweight demo-only login gate. It does not create a Supabase session and keeps the demo API guard that blocks real ERP API calls.
+
+Required environment variables:
+
+```bash
+DEMO_ACCESS_ID=
+DEMO_ACCESS_PASSWORD=
+DEMO_ACCESS_COOKIE_SECRET=
+```
+
+Use different values per Vercel environment when needed. `DEMO_ACCESS_COOKIE_SECRET` signs the short-lived httpOnly `/demo` cookie and must not be committed to source control.
+
 ## Meta Lead Ads Setup
 
 Run `supabase_meta_lead_ads_migration.sql` before enabling the Meta integration.
