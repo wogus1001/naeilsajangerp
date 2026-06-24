@@ -9,6 +9,7 @@ import {
     DISCLOSURE_UPLOAD_BUCKET,
     type DocumentDraft
 } from './leadDisclosureFormUtils';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 export type LeadDisclosureWorkflowState = {
     readonly documents: readonly FranchiseDisclosureDocument[];
@@ -46,9 +47,10 @@ type FetchDisclosureWorkflowStateInput = {
 };
 
 type UploadDisclosureFileInput = {
-    readonly companyId?: string;
+    readonly companyId: string;
     readonly companyName: string;
     readonly file: File;
+    readonly requesterId: string;
 };
 
 type SaveDisclosureDocumentInput = {
@@ -102,6 +104,7 @@ export async function uploadDisclosureFileRequest(input: UploadDisclosureFileInp
     const formData = new FormData();
     formData.append('file', input.file);
     formData.append('bucket', DISCLOSURE_UPLOAD_BUCKET);
+    if (input.companyId) formData.append('companyId', input.companyId);
     formData.append('path', buildDisclosureStoragePath({
         companyId: input.companyId,
         companyName: input.companyName,
@@ -110,7 +113,11 @@ export async function uploadDisclosureFileRequest(input: UploadDisclosureFileInp
         uniqueSuffix: buildUploadSuffix()
     }));
 
-    const response = await fetch('/api/upload', { method: 'POST', body: formData });
+    const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        headers: await getApiAuthHeaders()
+    });
     const payload = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
     const data = unwrapApiData<DisclosureUploadResponse>(payload);

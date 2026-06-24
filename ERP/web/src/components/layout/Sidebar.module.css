@@ -178,6 +178,11 @@
     transition: all 0.2s;
 }
 
+.navSubLinkChild {
+    padding-left: 58px;
+    font-size: 13px;
+}
+
 .sidebar.collapsed .navSubLink {
     padding: 10px 0;
     text-align: center;

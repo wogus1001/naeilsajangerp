@@ -106,7 +106,7 @@ export function SidebarNavSection({
                             <Link
                                 key={item.url}
                                 href={item.url}
-                                className={`${styles.navSubLink} ${pathname === item.url ? styles.active : ''}`}
+                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${pathname === item.url ? styles.active : ''}`}
                             >
                                 {icon ? (
                                     <span className={styles.navSubLinkContent}>

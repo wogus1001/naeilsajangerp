@@ -4,6 +4,7 @@ export type PageMode = 'documents' | 'templates';
 
 export type ElectronicContract = {
     readonly id: string;
+    readonly leadId: string;
     readonly name: string;
     readonly status: string;
     readonly ucansignDocumentId: string;
@@ -45,8 +46,9 @@ export function formatDate(value: string): string {
 }
 
 export function draftHref(contract: ElectronicContract): string {
+    const leadParam = contract.leadId ? `&leadId=${encodeURIComponent(contract.leadId)}` : '';
     if (contract.templateSource === 'company_uploaded' && contract.companyTemplateId) {
-        return `/contracts/electronic/create?companyTemplateId=${encodeURIComponent(contract.companyTemplateId)}&draftId=${encodeURIComponent(contract.id)}`;
+        return `/contracts/electronic/create?companyTemplateId=${encodeURIComponent(contract.companyTemplateId)}&draftId=${encodeURIComponent(contract.id)}${leadParam}`;
     }
-    return `/contracts/electronic/create?draftId=${encodeURIComponent(contract.id)}`;
+    return `/contracts/electronic/create?draftId=${encodeURIComponent(contract.id)}${leadParam}`;
 }

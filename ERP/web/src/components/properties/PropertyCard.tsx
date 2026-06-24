@@ -217,6 +217,22 @@ function deriveRealtyRegion(value: unknown) {
     return tokens.slice(0, 2).join(' ') || text;
 }
 
+function createClientTimestamp() {
+    return Date.now();
+}
+
+function createClientId() {
+    return createClientTimestamp().toString();
+}
+
+function createClientIdWithSuffix() {
+    return `${createClientId()}${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function createClientIdWithTimestamp(timestamp: number) {
+    return `${timestamp}${Math.random().toString(36).slice(2, 7)}`;
+}
+
 export default function PropertyCard({ property, onClose, onRefresh, onNavigate, canNavigate }: PropertyCardProps) {
     useKakaoLoader({
         appkey: "26c1197bae99e17f8c1f3e688e22914d",
@@ -569,7 +585,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             }
 
             const newHistory = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                id: createClientIdWithSuffix(),
                 date: new Date().toISOString().split('T')[0],
                 manager: managerName,
                 relatedProperty: propertyData.name,
@@ -612,7 +628,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
         } else {
             // Promoted Customer Mode
             const newCustomer = {
-                id: Date.now().toString(),
+                id: createClientId(),
                 date: new Date().toISOString().split('T')[0],
                 name: name,
                 type: type, // 'customer' or 'businessCard'
@@ -688,7 +704,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
     const handleSaveContract = async () => {
         const newContract = {
-            id: editingContractId || Date.now().toString(),
+            id: editingContractId || createClientId(),
             ...contractForm
         };
 
@@ -872,7 +888,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
     const handleSavePriceHistory = async () => {
         const newItem: PriceHistoryItem = {
-            id: editingHistoryId || Date.now().toString(),
+            id: editingHistoryId || createClientId(),
             date: priceHistoryForm.date,
             manager: formData.managerName || 'Unknown',
             amount: priceHistoryForm.amount,
@@ -1098,7 +1114,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
             // Create History Item for Person
             const newHistory = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                id: createClientIdWithSuffix(),
                 date: historyItem.date,
                 manager: historyItem.manager,
                 relatedProperty: propertyName, // LINKED PROPERTY NAME
@@ -1181,7 +1197,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
         }
 
         const newItem: WorkHistoryItem = {
-            id: editingHistoryId || Date.now().toString(),
+            id: editingHistoryId || createClientId(),
             date: workHistoryForm.date,
             manager: formData.managerName || 'Unknown',
             content: workHistoryForm.content,
@@ -1533,10 +1549,10 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 if (exists) {
                     newHistory = newHistory.filter((item: any) => item.id !== exists.id);
                 }
-            } else {
-                // Add New
-                const newItem: RevenueItem = {
-                    id: exists ? exists.id : Date.now().toString(),
+                } else {
+                    // Add New
+                    const newItem: RevenueItem = {
+                    id: exists ? exists.id : createClientId(),
                     date: dateStr,
                     cash,
                     card,
@@ -1626,7 +1642,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 if (year && month) {
                     const dateStr = `${year}-${String(month).padStart(2, '0')}`;
                     newItems.push({
-                        id: Date.now().toString() + Math.random().toString(),
+                        id: createClientIdWithSuffix(),
                         date: dateStr,
                         cash,
                         card,
@@ -2283,7 +2299,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
                 if (currentTotal !== lastTotal) {
                     const newHistoryItem: PriceHistoryItem = {
-                        id: Date.now().toString(),
+                        id: createClientId(),
                         date: new Date().toISOString().split('T')[0],
                         manager: formData.managerName || 'Unknown',
                         amount: currentTotal,
@@ -2510,7 +2526,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
                 // 1. Upload to Supabase Storage
                 // Path: properties/{propertyId}/{timestamp}_{filename}
-                const timestamp = Date.now();
+                const timestamp = createClientTimestamp();
                 // Sanitize filename to avoid weird character issues
                 const sanitizedName = file.name.replace(/[^\x00-\x7F]/g, "_");
                 const filePath = `properties/${property.id || 'temp'}/${timestamp}_${sanitizedName}`;
@@ -2532,7 +2548,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
                 // 3. Create Document Metadata
                 newDocs.push({
-                    id: timestamp.toString() + Math.random().toString().substr(2, 5),
+                    id: createClientIdWithTimestamp(timestamp),
                     date: new Date().toISOString().split('T')[0],
                     uploader: userName,
                     type: ext,
@@ -3860,7 +3876,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                                             <XAxis dataKey="date" />
                                             <YAxis yAxisId="left" />
                                             <YAxis yAxisId="right" orientation="right" />
-                                            <Tooltip formatter={(value: number) => `${value.toLocaleString()} 만원`} />
+                                            <Tooltip formatter={(value) => `${Number(value ?? 0).toLocaleString()} 만원`} />
                                             <Legend />
                                             <Bar yAxisId="left" dataKey="cash" name="현금" fill="#1c7ed6" stackId="a" />
                                             <Bar yAxisId="left" dataKey="card" name="카드" fill="#37b24d" stackId="a" />
@@ -4494,7 +4510,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                         }
 
                         setActiveTab('reports');
-                        setDirectReportPreview(Date.now());
+                        setDirectReportPreview(createClientTimestamp());
                     }}><Printer size={14} /> 인쇄</button>
                     <button className={styles.footerBtn} onClick={onClose}>닫기</button>
                 </div>

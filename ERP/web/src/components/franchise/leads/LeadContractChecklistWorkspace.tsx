@@ -31,8 +31,9 @@ type ChecklistDisplayState = {
     readonly isComplete: boolean;
 };
 
-const DEFAULT_TOTAL = LEAD_CONTRACT_CHECKLIST_DEFINITIONS.length;
-const DEFAULT_REMAINING_LABELS = LEAD_CONTRACT_CHECKLIST_DEFINITIONS.map(definition => definition.label);
+const REQUIRED_DEFINITIONS = LEAD_CONTRACT_CHECKLIST_DEFINITIONS.filter(definition => definition.requirementType === 'required');
+const DEFAULT_TOTAL = REQUIRED_DEFINITIONS.length;
+const DEFAULT_REMAINING_LABELS = REQUIRED_DEFINITIONS.map(definition => definition.label);
 
 function getChecklistDisplayState(
     summary: LeadContractChecklistSummaryView | undefined,
@@ -48,8 +49,9 @@ function getChecklistDisplayState(
         };
     }
 
-    const total = summary?.total || DEFAULT_TOTAL;
-    const completed = summary?.completed || 0;
+    const requiredSummary = summary?.groups.required;
+    const total = requiredSummary?.total || DEFAULT_TOTAL;
+    const completed = requiredSummary?.resolved || 0;
     const remainingLabels = summary?.remainingLabels?.length
         ? summary.remainingLabels
         : completed >= total
@@ -59,7 +61,7 @@ function getChecklistDisplayState(
     return {
         completed,
         total,
-        progressPercent: summary?.progressPercent || 0,
+        progressPercent: requiredSummary?.progressPercent || 0,
         remainingLabels,
         isComplete: total > 0 && completed >= total
     };

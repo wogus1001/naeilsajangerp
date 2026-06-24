@@ -10,6 +10,8 @@ export type ContractDetailResponse = {
     readonly data?: {
         readonly contract?: {
             readonly id?: string;
+            readonly leadId?: string;
+            readonly checklistStepKey?: string;
         };
         readonly formSnapshot?: unknown;
     };

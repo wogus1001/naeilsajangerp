@@ -1,8 +1,9 @@
 # MAC_CONTEXT
 
 ## 목적
-- 맥북에서 ERP/web 작업을 이어갈 때 필요한 운영 규칙, 폴더 구조, 배포 방식, 최근 상태를 한 문서에 정리한다.
-- 새 Codex 세션은 이 문서와 [AGENTS.md](/C:/Users/awmve/OneDrive/바탕%20화면/my_project/ERP/web/AGENTS.md), [ROADMAP.md](/C:/Users/awmve/OneDrive/바탕%20화면/my_project/ERP/web/ROADMAP.md)를 먼저 읽고 시작한다.
+- 맥북에서 ERP/web 작업을 이어갈 때 필요한 worktree 운영 규칙, 폴더 구조, 배포 방식을 상단에 먼저 정리한다.
+- 최신 구현/배포/QA 판단은 이 문서에 누적하지 않고 `ERP/web/docs/franchise-current-status.md`, `ERP/web/docs/release-management.md`, `ERP/web/docs/franchise-dev-qa-log.md`를 우선 확인한다.
+- 새 Codex 세션은 이 문서, `AGENTS.md`, `ERP/web/AGENTS.md`, `ERP/web/docs/franchise-current-status.md`, `ERP/web/docs/franchise-growth-roadmap.md`를 먼저 읽고 시작한다.
 
 ## 현재 운영 방식
 - 로컬 개발: `my_project`
@@ -10,11 +11,12 @@
 - 실서버 배포용 worktree: `my_project_main_release`
 - 깨끗한 기준 확인용 worktree: `my_project_clean_main`
 
-## 윈도우 기준 worktree 상태
-- `C:/Users/awmve/OneDrive/바탕 화면/my_project` -> `main` at `8171138e`
-- `C:/Users/awmve/OneDrive/바탕 화면/my_project_dev_deploy` -> `dev` at `0564333e`
-- `C:/Users/awmve/OneDrive/바탕 화면/my_project_main_release` -> `release-main-20260324` at `b6f4c653`
-- `C:/Users/awmve/OneDrive/바탕 화면/my_project_clean_main` -> `clean-main-20260324` at `a8258ccb`
+## 현재 상태 확인 기준
+- 단일 페이지 최신 상태: `ERP/web/docs/franchise-current-status.md`
+- 브랜치/커밋/배포 ledger: `ERP/web/docs/release-management.md`
+- 상세 QA 로그와 미검증 리스크: `ERP/web/docs/franchise-dev-qa-log.md`
+- 제품 방향과 다음 작업 목록: `ERP/web/docs/franchise-growth-roadmap.md`
+- 이 문서의 오래된 작업 메모는 역사적 참고용이다. 최신 배포 여부, SQL 적용 여부, 샘플 데이터 정리는 위 문서들을 우선한다.
 
 ## 맥북 권장 폴더 구조
 - 권장 루트: `/Users/kimjaehyun/Documents/project/erp_workspace`
@@ -109,9 +111,9 @@ npm run build
 - 상세 규칙과 ledger 형식은 `ERP/web/docs/release-management.md`를 따른다.
 
 ## 최근 배포 이력 기준점
-- `dev` 최신 확인 커밋: `e11de81` `feat(franchise): connect insights and disclosure email`
-- `main` 최신 확인 커밋: `9817b10` `feat(franchise): connect insights and disclosure email`
-- 2026-06-16 production Vercel READY 확인 완료. 단, production Gmail 발송은 Vercel production env의 `GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` 설정 전까지 `configReady: false`가 정상 상태다.
+- 최신 dev/main 반영, Vercel URL, 검증 결과는 `ERP/web/docs/release-management.md`의 `Current Release Baseline`을 기준으로 판단한다.
+- 빠른 세션 재개용 현황은 `ERP/web/docs/franchise-current-status.md`를 먼저 확인한다.
+- 이 문서에는 특정 최신 커밋 해시를 계속 갱신하지 않는다. worktree 운영 규칙이 바뀐 경우에만 수정한다.
 
 ## 최근 중요 작업 요약
 - 2026-06-09 Meta Lead Ads 개발 HOLD
@@ -253,6 +255,7 @@ npm run build
   - 문서 역할:
     - `MAC_CONTEXT.md`: 세션 인수인계/로컬 운영 요약
     - `ERP/web/README.md`: 실행/환경변수/SQL 적용 안내
+    - `ERP/web/docs/franchise-current-status.md`: 최신 구현/배포/SQL/샘플/라이브 QA 상태 요약
     - `ERP/web/docs/franchise-growth-roadmap.md`: 기능 우선순위, API 정책, 다음 작업 목록
     - `ERP/web/docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크, 다음 QA 체크리스트
     - `ERP/web/docs/documentation-agent.md`: Docs Steward 역할, 수정 권한, 출력 형식
@@ -440,5 +443,6 @@ npm run build
 2. `git worktree list`
 3. `git status`
 4. `ERP/web/AGENTS.md` 확인
-5. 필요한 경우 `ERP/web/ROADMAP.md` 확인
-6. 변경 범위가 리포트면 `PropertyReportPrint.tsx`, 매물 입력이면 `PropertyCard.tsx` / `properties/register/page.tsx`부터 확인
+5. `ERP/web/docs/franchise-current-status.md` 확인
+6. 필요한 경우 `ERP/web/docs/franchise-growth-roadmap.md`, `ERP/web/docs/release-management.md`, `ERP/web/docs/franchise-dev-qa-log.md` 확인
+7. 변경 범위가 리포트면 `PropertyReportPrint.tsx`, 매물 입력이면 `PropertyCard.tsx` / `properties/register/page.tsx`부터 확인

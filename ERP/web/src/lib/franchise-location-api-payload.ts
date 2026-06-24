@@ -30,6 +30,14 @@ const CONTROL_FIELDS = new Set([
     'opened_at',
     'sourcePropertyId',
     'source_property_id',
+    'contractLeadId',
+    'contract_lead_id',
+    'sourceLocationId',
+    'source_location_id',
+    'sourceExternalListingId',
+    'source_external_listing_id',
+    'contractedAt',
+    'contracted_at',
     'memo'
 ]);
 
@@ -69,6 +77,13 @@ function parseNullableDate(value: unknown): string | null {
     return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString().slice(0, 10);
 }
 
+function parseNullableDateTime(value: unknown): string | null {
+    const raw = cleanString(value);
+    if (!raw) return null;
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString();
+}
+
 function normalizeLocationType(value: unknown) {
     const raw = cleanString(value) || '예정점';
     const matched = LOCATION_TYPES.find(type => type === raw || raw.includes(type.replace('점', '')));
@@ -100,6 +115,23 @@ function buildDataPayload(body: LocationRequestBody, existingData: LocationReque
     });
 }
 
+function buildContractLinkColumns(body: LocationRequestBody): LocationRequestBody {
+    const columns: LocationRequestBody = {};
+    if (hasAny(body, ['contractLeadId', 'contract_lead_id'])) {
+        columns.contract_lead_id = cleanString(getFirst(body, ['contractLeadId', 'contract_lead_id']));
+    }
+    if (hasAny(body, ['sourceLocationId', 'source_location_id'])) {
+        columns.source_location_id = cleanString(getFirst(body, ['sourceLocationId', 'source_location_id']));
+    }
+    if (hasAny(body, ['sourceExternalListingId', 'source_external_listing_id'])) {
+        columns.source_external_listing_id = cleanString(getFirst(body, ['sourceExternalListingId', 'source_external_listing_id']));
+    }
+    if (hasAny(body, ['contractedAt', 'contracted_at'])) {
+        columns.contracted_at = parseNullableDateTime(getFirst(body, ['contractedAt', 'contracted_at']));
+    }
+    return columns;
+}
+
 export function buildInsertPayload(
     body: LocationRequestBody,
     companyId: string,
@@ -127,6 +159,7 @@ export function buildInsertPayload(
             longitude: parseNullableNumber(getFirst(body, ['longitude', 'lng', '경도'])),
             opened_at: parseNullableDate(getFirst(body, ['openedAt', 'opened_at', '오픈일'])),
             source_property_id: cleanString(getFirst(body, ['sourcePropertyId', 'source_property_id'])),
+            ...buildContractLinkColumns(body),
             memo: cleanString(getFirst(body, ['memo', '메모'])) || '',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -151,6 +184,7 @@ export function buildUpdatePayload(body: LocationRequestBody, existingData: Loca
     if (hasAny(body, ['longitude', 'lng', '경도'])) updates.longitude = parseNullableNumber(getFirst(body, ['longitude', 'lng', '경도']));
     if (hasAny(body, ['openedAt', 'opened_at', '오픈일'])) updates.opened_at = parseNullableDate(getFirst(body, ['openedAt', 'opened_at', '오픈일']));
     if (hasAny(body, ['sourcePropertyId', 'source_property_id'])) updates.source_property_id = cleanString(getFirst(body, ['sourcePropertyId', 'source_property_id']));
+    Object.assign(updates, buildContractLinkColumns(body));
     if (hasAny(body, ['memo', '메모'])) updates.memo = cleanString(getFirst(body, ['memo', '메모'])) || '';
 
     return updates;

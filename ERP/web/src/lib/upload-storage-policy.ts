@@ -1,0 +1,128 @@
+const PROPERTY_IMAGES_BUCKET = 'property-images';
+const PROPERTY_DOCUMENTS_BUCKET = 'property-documents';
+const LEAD_DOCUMENT_PREFIX = 'franchise-lead-documents';
+const DISCLOSURE_PREFIX = 'franchise-disclosures';
+const PROPERTY_DOCUMENT_PREFIX = 'properties';
+
+type UploadBucket = typeof PROPERTY_IMAGES_BUCKET | typeof PROPERTY_DOCUMENTS_BUCKET;
+
+type BaseUploadTarget = {
+    readonly bucket: UploadBucket;
+    readonly path: string;
+};
+
+export type UploadStorageTarget =
+    | (BaseUploadTarget & {
+        readonly kind: 'propertyImage';
+        readonly propertyId: string;
+    })
+    | (BaseUploadTarget & {
+        readonly kind: 'propertyDocument';
+        readonly propertyId: string;
+    })
+    | (BaseUploadTarget & {
+        readonly kind: 'leadDocument';
+        readonly companyId: string;
+        readonly leadId: string;
+    })
+    | (BaseUploadTarget & {
+        readonly kind: 'disclosure';
+        readonly companyId: string;
+    });
+
+export type UploadStorageParseResult =
+    | {
+        readonly ok: true;
+        readonly target: UploadStorageTarget;
+    }
+    | {
+        readonly ok: false;
+        readonly error: string;
+    };
+
+function cleanString(value: unknown): string {
+    return String(value ?? '').trim();
+}
+
+function readPathSegments(path: string): readonly string[] | null {
+    if (!path || path.startsWith('/') || path.includes('\\') || path.includes('..')) return null;
+    const segments = path.split('/');
+    if (segments.some(segment => segment.trim().length === 0)) return null;
+    return segments;
+}
+
+function isUploadBucket(value: string): value is UploadBucket {
+    return value === PROPERTY_IMAGES_BUCKET || value === PROPERTY_DOCUMENTS_BUCKET;
+}
+
+export function parseUploadStorageTarget(input: {
+    readonly bucket?: unknown;
+    readonly companyId?: unknown;
+    readonly path?: unknown;
+}): UploadStorageParseResult {
+    const bucket = cleanString(input.bucket) || PROPERTY_IMAGES_BUCKET;
+    if (!isUploadBucket(bucket)) return { ok: false, error: 'Invalid upload bucket' };
+
+    const path = cleanString(input.path);
+    const segments = readPathSegments(path);
+    if (!segments) return { ok: false, error: 'Invalid upload path' };
+
+    if (bucket === PROPERTY_IMAGES_BUCKET) {
+        if (segments.length < 2) return { ok: false, error: 'Invalid property image storage path' };
+        return {
+            ok: true,
+            target: {
+                bucket,
+                kind: 'propertyImage',
+                path,
+                propertyId: segments[0]
+            }
+        };
+    }
+
+    if (segments[0] === PROPERTY_DOCUMENT_PREFIX) {
+        if (segments.length < 3) return { ok: false, error: 'Invalid property document storage path' };
+        return {
+            ok: true,
+            target: {
+                bucket,
+                kind: 'propertyDocument',
+                path,
+                propertyId: segments[1]
+            }
+        };
+    }
+
+    if (segments[0] === LEAD_DOCUMENT_PREFIX) {
+        if (segments.length < 4) return { ok: false, error: 'Invalid lead document storage path' };
+        return {
+            ok: true,
+            target: {
+                bucket,
+                companyId: segments[1],
+                kind: 'leadDocument',
+                leadId: segments[2],
+                path
+            }
+        };
+    }
+
+    if (segments[0] === DISCLOSURE_PREFIX) {
+        if (segments.length < 3) return { ok: false, error: 'Invalid disclosure storage path' };
+        const companyId = cleanString(input.companyId);
+        if (!companyId || companyId !== segments[1]) {
+            return { ok: false, error: 'Invalid disclosure storage path' };
+        }
+        return {
+            ok: true,
+            target: {
+                bucket,
+                companyId,
+                kind: 'disclosure',
+                path
+            }
+        };
+    }
+
+    return { ok: false, error: 'Unsupported upload path' };
+}

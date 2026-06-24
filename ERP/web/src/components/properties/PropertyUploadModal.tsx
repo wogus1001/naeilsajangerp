@@ -8,6 +8,7 @@ import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 
 import { readApiJson } from '@/utils/apiResponse';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getSupabase } from '@/lib/supabase'; // Import Supabase client
 
 interface PropertyUploadModalProps {
@@ -182,6 +183,7 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
                     userCompanyName = user.companyName || 'Unknown';
                     managerIdVal = user.uid || user.id || '';
                 }
+                const uploadHeaders = await getApiAuthHeaders();
 
                 // Vercel 요청 크기 제한(4.5MB) 방지: 100건씩 분할 전송
                 // 500건도 행당 데이터(월별매출현황 등 JSONB)가 크면 4.5MB 초과 가능
@@ -342,7 +344,8 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
                                             try {
                                                 const uploadRes = await fetch('/api/upload', {
                                                     method: 'POST',
-                                                    body: formData
+                                                    body: formData,
+                                                    headers: uploadHeaders
                                                 });
 
                                                 if (uploadRes.ok) {
@@ -429,7 +432,8 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
                                     try {
                                         const uploadRes = await fetch('/api/upload', {
                                             method: 'POST',
-                                            body: formData
+                                            body: formData,
+                                            headers: uploadHeaders
                                         });
 
                                         if (!uploadRes.ok) {
@@ -501,6 +505,7 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
                 const parsed = userStr ? JSON.parse(userStr) : {};
                 const user = parsed.user || parsed;
                 const companyQuery = user?.companyName ? `&company=${encodeURIComponent(user.companyName)}` : '';
+                const uploadHeaders = await getApiAuthHeaders();
 
                 const res = await fetch(`/api/properties?min=true${companyQuery}`);
                 if (!res.ok) throw new Error('매물 정보를 불러오는데 실패했습니다.');
@@ -556,7 +561,8 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
                         try {
                             const uploadRes = await fetch('/api/upload', {
                                 method: 'POST',
-                                body: formData
+                                body: formData,
+                                headers: uploadHeaders
                             });
 
                             if (!uploadRes.ok) {

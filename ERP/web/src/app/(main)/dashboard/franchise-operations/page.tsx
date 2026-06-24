@@ -1,14 +1,14 @@
 "use client";
 
 import React from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { BarChart3, List, PencilLine, Plus } from 'lucide-react';
 import { ExportActions } from '@/components/franchise/ExportActions';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
+import { FranchiseOperationDashboard } from '@/components/franchise/operations/FranchiseOperationDashboard';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
-import { ManualPromotedPropertyPanel } from '@/components/franchise/operations/ManualPromotedPropertyPanel';
-import { OpeningProjectPanel } from '@/components/franchise/operations/OpeningProjectPanel';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
+import type { FranchiseLocation } from '@/components/franchise/operations/types';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
 import {
     buildOperationExportColumns,
@@ -22,8 +22,28 @@ import {
 } from '@/utils/tableExport';
 import styles from '../franchise-leads/page.module.css';
 
+type MasterView = 'dashboard' | 'list' | 'form';
+
+const MASTER_VIEWS: readonly {
+    readonly key: MasterView;
+    readonly label: string;
+    readonly icon: React.ComponentType<{ readonly size?: number }>;
+}[] = [
+    { key: 'dashboard', label: '대시보드', icon: BarChart3 },
+    { key: 'list', label: '가맹점 목록', icon: List },
+    { key: 'form', label: '가맹점 등록', icon: PencilLine }
+];
+
 export default function FranchiseOperationsPage() {
     const controller = useFranchiseOperationsController();
+    const [masterView, setMasterView] = React.useState<MasterView>('dashboard');
+
+    React.useEffect(() => {
+        if (controller.locationForm.id) {
+            setMasterView('form');
+        }
+    }, [controller.locationForm.id]);
+
     const buildExportPayload = (): TableExportPayload => {
         const columns = buildOperationExportColumns();
         return {
@@ -45,60 +65,84 @@ export default function FranchiseOperationsPage() {
         }
     };
 
+    const openNewLocationForm = () => {
+        controller.resetLocationForm();
+        setMasterView('form');
+    };
+
+    const editLocation = (location: FranchiseLocation) => {
+        controller.editLocation(location);
+        setMasterView('form');
+    };
+
     return (
         <div className={styles.pageShell}>
             <FranchiseWorkspaceHero
                 title="가맹 운영"
-                description="운영중인 직영점과 가맹점의 상태, 주소, 경쟁환경을 본사용 운영 관점에서 관리합니다."
-                actions={(
-                    <button
-                        className={styles.secondaryButton}
-                        onClick={() => void controller.fetchLocations()}
-                        disabled={controller.isLoading}
-                    >
-                        <RefreshCw size={16} />
-                        {controller.isLoading ? '불러오는 중' : '새로고침'}
-                    </button>
-                )}
+                description="운영중인 직영점과 가맹점의 상태, 주소, 담당 메모를 본사용 운영 관점에서 관리합니다."
             />
 
-            <section className={styles.marketInsightPanel}>
-                <div className={styles.panelHeader}>
-                    <div>
-                        <h2>가맹점 운영 현황</h2>
-                        <p>출점 후보지와 분리된 현재 점포 관리 화면입니다. 추후 SV 점검, CS, 오픈 준비 프로젝트와 연결합니다.</p>
-                    </div>
-                    <span>운영관리 · 본사 전용</span>
-                </div>
-                <div className={styles.marketInsightBody}>
-                    <OperationsSummary
-                        activeCount={controller.counts.activeCount}
-                        openingCount={controller.counts.openingCount}
-                        pausedCount={controller.counts.pausedCount}
-                        scannedCount={controller.counts.scannedCount}
-                    />
-
-                    <div className={styles.locationMasterPanel}>
-                        <div className={styles.locationMasterHeader}>
-                            <div>
-                                <h3>가맹점 마스터</h3>
-                                <p>운영중/오픈준비/휴점 매장을 관리합니다. 예정지 관리는 모객DB의 출점 후보지에서 분리해 다룹니다.</p>
-                            </div>
-                            <div className={styles.locationMasterHeaderActions}>
-                                <ExportActions
-                                    rowCount={controller.operationalLocations.length}
-                                    disabled={controller.isLoading}
-                                    onExcelAction={() => runExportAction(downloadTableAsXlsx)}
-                                    onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
-                                    onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
-                                />
-                                <button className={styles.secondaryButton} onClick={controller.resetLocationForm}>
-                                    <Plus size={14} />
-                                    새 가맹점
+            <section className={styles.operationWorkspace}>
+                <div className={styles.locationMasterToolbar}>
+                    <div className={styles.locationModeTabs} role="tablist" aria-label="가맹 운영 보기">
+                        {MASTER_VIEWS.map(view => {
+                            const Icon = view.icon;
+                            const isActive = masterView === view.key;
+                            return (
+                                <button
+                                    key={view.key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    className={isActive ? styles.locationModeTabActive : styles.locationModeTab}
+                                    onClick={() => setMasterView(view.key)}
+                                >
+                                    <Icon size={13} />
+                                    {view.label}
                                 </button>
-                            </div>
-                        </div>
-                        <div className={styles.locationMasterGrid}>
+                            );
+                        })}
+                    </div>
+                    <div className={styles.locationMasterToolbarActions}>
+                        <ExportActions
+                            rowCount={controller.operationalLocations.length}
+                            disabled={controller.isLoading || masterView === 'form'}
+                            onExcelAction={() => runExportAction(downloadTableAsXlsx)}
+                            onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
+                            onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
+                        />
+                        <button className={styles.secondaryButton} onClick={openNewLocationForm}>
+                            <Plus size={14} />
+                            새 가맹점
+                        </button>
+                    </div>
+                </div>
+                <div className={styles.operationWorkspaceBody}>
+                    {masterView === 'dashboard' ? (
+                        <>
+                            <OperationsSummary
+                                activeCount={controller.counts.activeCount}
+                                openingCount={controller.counts.openingCount}
+                                pausedCount={controller.counts.pausedCount}
+                                addressedCount={controller.counts.addressedCount}
+                            />
+                            <FranchiseOperationDashboard locations={controller.operationalLocations} />
+                        </>
+                    ) : null}
+
+                    {masterView === 'list' ? (
+                        <FranchiseLocationList
+                            locations={controller.operationalLocations}
+                            updatingStatusId={controller.updatingStatusId}
+                            deletingLocationId={controller.deletingLocationId}
+                            onEdit={editLocation}
+                            onDelete={(location) => void controller.deleteLocation(location)}
+                            onStatusChange={(location, status) => void controller.updateLocationStatus(location, status)}
+                        />
+                    ) : null}
+
+                    {masterView === 'form' ? (
+                        <div className={styles.locationMasterFormPane}>
                             <FranchiseLocationForm
                                 userId={controller.userId}
                                 companyName={controller.companyName}
@@ -110,40 +154,15 @@ export default function FranchiseOperationsPage() {
                                 onSelectAddress={controller.selectKakaoAddress}
                                 onSelectBrand={controller.selectBrand}
                             />
-                            <FranchiseLocationList
-                                locations={controller.operationalLocations}
-                                updatingStatusId={controller.updatingStatusId}
-                                scanningLocationId={controller.scanningLocationId}
-                                deletingLocationId={controller.deletingLocationId}
-                                onEdit={controller.editLocation}
-                                onDelete={(location) => void controller.deleteLocation(location)}
-                                onScan={(location) => void controller.scanLocationCompetitors(location)}
-                                onStatusChange={(location, status) => void controller.updateLocationStatus(location, status)}
-                            />
                         </div>
-                    </div>
-
-                    <ManualPromotedPropertyPanel
-                        entries={controller.manualPromotedEntries}
-                        isLoading={controller.isLoadingPromotedProperties}
-                        creatingPropertyId={controller.creatingLocationPropertyId}
-                        onRefresh={() => void controller.fetchManualPromotedProperties()}
-                        onCreateLocation={(entry) => void controller.createLocationFromManualPromotedProperty(entry)}
-                    />
-
-                    <OpeningProjectPanel
-                        userId={controller.userId}
-                        companyName={controller.companyName}
-                        locations={controller.operationalLocations}
-                    />
-
-                    <div className={styles.marketRoadmap}>
-                        <strong>운영 확장</strong>
-                        <span>SV 방문/점검</span>
-                        <span>오픈 준비 프로젝트</span>
-                        <span>CS/이슈 티켓</span>
-                        <span>공지/매뉴얼 배포</span>
-                    </div>
+                    ) : null}
+                </div>
+                <div className={styles.marketRoadmap}>
+                    <strong>운영 확장</strong>
+                    <span>SV 방문/점검</span>
+                    <span>계약완료 인계</span>
+                    <span>CS/이슈 티켓</span>
+                    <span>공지/매뉴얼 배포</span>
                 </div>
             </section>
         </div>

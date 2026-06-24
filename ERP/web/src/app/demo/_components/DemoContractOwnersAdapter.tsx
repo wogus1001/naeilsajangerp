@@ -20,11 +20,18 @@ type DemoContractOwnersAdapterProps = {
 const DEMO_CONTRACT_CHECKLIST_SUMMARIES: Record<string, LeadContractChecklistSummaryView> = {
     'demo-candidate-2': {
         leadId: 'demo-candidate-2',
-        total: 7,
+        total: 17,
         completed: 5,
-        remaining: 2,
-        progressPercent: 71,
-        remainingLabels: ['가맹금 안내', '인근 가맹점 현황 확인'],
+        resolved: 8,
+        remaining: 9,
+        progressPercent: 47,
+        missingRequiredCount: 2,
+        groups: {
+            required: { total: 6, completed: 4, resolved: 4, remaining: 2, progressPercent: 67, missingDocumentCount: 2 },
+            report: { total: 7, completed: 1, resolved: 2, remaining: 5, progressPercent: 29, missingDocumentCount: 5 },
+            optional: { total: 4, completed: 0, resolved: 2, remaining: 2, progressPercent: 50, missingDocumentCount: 0 }
+        },
+        remainingLabels: ['가맹계약서', '사업자등록증/영업신고증'],
         schemaReady: true
     }
 };

@@ -23,6 +23,7 @@ export async function GET(request: Request) {
 
         const { searchParams } = new URL(request.url);
         const scope = normalizeScope(searchParams.get('scope'));
+        const leadId = searchParams.get('leadId') || searchParams.get('lead_id');
         const requestedCompanyId = searchParams.get('companyId');
         const targetCompanyId = isAdmin(requester) && requestedCompanyId
             ? requestedCompanyId
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
             query = query.eq('sent_by_profile_id', requester.id);
             if (targetCompanyId) query = query.eq('company_id', targetCompanyId);
         }
+        if (leadId) query = query.eq('lead_id', leadId);
 
         const { data, error } = await query
             .order('created_at', { ascending: false })

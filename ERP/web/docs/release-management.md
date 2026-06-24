@@ -1,6 +1,6 @@
 # Release Management
 
-이 문서는 ERP/web 업데이트를 브랜치, 커밋, 배포 이력과 함께 관리하기 위한 운영 규칙이다. 코드 구현 세부 로드맵은 `franchise-growth-roadmap.md`, QA 결과는 `franchise-dev-qa-log.md`, 로컬 worktree 상태는 `../../MAC_CONTEXT.md`에 기록한다.
+이 문서는 ERP/web 업데이트를 브랜치, 커밋, 배포 이력과 함께 관리하기 위한 운영 규칙이다. 현재 상태 요약은 `franchise-current-status.md`, 코드 구현 세부 로드맵은 `franchise-growth-roadmap.md`, QA 결과는 `franchise-dev-qa-log.md`, 로컬 worktree 운영 방식은 `../../MAC_CONTEXT.md`에 기록한다.
 
 ## Branch Policy
 
@@ -23,7 +23,7 @@
 
 1. 작업 브랜치 생성: `git switch -c codex/<topic>-YYYYMMDD origin/main`
 2. 구현 후 로컬 검증: lint, typecheck, tests, build, browser QA 중 변경 범위에 맞는 항목을 수행한다.
-3. 문서 갱신: README, roadmap, QA log, MAC_CONTEXT 중 변경 사실을 알 필요가 있는 문서만 수정한다.
+3. 문서 갱신: current status, README, roadmap, QA log, MAC_CONTEXT 중 변경 사실을 알 필요가 있는 문서만 수정한다.
    - 공개 설명/사용 흐름에 영향이 있으면 데모 페이지를 함께 갱신하고, 영향이 없으면 QA 로그에 `데모 영향 없음`으로 남긴다.
 4. 기능 커밋 생성: 커밋 해시와 메시지를 작업 요약에 남긴다.
 5. dev 배포 요청 시: `my_project_dev_deploy`에서 해당 커밋을 반영하고 `dev`로 push한다.
@@ -45,6 +45,8 @@ YYYY-MM-DD
 - 남은 이슈: env, migration, 외부 계정 승인 등
 ```
 
+상세 명령 출력과 긴 브라우저 QA 내역은 `franchise-dev-qa-log.md`에 남기고, 이 문서에는 릴리즈 판단에 필요한 요약과 링크 가능한 기준만 남긴다. 최신 한 장 요약은 `franchise-current-status.md`에 반영한다.
+
 ## Pending Work Ledger
 
 ### 2026-06-22 전자계약/관리자 후속 작업
@@ -61,6 +63,25 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 물건지 지도 반경분석/측정 도구 커밋
+  - 주요 기능: `/dashboard/franchise-locations`의 우측 목록 클릭과 지도 마커 클릭을 같은 선택 로직으로 묶어 선택 물건지로 지도 중심을 이동한다. `지도 분석` 패널 안에 `반경분석 / 거리재기 / 면적재기` 탭을 통합하고, 반경 500m/1km/2km 요약, 직접 반경 기준점 지정, 거리 polyline, 면적 polygon, 되돌리기/초기화를 제공한다. 내일 회사 실데이터 확인용으로 `지도QA_20260624_01`부터 `지도QA_20260624_30`까지 30개 샘플 물건지를 기존 API로 생성했다. 사이드바 `물건지 지도`는 `가맹 운영` 바로 아래 같은 레벨 메뉴로 표시하고, 아이콘 왼쪽 하위 표시 선을 제거했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts` 19건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. Playwright/Chrome으로 `내일 / admin / 1234` 로그인 후 데스크톱 메뉴 표시와 모바일 390px `지도 분석` 패널 탭 전환을 확인했고 console error 0건이었다.
+  - 남은 이슈: 이번 변경의 신규 SQL은 없다. 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 SQL 등록 완료 상태다. 물건지 지도 샘플 30건은 QA용 prefix/tag로 식별 가능하므로 운영 데이터 정리 시 같은 기준으로 제거한다.
+- 2026-06-23
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `9322175 feat(franchise): refine contract readiness workflows`
+  - 주요 기능: 계약 전 체크를 문서 기반 v2로 확장하고 `필수/내부보고/선택`, 해당 여부, 연결 문서, 문서 메모를 분리해 표시한다. 체크리스트 행은 한 줄형 `완료/완료됨` 버튼과 업로드/전자계약 문서 관리 모달 중심으로 정리했고, 필수 항목도 체크 메모 없이 `해당없음` 저장/해결 처리가 가능하다. 점주 문서함은 업로드, 완료 전자계약 문서 연결, 체크 항목 재연결/문서 삭제를 지원한다. 계약완료 점주 상세에는 `체크리스트 / 문서함 / 가맹점 정보` 탭을 추가하고, 연결 후보지 또는 직접 입력으로 운영 가맹점 마스터를 생성해 `/dashboard/franchise-operations?locationId=...`로 이어갈 수 있다.
+  - 후속 변경: 가맹 운영 마스터를 `대시보드 / 가맹점 목록 / 가맹점 등록` 탭으로 분리했다. 대시보드에는 운영 상태 그래프와 시도 단위 한국 지도형 분포를 추가했고, 경쟁스캔 UI, 외부 승격 물건지 운영 전환 패널, 오픈 준비 프로젝트 패널은 임시 숨김 처리했다. 오픈 준비 프로젝트는 계약완료 점주 상세의 가맹점 정보/인계 흐름에서 재고도화한다. 계약완료 점주의 가맹점 생성은 후보지/외부 상가 source의 지역/주소/좌표를 폼에 복사하고, 직접 입력은 Kakao 주소 검색으로 받으며, 주소 없는 생성은 API에서 차단한다. 프랜차이즈 하위 `가맹 운영` 아래에 `물건지 지도`(`/dashboard/franchise-locations`)를 추가해 `franchise_locations`의 가맹 운영점과 출점 후보지를 Kakao 지도 위에 함께 표시한다. 기존 `점포개발 업무 > 물건지도`는 정상 동작하므로 전역 Kakao 설정은 건드리지 않고, 새 물건지 지도에서 저장 좌표의 한국 범위 검증, 위도/경도 반전 자동 보정, 범위 밖 좌표의 주소 geocoder fallback을 추가했다. 지오코딩 상한은 주소 조회에만 적용하고 저장 좌표가 있는 물건지는 모두 표시한다. 물건지 지도 캔버스는 명시 높이와 ResizeObserver 기반 relayout을 유지하며, 외부 상가 수집/새로고침 버튼은 숨김 처리했다. 문서 후속으로 외부 상가 수집까지 같은 물건지 축으로 묶는 구조와, 브랜드 검색량/Threads 언급/위험 키워드/경쟁 브랜드 비교 및 가맹점별 네이버·카카오맵·배달앱 리뷰 최신화 고도화 범위를 로드맵에 기록했다. 이번 물건지 지도 v1의 신규 SQL은 없다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: `https://naeilsajang.vercel.app` (`dpl_7b4n3rGnyENexpdjaS43X3gdVzxT`, READY; source `https://naeilsajang-2mn71bkxn-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증: `npx tsx --test src/lib/franchise-contract-store.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`는 가맹점 정보 연동 직후 통과했다. 후속 체크리스트/문서함 UI 보정과 `PropertyCard` Recharts formatter/purity 정리 후 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-contract-store.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 20개 테스트, `git diff --check`, `npm run build` 통과. Playwright로 `/demo/manager` 계약 완료 요약을 1280px/390px에서 확인했고 page-level horizontal overflow 0건이었다. Supabase 실데이터에는 `contract_check_14day_seed_20260623` 태그로 `내일` 회사 관리자용 계약완료 샘플 3건을 생성/갱신했고, 정보공개서 발송일 `2026-06-01` 기준 14일 게이트 통과를 DB 재조회로 확인했다. 가맹점 정보 탭은 후보지 선택 주소가 폼에서 유지되도록 보정하고, 직접 입력 주소도 Kakao 주소 검색으로 선택하게 바꿨다. 보정 후 `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-contract-store.test.mts`, `git diff --check`, `npm run build`가 통과했고, Playwright mock QA로 1280px/390px에서 후보지 주소 복사와 `가맹 운영에 생성` 버튼을 확인했다. 코드 리뷰 보정으로 후보지/외부 상가 source의 `region`을 폼 초기값에 포함하고, 점주 문서함 `문서 삭제`를 `status='archived'` soft-delete가 아닌 레코드 삭제로 변경했다. 업로드 문서는 Storage path를 문서 `data`에 저장하고 삭제 시 Storage 파일도 best-effort로 정리한다. 리뷰 보정 후 `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-contract-store.test.mts src/lib/franchise-contract-store-form.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 27건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했고, Playwright auth/API mock으로 계약 완료 상세의 `구비서류 체크리스트`, `업로드`, `1건 연결` 표시를 확인했다. 가맹 운영 마스터 후속 보정도 `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했고, Playwright auth/API mock으로 `/dashboard/franchise-operations` 1280px/390px에서 탭 분리, 운영 상태 그래프, 지역 분포, 경쟁스캔/외부승격/오픈준비 미노출, overflow 0건, console error 0건을 확인했다. 물건지 지도 최종 보정 후 `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-contract-store-form.test.mts src/lib/franchise-contract-store.test.mts` 23건, `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 로컬 `127.0.0.1` production 서버는 Kakao JavaScript 키 도메인 제한으로 지도 fallback 안내를 표시했으며, 메뉴/문구/숨김 버튼/검색 배치/1440px·390px overflow는 확인했다. 공용 `/api/upload`는 Storage 쓰기 전에 `property-images`/`property-documents` 버킷과 허용 prefix를 검증하고, 매물/정보공개서/점주 문서함 각각 bearer 세션 기준 requester 권한을 확인하도록 보정했다. 점주 문서함 storage 삭제도 `property-documents` 버킷과 `franchise-lead-documents/{companyId}/{leadId}/` prefix만 허용한다. 최종 보안 보정 후 `npx tsx --test src/app/api/upload/route.test.mts src/lib/upload-storage-access.test.mts src/lib/upload-storage-policy.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-contract-store-form.test.mts src/lib/franchise-contract-store.test.mts src/lib/company-menu-features.test.mts src/components/franchise/location-map/mapUtils.test.mts` 50건, `git diff --check`, `git check-ignore -v .omo/evidence/foo ERP/web/.omo/evidence/foo`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 재통과했다. 실제 지도 타일/마커는 Vercel 실서버 도메인에서 배포 후 확인한다.
+  - 남은 이슈: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql` SQL 등록 완료. 실제 후보자 상세에서 체크리스트 저장, 해당없음 저장, 업로드 문서 등록, 완료 전자계약 연결/해제, 계약완료 후 가맹점 정보 생성, 교차 회사 접근 차단을 live QA한다. seed 샘플 생성 자체에는 신규 SQL이 없다.
 - 2026-06-23
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `b224e17 feat(contracts): refine electronic contract operations`

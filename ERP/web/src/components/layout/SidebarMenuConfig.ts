@@ -16,6 +16,7 @@ export type SidebarMenuItem = {
     readonly category: string;
     readonly featureKey: CompanyMenuFeatureKey;
     readonly icon?: SidebarLinkIcon;
+    readonly depth?: 0 | 1;
 };
 
 export type SidebarMenuSection = {
@@ -44,6 +45,7 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
             { title: '모객 DB', url: '/dashboard/franchise-leads', category: '프랜차이즈', featureKey: 'franchiseLeads', icon: 'target' },
             { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '프랜차이즈', featureKey: 'marketInsights', icon: 'mapPin' },
             { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store' },
+            { title: '물건지 지도', url: '/dashboard/franchise-locations', category: '가맹 운영', featureKey: 'franchiseLocations', icon: 'mapPin' },
             { title: '전자계약', url: '/contracts/electronic', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature' }
         ]
     },

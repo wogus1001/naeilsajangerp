@@ -5,6 +5,7 @@ export type CompanyMenuFeatureKey =
     | 'franchiseMatchingRequest'
     | 'franchisePropertyRegistration'
     | 'marketInsights'
+    | 'franchiseLocations'
     | 'franchiseOperations'
     | 'properties'
     | 'propertyRegister'
@@ -90,6 +91,13 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         title: '출점 후보지',
         description: '후보지, 외부 상가, 상권 검토 데이터를 관리합니다.',
         routePrefixes: ['/dashboard/franchise-leads/market-insights']
+    },
+    {
+        key: 'franchiseLocations',
+        category: '가맹 운영',
+        title: '물건지 지도',
+        description: '가맹 운영점과 출점 후보지를 지도에서 함께 확인합니다.',
+        routePrefixes: ['/dashboard/franchise-locations']
     },
     {
         key: 'franchiseOperations',
@@ -199,6 +207,7 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
         franchiseMatchingRequest: true,
         franchisePropertyRegistration: true,
         marketInsights: true,
+        franchiseLocations: true,
         franchiseOperations: true,
         properties: true,
         propertyRegister: true,

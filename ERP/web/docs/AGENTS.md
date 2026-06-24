@@ -11,6 +11,7 @@
 | Task | Location | Notes |
 |------|----------|-------|
 | Docs steward rules | `documentation-agent.md` | Authority, approved docs, required report format. |
+| Current franchise status | `franchise-current-status.md` | Latest implementation/deploy/SQL/sample/live QA summary. |
 | Product roadmap | `franchise-growth-roadmap.md` | Priorities, provider policies, next work. |
 | Product direction | `franchise-product-direction.md` | Macro product principles and long-term module structure. |
 | UI redesign | `franchise-ui-redesign-plan.md` | User-facing UI audit, Toss-like design direction, phased redesign plan. |
@@ -19,10 +20,10 @@
 | FDAM reference | `fdam-reference.md` | Competitive ERP reference, not live status. |
 
 ## CONVENTIONS
-- Keep live status in roadmap/QA docs; keep reference analysis separate.
+- Keep current live status in `franchise-current-status.md`; keep detailed history in roadmap/QA docs and reference analysis separate.
 - Approved docs may be edited when development status, QA, API limits, rollout notes, or future plans change.
 - Every Docs Steward run should finish with the `Doc Update Brief` format from `documentation-agent.md`.
-- Keep `MAC_CONTEXT.md` concise; it is session resume context, not a full changelog.
+- Keep the top resume section of `MAC_CONTEXT.md` concise; historical notes may remain, but they are not the source of truth for current status.
 - Cross-link docs by path when a status note depends on another document.
 
 ## ANTI-PATTERNS
