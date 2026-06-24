@@ -37,7 +37,9 @@ export function LeadContractDetailTabs({
     isLocationMatchLoading,
     onContractChecklistSavedAction
 }: LeadContractDetailTabsProps) {
-    const [activeTab, setActiveTab] = React.useState<ContractDetailTab>('checklist');
+    const [activeTab, setActiveTab] = React.useState<ContractDetailTab>(
+        lead.status === '계약완료' ? 'opening' : 'checklist'
+    );
     const [documentRefreshKey, setDocumentRefreshKey] = React.useState(0);
     const [checklistRefreshKey, setChecklistRefreshKey] = React.useState(0);
     const canShowStoreTab = lead.status === '계약완료';
@@ -45,6 +47,10 @@ export function LeadContractDetailTabs({
     React.useEffect(() => {
         if (!canShowStoreTab && (activeTab === 'store' || activeTab === 'opening')) setActiveTab('checklist');
     }, [activeTab, canShowStoreTab]);
+
+    React.useEffect(() => {
+        setActiveTab(lead.status === '계약완료' ? 'opening' : 'checklist');
+    }, [lead.id, lead.status]);
 
     return (
         <div className={styles.contractChecklistOnlyContent}>
@@ -65,7 +71,7 @@ export function LeadContractDetailTabs({
                     onClick={() => setActiveTab('checklist')}
                 >
                     <ListChecks size={15} />
-                    체크리스트
+                    구비서류
                 </button>
                 <button
                     type="button"

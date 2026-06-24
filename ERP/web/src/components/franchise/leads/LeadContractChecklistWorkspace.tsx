@@ -82,7 +82,7 @@ export function LeadContractChecklistWorkspace({
     onNextPageAction
 }: LeadContractChecklistWorkspaceProps) {
     if (isLoading) {
-        return <div className={styles.emptyState}>계약 전 체크리스트를 불러오는 중입니다.</div>;
+        return <div className={styles.emptyState}>구비서류를 불러오는 중입니다.</div>;
     }
 
     if (leads.length === 0) {
@@ -109,10 +109,10 @@ export function LeadContractChecklistWorkspace({
 
                             <div className={styles.checkSummary}>
                                 <div className={styles.checkHeader}>
-                                    <span><ListChecks size={16} /> 계약 전 체크</span>
+                                    <span><ListChecks size={16} /> 구비서류</span>
                                     <strong>{checklist.completed}/{checklist.total}</strong>
                                 </div>
-                                <div className={styles.progress} aria-label={`계약 전 체크 진행률 ${checklist.progressPercent}%`}>
+                                <div className={styles.progress} aria-label={`구비서류 진행률 ${checklist.progressPercent}%`}>
                                     <span style={{ width: `${checklist.progressPercent}%` }} />
                                 </div>
                                 <div className={styles.remainingList}>
@@ -126,7 +126,7 @@ export function LeadContractChecklistWorkspace({
                             </div>
 
                             <button type="button" className={styles.openButton} onClick={() => onOpenChecklistAction(lead.id)}>
-                                체크리스트 열기
+                                구비서류 열기
                             </button>
                         </article>
                     );

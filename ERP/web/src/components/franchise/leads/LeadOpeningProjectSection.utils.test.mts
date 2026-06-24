@@ -5,6 +5,7 @@ import {
     readOpeningProjectStatus,
     toOpeningProjectDraft
 } from './LeadOpeningProjectSection.utils.js';
+import { mergeOpeningProjectTasks } from '../../../lib/franchise-opening-projects.js';
 
 test('Given a contract store location without project When building draft Then default opening tasks are attached', () => {
     const draft = toOpeningProjectDraft({
@@ -18,7 +19,8 @@ test('Given a contract store location without project When building draft Then d
     assert.equal(draft.locationId, 'location-1');
     assert.equal(draft.status, '준비중');
     assert.equal(draft.targetOpenDate, '2026-07-10');
-    assert.deepEqual(draft.tasks.map(task => task.label), ['계약', '인테리어', '교육', '초도물류', '홍보', '오픈일']);
+    assert.equal(draft.tasks.length, 25);
+    assert.deepEqual(draft.tasks.slice(0, 3).map(task => task.label), ['계약 최종본 확인', '사업자등록증/영업신고증', '정산계좌/POS 정보']);
 });
 
 test('Given an existing project When building draft Then saved state wins over location defaults', () => {
@@ -37,8 +39,17 @@ test('Given an existing project When building draft Then saved state wins over l
             status: '진행중',
             targetOpenDate: '2026-07-20',
             memo: '간판 일정 확인',
-            summary: { total: 1, done: 1, blocked: 0, overdue: 0, dueSoon: 0, progressPercent: 100 },
-            tasks: [{ id: 'contract', label: '계약서 확인', status: '완료', owner: '', dueDate: '', memo: '' }]
+            summary: {
+                total: 1,
+                done: 1,
+                blocked: 0,
+                reviewRequested: 0,
+                dueToday: 0,
+                overdue: 0,
+                dueSoon: 0,
+                progressPercent: 100
+            },
+            tasks: mergeOpeningProjectTasks([{ id: 'contract', label: '계약서 확인', status: '완료', owner: '', dueDate: '', memo: '' }])
         }
     );
 
@@ -47,6 +58,7 @@ test('Given an existing project When building draft Then saved state wins over l
     assert.equal(draft.targetOpenDate, '2026-07-20');
     assert.equal(draft.memo, '간판 일정 확인');
     assert.equal(draft.tasks[0]?.status, '완료');
+    assert.equal(draft.tasks[0]?.label, '계약 최종본 확인');
 });
 
 test('Given a checklist task patch When updating draft tasks Then only the target task changes', () => {
