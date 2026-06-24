@@ -65,6 +65,15 @@ YYYY-MM-DD
 
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 `/demo` 접근 게이트 커밋
+  - 주요 기능: `/demo`와 `/demo/[role]` 샘플 데이터 화면을 데모 전용 ID/PW 접근 게이트로 보호했다. 실제 Supabase 로그인과 분리하고, `POST /api/demo/access`에서 httpOnly `/demo` 범위 쿠키를 발급하며 `DELETE /api/demo/access`에서 로그아웃한다. 기존 데모 API guard는 `/api/demo/access`만 예외로 허용하고 실제 ERP API 호출 차단을 유지한다. 데모 헤더에는 `데모 로그아웃` 액션을 추가했다.
+  - dev 반영: `10535b6 feat(demo): protect public demo access`
+  - main 반영: 이번 production 배포 커밋
+  - 배포 URL: `https://naeilsajang.vercel.app`
+  - 검증: `npx tsx --test src/lib/demo-access.test.mts src/app/api/demo/access/route.test.mts src/app/demo/demoContent.test.mts` 12건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3047`에서 `/demo`, `/demo/manager`, `/demo/partner` 로그인/오류/딥링크/로그아웃 흐름과 모바일 390px 접근 게이트 overflow 0건을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. Vercel Production, Development, Preview(dev) 환경에 `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`, `DEMO_ACCESS_COOKIE_SECRET` 등록은 완료했다. 배포 후 `/demo` 접근 게이트를 실서버에서 확인한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 물건지 지도 반경분석/측정 도구 커밋
   - 주요 기능: `/dashboard/franchise-locations`의 우측 목록 클릭과 지도 마커 클릭을 같은 선택 로직으로 묶어 선택 물건지로 지도 중심을 이동한다. `지도 분석` 패널 안에 `반경분석 / 거리재기 / 면적재기` 탭을 통합하고, 반경 500m/1km/2km 요약, 직접 반경 기준점 지정, 거리 polyline, 면적 polygon, 되돌리기/초기화를 제공한다. 내일 회사 실데이터 확인용으로 `지도QA_20260624_01`부터 `지도QA_20260624_30`까지 30개 샘플 물건지를 기존 API로 생성했다. 사이드바 `물건지 지도`는 `가맹 운영` 바로 아래 같은 레벨 메뉴로 표시하고, 아이콘 왼쪽 하위 표시 선을 제거했다.
   - dev 반영: none

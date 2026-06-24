@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 export const DEMO_BLOCKED_REQUEST_PREFIX = '/api/' as const;
+export const DEMO_ALLOWED_REQUEST_PATHS = ['/api/demo/access'] as const;
 
 export class DemoApiBlockedError extends Error {
     constructor(pathname: string) {
@@ -29,7 +30,8 @@ export function useDemoApiGuard() {
 
         window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
             const pathname = getFetchPathname(input);
-            if (pathname.startsWith(DEMO_BLOCKED_REQUEST_PREFIX)) {
+            const isAllowedDemoRequest = DEMO_ALLOWED_REQUEST_PATHS.some(path => path === pathname);
+            if (pathname.startsWith(DEMO_BLOCKED_REQUEST_PREFIX) && !isAllowedDemoRequest) {
                 throw new DemoApiBlockedError(pathname);
             }
 

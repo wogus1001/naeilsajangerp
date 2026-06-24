@@ -32,6 +32,7 @@ type DemoErpShellProps = {
     readonly activeScreen: DemoScreenId;
     readonly notice: string;
     readonly children: ReactNode;
+    readonly onLogout: () => void;
     readonly onScreenChange: (screen: DemoScreenId) => void;
     readonly onRestartTour: () => void;
 };
@@ -41,6 +42,7 @@ export function DemoErpShell({
     activeScreen,
     notice,
     children,
+    onLogout,
     onScreenChange,
     onRestartTour
 }: DemoErpShellProps) {
@@ -85,7 +87,8 @@ export function DemoErpShell({
                         <span className={headerStyles.crumbCurrent}>{activeNav?.label ?? scenario.title}</span>
                     </div>
                     <div className={headerStyles.actions}>
-                        <button type="button" className={styles.demoHeaderButton} onClick={onRestartTour}>설명 다시 보기</button>
+                        <button type="button" className={`${styles.demoHeaderButton} ${styles.demoTourButton}`} onClick={onRestartTour}>설명 다시 보기</button>
+                        <button type="button" className={`${styles.demoHeaderButton} ${styles.demoLogoutButton}`} onClick={onLogout}>데모 로그아웃</button>
                         <span className={styles.demoModeBadge}>샘플 데이터 데모</span>
                         <button type="button" className={styles.demoBellButton} aria-label="데모 알림">
                             <Bell size={17} aria-hidden="true" />
