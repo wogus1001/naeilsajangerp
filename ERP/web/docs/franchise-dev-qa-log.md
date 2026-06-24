@@ -645,6 +645,13 @@
 - 검증: `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts` 19건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: `http://localhost:3000/dashboard/franchise-locations`에 내일 회사 관리자 테스트 세션(자격증명 마스킹)으로 로그인해 확인했다. 데스크톱에서 `물건지 지도` 메뉴의 `::before` content가 `none`이고, 모바일 390px에서 `지도 분석` 패널이 `반경분석/거리재기/면적재기` 탭으로 전환되며 console error 0건이었다. 증거 스크린샷: `franchise-location-map-nav-same-level.png`, `franchise-location-map-mobile-analysis-same-level-final.png`.
 
+## 2026-06-24 가맹 운영 대시보드 지역 분포 개선 QA
+
+- `/dashboard/franchise-operations` 대시보드의 시도별 한국 지도 SVG를 제거했다. 기존 지도는 실제 행정구역 라벨이 작게 겹쳐 운영자가 지역별 분포를 읽기 어려웠으므로, 운영 상태 그래프 옆에 `지역별 운영 분포` 분석 패널을 배치했다.
+- 새 패널은 저장된 `franchise_locations`의 `region`, `address`, `status`를 기반으로 시도별 점포 수, 전체 비중, 상태별 건수를 보여준다. 데이터 품질/주소 등록 카드는 운영 판단에서 우선순위가 낮아 제거했고, 상단 요약의 빈 칸은 `운영 안정률`로 대체했다. `기타` 합산과 `시도 미분류` 행은 의미가 모호해 지역 분포 본문에서 제거하고, 실제 시도명으로 분류된 지역만 보여준다. 기본 화면은 상위 5개 지역만 노출하며 나머지는 중앙 정렬된 긴 `더보기` 버튼으로 확장한다. 지역명 하단의 `지역 등록 점포` 보조 문구도 제거했다.
+- 이번 변경은 기존 `franchise_locations` 데이터만 사용하며 신규 SQL은 없다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. Playwright production QA에서 mock 지역 7개 기준 기본 5개만 노출, `더보기 2개` 클릭 후 7개 노출, `접기` 버튼, 더보기 버튼 360px 중앙 정렬, `지역 등록 점포`/`기타`/`시도 미분류`/`데이터 품질`/`주소 등록` 미노출, 390px overflow 0, console error 0건을 확인했다. 증거 스크린샷: `franchise-operations-region-top5-centered-more.png`, `franchise-operations-region-expanded-no-helper.png`, `franchise-operations-region-mobile-top5.png`.
+
 ## 2026-06-24 문서함/업로드 보안 핫픽스 QA
 
 - `/api/franchise-lead-documents` GET/POST/PATCH/DELETE는 bearer 세션의 `getAuthenticatedRequesterProfile`만 신뢰하도록 보정했다. `requesterId`, `userId`, `managerId` body/query fallback은 제거했고, 인증이 없으면 `401 AUTH_REQUIRED`로 실패한다.

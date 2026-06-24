@@ -51,7 +51,7 @@ export function DemoOperationsAdapter({ onSimulate }: DemoOperationsAdapterProps
                         activeCount={activeCount}
                         openingCount={openingCount}
                         pausedCount={pausedCount}
-                        addressedCount={locations.filter(location => location.address).length}
+                        totalCount={locations.length}
                     />
                     <div className={pageStyles.locationMasterPanel}>
                         <div className={pageStyles.locationMasterHeader}>

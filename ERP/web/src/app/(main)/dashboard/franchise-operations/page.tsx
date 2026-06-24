@@ -124,7 +124,7 @@ export default function FranchiseOperationsPage() {
                                 activeCount={controller.counts.activeCount}
                                 openingCount={controller.counts.openingCount}
                                 pausedCount={controller.counts.pausedCount}
-                                addressedCount={controller.counts.addressedCount}
+                                totalCount={controller.operationalLocations.length}
                             />
                             <FranchiseOperationDashboard locations={controller.operationalLocations} />
                         </>
