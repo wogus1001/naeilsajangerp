@@ -5,7 +5,8 @@ import {
     getCompanyMenuFeatureForPath,
     getDefaultCompanyMenuFlags,
     isCompanyDashboardMode,
-    normalizeCompanyDashboardMode
+    normalizeCompanyDashboardMode,
+    normalizeCompanyMenuFlags
 } from './company-menu-features.js';
 import { SIDEBAR_SECTIONS } from '../components/layout/SidebarMenuConfig.js';
 
@@ -66,6 +67,30 @@ test('Given default company menu flags When reading franchise intake features Th
     assert.equal(flags.franchisePropertyRegistration, true);
     assert.equal(flags.franchiseWorkIntake, true);
     assert.equal(flags.propertyRegister, true);
+});
+
+test('Given partial saved company menu rows When normalizing Then missing menu features stay disabled', () => {
+    const flags = normalizeCompanyMenuFlags([
+        { feature_key: 'dashboard', enabled: true },
+        { feature_key: 'electronicPremiumContracts', enabled: true },
+        { feature_key: 'companyStaff', enabled: true }
+    ]);
+
+    assert.equal(flags.dashboard, true);
+    assert.equal(flags.electronicPremiumContracts, true);
+    assert.equal(flags.companyStaff, true);
+    assert.equal(flags.franchiseLeads, false);
+    assert.equal(flags.franchiseOperations, false);
+});
+
+test('Given no saved company menu rows When normalizing Then legacy companies keep default access', () => {
+    const flags = normalizeCompanyMenuFlags([
+        { feature_key: 'dashboard_mode_a', enabled: true }
+    ]);
+
+    assert.equal(flags.dashboard, true);
+    assert.equal(flags.franchiseLeads, true);
+    assert.equal(flags.companyStaff, true);
 });
 
 test('Given electronic premium contract route When resolving company menu feature Then new contract feature owns it', () => {

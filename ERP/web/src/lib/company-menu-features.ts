@@ -238,7 +238,10 @@ export function normalizeCompanyDashboardMode(value: unknown): CompanyDashboardM
 }
 
 export function normalizeCompanyMenuFlags(rows: readonly CompanyMenuFeatureRow[]): CompanyMenuFlagMap {
-    const flags: Record<CompanyMenuFeatureKey, boolean> = { ...getDefaultCompanyMenuFlags() };
+    const hasSavedMenuRows = rows.some(row => isCompanyMenuFeatureKey(row.feature_key));
+    const flags: Record<CompanyMenuFeatureKey, boolean> = hasSavedMenuRows
+        ? Object.fromEntries(COMPANY_MENU_FEATURES.map(feature => [feature.key, false])) as Record<CompanyMenuFeatureKey, boolean>
+        : { ...getDefaultCompanyMenuFlags() };
 
     for (const row of rows) {
         if (isCompanyMenuFeatureKey(row.feature_key)) {
