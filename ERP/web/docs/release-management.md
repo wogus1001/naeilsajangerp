@@ -63,6 +63,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-26
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `812e1e1 fix(admin): normalize company search and menu flags`
+  - dev 반영: none
+  - main 반영: `4981e32 fix(admin): normalize company search and menu flags`
+  - 배포 URL: `https://naeilsajang.vercel.app` (`dpl_6QfU4ZPq9Z7rcTEXTW2V7TXQdF1F`, READY; source `https://naeilsajang-ohm8mwiwl-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증: 작업 브랜치와 main release worktree에서 `npx tsx --test src/lib/company-search.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Production `/api/companies/search?query=p` 응답에 `Platinum Partners`가 포함되고, `/api/companies/search?query=platinumpartners`는 `Platinum Partners` 1건을 반환함을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. `company_menu_features` 행이 일부만 있는 회사는 저장된 메뉴 행만 ON으로 보고 누락 메뉴는 OFF 처리한다. 설정 행이 전혀 없는 기존 회사는 기존처럼 기본 전체 ON fallback을 유지한다.
+
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 `/demo` 접근 게이트 커밋

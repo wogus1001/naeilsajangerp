@@ -656,6 +656,15 @@
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3047`에서 임시 데모 env를 주입해 `/demo`, `/demo/manager`, `/demo/partner`를 확인했다. 로그인 전 접근 게이트, 잘못된 비밀번호 오류, 정상 로그인, 딥링크 유지, 로그아웃 후 로그인 화면 복귀, 모바일 390px 로그인 화면 horizontal overflow 0건을 확인했다.
 - 신규 SQL은 없다.
 
+## 2026-06-26 회사 검색/메뉴 설정 핫픽스 QA
+
+- 회사 검색 API의 후처리 매칭이 대소문자를 구분해 `Platinum Partners`가 소문자 `p` 검색에서 누락될 수 있던 문제를 수정했다. 회사명과 검색어를 NFC, 공백 제거, lowercase 기준으로 정규화한 뒤 비교한다.
+- 회사 검색 후보 수집 상한을 10건에서 30건으로 늘리고, 한 글자 검색에서도 fallback 후보 수집이 동작하게 보정했다.
+- `company_menu_features`에 선택 메뉴 행만 들어간 신규 회사가 나머지 메뉴까지 모두 켜져 보이는 문제를 수정했다. 유효한 메뉴 설정 행이 하나라도 있으면 누락 메뉴는 OFF, 설정 행이 전혀 없는 기존 회사는 기존 전체 ON fallback을 유지한다.
+- 검증: 작업 브랜치와 main release worktree에서 `npx tsx --test src/lib/company-search.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
+- 실서버 확인: `https://naeilsajang.vercel.app/api/companies/search?query=p` 응답에 `Platinum Partners`가 포함되고, `query=platinumpartners`는 `Platinum Partners` 1건을 반환했다.
+- 신규 SQL은 없다.
+
 ## 다음 QA 체크리스트
 
 ### P0
