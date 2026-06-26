@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { doesCompanyNameMatchQuery } from '@/lib/company-search';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
             .select('id, name, created_at, manager_id')
             .ilike('name', `%${nfcQuery}%`)
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(30);
 
         // 2. NFD Search (Only if different)
         let searchNFD = Promise.resolve({ data: [], error: null });
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
                 .select('id, name, created_at, manager_id')
                 .ilike('name', `%${nfdQuery}%`)
                 .order('created_at', { ascending: false })
-                .limit(10) as any;
+                .limit(30) as any;
         } else {
             debugInfo.steps.push('NFD search skipped (same as NFC)');
         }
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
                 .select('id, name, created_at, manager_id')
                 .ilike('name', `%${rawQuery}%`)
                 .order('created_at', { ascending: false })
-                .limit(10) as any;
+                .limit(30) as any;
         } else {
             debugInfo.steps.push('Raw search skipped (same as NFC or NFD)');
         }
@@ -94,15 +95,15 @@ export async function GET(request: Request) {
         debugInfo.initialCombinedResults = allResults.length;
 
         // Also search for "name without spaces" if nothing found but we have suspicious candidates
-        if (allResults.length === 0 && rawQuery.length > 2) {
+        if (allResults.length === 0) {
             debugInfo.steps.push('Performing fallback search');
             // Fallback: search for first 2-3 characters to catch weird variations
-            const firstPart = rawQuery.substring(0, 2); // Reduced to 2 chars for simpler matching
+            const firstPart = rawQuery.substring(0, Math.min(2, rawQuery.length)); // Reduced to 2 chars for simpler matching
             const { data: fallbackData, error: fallbackError } = await supabaseAdmin
                 .from('companies')
                 .select('id, name, created_at, manager_id')
                 .ilike('name', `%${firstPart}%`)
-                .limit(20);
+                .limit(30);
 
             if (fallbackData) {
                 debugInfo.fallbackResultCount = fallbackData.length;
@@ -116,17 +117,17 @@ export async function GET(request: Request) {
         const seenIds = new Set();
         const uniqueCompanies = [];
 
-        const cleanRawQuery = nfcQuery.replace(/\s+/g, '');
+        const cleanRawQuery = nfcQuery.replace(/\s+/g, '').toLowerCase();
         debugInfo.cleanRawQuery = cleanRawQuery;
 
         for (const company of allResults) {
             if (!seenIds.has(company.id)) {
 
                 // If we performed a fallback search, check if it's actually relevant
-                const cleanName = company.name.replace(/\s+/g, '').normalize('NFC');
+                const cleanName = company.name.replace(/\s+/g, '').normalize('NFC').toLowerCase();
 
                 // Accept match if it includes query OR query includes it (fuzzy)
-                if (cleanName.includes(cleanRawQuery) || cleanRawQuery.includes(cleanName)) {
+                if (doesCompanyNameMatchQuery(company.name, nfcQuery)) {
                     seenIds.add(company.id);
                     uniqueCompanies.push(company);
                 } else {
