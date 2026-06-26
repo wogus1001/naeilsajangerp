@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DEMO_SCENARIOS } from '../demoContent';
+import { DEMO_SCENARIOS, DEMO_SCREEN_GUIDES } from '../demoContent';
 import type { DemoRole, DemoScreenId } from '../demoTypes';
 import { useDemoApiGuard } from './DemoApiGuard';
 import { DemoErpShell } from './DemoErpShell';
@@ -20,13 +20,25 @@ export function DemoShell({ role }: DemoShellProps) {
     const scenario = DEMO_SCENARIOS[role];
     const defaultScreen = scenario.defaultScreen;
     const [activeScreen, setActiveScreen] = useState<DemoScreenId>(defaultScreen);
-    const [notice, setNotice] = useState('데모 설명을 따라가거나 직접 메뉴를 눌러 체험할 수 있습니다.');
     const [tourRun, setTourRun] = useState(0);
     const [isTourOpen, setIsTourOpen] = useState(true);
-    const activeNav = useMemo(
-        () => scenario.navItems.find(item => item.id === activeScreen) ?? scenario.navItems[0],
-        [activeScreen, scenario.navItems]
+    const activeGuide = DEMO_SCREEN_GUIDES[activeScreen];
+    const tourSteps = useMemo(
+        () => activeGuide.steps.map((step, index) => ({
+            id: `${activeScreen}-${index + 1}`,
+            targetId: step.targetId,
+            targetSelector: 'targetSelector' in step ? step.targetSelector : undefined,
+            title: `${index + 1}. ${step.title}`,
+            description: step.description
+        })),
+        [activeGuide.steps, activeScreen]
     );
+    const finalTourAction = activeGuide.actions[0];
+    const handleScreenChange = (screen: DemoScreenId) => {
+        setActiveScreen(screen);
+        setTourRun(run => run + 1);
+        setIsTourOpen(true);
+    };
     const handleLogout = async () => {
         const response = await fetch('/api/demo/access', { method: 'DELETE' });
         if (response.ok) {
@@ -40,9 +52,8 @@ export function DemoShell({ role }: DemoShellProps) {
             <DemoErpShell
                 scenario={scenario}
                 activeScreen={activeScreen}
-                notice={`${activeNav?.description ?? '프랜차이즈 샘플 화면'} · ${notice}`}
                 onLogout={handleLogout}
-                onScreenChange={setActiveScreen}
+                onScreenChange={handleScreenChange}
                 onRestartTour={() => {
                     setTourRun(run => run + 1);
                     setIsTourOpen(true);
@@ -51,15 +62,17 @@ export function DemoShell({ role }: DemoShellProps) {
                 <DemoRoleWorkspace
                     role={role}
                     activeScreen={activeScreen}
-                    onScreenChange={setActiveScreen}
-                    onSimulate={label => setNotice(`${label} 시뮬레이션이 완료됐습니다.`)}
+                    onScreenChange={handleScreenChange}
+                    onSimulate={() => undefined}
                 />
             </DemoErpShell>
             {isTourOpen && (
                 <DemoTourOverlay
-                    key={`${role}-${tourRun}`}
-                    steps={scenario.tourSteps}
+                    key={`${role}-${activeScreen}-${tourRun}`}
+                    steps={tourSteps}
+                    finalAction={finalTourAction}
                     onCloseAction={() => setIsTourOpen(false)}
+                    onFinalAction={action => handleScreenChange(action.screen)}
                 />
             )}
         </>

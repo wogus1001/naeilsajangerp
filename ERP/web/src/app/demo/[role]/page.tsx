@@ -14,7 +14,7 @@ type DemoRolePageProps = {
 
 export const metadata: Metadata = {
     title: 'Franchise OS 데모 | 기능 설명 투어',
-    description: '샘플 데이터와 딤드 오버레이로 Franchise OS 주요 기능을 역할별로 체험합니다.'
+    description: '실제형 샘플 데이터와 화면별 가이드로 Franchise OS 주요 기능을 역할별로 체험합니다.'
 };
 
 export const dynamic = 'force-dynamic';

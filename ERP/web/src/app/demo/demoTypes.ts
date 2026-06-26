@@ -5,6 +5,7 @@ export type DemoScreenId =
     | 'leadDb'
     | 'contractOwners'
     | 'location'
+    | 'locationMap'
     | 'operations';
 
 export type DemoRoleCard = {
@@ -31,8 +32,29 @@ export type DemoMetric = {
 export type DemoTourStep = {
     readonly id: string;
     readonly targetId: string;
+    readonly targetSelector?: string;
     readonly title: string;
     readonly description: string;
+};
+
+export type DemoGuideAction = {
+    readonly label: string;
+    readonly screen: DemoScreenId;
+};
+
+export type DemoGuideStep = {
+    readonly targetId: string;
+    readonly targetSelector?: string;
+    readonly title: string;
+    readonly description: string;
+};
+
+export type DemoScreenGuide = {
+    readonly badge: string;
+    readonly title: string;
+    readonly description: string;
+    readonly steps: readonly DemoGuideStep[];
+    readonly actions: readonly DemoGuideAction[];
 };
 
 export type DemoScenario = {

@@ -10,6 +10,7 @@ export const DEMO_PATH_TO_SCREEN: Readonly<Record<string, DemoScreenId>> = {
     '/dashboard': 'dashboard',
     '/dashboard/franchise-leads': 'leadDb',
     '/dashboard/franchise-leads/market-insights': 'location',
+    '/dashboard/franchise-locations': 'locationMap',
     '/dashboard/franchise-operations': 'operations'
 };
 

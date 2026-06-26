@@ -3,7 +3,7 @@
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { DemoTourStep } from '../demoTypes';
+import type { DemoGuideAction, DemoTourStep } from '../demoTypes';
 import styles from '../demo.module.css';
 
 type TargetRect = {
@@ -15,10 +15,12 @@ type TargetRect = {
 
 type DemoTourOverlayProps = {
     readonly steps: readonly DemoTourStep[];
+    readonly finalAction: DemoGuideAction | undefined;
     readonly onCloseAction?: () => void;
+    readonly onFinalAction?: (action: DemoGuideAction) => void;
 };
 
-export function DemoTourOverlay({ steps, onCloseAction }: DemoTourOverlayProps) {
+export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalAction }: DemoTourOverlayProps) {
     const [active, setActive] = useState(true);
     const [stepIndex, setStepIndex] = useState(0);
     const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
@@ -30,12 +32,13 @@ export function DemoTourOverlay({ steps, onCloseAction }: DemoTourOverlayProps) 
             return;
         }
 
-        const element = document.querySelector(`[data-demo-id="${step.targetId}"]`);
+        const element = document.querySelector(step.targetSelector ?? `[data-demo-id="${step.targetId}"]`);
         if (!(element instanceof HTMLElement)) {
             setTargetRect(null);
             return;
         }
 
+        element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
         const rect = element.getBoundingClientRect();
         setTargetRect({
             top: Math.max(rect.top - 8, 12),
@@ -82,13 +85,50 @@ export function DemoTourOverlay({ steps, onCloseAction }: DemoTourOverlayProps) 
             return {};
         }
 
-        const placeRight = targetRect.left + targetRect.width + 360 < window.innerWidth;
-        const nextLeft = placeRight ? targetRect.left + targetRect.width + 16 : Math.max(24, targetRect.left - 336);
-        const nextTop = Math.min(Math.max(24, targetRect.top), window.innerHeight - 260);
+        const margin = 16;
+        const cardWidth = 320;
+        const estimatedCardHeight = 220;
+        const maxLeft = window.innerWidth - cardWidth - margin;
+        const maxTop = window.innerHeight - estimatedCardHeight - margin;
+        const clampLeft = (left: number) => Math.min(Math.max(margin, left), maxLeft);
+        const clampTop = (top: number) => Math.min(Math.max(margin, top), maxTop);
+        const wideTarget = targetRect.width > window.innerWidth * 0.55;
+        const canPlaceRight = targetRect.left + targetRect.width + cardWidth + margin <= window.innerWidth;
+        const canPlaceLeft = targetRect.left - cardWidth - margin >= margin;
+        const canPlaceBelow = targetRect.top + targetRect.height + estimatedCardHeight + margin <= window.innerHeight;
+        const canPlaceAbove = targetRect.top - estimatedCardHeight - margin >= margin;
+
+        if (!wideTarget && canPlaceRight) {
+            return {
+                top: clampTop(targetRect.top),
+                left: targetRect.left + targetRect.width + margin
+            };
+        }
+
+        if (!wideTarget && canPlaceLeft) {
+            return {
+                top: clampTop(targetRect.top),
+                left: targetRect.left - cardWidth - margin
+            };
+        }
+
+        if (canPlaceBelow) {
+            return {
+                top: targetRect.top + targetRect.height + margin,
+                left: clampLeft(targetRect.left)
+            };
+        }
+
+        if (canPlaceAbove) {
+            return {
+                top: targetRect.top - estimatedCardHeight - margin,
+                left: clampLeft(targetRect.left)
+            };
+        }
 
         return {
-            top: nextTop,
-            left: nextLeft
+            top: clampTop(targetRect.top + targetRect.height + margin),
+            left: clampLeft(targetRect.left)
         };
     }, [targetRect]);
 
@@ -102,11 +142,21 @@ export function DemoTourOverlay({ steps, onCloseAction }: DemoTourOverlayProps) 
         setActive(false);
         onCloseAction?.();
     };
+    const completeTour = () => {
+        if (finalAction) {
+            setActive(false);
+            onCloseAction?.();
+            onFinalAction?.(finalAction);
+            return;
+        }
+
+        closeTour();
+    };
 
     return (
         <div className={styles.tourLayer} aria-live="polite">
             <div className={styles.spotlight} style={spotlightStyle} />
-            <section className={styles.tourCard} style={cardStyle} role="dialog" aria-label="데모 기능 설명">
+            <section className={styles.tourCard} style={cardStyle} role="dialog" aria-label="데모 기능 설명" data-demo-id="demo-tour-card">
                 <button type="button" className={styles.tourClose} onClick={closeTour} aria-label="데모 설명 닫기">
                     <X size={16} aria-hidden="true" />
                 </button>
@@ -120,10 +170,10 @@ export function DemoTourOverlay({ steps, onCloseAction }: DemoTourOverlayProps) 
                     </button>
                     <button
                         type="button"
-                        onClick={() => isLast ? closeTour() : setStepIndex(index => Math.min(steps.length - 1, index + 1))}
+                        onClick={() => isLast ? completeTour() : setStepIndex(index => Math.min(steps.length - 1, index + 1))}
                         className={styles.primaryButton}
                     >
-                        {isLast ? '직접 사용하기' : '다음'}
+                        {isLast ? finalAction?.label ?? '직접 사용하기' : '다음'}
                     </button>
                 </div>
             </section>
