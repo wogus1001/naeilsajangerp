@@ -66,11 +66,11 @@ YYYY-MM-DD
 - 2026-06-29
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회원가입 승인/Solapi/데모 가이드 릴리즈 커밋
-  - 주요 기능: 회원가입 화면의 입력 순서를 회사 찾기 우선으로 정리하고, 이메일 `@` 누락/비밀번호 확인 불일치/휴대폰 자동 하이픈 정책을 추가했다. 기존 회사 브랜드 임직원 가입은 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 백엔드에서 자동 접수한다. Solapi SDK로 회원가입 요청 관리자 알림과 승인 완료 신청자 알림을 추가했고, 문자 문구 prefix는 `[ERP]`로 통일했다. `/demo` 가이드는 대시보드와 모객 DB의 필터, 1차 유입 DB, 개별 상세, 승격, 가맹 희망자 단계 설명과 상세 드로어를 실제 업무 흐름에 맞게 조정했다.
+  - 주요 기능: 회원가입 화면의 입력 순서를 회사 찾기 우선으로 정리하고, 이메일 `@` 누락/비밀번호 확인 불일치/휴대폰 자동 하이픈 정책을 추가했다. 기존 회사 브랜드 임직원 가입은 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 백엔드에서 자동 접수한다. Solapi SDK로 회원가입 요청 관리자 알림과 승인 완료 신청자 알림을 추가했고, 문자 문구 prefix는 `[ERP]`로 통일했다. `/demo` 가이드는 대시보드와 모객 DB의 필터, 1차 유입 DB, 개별 상세, 승격, 가맹 희망자 단계 설명과 상세 드로어를 실제 업무 흐름에 맞게 조정했다. 어드민 관리 홈에서는 회사별 전자계약 사용량과 회사별 메뉴 관리를 각각 `전자계약 관리`, `회사별 메뉴 관리` 전용 페이지로 분리했고, 전자계약 사용량과 회원 및 권한 관리에 검색/필터/정렬/페이지네이션을 추가했다.
   - dev 반영: 이번 커밋 반영 예정
   - main 반영: 이번 커밋 반영 예정
   - 배포 URL: 배포 후 최종 보고
-  - 검증: `npx tsx --test src/lib/signup-approval-policy.test.mts`, `npx tsx --test src/lib/solapi-notifications.test.mts`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright로 `/signup` 390px 입력 순서/검증 메시지/휴대폰 자동 포맷을 확인했다.
+  - 검증: `npx tsx --test src/lib/signup-approval-policy.test.mts`, `npx tsx --test src/lib/solapi-notifications.test.mts`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsx --test src/app/admin/electronicContractUsageTableState.test.mts src/app/admin/users/adminUsersTableState.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright로 `/signup` 390px 입력 순서/검증 메시지/휴대폰 자동 포맷을 확인했다. 로컬 production 서버 `127.0.0.1:3094`에서 `/admin`, `/admin/electronic-contracts`, `/admin/company-access`, `/admin/users`의 관리 메뉴 분리, 전자계약 사용량/회원 관리 검색·필터·정렬·페이지네이션, console/page error 0건을 확인했다.
   - 남은 이슈: 신규 SQL 없음. Solapi 실문자 발송은 운영 환경변수와 관리자 수신 번호 설정이 완료된 배포 환경에서 실제 가입/승인 흐름으로 확인한다.
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`

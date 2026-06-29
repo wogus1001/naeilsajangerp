@@ -2,16 +2,72 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, User, Calendar, Eye, Trash2, Edit3 } from 'lucide-react';
+import { ArrowLeft, Eye, Trash2, Edit3 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { canManageNotice } from '@/lib/notices';
+import { getStoredUser, type StoredUser } from '@/utils/userUtils';
+
+type NoticeDetail = {
+    readonly id: string;
+    readonly title: string;
+    readonly content?: string | null;
+    readonly type?: string | null;
+    readonly authorId?: string | null;
+    readonly author_id?: string | null;
+    readonly authorName: string;
+    readonly authorRole: string;
+    readonly companyId?: string | null;
+    readonly company_id?: string | null;
+    readonly createdAt: string;
+    readonly views?: number | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readOptionalString(source: Record<string, unknown>, key: string): string | null {
+    const value = source[key];
+    return typeof value === 'string' ? value : null;
+}
+
+function readOptionalNumber(source: Record<string, unknown>, key: string): number | null {
+    const value = source[key];
+    return typeof value === 'number' ? value : null;
+}
+
+function parseNoticeDetail(value: unknown): NoticeDetail | null {
+    if (!isRecord(value)) return null;
+    const id = readOptionalString(value, 'id');
+    const title = readOptionalString(value, 'title');
+    const authorName = readOptionalString(value, 'authorName');
+    const authorRole = readOptionalString(value, 'authorRole');
+    const createdAt = readOptionalString(value, 'createdAt');
+    if (!id || !title || !authorName || !authorRole || createdAt === null) return null;
+
+    return {
+        id,
+        title,
+        content: readOptionalString(value, 'content'),
+        type: readOptionalString(value, 'type'),
+        authorId: readOptionalString(value, 'authorId'),
+        author_id: readOptionalString(value, 'author_id'),
+        authorName,
+        authorRole,
+        companyId: readOptionalString(value, 'companyId'),
+        company_id: readOptionalString(value, 'company_id'),
+        createdAt,
+        views: readOptionalNumber(value, 'views')
+    };
+}
 
 export default function NoticeDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const [notice, setNotice] = useState<any>(null);
+    const [notice, setNotice] = useState<NoticeDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<StoredUser>(null);
 
     const [alertConfig, setAlertConfig] = useState({ isOpen: false, message: '', title: '' });
     const showAlert = (message: string) => setAlertConfig({ isOpen: true, message, title: '알림' });
@@ -21,24 +77,26 @@ export default function NoticeDetailPage() {
     const showConfirm = (message: string, onConfirm: () => void) => setConfirmModal({ isOpen: true, message, onConfirm });
 
     useEffect(() => {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            setCurrentUser(JSON.parse(userStr));
-        }
+        setCurrentUser(getStoredUser());
 
         const fetchNotice = async () => {
             if (!params?.id) return;
             try {
                 const res = await fetch(`/api/notices/${params.id}`);
                 if (res.ok) {
-                    const data = await res.json();
-                    setNotice(data);
+                    const data: unknown = await res.json();
+                    const parsedNotice = parseNoticeDetail(data);
+                    if (!parsedNotice) {
+                        showAlert('공지사항 정보를 읽을 수 없습니다.');
+                        return;
+                    }
+                    setNotice(parsedNotice);
                 } else {
                     showAlert('공지사항을 찾을 수 없습니다.');
                     router.push('/board/notices');
                 }
             } catch (error) {
-                console.error(error);
+                console.error(error instanceof Error ? error.message : String(error));
             } finally {
                 setLoading(false);
             }
@@ -58,7 +116,7 @@ export default function NoticeDetailPage() {
                     showAlert('삭제 실패');
                 }
             } catch (error) {
-                console.error(error);
+                console.error(error instanceof Error ? error.message : String(error));
                 showAlert('오류 발생');
             }
         });
@@ -67,7 +125,7 @@ export default function NoticeDetailPage() {
     if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
     if (!notice) return null;
 
-    const isAuthor = currentUser?.id === notice.authorId || currentUser?.role === 'admin'; // Allow admin/author delete
+    const canManage = canManageNotice(currentUser, notice);
 
     const getRoleBadge = (role: string) => {
         if (role === 'admin') return <span style={{ background: '#212529', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', marginLeft: '8px' }}>관리자</span>;
@@ -101,9 +159,9 @@ export default function NoticeDetailPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {notice.type === 'system' ? (
-                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#fa5252', background: '#fff5f5', padding: '4px 8px', borderRadius: '4px' }}>📢 전체 공지</span>
+                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#fa5252', background: '#fff5f5', padding: '4px 8px', borderRadius: '4px' }}>전체 공지</span>
                             ) : (
-                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1971c2', background: '#e7f5ff', padding: '4px 8px', borderRadius: '4px' }}>👥 팀 공지</span>
+                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1971c2', background: '#e7f5ff', padding: '4px 8px', borderRadius: '4px' }}>팀 공지</span>
                             )}
                             <span style={{ fontSize: '13px', color: '#adb5bd' }}>|</span>
                             <span style={{ fontSize: '13px', color: '#868e96' }}>{notice.createdAt}</span>
@@ -133,7 +191,7 @@ export default function NoticeDetailPage() {
                     {notice.content}
                 </div>
 
-                {isAuthor && (
+                {canManage && (
                     <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid #f1f3f5', display: 'flex', justifyContent: 'flex-end' }}>
                         <button
                             onClick={() => router.push(`/board/notices/${notice.id}/edit`)}

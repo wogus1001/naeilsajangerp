@@ -9,7 +9,9 @@ export const adminUsersStyles = {
         fontSize: '15px',
         fontWeight: 600,
         cursor: 'pointer',
+        border: '0',
         borderBottom: '2px solid transparent',
+        backgroundColor: 'transparent',
         color: '#868e96',
         display: 'flex',
         alignItems: 'center',
@@ -25,6 +27,31 @@ export const adminUsersStyles = {
         fontSize: '11px',
         padding: '2px 6px',
         borderRadius: '10px',
+        fontWeight: 700
+    },
+    toolbar: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: '8px',
+        marginBottom: '12px'
+    },
+    searchInput: {
+        height: '40px',
+        padding: '0 12px',
+        border: '1px solid #e5e8eb',
+        borderRadius: '8px',
+        color: '#191f28',
+        fontSize: '13px',
+        outline: 'none'
+    },
+    filterSelect: {
+        height: '40px',
+        padding: '0 10px',
+        border: '1px solid #e5e8eb',
+        borderRadius: '8px',
+        backgroundColor: '#ffffff',
+        color: '#333d4b',
+        fontSize: '13px',
         fontWeight: 700
     },
     tableContainer: {
@@ -58,5 +85,42 @@ export const adminUsersStyles = {
         fontWeight: 600
     },
     approveBtn: { backgroundColor: '#e6fcf5', color: '#0ca678' },
-    statusBadge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }
+    statusBadge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 },
+    pagination: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        marginTop: '12px'
+    },
+    pageInfo: { color: '#6b7684', fontSize: '13px', fontWeight: 600 },
+    pageControls: { display: 'flex', alignItems: 'center', gap: '8px' },
+    pageSizeSelect: {
+        height: '36px',
+        padding: '0 10px',
+        border: '1px solid #e5e8eb',
+        borderRadius: '8px',
+        backgroundColor: '#ffffff',
+        color: '#333d4b',
+        fontSize: '13px',
+        fontWeight: 700
+    },
+    pageButton: {
+        height: '36px',
+        padding: '0 12px',
+        border: '1px solid #e5e8eb',
+        borderRadius: '8px',
+        backgroundColor: '#ffffff',
+        color: '#333d4b',
+        fontSize: '13px',
+        fontWeight: 700,
+        cursor: 'pointer'
+    },
+    pageNumber: {
+        minWidth: '56px',
+        color: '#4e5968',
+        fontSize: '13px',
+        fontWeight: 800,
+        textAlign: 'center' as const
+    }
 } as const;

@@ -32,8 +32,11 @@
 - 브랜드 임직원 가입 승인 정책을 백엔드 기준으로 보정했다. 기존 회사에 팀장이 없으면 팀장 권한으로 관리자 승인 대기, 팀장이 있으면 매니저 권한으로 팀장 승인 대기 상태가 된다.
 - Solapi SDK 기반 회원가입 문자 알림을 추가했다. 회원가입 요청 시 관리자 수신 번호로 `[ERP] 회원가입 요청` 문자를 보내고, 승인 완료 시 신청자에게 `[ERP] 회원가입 승인` 문자를 보낸다. 문자 발송 실패는 가입/승인 트랜잭션을 실패시키지 않고 서버 로그로만 남긴다.
 - `/demo`는 대시보드와 모객 DB 가이드 단계를 실제 설명 흐름에 맞춰 조정했다. 필터, 1차 유입 DB, 개별 상세, 승격, 가맹 희망자 단계와 상세 드로어가 안내 순서에 맞게 이어지며, `건너뛰기` 버튼은 `둘러보기`로 바꿨다.
+- 어드민 관리 홈에서 회사별 전자계약 사용량 표와 회사별 메뉴 관리 패널을 분리했다. 관리 메뉴에 `전자계약 관리`와 `회사별 메뉴 관리` 전용 진입점을 추가하고, 각각 `/admin/electronic-contracts`, `/admin/company-access` 페이지로 이동한다.
+- 회사별 전자계약 사용량 화면은 `새로고침` 버튼을 제거하고 회사명/회사 ID 검색, 사용 상태 필터, 사용량/회사명/최근 발송·완료 기준 정렬, 10/20/50개 페이지네이션을 추가했다.
+- `회원 및 권한 관리`는 전체/승인대기 탭을 필터 바 안으로 통합하고, 이름/로그인 ID/이메일/회사명 검색, 상태/권한/회사 필터, 가입일/이름/로그인 ID/회사명/권한/상태 정렬, 페이지네이션을 추가했다.
 - 검증: `npx tsx --test src/lib/signup-approval-policy.test.mts`, `npx tsx --test src/lib/solapi-notifications.test.mts`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. Playwright로 `/signup` 390px에서 필드 순서, 이메일 `@` 안내, 비밀번호 불일치 안내, 휴대폰 자동 하이픈을 확인했다.
-- 남은 QA: Solapi 실문자 발송은 운영 환경변수와 실제 수신 번호가 설정된 실서버에서 승인/가입 요청 흐름으로 확인한다. 이번 작업의 신규 SQL은 없다.
+- 추가 검증: `npx tsx --test src/app/admin/electronicContractUsageTableState.test.mts src/app/admin/users/adminUsersTableState.test.mts`로 전자계약 사용량/회원 관리 필터·정렬·페이지네이션 순수 로직을 확인했다. 로컬 production 서버 `127.0.0.1:3094`에서 Playwright API mock으로 `/admin`, `/admin/electronic-contracts`, `/admin/company-access`, `/admin/users`를 확인했고, 관리 홈의 전자계약 사용량 표 미노출, 새 관리 메뉴 2개, 전자계약 사용량 새로고침 버튼 미노출, 검색/필터/페이지네이션 조작, 회원 관리 검색/상태·권한 필터/페이지네이션 조작, console/page error 0건을 확인했다. 남은 QA: Solapi 실문자 발송은 운영 환경변수와 실제 수신 번호가 설정된 실서버에서 승인/가입 요청 흐름으로 확인한다. 이번 작업의 신규 SQL은 없다.
 
 ### 2026-06-09
 
