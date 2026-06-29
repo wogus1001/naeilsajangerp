@@ -5,6 +5,7 @@ import {
     type NoticeAuthor,
     type NoticeRow
 } from '@/lib/notices';
+import { normalizeLoginId } from '@/lib/login-id';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Service Role Client moved to handlers
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json(formatted);
     } catch (error) {
-        console.error('Fetch notices error:', error);
+        console.error('Fetch notices error:', error instanceof Error ? error.message : String(error));
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -88,13 +89,18 @@ async function fetchNoticeAuthors(rows: readonly NoticeRow[]): Promise<Map<strin
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const body = await request.json();
-        const { title, content, type, authorId, companyName, isPinned } = body;
+        const body: unknown = await request.json();
+        const title = readText(body, 'title');
+        const content = readText(body, 'content');
+        const type = readText(body, 'type');
+        const authorId = readText(body, 'authorId');
+        const authorUid = readText(body, 'authorUid');
+        const companyName = readText(body, 'companyName');
+        const isPinned = readBoolean(body, 'isPinned');
 
         // Resolve IDs
         // Author
-        const email = `${authorId}@example.com`;
-        const { data: author } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
+        const author = await resolveNoticeAuthor({ authorId, authorUid, companyName });
         if (!author) return NextResponse.json({ error: 'Author not found' }, { status: 400 });
 
         // Company
@@ -112,7 +118,7 @@ export async function POST(request: Request) {
                 type,
                 author_id: author.id,
                 company_id: companyUuid,
-                is_pinned: isPinned || false
+                is_pinned: isPinned
             })
             .select()
             .single();
@@ -121,7 +127,72 @@ export async function POST(request: Request) {
 
         return NextResponse.json(newNotice);
     } catch (error) {
-        console.error('Create notice error:', error);
+        console.error('Create notice error:', error instanceof Error ? error.message : String(error));
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+}
+
+type ResolvedAuthor = {
+    readonly id: string;
+};
+
+type ResolveNoticeAuthorInput = {
+    readonly authorId: string;
+    readonly authorUid: string;
+    readonly companyName: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readText(source: unknown, key: string): string {
+    if (!isRecord(source)) return '';
+    const value = source[key];
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function readBoolean(source: unknown, key: string): boolean {
+    if (!isRecord(source)) return false;
+    return source[key] === true;
+}
+
+async function resolveNoticeAuthor(input: ResolveNoticeAuthorInput): Promise<ResolvedAuthor | null> {
+    const supabaseAdmin = getSupabaseAdmin();
+    if (input.authorUid) {
+        const { data } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('id', input.authorUid)
+            .maybeSingle<ResolvedAuthor>();
+        if (data) return data;
+    }
+
+    if (input.companyName && input.authorId) {
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('name', input.companyName)
+            .maybeSingle<{ readonly id: string }>();
+
+        if (company?.id) {
+            const loginIdNormalized = normalizeLoginId(input.authorId);
+            const { data } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('company_id', company.id)
+                .eq('login_id_normalized', loginIdNormalized)
+                .maybeSingle<ResolvedAuthor>();
+            if (data) return data;
+        }
+    }
+
+    if (!input.authorId) return null;
+    const email = `${input.authorId}@example.com`;
+    const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle<ResolvedAuthor>();
+    return data || null;
 }
