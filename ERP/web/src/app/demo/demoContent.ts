@@ -124,7 +124,7 @@ export const DEMO_SCENARIOS = {
     }
 } as const satisfies Record<DemoRole, DemoScenario>;
 
-export const DEMO_SCREEN_GUIDES = {
+export const DEMO_SCREEN_GUIDES: Record<DemoScreenId, DemoScreenGuide> = {
     dashboard: {
         badge: '가이드 1',
         title: '메인 대시보드는 오늘 볼 일을 먼저 보여줍니다.',
@@ -133,7 +133,12 @@ export const DEMO_SCREEN_GUIDES = {
             { targetId: 'dashboard-home-kpis', title: 'KPI 확인', description: '모객 DB, 계약 가능, 출점 후보지, 연결 필요 건수를 먼저 확인합니다.' },
             { targetId: 'dashboard-home-schedule', title: '일정 확인', description: '오늘 확인할 현장 방문, 오픈 준비 점검, 수령 확인 콜을 먼저 봅니다.' },
             { targetId: 'dashboard-home-notices', title: '공지사항 확인', description: '팀 공지와 전체 안내를 확인하고 필요한 안내는 바로 열어봅니다.' },
-            { targetId: 'dashboard-home-memo', title: '간편 메모', description: '오늘 처리할 메모를 남깁니다. 데모에서는 실제 저장되지 않습니다.' }
+            {
+                targetId: 'dashboard-home-memo',
+                emphasisTargetIds: ['nav-leadDb'],
+                title: '간편 메모',
+                description: '오늘 처리할 메모를 남깁니다. 데모에서는 실제 저장되지 않습니다.'
+            }
         ],
         actions: [
             { label: '모객 DB로 이동', screen: 'leadDb' },
@@ -146,10 +151,15 @@ export const DEMO_SCREEN_GUIDES = {
         description: '1차 유입 DB에서 상담 가능 고객을 선별하고, 가맹 희망자로 승격해 관리하는 흐름입니다.',
         steps: [
             {
+                targetId: 'lead-db-filters',
+                title: '필터 검색',
+                description: '기간, 상태, 유입, 담당자, 검색어로 오늘 확인할 DB를 먼저 좁혀봅니다.'
+            },
+            {
                 targetId: 'lead-db-raw-intake-tab',
                 targetSelector: '[class*="leadLayerTabs"] button:nth-of-type(1)',
                 title: '1차 유입 DB',
-                description: 'Meta 광고, 엑셀 업로드 등 처음 들어온 원천 DB를 먼저 모아두는 영역입니다.'
+                description: 'Meta 광고, 엑셀 업로드 등 처음 들어온 원천 DB를 모아두고 상담 가능성을 먼저 봅니다.'
             },
             {
                 targetId: 'lead-db-first-record',
@@ -159,9 +169,9 @@ export const DEMO_SCREEN_GUIDES = {
             },
             {
                 targetId: 'lead-db-promote-action',
-                targetSelector: 'button[data-tooltip="가맹 희망자 목록으로 승격"]',
+                targetSelector: '[data-demo-id="lead-db-drawer-primary-action"]',
                 title: '승격 처리',
-                description: '상담 가능성이 확인된 1차 유입 DB는 승격 버튼으로 가맹 희망자 DB로 넘깁니다.'
+                description: '상담 가능성이 확인된 1차 유입 DB는 상세 드로어에서 가맹 희망자로 승격합니다.'
             },
             {
                 targetId: 'lead-db-candidate-tab',
@@ -231,4 +241,4 @@ export const DEMO_SCREEN_GUIDES = {
             { label: '대시보드로 이동', screen: 'dashboard' }
         ]
     }
-} as const satisfies Record<DemoScreenId, DemoScreenGuide>;
+};

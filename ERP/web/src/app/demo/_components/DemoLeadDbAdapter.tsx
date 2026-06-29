@@ -16,10 +16,11 @@ import {
 } from '@/components/franchise/leads/leadTableConfig';
 import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
 import type { FranchiseLead, LeadViewMode } from '@/components/franchise/leads/types';
+import { DEMO_TOUR_STEP_ADVANCE_EVENT } from '../demoTypes';
 import type { DemoActionHandler, DemoScreenId } from '../demoTypes';
 import { DEMO_LEAD_MANAGERS, DEMO_SAMPLE_LEADS } from './DemoLeadSampleData';
 import { DemoRecordDrawer } from './DemoRecordDrawer';
-import { DemoGuidedLayout } from './DemoScreenGuide';
+import { DemoGuideTarget, DemoGuidedLayout } from './DemoScreenGuide';
 
 type DemoLeadDbAdapterProps = {
     readonly activeTab: LeadWorkspaceTab;
@@ -47,24 +48,49 @@ export function DemoLeadDbAdapter({ activeTab, onScreenChange, onSimulate }: Dem
     const [selectedLeadId, setSelectedLeadId] = React.useState<string | null>(null);
 
     const layerLeads = React.useMemo(() => leads.filter(lead => lead.leadStage === leadDbLayer), [leadDbLayer, leads]);
-    const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({
-        status,
-        leads: layerLeads.filter(lead => lead.status === status)
-    }));
-    const taskQueueOptions = WORK_QUEUE_OPTIONS.map(option => ({
-        ...option,
-        count: option.key === 'all' ? layerLeads.length : layerLeads.filter(lead => lead.nextContactAt).length
-    }));
+    const pipelineColumns = FRANCHISE_LEAD_STATUSES.map(status => ({ status, leads: layerLeads.filter(lead => lead.status === status) }));
+    const taskQueueOptions = WORK_QUEUE_OPTIONS.map(option => ({ ...option, count: option.key === 'all' ? layerLeads.length : layerLeads.filter(lead => lead.nextContactAt).length }));
 
-    const updateLead = (leadId: string, updater: (lead: FranchiseLead) => FranchiseLead) => {
-        setLeads(current => current.map(lead => lead.id === leadId ? updater(lead) : lead));
-    };
+    const updateLead = (leadId: string, updater: (lead: FranchiseLead) => FranchiseLead) => setLeads(current => current.map(lead => lead.id === leadId ? updater(lead) : lead));
     const selectedLead = selectedLeadId ? leads.find(lead => lead.id === selectedLeadId) || null : null;
     const openLeadDetail = (leadId: string, actionLabel = '샘플 상세 패널 열기') => {
         setSelectedLeadId(leadId);
         const lead = leads.find(item => item.id === leadId);
         onSimulate(lead ? `${lead.name} ${actionLabel}` : actionLabel);
     };
+    React.useEffect(() => {
+        const handleTourStepAdvance = (event: WindowEventMap[typeof DEMO_TOUR_STEP_ADVANCE_EVENT]) => {
+            if (event.detail.screen !== 'leadDb') {
+                return;
+            }
+
+            if (event.detail.fromTargetId === 'lead-db-first-record') {
+                const firstRawLead = leads.find(lead => lead.leadStage === 'raw_intake');
+                if (!firstRawLead) {
+                    return;
+                }
+
+                setSelectedLeadId(firstRawLead.id);
+                onSimulate(`${firstRawLead.name} 샘플 상세 패널 열기`);
+            }
+
+            if (event.detail.fromTargetId === 'lead-db-promote-action') {
+                const leadToPromote = (selectedLeadId ? leads.find(lead => lead.id === selectedLeadId) : null)
+                    ?? leads.find(lead => lead.leadStage === 'raw_intake');
+                if (!leadToPromote) {
+                    return;
+                }
+
+                updateLead(leadToPromote.id, current => ({ ...current, leadStage: 'candidate', status: '가맹검토' }));
+                setLeadDbLayer('candidate');
+                setSelectedLeadId(null);
+                onSimulate(`${leadToPromote.name} 가맹 희망자 승격`);
+            }
+        };
+
+        window.addEventListener(DEMO_TOUR_STEP_ADVANCE_EVENT, handleTourStepAdvance);
+        return () => window.removeEventListener(DEMO_TOUR_STEP_ADVANCE_EVENT, handleTourStepAdvance);
+    }, [leads, onSimulate, selectedLeadId]);
     const runDrawerPrimaryAction = (lead: FranchiseLead) => {
         if (lead.leadStage === 'raw_intake') {
             updateLead(lead.id, current => ({ ...current, leadStage: 'candidate', status: '가맹검토' }));
@@ -103,32 +129,34 @@ export function DemoLeadDbAdapter({ activeTab, onScreenChange, onSimulate }: Dem
                     </>
                 )}
             />
-            <LeadToolbar
-                rangeOptions={RANGE_OPTIONS}
-                range={range}
-                searchTerm={searchTerm}
-                statusFilter={statusFilter}
-                statusOptions={FRANCHISE_LEAD_STATUSES}
-                sourceFilter={sourceFilter}
-                sourceOptions={SOURCE_FILTER_OPTIONS}
-                managerFilter={managerFilter}
-                managerOptions={DEMO_LEAD_MANAGERS.map(manager => <option key={manager.id} value={manager.id}>{manager.label}</option>)}
-                createdFrom={createdFrom}
-                createdTo={createdTo}
-                onRangeClickAction={(nextRange) => setRange(nextRange as typeof RANGE_OPTIONS[number])}
-                onSearchTermChangeAction={setSearchTerm}
-                onStatusFilterChangeAction={setStatusFilter}
-                onSourceFilterChangeAction={(nextSource) => setSourceFilter(nextSource as typeof SOURCE_FILTER_OPTIONS[number])}
-                onManagerFilterChangeAction={setManagerFilter}
-                onCreatedFromChangeAction={(date) => {
-                    setRange('전체');
-                    setCreatedFrom(date);
-                }}
-                onCreatedToChangeAction={(date) => {
-                    setRange('전체');
-                    setCreatedTo(date);
-                }}
-            />
+            <DemoGuideTarget marker={1} targetId="lead-db-filters" label="필터 검색">
+                <LeadToolbar
+                    rangeOptions={RANGE_OPTIONS}
+                    range={range}
+                    searchTerm={searchTerm}
+                    statusFilter={statusFilter}
+                    statusOptions={FRANCHISE_LEAD_STATUSES}
+                    sourceFilter={sourceFilter}
+                    sourceOptions={SOURCE_FILTER_OPTIONS}
+                    managerFilter={managerFilter}
+                    managerOptions={DEMO_LEAD_MANAGERS.map(manager => <option key={manager.id} value={manager.id}>{manager.label}</option>)}
+                    createdFrom={createdFrom}
+                    createdTo={createdTo}
+                    onRangeClickAction={(nextRange) => setRange(nextRange as typeof RANGE_OPTIONS[number])}
+                    onSearchTermChangeAction={setSearchTerm}
+                    onStatusFilterChangeAction={setStatusFilter}
+                    onSourceFilterChangeAction={(nextSource) => setSourceFilter(nextSource as typeof SOURCE_FILTER_OPTIONS[number])}
+                    onManagerFilterChangeAction={setManagerFilter}
+                    onCreatedFromChangeAction={(date) => {
+                        setRange('전체');
+                        setCreatedFrom(date);
+                    }}
+                    onCreatedToChangeAction={(date) => {
+                        setRange('전체');
+                        setCreatedTo(date);
+                    }}
+                />
+            </DemoGuideTarget>
             <LeadWorkspaceTabs activeTab={activeTab} onTabChange={tab => handleTabChange(tab, onScreenChange)} />
             <DemoGuidedLayout screen="leadDb" onScreenChange={onScreenChange}>
                 <LeadDbWorkspace
@@ -199,16 +227,9 @@ export function DemoLeadDbAdapter({ activeTab, onScreenChange, onSimulate }: Dem
                         { label: '담당자', value: DEMO_LEAD_MANAGERS.find(manager => manager.id === selectedLead.managerId)?.label || '담당자 미정' },
                         { label: '다음 액션', value: selectedLead.nextAction || '미정' }
                     ]}
-                    steps={selectedLead.leadStage === 'raw_intake' ? [
-                        { title: '상담 메모 확인', description: '예산, 지역, 브랜드 선호를 먼저 보고 상담 가능 여부를 판단합니다.' },
-                        { title: '가맹 희망자 승격', description: '의사가 확인된 고객은 승격해 가맹 희망자 DB에서 별도로 관리합니다.' },
-                        { title: '승격 후 후속 관리', description: '승격된 건은 후보지 연결, 정보공개서, 계약 가능일 확인으로 이어집니다.' }
-                    ] : [
-                        { title: '가맹 희망자 정보 확인', description: '희망지역, 예산, 관심 브랜드와 상담 메모를 기준으로 우선순위를 정합니다.' },
-                        { title: '후보지 연결', description: '출점 후보지와 연결해 입지 조건과 계약 가능성을 함께 검토합니다.' },
-                        { title: '계약 완료 전환', description: '정보공개서 기준과 구비서류를 확인한 뒤 계약 완료 흐름으로 이어집니다.' }
-                    ]}
                     primaryActionLabel={selectedLead.leadStage === 'raw_intake' ? '가맹 희망자 승격' : selectedLead.status === '계약완료' ? '계약 완료 탭에서 보기' : '출점 후보지 보기'}
+                    primaryActionTargetId={selectedLead.leadStage === 'raw_intake' ? 'lead-db-drawer-primary-action' : undefined}
+                    showLeadWorkflowSections
                     onPrimaryAction={() => runDrawerPrimaryAction(selectedLead)}
                     onCloseAction={() => setSelectedLeadId(null)}
                 />

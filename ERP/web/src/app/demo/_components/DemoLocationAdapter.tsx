@@ -187,11 +187,6 @@ export function DemoLocationAdapter({ onScreenChange, onSimulate }: DemoLocation
                         { label: '권리금', value: formatMoney(selectedLocation.cost?.premium) },
                         { label: '월세', value: formatMoney(selectedLocation.lease?.monthlyRent) }
                     ]}
-                    steps={[
-                        { title: '주소와 좌표 확인', description: '카카오 주소 검색으로 정리된 주소가 물건지 지도와 운영 전환의 기준이 됩니다.' },
-                        { title: '임대 조건 비교', description: '보증금, 권리금, 월세, 관리비를 후보자 예산과 맞춰 봅니다.' },
-                        { title: '가맹 운영점 전환', description: '계약이 끝나면 원본 후보지는 보존하고 운영 가맹점 레코드로 이어집니다.' }
-                    ]}
                     primaryActionLabel="물건지 지도에서 보기"
                     onPrimaryAction={() => onScreenChange('locationMap')}
                     onCloseAction={() => setSelectedLocationId(null)}

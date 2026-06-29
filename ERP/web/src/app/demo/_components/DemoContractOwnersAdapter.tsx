@@ -159,11 +159,6 @@ export function DemoContractOwnersAdapter({ onScreenChange, onSimulate }: DemoCo
                         { label: '오픈 준비', value: '프로젝트 탭에서 관리' },
                         { label: '문서함', value: '전자계약·업로드 문서 연결' }
                     ]}
-                    steps={[
-                        { title: '오픈 준비 먼저 확인', description: '계약 완료 점주는 실제 오픈일까지 프로젝트 상태와 기한임박 항목을 봅니다.' },
-                        { title: '구비서류 누락 점검', description: '필수 서류는 계약 진행 게이트, 내부보고는 경고 기준으로 확인합니다.' },
-                        { title: '점주 문서함 연결', description: '전자계약 문서와 업로드 문서를 체크 항목에 연결해 보관 흐름을 확인합니다.' }
-                    ]}
                     primaryActionLabel="오픈 준비 흐름 보기"
                     onPrimaryAction={() => onScreenChange('operations')}
                     onCloseAction={() => setSelectedLeadId(null)}

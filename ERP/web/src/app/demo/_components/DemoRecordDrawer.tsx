@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, ExternalLink, X } from 'lucide-react';
+import { ClipboardList, ExternalLink, FileText, Link2, MessageSquare, Pencil, Trash2, X } from 'lucide-react';
 import styles from './DemoDashboardGuide.module.css';
 
 export type DemoRecordField = {
@@ -8,18 +8,14 @@ export type DemoRecordField = {
     readonly value: string;
 };
 
-export type DemoRecordStep = {
-    readonly title: string;
-    readonly description: string;
-};
-
 type DemoRecordDrawerProps = {
     readonly badge: string;
     readonly title: string;
     readonly description: string;
     readonly fields: readonly DemoRecordField[];
-    readonly steps: readonly DemoRecordStep[];
+    readonly showLeadWorkflowSections?: boolean;
     readonly primaryActionLabel?: string;
+    readonly primaryActionTargetId?: string;
     readonly onPrimaryAction?: () => void;
     readonly onCloseAction: () => void;
 };
@@ -29,11 +25,14 @@ export function DemoRecordDrawer({
     title,
     description,
     fields,
-    steps,
+    showLeadWorkflowSections = false,
     primaryActionLabel,
+    primaryActionTargetId,
     onPrimaryAction,
     onCloseAction
 }: DemoRecordDrawerProps) {
+    const currentStatus = getFieldValue(fields, '상태') || '상담중';
+
     return (
         <div className={styles.demoDrawerBackdrop} onClick={onCloseAction}>
             <aside
@@ -53,18 +52,38 @@ export function DemoRecordDrawer({
                 </header>
                 <div className={styles.demoDrawerBody}>
                     <div className={styles.demoDrawerQuickActions}>
-                        <button type="button" onClick={onPrimaryAction || onCloseAction}>
-                            {primaryActionLabel || '샘플 화면 확인'}
-                            <ExternalLink size={15} aria-hidden="true" />
-                        </button>
-                        <button type="button" onClick={onCloseAction}>
-                            닫기
-                        </button>
+                        {primaryActionLabel ? (
+                            <button
+                                type="button"
+                                className={styles.demoDrawerQuickPrimary}
+                                data-demo-id={primaryActionTargetId}
+                                onClick={onPrimaryAction || onCloseAction}
+                            >
+                                {primaryActionLabel}
+                                <ExternalLink size={15} aria-hidden="true" />
+                            </button>
+                        ) : null}
+                        {showLeadWorkflowSections ? (
+                            <>
+                                <select value={currentStatus} aria-label="상태" onChange={() => undefined}>
+                                    {DEMO_LEAD_STATUS_OPTIONS.map(status => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                                <button type="button">
+                                    <Pencil size={15} aria-hidden="true" />
+                                    기본정보 수정
+                                </button>
+                            </>
+                        ) : (
+                            <button type="button" onClick={onCloseAction}>
+                                닫기
+                            </button>
+                        )}
                     </div>
                     <section className={styles.demoDrawerSection}>
                         <div className={styles.demoDrawerSectionHeader}>
                             <h3>기본정보</h3>
-                            <p>실제 상세 패널과 같은 순서로 핵심 정보를 먼저 확인합니다.</p>
                         </div>
                         <div className={styles.demoDrawerFields}>
                             {fields.map(field => (
@@ -75,32 +94,109 @@ export function DemoRecordDrawer({
                             ))}
                         </div>
                     </section>
-                    <section className={styles.demoDrawerSection}>
-                        <div className={styles.demoDrawerSectionHeader}>
-                            <h3>업무 흐름</h3>
-                            <p>각 번호는 오른쪽 가이드와 같은 순서로 이어집니다.</p>
-                        </div>
-                        {steps.map((step, index) => (
-                            <div key={`${step.title}-${index}`} className={styles.demoDrawerStep}>
-                                <b>{index + 1}</b>
-                                <div>
-                                    <strong>{step.title}</strong>
-                                    <p>{step.description}</p>
+                    {showLeadWorkflowSections ? (
+                        <>
+                            <section className={styles.demoDrawerSection}>
+                                <div className={styles.demoDrawerSectionTitleRow}>
+                                    <h3><MessageSquare size={16} aria-hidden="true" /> 상담 이력</h3>
+                                    <span>2건</span>
                                 </div>
+                                <div className={styles.demoDrawerActivityComposer}>
+                                    <select value="전화" aria-label="상담 유형" onChange={() => undefined}>
+                                        <option>전화</option>
+                                        <option>메모</option>
+                                        <option>방문</option>
+                                    </select>
+                                    <textarea placeholder="상담 내용, 고객 반응, 다음 액션을 기록하세요." onChange={() => undefined} />
+                                    <button type="button">이력 추가</button>
+                                </div>
+                                <div className={styles.demoDrawerTimeline}>
+                                    <article>
+                                        <div>
+                                            <span>고객전환</span>
+                                            <time>2026. 06. 24. 오후 03:00</time>
+                                        </div>
+                                        <p>기존 연결 고객을 전환 완료로 표시</p>
+                                        <small>관리자</small>
+                                        <div className={styles.demoDrawerTimelineActions}>
+                                            <button type="button"><Pencil size={14} aria-hidden="true" /> 수정</button>
+                                            <button type="button"><Trash2 size={14} aria-hidden="true" /> 삭제</button>
+                                        </div>
+                                    </article>
+                                    <article>
+                                        <div>
+                                            <span>상태변경</span>
+                                            <time>2026. 06. 24. 오후 02:20</time>
+                                        </div>
+                                        <p>문의접수에서 상담중으로 변경</p>
+                                        <small>관리자</small>
+                                    </article>
+                                </div>
+                            </section>
+                            <div className={styles.demoDrawerTwoColumn}>
+                                <section className={styles.demoDrawerSection}>
+                                    <h3><ClipboardList size={16} aria-hidden="true" /> 업무 관리</h3>
+                                    <div className={styles.demoDrawerWorkflowGrid}>
+                                        <label>
+                                            <span>다음 액션</span>
+                                            <select value="상담 후 검토" onChange={() => undefined}>
+                                                <option>상담 후 검토</option>
+                                                <option>후보지 연결</option>
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>상담 결과</span>
+                                            <select value="관심 있음" onChange={() => undefined}>
+                                                <option>관심 있음</option>
+                                                <option>추가 확인</option>
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>다음 연락</span>
+                                            <input type="datetime-local" value="2026-06-25T15:00" onChange={() => undefined} />
+                                        </label>
+                                        <label>
+                                            <span>메모</span>
+                                            <input value="권리금 조건 확인 필요" onChange={() => undefined} />
+                                        </label>
+                                    </div>
+                                    <button type="button" className={styles.demoDrawerSaveButton}>후속 관리 저장</button>
+                                </section>
+                                <section className={styles.demoDrawerSection}>
+                                    <div className={styles.demoDrawerSectionTitleRow}>
+                                        <h3><FileText size={16} aria-hidden="true" /> 정보공개서</h3>
+                                        <span>발송 전</span>
+                                    </div>
+                                    <div>
+                                        <p className={styles.demoDrawerMutedText}>정보공개서 발송 이력이 있어야 계약 단계로 변경할 수 있습니다.</p>
+                                        <div className={styles.demoDrawerDisclosureBox}>
+                                            <strong>미카도 정보공개서</strong>
+                                            <span>발송 전 · 수령 확인 전</span>
+                                        </div>
+                                        <button type="button" className={styles.demoDrawerOutlineButton}>정보공개서 발송</button>
+                                    </div>
+                                </section>
                             </div>
-                        ))}
-                    </section>
-                    <section className={styles.demoDrawerSection}>
-                        <div className={styles.demoDrawerCompletion}>
-                            <CheckCircle2 size={17} aria-hidden="true" />
-                            <div>
-                                <strong>샘플 전용 상세입니다.</strong>
-                                <p>버튼과 입력은 실제 화면 구조를 설명하기 위한 데모이며 운영 데이터는 변경하지 않습니다.</p>
-                            </div>
-                        </div>
-                    </section>
+                            <section className={styles.demoDrawerSection}>
+                                <div className={styles.demoDrawerSectionTitleRow}>
+                                    <h3><Link2 size={16} aria-hidden="true" /> 연결된 후보지</h3>
+                                    <span>1건</span>
+                                </div>
+                                <div className={styles.demoDrawerLocationBox}>
+                                    <strong>강남역 후보지 현장 확인</strong>
+                                    <span>서울 강남구 · 검토 예정</span>
+                                </div>
+                            </section>
+                        </>
+                    ) : null}
                 </div>
             </aside>
         </div>
     );
+}
+
+const DEMO_LEAD_STATUS_OPTIONS = ['문의접수', '상담중', '가맹검토', '입지검토', '계약예정', '계약완료', '보류/이탈'] as const;
+
+function getFieldValue(fields: readonly DemoRecordField[], label: string) {
+    return fields.find(field => field.label === label)?.value ?? '';
 }

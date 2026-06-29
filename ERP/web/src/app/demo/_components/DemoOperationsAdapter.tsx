@@ -103,11 +103,6 @@ export function DemoOperationsAdapter({ onScreenChange, onSimulate }: DemoOperat
                         { label: '경쟁 키워드', value: selectedLocation.competitionKeyword || '미입력' },
                         { label: '지도 좌표', value: selectedLocation.latitude && selectedLocation.longitude ? '등록됨' : '미등록' }
                     ]}
-                    steps={[
-                        { title: '운영상태 확인', description: '운영중, 오픈준비, 휴점, 폐점 상태를 기준으로 본사 관리 대상을 나눕니다.' },
-                        { title: '오픈 준비 연결', description: '오픈준비 매장은 계약 완료 상세의 오픈 준비 프로젝트와 같은 흐름으로 봅니다.' },
-                        { title: '지도와 함께 보기', description: '물건지 지도에서 주변 운영점과 후보지 밀집도를 함께 확인합니다.' }
-                    ]}
                     primaryActionLabel="물건지 지도 열기"
                     onPrimaryAction={() => onScreenChange('locationMap')}
                     onCloseAction={() => setSelectedLocationId(null)}

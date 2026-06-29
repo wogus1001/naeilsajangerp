@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DEMO_SCENARIOS, DEMO_SCREEN_GUIDES } from '../demoContent';
-import type { DemoRole, DemoScreenId } from '../demoTypes';
+import { DEMO_TOUR_STEP_ADVANCE_EVENT } from '../demoTypes';
+import type { DemoRole, DemoScreenId, DemoTourStep, DemoTourStepAdvanceEventDetail } from '../demoTypes';
 import { useDemoApiGuard } from './DemoApiGuard';
 import { DemoErpShell } from './DemoErpShell';
 import { DemoRoleWorkspace } from './DemoRoleWorkspace';
@@ -27,7 +28,9 @@ export function DemoShell({ role }: DemoShellProps) {
         () => activeGuide.steps.map((step, index) => ({
             id: `${activeScreen}-${index + 1}`,
             targetId: step.targetId,
-            targetSelector: 'targetSelector' in step ? step.targetSelector : undefined,
+            targetSelector: step.targetSelector,
+            emphasisTargetIds: step.emphasisTargetIds,
+            emphasisTargetSelectors: step.emphasisTargetSelectors,
             title: `${index + 1}. ${step.title}`,
             description: step.description
         })),
@@ -38,6 +41,15 @@ export function DemoShell({ role }: DemoShellProps) {
         setActiveScreen(screen);
         setTourRun(run => run + 1);
         setIsTourOpen(true);
+    };
+    const handleTourStepAdvance = (currentStep: DemoTourStep, nextStep: DemoTourStep | undefined) => {
+        window.dispatchEvent(new CustomEvent<DemoTourStepAdvanceEventDetail>(DEMO_TOUR_STEP_ADVANCE_EVENT, {
+            detail: {
+                screen: activeScreen,
+                fromTargetId: currentStep.targetId,
+                toTargetId: nextStep?.targetId
+            }
+        }));
     };
     const handleLogout = async () => {
         const response = await fetch('/api/demo/access', { method: 'DELETE' });
@@ -73,6 +85,7 @@ export function DemoShell({ role }: DemoShellProps) {
                     finalAction={finalTourAction}
                     onCloseAction={() => setIsTourOpen(false)}
                     onFinalAction={action => handleScreenChange(action.screen)}
+                    onStepAdvanceAction={handleTourStepAdvance}
                 />
             )}
         </>

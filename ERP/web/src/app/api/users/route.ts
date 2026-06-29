@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notifyUserOfSignupApproval } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeAdminAssignableUserRole } from '@/lib/user-role-policy';
 import {
@@ -14,7 +15,11 @@ import {
 export const dynamic = 'force-dynamic';
 export { DELETE } from './deleteUserRoute';
 
-type TargetProfileRow = RequesterProfileRow & { readonly status: string | null };
+type TargetProfileRow = RequesterProfileRow & {
+    readonly status: string | null;
+    readonly phone: string | null;
+    readonly phone_normalized: string | null;
+};
 
 export async function GET(request: Request) {
     try {
@@ -145,7 +150,7 @@ export async function PUT(request: Request) {
         for (const candidateId of lookup.ids) {
             const { data } = await supabaseAdmin
                 .from('profiles')
-                .select('id, role, status, company_id')
+                .select('id, role, status, company_id, phone, phone_normalized')
                 .eq('id', candidateId)
                 .maybeSingle<TargetProfileRow>();
             if (data) {
@@ -158,7 +163,7 @@ export async function PUT(request: Request) {
             for (const candidateEmail of lookup.emails) {
                 const { data } = await supabaseAdmin
                     .from('profiles')
-                    .select('id, role, status, company_id')
+                    .select('id, role, status, company_id, phone, phone_normalized')
                     .eq('email', candidateEmail)
                     .limit(1)
                     .maybeSingle<TargetProfileRow>();
@@ -204,6 +209,19 @@ export async function PUT(request: Request) {
 
         const nextStatus = status || targetProfile.status;
         const nextRole = role || targetProfile.role;
+
+        if (status === 'active' && targetProfile.status !== 'active') {
+            try {
+                await notifyUserOfSignupApproval({
+                    phone: targetProfile.phone_normalized || targetProfile.phone
+                });
+            } catch (error) {
+                console.error(
+                    'Signup approval SMS notification failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+        }
 
         if (nextStatus === 'active' && nextRole === 'manager' && targetProfile.company_id) {
             const { data: company } = await supabaseAdmin

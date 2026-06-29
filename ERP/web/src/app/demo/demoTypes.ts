@@ -33,9 +33,25 @@ export type DemoTourStep = {
     readonly id: string;
     readonly targetId: string;
     readonly targetSelector?: string;
+    readonly emphasisTargetIds?: readonly string[];
+    readonly emphasisTargetSelectors?: readonly string[];
     readonly title: string;
     readonly description: string;
 };
+
+export const DEMO_TOUR_STEP_ADVANCE_EVENT = 'demo-tour-step-advance' as const;
+
+export type DemoTourStepAdvanceEventDetail = {
+    readonly screen: DemoScreenId;
+    readonly fromTargetId: string;
+    readonly toTargetId: string | undefined;
+};
+
+declare global {
+    interface WindowEventMap {
+        'demo-tour-step-advance': CustomEvent<DemoTourStepAdvanceEventDetail>;
+    }
+}
 
 export type DemoGuideAction = {
     readonly label: string;
@@ -45,6 +61,8 @@ export type DemoGuideAction = {
 export type DemoGuideStep = {
     readonly targetId: string;
     readonly targetSelector?: string;
+    readonly emphasisTargetIds?: readonly string[];
+    readonly emphasisTargetSelectors?: readonly string[];
     readonly title: string;
     readonly description: string;
 };

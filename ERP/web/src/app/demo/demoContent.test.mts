@@ -25,7 +25,9 @@ test('Given demo navigation When checking guides Then every screen has guide con
             const guide = DEMO_SCREEN_GUIDES[item.id];
             assert.ok(guide);
             assert.ok(guide.steps.length >= 3);
-            assert.ok(guide.steps.every(step => !('targetSelector' in step) || step.targetSelector.length > 0));
+            assert.ok(guide.steps.every(step => step.targetSelector === undefined || step.targetSelector.length > 0));
+            assert.ok(guide.steps.every(step => step.emphasisTargetIds === undefined || step.emphasisTargetIds.every(targetId => targetId.length > 0)));
+            assert.ok(guide.steps.every(step => step.emphasisTargetSelectors === undefined || step.emphasisTargetSelectors.every(selector => selector.length > 0)));
             assert.ok(guide.actions.length >= 1);
         }
     }
