@@ -300,19 +300,30 @@ export async function POST(request: Request) {
             .eq('id', contractId);
         if (updateError) throw updateError;
 
+        let documentLinkWarning = '';
         if (requestedLeadId) {
-            await upsertElectronicContractLeadDocument(supabaseAdmin, {
-                companyId: access.template.company_id,
-                leadId: requestedLeadId,
-                contractId,
-                checklistStepKey: requestedChecklistStepKey || undefined,
-                title: documentName,
-                documentStatus: 'sent',
-                requesterId: requester.id
-            });
+            try {
+                await upsertElectronicContractLeadDocument(supabaseAdmin, {
+                    companyId: access.template.company_id,
+                    leadId: requestedLeadId,
+                    contractId,
+                    checklistStepKey: requestedChecklistStepKey || undefined,
+                    title: documentName,
+                    documentStatus: 'sent',
+                    requesterId: requester.id
+                });
+            } catch (linkError) {
+                documentLinkWarning = 'DOCUMENT_LINK_FAILED';
+                console.error('Company template document box link error:', linkError);
+            }
         }
 
-        return ok({ contractId, ucansignDocumentId, status: 'sent' }, 201);
+        return ok({
+            contractId,
+            ucansignDocumentId,
+            status: 'sent',
+            ...(documentLinkWarning ? { warning: documentLinkWarning } : {})
+        }, 201);
     } catch (error) {
         console.error('Company template electronic contract send error:', error);
         await supabaseAdmin

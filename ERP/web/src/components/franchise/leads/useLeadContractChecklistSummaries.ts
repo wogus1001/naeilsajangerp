@@ -57,7 +57,7 @@ export function useLeadContractChecklistSummaries({
                 if (error instanceof DOMException && error.name === 'AbortError') return;
                 setSummaries({});
                 setSchemaReady(true);
-                setErrorMessage(error instanceof Error ? error.message : '계약 전 체크 요약을 불러오지 못했습니다.');
+                setErrorMessage(error instanceof Error ? error.message : '구비서류 요약을 불러오지 못했습니다.');
             } finally {
                 if (!controller.signal.aborted) setIsLoading(false);
             }

@@ -3,6 +3,7 @@ import { DemoContractOwnersAdapter } from './DemoContractOwnersAdapter';
 import { DemoFranchiseDashboardAdapter } from './DemoFranchiseDashboardAdapter';
 import { DemoLeadDbAdapter } from './DemoLeadDbAdapter';
 import { DemoLocationAdapter } from './DemoLocationAdapter';
+import { DemoLocationMapAdapter } from './DemoLocationMapAdapter';
 import { DemoOperationsAdapter } from './DemoOperationsAdapter';
 
 export function ManagerDemoWorkspace({ activeScreen, onScreenChange, onSimulate }: DemoWorkspaceProps) {
@@ -14,8 +15,10 @@ export function ManagerDemoWorkspace({ activeScreen, onScreenChange, onSimulate 
         case 'contractOwners':
             return <DemoContractOwnersAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
         case 'location':
-            return <DemoLocationAdapter onSimulate={onSimulate} />;
+            return <DemoLocationAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
+        case 'locationMap':
+            return <DemoLocationMapAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
         case 'operations':
-            return <DemoOperationsAdapter onSimulate={onSimulate} />;
+            return <DemoOperationsAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
     }
 }

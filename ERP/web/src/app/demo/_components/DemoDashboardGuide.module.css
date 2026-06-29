@@ -5,8 +5,37 @@
     align-items: start;
 }
 
+.dashboardGuideLayout:has(.guideCollapsedButton) {
+    grid-template-columns: minmax(0, 1fr) 136px;
+}
+
 .dashboardGuideMain {
     min-width: 0;
+}
+
+.guideTarget {
+    position: relative;
+    min-width: 0;
+}
+
+.guideMarker {
+    position: absolute;
+    z-index: 8;
+    top: -16px;
+    left: -2px;
+    display: inline-grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+    background: #3182f6;
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgb(49 130 246 / 28%);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    pointer-events: none;
 }
 
 .guidePanel {
@@ -25,7 +54,14 @@
     gap: 8px;
 }
 
-.guideHeader span {
+.guidePanelTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.guidePanelTop span {
     display: inline-flex;
     width: fit-content;
     min-height: 24px;
@@ -36,6 +72,43 @@
     padding: 0 9px;
     font-size: 12px;
     font-weight: 700;
+}
+
+.guideCloseButton,
+.guideCollapsedButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.guideCloseButton {
+    min-height: 30px;
+    padding: 0 9px;
+}
+
+.guideCollapsedButton {
+    position: sticky;
+    top: 82px;
+    min-height: 38px;
+    padding: 0 12px;
+    background: #f9fafb;
+}
+
+.guideCloseButton:hover,
+.guideCollapsedButton:hover,
+.guideCloseButton:focus-visible,
+.guideCollapsedButton:focus-visible {
+    border-color: #3182f6;
+    color: #2272eb;
 }
 
 .guideHeader h2 {
@@ -81,9 +154,11 @@
     width: 28px;
     height: 28px;
     place-items: center;
-    border-radius: 8px;
-    background: #f2f4f6;
-    color: #3182f6;
+    border-radius: 999px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .guideStep strong {
@@ -127,13 +202,408 @@
     outline-offset: 2px;
 }
 
+.guideCloseButton:focus-visible,
+.guideCollapsedButton:focus-visible {
+    outline: 2px solid #3182f6;
+    outline-offset: 2px;
+}
+
+.demoDrawerBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    justify-content: flex-end;
+    background: rgb(25 31 40 / 52%);
+}
+
+.demoDrawer {
+    display: grid;
+    width: min(100%, 620px);
+    max-height: 100dvh;
+    grid-template-rows: auto 1fr;
+    border-left: 1px solid #e5e8eb;
+    background: #ffffff;
+    box-shadow: -16px 0 40px rgb(25 31 40 / 16%);
+}
+
+.demoDrawerHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid #e5e8eb;
+    padding: 22px 24px;
+}
+
+.demoDrawerHeader span {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 24px;
+    align-items: center;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.demoDrawerHeader h2 {
+    margin: 10px 0 0;
+    color: #191f28;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.demoDrawerHeader p {
+    margin: 8px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.demoDrawerClose {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    cursor: pointer;
+}
+
+.demoDrawerBody {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    overflow-y: auto;
+    background: #f9fafb;
+    padding: 18px 20px 24px;
+}
+
+.demoDrawerQuickActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.demoDrawerQuickActions button,
+.demoDrawerQuickActions select {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.demoDrawerQuickActions select {
+    min-width: 128px;
+}
+
+.demoDrawerQuickActions button:first-child {
+    border-color: #3182f6;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.demoDrawerQuickActions button:hover,
+.demoDrawerQuickActions button:focus-visible {
+    border-color: #2272eb;
+}
+
+.demoDrawerFields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.demoDrawerField {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.demoDrawerField span {
+    display: block;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.demoDrawerField strong {
+    display: block;
+    margin-top: 6px;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 700;
+    word-break: keep-all;
+}
+
+.demoDrawerSection {
+    display: grid;
+    gap: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px;
+}
+
+.demoDrawerSectionHeader {
+    display: grid;
+    gap: 4px;
+}
+
+.demoDrawerSection h3 {
+    margin: 0;
+    color: #333d4b;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.demoDrawerSectionHeader p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.demoDrawerPrimary {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: #3182f6;
+    color: #ffffff;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.demoDrawerSectionTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.demoDrawerSectionTitleRow h3 {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.demoDrawerSectionTitleRow span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.demoDrawerActivityComposer {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 112px;
+    gap: 8px;
+}
+
+.demoDrawerActivityComposer select,
+.demoDrawerActivityComposer textarea,
+.demoDrawerWorkflowGrid select,
+.demoDrawerWorkflowGrid input {
+    min-height: 40px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 13px;
+}
+
+.demoDrawerActivityComposer textarea {
+    min-height: 64px;
+    padding-top: 12px;
+    resize: vertical;
+}
+
+.demoDrawerActivityComposer button,
+.demoDrawerSaveButton {
+    border: 0;
+    border-radius: 8px;
+    background: #3182f6;
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.demoDrawerTimeline {
+    display: grid;
+    gap: 10px;
+}
+
+.demoDrawerTimeline article {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.demoDrawerTimeline article > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.demoDrawerTimeline span {
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.demoDrawerTimeline time,
+.demoDrawerTimeline small,
+.demoDrawerMutedText {
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.demoDrawerTimeline p,
+.demoDrawerMutedText {
+    margin: 0;
+}
+
+.demoDrawerTimelineActions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+}
+
+.demoDrawerTimelineActions button,
+.demoDrawerOutlineButton {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.demoDrawerTimelineActions button:last-child,
+.demoDrawerOutlineButton {
+    border-color: #ffd8d8;
+    color: #f04452;
+}
+
+.demoDrawerTwoColumn {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+}
+
+.demoDrawerWorkflowGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.demoDrawerWorkflowGrid label {
+    display: grid;
+    gap: 6px;
+}
+
+.demoDrawerWorkflowGrid label:last-child {
+    grid-column: 1 / -1;
+}
+
+.demoDrawerWorkflowGrid span {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.demoDrawerSaveButton {
+    min-height: 38px;
+    width: fit-content;
+    padding: 0 14px;
+}
+
+.demoDrawerDisclosureBox,
+.demoDrawerLocationBox {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.demoDrawerDisclosureBox strong,
+.demoDrawerLocationBox strong {
+    color: #191f28;
+    font-size: 13px;
+}
+
+.demoDrawerDisclosureBox span,
+.demoDrawerLocationBox span {
+    color: #6b7684;
+    font-size: 12px;
+}
+
 @media (max-width: 1180px) {
     .dashboardGuideLayout {
         grid-template-columns: 1fr;
     }
 
+    .dashboardGuideLayout:has(.guideCollapsedButton) {
+        grid-template-columns: 1fr;
+    }
+
     .guidePanel {
         position: static;
+        order: -1;
+    }
+
+    .guideCollapsedButton {
+        position: static;
+        justify-self: start;
         order: -1;
     }
 
@@ -145,5 +615,23 @@
 @media (max-width: 680px) {
     .guideSteps {
         grid-template-columns: 1fr;
+    }
+
+    .demoDrawer {
+        width: 100%;
+    }
+
+    .demoDrawerFields,
+    .demoDrawerTwoColumn,
+    .demoDrawerWorkflowGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .demoDrawerActivityComposer {
+        grid-template-columns: 1fr;
+    }
+
+    .demoDrawerWorkflowGrid label:last-child {
+        grid-column: auto;
     }
 }

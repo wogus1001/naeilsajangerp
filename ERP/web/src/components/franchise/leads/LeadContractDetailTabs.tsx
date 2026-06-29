@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { FileText, ListChecks, Store } from 'lucide-react';
+import { CalendarCheck, FileText, ListChecks, Store } from 'lucide-react';
 import { LeadContractChecklistSection } from '@/components/franchise/LeadContractChecklistSection';
 import { LeadDocumentBoxSection } from '@/components/franchise/LeadDocumentBoxSection';
 import type {
@@ -11,9 +11,10 @@ import type {
     LeadLocationLink
 } from './types';
 import { LeadContractStoreSection } from './LeadContractStoreSection';
+import { LeadOpeningProjectSection } from './LeadOpeningProjectSection';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 
-type ContractDetailTab = 'checklist' | 'documents' | 'store';
+type ContractDetailTab = 'checklist' | 'documents' | 'store' | 'opening';
 
 type LeadContractDetailTabsProps = {
     readonly lead: FranchiseLead;
@@ -36,32 +37,48 @@ export function LeadContractDetailTabs({
     isLocationMatchLoading,
     onContractChecklistSavedAction
 }: LeadContractDetailTabsProps) {
-    const [activeTab, setActiveTab] = React.useState<ContractDetailTab>('checklist');
+    const [activeTab, setActiveTab] = React.useState<ContractDetailTab>(
+        lead.status === '계약완료' ? 'opening' : 'checklist'
+    );
     const [documentRefreshKey, setDocumentRefreshKey] = React.useState(0);
     const [checklistRefreshKey, setChecklistRefreshKey] = React.useState(0);
     const canShowStoreTab = lead.status === '계약완료';
 
     React.useEffect(() => {
-        if (!canShowStoreTab && activeTab === 'store') setActiveTab('checklist');
+        if (!canShowStoreTab && (activeTab === 'store' || activeTab === 'opening')) setActiveTab('checklist');
     }, [activeTab, canShowStoreTab]);
+
+    React.useEffect(() => {
+        setActiveTab(lead.status === '계약완료' ? 'opening' : 'checklist');
+    }, [lead.id, lead.status]);
 
     return (
         <div className={styles.contractChecklistOnlyContent}>
             <nav className={styles.contractDetailTabs} aria-label="계약 완료 점주 상세">
+                {canShowStoreTab && (
+                    <button
+                        type="button"
+                        className={activeTab === 'opening' ? styles.contractDetailTabActive : styles.contractDetailTab}
+                        onClick={() => setActiveTab('opening')}
+                    >
+                        <CalendarCheck size={15} />
+                        오픈 준비
+                    </button>
+                )}
                 <button
                     type="button"
                     className={activeTab === 'checklist' ? styles.contractDetailTabActive : styles.contractDetailTab}
                     onClick={() => setActiveTab('checklist')}
                 >
                     <ListChecks size={15} />
-                    체크리스트
+                    구비서류
                 </button>
                 <button
                     type="button"
                     className={activeTab === 'documents' ? styles.contractDetailTabActive : styles.contractDetailTab}
                     onClick={() => setActiveTab('documents')}
-                    >
-                        <FileText size={15} />
+                >
+                    <FileText size={15} />
                     점주 문서함
                 </button>
                 {canShowStoreTab && (
@@ -105,6 +122,14 @@ export function LeadContractDetailTabs({
                     franchiseLocations={franchiseLocations}
                     externalListings={externalListings}
                     isLocationMatchLoading={isLocationMatchLoading}
+                />
+            )}
+            {activeTab === 'opening' && canShowStoreTab && (
+                <LeadOpeningProjectSection
+                    lead={lead}
+                    userId={userId}
+                    companyName={lead.companyName || companyName}
+                    onOpenStoreTabAction={() => setActiveTab('store')}
                 />
             )}
         </div>

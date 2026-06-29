@@ -47,7 +47,10 @@ type QuickDocumentDraft = {
 
 type UploadResponse = {
     readonly path?: string;
-    readonly publicUrl?: string;
+};
+
+type OpenDocumentResponse = {
+    readonly url?: string;
 };
 
 type ElectronicContractOption = {
@@ -164,8 +167,7 @@ function documentUploaderText(document: LeadContractChecklistDocumentItem): stri
     return document.createdByName || document.createdBy || '담당자 미확인';
 }
 
-function documentOpenHref(document: LeadContractChecklistDocumentItem): string {
-    if (document.fileUrl) return document.fileUrl;
+function electronicContractHref(document: LeadContractChecklistDocumentItem): string {
     if (document.sourceType === 'electronic_contract' && document.sourceId) {
         return `/contracts/electronic?contractId=${encodeURIComponent(document.sourceId)}`;
     }
@@ -263,8 +265,28 @@ export function LeadContractChecklistSection({
         const payload = await response.json();
         if (!response.ok) throw new Error(readApiError(payload));
         const data = unwrapApiData<UploadResponse>(payload);
-        if (!data.publicUrl || !data.path) throw new Error('업로드 URL을 확인할 수 없습니다.');
+        if (!data.path) throw new Error('업로드 경로를 확인할 수 없습니다.');
         return data;
+    };
+
+    const openUploadedDocument = async (documentId: string) => {
+        if (!documentId) return;
+        setDocumentMessage('');
+        setDocumentErrorMessage('');
+        try {
+            const params = new URLSearchParams({ action: 'open', documentId });
+            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
+                cache: 'no-store',
+                headers: await getApiAuthHeaders()
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(readApiError(payload));
+            const data = unwrapApiData<OpenDocumentResponse>(payload);
+            if (!data.url) throw new Error('문서 열람 URL을 확인하지 못했습니다.');
+            window.open(data.url, '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            setDocumentErrorMessage(error instanceof Error ? error.message : '문서를 열지 못했습니다.');
+        }
     };
 
     const saveQuickDocument = async () => {
@@ -293,15 +315,13 @@ export function LeadContractChecklistSection({
             const selectedContract = electronicContracts.find(contract => contract.id === quickDraft.electronicContractId);
             const response = await fetch('/api/franchise-lead-documents', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
-                    requesterId: userId,
                     leadId,
                     title: quickDraft.mode === 'electronic_contract' ? selectedContract?.name || title : title,
                     sourceType: quickDraft.mode,
                     sourceId: quickDraft.mode === 'electronic_contract' ? quickDraft.electronicContractId : '',
                     documentStatus: 'stored',
-                    fileUrl: uploadResult?.publicUrl || '',
                     fileName: quickDraft.file?.name || '',
                     storageBucket: uploadResult ? UPLOAD_BUCKET : '',
                     storagePath: uploadResult?.path || '',
@@ -328,11 +348,11 @@ export function LeadContractChecklistSection({
         setDocumentMessage('');
         setDocumentErrorMessage('');
         try {
-            const params = new URLSearchParams({
-                requesterId: userId,
-                id: documentId
+            const params = new URLSearchParams({ id: documentId });
+            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
+                method: 'DELETE',
+                headers: await getApiAuthHeaders()
             });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, { method: 'DELETE' });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
             setDocumentMessage('문서를 삭제했습니다.');
@@ -349,7 +369,7 @@ export function LeadContractChecklistSection({
         <section className={styles.section}>
             <div className={styles.header}>
                 <div>
-                    <h3><ListChecks size={16} /> 구비서류 체크리스트</h3>
+                    <h3><ListChecks size={16} /> 구비서류</h3>
                     <p>필수는 계약 가능 게이트, 내부보고는 경고, 선택은 관리 편의 항목입니다.</p>
                 </div>
                 <span className={summary.missingRequiredCount > 0 ? styles.blockingPill : styles.readyPill}>
@@ -370,7 +390,7 @@ export function LeadContractChecklistSection({
                 })}
             </div>
 
-            <div className={styles.progress} aria-label={`필수 구비서류 체크리스트 진행률 ${summary.groups.required.progressPercent}%`}>
+            <div className={styles.progress} aria-label={`필수 구비서류 진행률 ${summary.groups.required.progressPercent}%`}>
                 <span style={{ width: `${summary.groups.required.progressPercent}%` }} />
             </div>
 
@@ -381,14 +401,14 @@ export function LeadContractChecklistSection({
 
             <div className={styles.groupList}>
                 {isLoading && steps.length === 0 ? (
-                    <div className={styles.empty}>체크리스트를 불러오는 중입니다.</div>
+                    <div className={styles.empty}>구비서류를 불러오는 중입니다.</div>
                 ) : CHECKLIST_GROUPS.map(group => {
                     const groupedSteps = groupSteps(steps, group.requirementType);
                     const groupSummary = summary.groups[group.requirementType];
                     return (
                         <section key={group.requirementType} className={`${styles.groupSection} ${styles[`${group.requirementType}Group`]}`}>
                             <div className={styles.groupHeader}>
-                                <div>
+                                <div className={styles.groupHeaderText}>
                                     <span>{group.label}</span>
                                     <strong>{group.title}</strong>
                                     <small>{group.description}</small>
@@ -504,7 +524,7 @@ export function LeadContractChecklistSection({
                                 <div className={styles.documentModalLinkedBody}>
                                     {activeDocumentStep.documentSummary.documents.length > 0 ? (
                                         activeDocumentStep.documentSummary.documents.map(document => {
-                                            const href = documentOpenHref(document);
+                                            const href = electronicContractHref(document);
                                             return (
                                                 <div key={document.id} className={styles.linkedDocumentItem}>
                                                     <div>
@@ -512,12 +532,21 @@ export function LeadContractChecklistSection({
                                                         <span>올림 담당자 · {documentUploaderText(document)}</span>
                                                     </div>
                                                     <div className={styles.linkedDocumentActions}>
-                                                        {href && (
+                                                        {document.sourceType === 'upload' ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => void openUploadedDocument(document.id)}
+                                                                disabled={quickSavingStepKey === activeDocumentStep.stepKey}
+                                                            >
+                                                                <ExternalLink size={13} />
+                                                                열기
+                                                            </button>
+                                                        ) : href ? (
                                                             <a href={href} target="_blank" rel="noreferrer">
                                                                 <ExternalLink size={13} />
                                                                 열기
                                                             </a>
-                                                        )}
+                                                        ) : null}
                                                         <button
                                                             type="button"
                                                             onClick={() => void deleteDocument(document.id, activeDocumentStep.stepKey)}

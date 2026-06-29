@@ -1,4 +1,4 @@
-export type SignupApprovalRole = 'manager' | 'staff' | 'partner_vendor';
+export type SignupApprovalRole = 'manager' | 'sub_manager' | 'staff' | 'partner_vendor';
 export type SignupApprovalStatus = 'pending_approval';
 export type SignupApprovalOwner = 'admin' | 'manager';
 
@@ -17,6 +17,7 @@ export type SignupApprovalPolicy =
 
 type SignupApprovalInput = {
     readonly companyExists: boolean;
+    readonly companyHasManager?: boolean;
     readonly requestedRole: unknown;
 };
 
@@ -55,12 +56,22 @@ export function resolveSignupApprovalPolicy(input: SignupApprovalInput): SignupA
         };
     }
 
+    if (!input.companyHasManager) {
+        return {
+            kind: 'allow',
+            role: 'manager',
+            status: 'pending_approval',
+            approvalOwner: 'admin',
+            message: '회사에 등록된 팀장이 없어 팀장 권한으로 접수되었습니다. 관리자 승인 후 로그인이 가능합니다.'
+        };
+    }
+
     return {
         kind: 'allow',
-        role: 'staff',
+        role: 'sub_manager',
         status: 'pending_approval',
         approvalOwner: 'manager',
-        message: '가입 요청이 완료되었습니다. 팀장 승인 후 로그인이 가능합니다.'
+        message: '가입 요청이 완료되었습니다. 매니저 권한으로 접수되며, 팀장 승인 후 로그인이 가능합니다.'
     };
 }
 

@@ -25,6 +25,16 @@
 
 ## 개발 과정 로그
 
+### 2026-06-29
+
+- 회원가입 화면 입력 순서를 회사 찾기 우선 흐름으로 변경했다. 회사명 선택 후 아이디, 이메일, 비밀번호, 비밀번호 확인, 이름, 휴대폰 번호를 입력하도록 정리했다.
+- 회원가입 클라이언트/서버 양쪽에 이메일 `@` 누락 안내와 비밀번호 확인 불일치 안내를 추가했다. 휴대폰 번호는 숫자 입력만으로 `010-1234-5678` 형태로 표시되며 서버 저장용 정규화는 기존처럼 숫자만 사용한다.
+- 브랜드 임직원 가입 승인 정책을 백엔드 기준으로 보정했다. 기존 회사에 팀장이 없으면 팀장 권한으로 관리자 승인 대기, 팀장이 있으면 매니저 권한으로 팀장 승인 대기 상태가 된다.
+- Solapi SDK 기반 회원가입 문자 알림을 추가했다. 회원가입 요청 시 관리자 수신 번호로 `[ERP] 회원가입 요청` 문자를 보내고, 승인 완료 시 신청자에게 `[ERP] 회원가입 승인` 문자를 보낸다. 문자 발송 실패는 가입/승인 트랜잭션을 실패시키지 않고 서버 로그로만 남긴다.
+- `/demo`는 대시보드와 모객 DB 가이드 단계를 실제 설명 흐름에 맞춰 조정했다. 필터, 1차 유입 DB, 개별 상세, 승격, 가맹 희망자 단계와 상세 드로어가 안내 순서에 맞게 이어지며, `건너뛰기` 버튼은 `둘러보기`로 바꿨다.
+- 검증: `npx tsx --test src/lib/signup-approval-policy.test.mts`, `npx tsx --test src/lib/solapi-notifications.test.mts`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. Playwright로 `/signup` 390px에서 필드 순서, 이메일 `@` 안내, 비밀번호 불일치 안내, 휴대폰 자동 하이픈을 확인했다.
+- 남은 QA: Solapi 실문자 발송은 운영 환경변수와 실제 수신 번호가 설정된 실서버에서 승인/가입 요청 흐름으로 확인한다. 이번 작업의 신규 SQL은 없다.
+
 ### 2026-06-09
 
 - Meta Lead Ads는 계정/앱 설정 이슈 때문에 HOLD로 전환했다.
@@ -75,7 +85,7 @@
 - 2026-06-10 업무 큐를 `전체 업무`, `연락 지연`, `오늘 연락`, `무응답`으로 단순화했다. 계약 가능/즉시상담은 업무 큐에서 제외하고, 계약 상태는 별도 상태 관리로 본다.
 - 2026-06-10 후보자 상세의 점포·상권 매칭을 자동추천 카드에서 담당자 수동 연결 패널로 전환했다. `출점 후보지`와 `외부 상가 DB`를 검색해 연결하고 상태/메모를 저장한다.
 - 2026-06-10 후보지 연결은 같은 출점 후보지나 외부 상가를 여러 후보자에게 중복 연결할 수 있게 했다. 연결 기록은 `franchise_leads.data.locationLinks`에 배열로 저장한다.
-- 2026-06-11 로그인 세션 기준 P0 QA를 완료했다. `admin / 1234` 세션에서 QA 리드를 `1차 유입 DB`로 생성하고, UI의 `후보자 승격` 액션으로 후보자 레이어에 이동하는지 확인했다.
+- 2026-06-11 로그인 세션 기준 P0 QA를 완료했다. 관리자 테스트 세션(자격증명 마스킹)에서 QA 리드를 `1차 유입 DB`로 생성하고, UI의 `후보자 승격` 액션으로 후보자 레이어에 이동하는지 확인했다.
 - 2026-06-11 업무 큐 QA에서 QA 리드 기준 `전체 업무 1`, `연락 지연 1`, `오늘 연락 0`, `무응답 1`이 실제 카드 목록과 일치했다. 연락 지연 리드는 오늘 연락보다 지연 분류가 우선 적용된다.
 - 2026-06-11 후보자 상세의 업무 관리 필드(`nextAction`, `consultationResult`, `churnReason`, `budgetFit`, `regionFit`, `brandFit`)를 저장하고 새로고침 후 API와 화면 활동 이력에서 유지됨을 확인했다.
 - 2026-06-11 후보자 상세 후보지 연결 QA 중 같은 후보자 안에서 동일 출점 후보지가 중복 연결되는 버그를 발견했다. `addUniqueLeadLocationLink` 유틸과 화면 guard를 추가해 동일 후보자 내 동일 대상 중복을 막고, 여러 후보자 간 동일 대상 연결은 계속 허용하는 정책으로 정리했다.
@@ -167,7 +177,7 @@
 - 2026-06-16 지역 인사이트 유닛 테스트 통과: `npx tsx --test src/lib/franchise-market-insights.test.mts`에서 보유 후보지 수, 연결 완료 수, 연결 필요 수, 정렬 기준을 확인했다.
 - 2026-06-16 Gmail/정보공개서 유닛 테스트 통과: `npx tsx --test src/lib/franchise-disclosure-deliveries.test.mts src/lib/franchise-lead-disclosure-records.test.mts src/lib/gmail-integration.test.mts src/lib/gmail-provider.test.mts src/components/franchise/leadDisclosureFormUtils.test.mts`에서 Gmail MIME 생성, 저장 리드명 미사용 메일 문구, 열람 추정 픽셀 URL, OAuth token 암복호화, 확인 token hash, 로컬 OAuth redirect URI, `pending`/`failed` 발송 제외, 정보공개서 기본값과 OAuth 결과 메시지를 확인했다.
 - 2026-06-16 통합 정적 검증 통과: `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, 관련 `npx tsx --test ...`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, multiple lockfiles/root, Browserslist stale 경고만 출력했다.
-- 2026-06-16 브라우저 QA 통과: `admin / 1234` 로그인 세션에서 `/dashboard/franchise-leads/market-insights?view=region-insight`의 삭제 대상 컬럼(`유입 채널`, `경쟁업체`, `마케팅`, `경쟁`, `추천 액션`, `다음 확장`, `평균예산`, `목록`)과 `후보지 보기` 버튼이 DOM에 없고, 새 컬럼(`지역`, `후보자 수`, `상담 우선`, `계약 진행`, `보유 후보지`, `연결 완료`, `연결 필요`)이 보임을 확인했다. 지역 인사이트는 `시도`/`시군구` 필터와 10개 단위 페이지네이션을 제공하며, `서울` 시도 선택 시 서울 지역만, `강남구` 시군구 선택 시 `서울 강남구`만 표시된다. 지역 행 클릭 후 후보지 목록으로 전환되고 지역 필터에 `서울 강남구`가 적용됐다. 1440px/390px page overflow는 0건이다.
+- 2026-06-16 브라우저 QA 통과: 관리자 테스트 세션(자격증명 마스킹)에서 `/dashboard/franchise-leads/market-insights?view=region-insight`의 삭제 대상 컬럼(`유입 채널`, `경쟁업체`, `마케팅`, `경쟁`, `추천 액션`, `다음 확장`, `평균예산`, `목록`)과 `후보지 보기` 버튼이 DOM에 없고, 새 컬럼(`지역`, `후보자 수`, `상담 우선`, `계약 진행`, `보유 후보지`, `연결 완료`, `연결 필요`)이 보임을 확인했다. 지역 인사이트는 `시도`/`시군구` 필터와 10개 단위 페이지네이션을 제공하며, `서울` 시도 선택 시 서울 지역만, `강남구` 시군구 선택 시 `서울 강남구`만 표시된다. 지역 행 클릭 후 후보지 목록으로 전환되고 지역 필터에 `서울 강남구`가 적용됐다. 1440px/390px page overflow는 0건이다.
 - 2026-06-16 정보공개서 브라우저 QA 통과: `테스트_강태오` 상세 패널에서 `문서 저장`, `저장 문서`, `Gmail 발송`, `수동 발송 기록`, `발송 기록`이 노출됨을 확인했다. 로컬 `.env.local`에 Gmail OAuth env 3종이 추가된 뒤 `/api/integrations/gmail/status`는 `configReady: true`, `connected: false`를 반환했다. 연결 URL은 Google OAuth로 307 이동하며 `NEXT_PUBLIC_APP_URL=http://localhost:3000` 기준 redirect URI는 `http://localhost:3000/api/integrations/gmail/callback`이다. `127.0.0.1`만 등록했을 때는 Google `redirect_uri_mismatch`, redirect URI 보정/등록 후에는 Google 테스트 사용자 미등록으로 `403 access_denied`가 재현됐다. `gmail=error&reason=access_denied`로 돌아온 리드 상세에는 `Google OAuth 앱의 테스트 사용자에 이 Gmail 계정을 추가해야 연결할 수 있습니다.` 메시지가 표시된다. 390px 모바일에서 상태 select 높이는 40px로 정상 표시되고, 스크롤 하단에서도 Gmail/수동 발송 controls와 연결 후보지 영역이 가로 overflow 없이 표시됐다. 실제 Gmail 승인 완료와 외부 수신자 발송은 Google 테스트 사용자 등록 이후 재시도한다.
 - 2026-06-16 정보공개서 메일 문구/열람 추정 업데이트: 메일 본문은 저장된 리드명을 인사말에 쓰지 않고 `안녕하세요. 가맹 상담 담당자입니다.`로 시작한다. HTML 본문에는 문서 열기/수령 확인 버튼과 보이지 않는 열람 추정 이미지가 포함되며, 이미지 로드 시 `/api/franchise-lead-disclosures/open?token=...`가 `opened_at`을 최초 1회 기록한다. 이 값은 영업 참고용 `열람 추정`으로만 표시하고, 법적/운영 확정 수령은 계속 `confirmed_at`으로 구분한다.
 - 2026-06-16 정보공개서 문서 관리 UI를 단순화했다. 후보자 상세의 직접 `문서 저장` 블록은 제거하고, `Gmail 발송` 폼의 `문서 관리` 버튼으로 회사별 정보공개서 등록 팝업을 연다. 저장 문서가 없으면 같은 위치에서 `문서 등록` 팝업을 바로 열 수 있다. Gmail 폼은 저장 문서/수신 이메일/발송 메모만 받고, 발송일시와 발송 채널은 Gmail 발송 성공 시 자동 기록한다.
@@ -346,7 +356,7 @@
 - 이미 밀어넣은 물건 원본을 수정하면 연결된 후보지를 즉시 덮어쓰지 않고 admin 목록에서 `수정` 상태로 표시한다. 관리자가 `업데이트`를 눌러야 promoted target에 반영된다.
 - 업종 옵션은 `franchise_brands`의 `industry/businessType/categoryMajor/categoryMiddle/categorySmall`와 `custom_categories(category_type='industry_detail')`를 병합하고, 데이터가 없으면 기본 옵션으로 fallback 한다.
 - 검증: `npx tsx --test src/lib/franchise-industry-options.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-property-promotion.test.mts src/lib/franchise-matching-request.test.mts src/lib/franchise-leads.test.mts src/lib/company-menu-features.test.mts` 17건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, Browserslist/baseline-browser-mapping 경고만 출력했다.
-- 브라우저 QA: `admin / 1234` 로그인 세션에서 기존 점포 신규등록, 새 물건 등록, 매칭 요청, 관리자 인입 페이지를 확인했다. 새 화면의 390px 모바일 overflow는 0건이었다.
+- 브라우저 QA: 관리자 테스트 세션(자격증명 마스킹)에서 기존 점포 신규등록, 새 물건 등록, 매칭 요청, 관리자 인입 페이지를 확인했다. 새 화면의 390px 모바일 overflow는 0건이었다.
 
 ## 2026-06-17 회사 로고 관리 QA
 
@@ -357,7 +367,7 @@
 - 로고 migration 적용 전 DB에서는 `logo_url` 조회가 실패할 수 있어 `/api/auth/me`, 프로필 저장 응답, 어드민 회사 목록 조회가 회사명-only 조회로 fallback 된다. 미로그인/만료 토큰 401/403은 예상 가능한 인증 실패로 처리하고 Next 개발 오버레이가 뜨지 않도록 오류 로그 대상에서 제외했다.
 - 회사 로고 API는 Supabase bearer 인증과 legacy `x-user-id` requester 인증을 모두 허용한다. 프로필/어드민 로고 컴포넌트는 기존 localStorage 로그인 세션에서도 `x-user-id`를 붙여 조회/등록/삭제 요청을 보낸다.
 - 검증: `npx tsx --test src/utils/userUtils.test.mts src/lib/company-logo.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
-- 브라우저 QA: `admin / 1234` 로그인 후 `/profile`에서 회사 로고 관리 블록, 정책 문구, `로고 등록` 버튼을 확인했다. `/admin` 회사별 메뉴 관리 선택 회사 패널에서도 같은 로고 관리 블록이 표시됐다. 390px 모바일 폭 기준 `/profile`, `/admin` 모두 page overflow 0건이고 `[AuthCheck] /api/auth/me failed` 오버레이는 표시되지 않았다.
+- 브라우저 QA: 관리자 테스트 세션(자격증명 마스킹)으로 `/profile`에서 회사 로고 관리 블록, 정책 문구, `로고 등록` 버튼을 확인했다. `/admin` 회사별 메뉴 관리 선택 회사 패널에서도 같은 로고 관리 블록이 표시됐다. 390px 모바일 폭 기준 `/profile`, `/admin` 모두 page overflow 0건이고 `[AuthCheck] /api/auth/me failed` 오버레이는 표시되지 않았다.
 - 추가 브라우저 QA: 조회 회사를 `민티아`로 변경한 뒤 사이드바 로고 이미지가 약 42.6px 정사각형으로 표시되고, `/api/company-logo?companyId=...`는 legacy `x-user-id` 헤더 기준 HTTP 200으로 로고 URL/파일명/크기를 반환했다. 파일 없는 POST는 401이 아니라 `로고 파일이 필요합니다.` 400 검증 오류로 진입해 업로드 인증 경로가 통과함을 확인했다.
 
 ## 2026-06-17 모객 DB 표시 문구 QA
@@ -387,7 +397,7 @@
 - 기존 `대시보드` 묶음은 `프랜차이즈`로 변경하고, 하위에 `모객 DB`, `출점 후보지`, `가맹 운영`만 배치했다.
 - 헤더 breadcrumb와 회사별 메뉴 관리의 카테고리도 같은 구조로 맞췄다.
 - 검증: `npx tsx --test src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
-- 브라우저 QA: `admin / 1234` 로그인 후 `/dashboard`에서 사이드바가 상위 단독 `대시보드`와 `프랜차이즈` 묶음으로 표시되는지 확인했다. `/dashboard/franchise-leads`는 `프랜차이즈 > 모객 DB`, `/dashboard/franchise-leads/market-insights`는 `프랜차이즈 > 출점 후보지` breadcrumb로 표시됐고, 1440px/390px 모두 문서 기준 가로 overflow 0건이었다.
+- 브라우저 QA: 관리자 테스트 세션(자격증명 마스킹)으로 `/dashboard`에서 사이드바가 상위 단독 `대시보드`와 `프랜차이즈` 묶음으로 표시되는지 확인했다. `/dashboard/franchise-leads`는 `프랜차이즈 > 모객 DB`, `/dashboard/franchise-leads/market-insights`는 `프랜차이즈 > 출점 후보지` breadcrumb로 표시됐고, 1440px/390px 모두 문서 기준 가로 overflow 0건이었다.
 
 ## 2026-06-17 인입 관리/로고 배포 전 QA
 
@@ -609,7 +619,7 @@
 - 브라우저 QA: `npm run start -- --hostname 127.0.0.1 --port 3000`로 production build를 띄운 뒤 Playwright로 `/demo/manager` 계약 완료 흐름을 1280px/390px에서 확인했다. 계약 전 체크 리스트 요약은 두 viewport 모두 page-level horizontal overflow 0건이었다. 실 대시보드 `/dashboard/franchise-leads`는 로컬 인증/데이터 조건 때문에 본문을 확인하지 못했고, 실제 후보자 상세의 체크리스트 저장/문서 업로드/전자계약 자동 연결은 SQL 적용 후 로그인 세션에서 live QA가 필요하다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-check-v2-workflow-desktop.png`, `ERP/web/.omo/evidence/contract-check-v2-workflow-mobile.png`.
 - UI 보정: 체크리스트 상세에서 `필수/보고/선택`을 행 배지가 아니라 섹션 단위로 분리하고, 상단 요약 카드와 섹션 좌측 컬러 라인으로 구분한다. 행에서는 `구분` 컬럼을 제거해 제출서류, 해당 여부, 근거, 제출담당, 연결 문서, 메모에 집중하도록 정리했다.
 - UI 재검증: production build에 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads` 계약 완료 탭에서 상세 체크리스트를 1280px/390px로 확인했다. 두 viewport 모두 page-level horizontal overflow 0건이고, 메모 저장 아이콘 버튼 17개가 모두 패널 안쪽에 들어왔다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-checklist-grouped-desktop-v2.png`, `ERP/web/.omo/evidence/contract-checklist-grouped-mobile-v2.png`.
-- 계약 완료 점주 상세 패널을 `체크리스트 / 문서함 / 가맹점 정보` 탭으로 분리했다. `가맹점 정보` 탭은 계약완료 상태에서만 노출되고, 연결 후보지가 있으면 원본 후보지를 보존한 채 `가맹점`, `오픈준비` 가맹점 마스터 레코드를 새로 생성한다. 생성 후에는 같은 탭에서 이름, 브랜드, 상태, 지역, 주소, 오픈예정일/오픈일, 운영 이관 메모를 수정하고, 운영 화면 deep link로 이동할 수 있다.
+- 계약 완료 점주 상세 패널을 `구비서류 / 점주 문서함 / 가맹점 정보` 탭으로 분리했다. `가맹점 정보` 탭은 계약완료 상태에서만 노출되고, 연결 후보지가 있으면 원본 후보지를 보존한 채 `가맹점`, `오픈준비` 가맹점 마스터 레코드를 새로 생성한다. 생성 후에는 같은 탭에서 이름, 브랜드, 상태, 지역, 주소, 오픈예정일/오픈일, 운영 이관 메모를 수정하고, 운영 화면 deep link로 이동할 수 있다.
 - 신규 API: `POST /api/franchise-leads/contract-store` 추가. 계약완료 lead와 후보지/외부 상가/직접 입력을 받아 `franchise_locations`에 운영 가맹점 레코드를 생성한다. 기존 `/api/franchise-locations`에는 `contractLeadId` 필터와 계약 연동 컬럼 응답을 추가했다. 운영 화면 `/dashboard/franchise-operations?locationId=...` 진입 시 해당 가맹점 폼이 자동 선택된다.
 - 신규 SQL: `supabase_franchise_contract_store_linkage_migration.sql` 추가. `franchise_locations.contract_lead_id`, `source_location_id`, `source_external_listing_id`, `contracted_at`, 중복 생성 방지 unique index와 조회 index를 포함한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-contract-store.test.mts` 3개 테스트 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
@@ -619,12 +629,12 @@
 - 연결 해제: 체크리스트 행과 점주 문서함 문서 목록에서 체크 항목 링크를 해제할 수 있게 했다. 문서 자체는 보관 처리하지 않고 `franchise_lead_document_checklist_links` 연결만 삭제한다.
 - 체크리스트 카드 폭 보정: 그룹 내부 체크 항목을 전체 폭 행이 아니라 390~460px 카드 그리드로 배치했다. 단일 항목도 `auto-fill` 트랙 안에 머물게 해 과도하게 길어지지 않도록 했고, 카드 안은 `완료 처리/완료됨` 버튼, 제출서류 정보, 연결 문서/메모 액션 순서로 세로 정리했다. 900px 이하에서는 1열로 전환된다.
 - 후속 검증: `./node_modules/.bin/eslint src/components/franchise/LeadContractChecklistSection.tsx src/components/franchise/LeadDocumentBoxSection.tsx src/app/api/franchise-lead-documents/route.ts src/app/api/electronic-contracts/route.ts` 에러/경고 없이 통과. 추가 CSS 보정과 `PropertyCard` Recharts formatter/purity 정리 후 `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-contract-store.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 20개 테스트, `git diff --check`, `npm run build` 통과. Playwright로 `http://localhost:3023/demo/manager` 계약 완료 요약을 1280px/390px에서 확인했고 page-level horizontal overflow 0건이었다. 데모의 `체크리스트 열기`는 실제 상세 모달이 아니라 샘플 토스트 동작이라, 실제 카드형 체크리스트 조작 QA는 SQL/로그인 세션에서 추가 확인이 필요하다.
-- 실데이터 QA 샘플: Supabase service role로 `내일` 회사(`92924bd6-b2a1-49bb-844b-05eabcc51bbf`) 관리자 계정(`7006b59c-031e-40f8-9041-e4255af22b1b`)에 `contract_check_14day_seed_20260623` 샘플을 생성/갱신했다. `QA_14일경과_문채원`, `QA_14일경과_강태오`, `QA_14일경과_이서준` 3건은 모두 `계약완료`, `leadStage=candidate`, 연결 후보지 1건, 정보공개서 발송 이력 `sent_at=2026-06-01 01:00:00+00`, `send_status=recorded`를 가진다. 2026-06-23 기준 21일 경과로 14일 계약 게이트 통과를 DB 재조회로 확인했다. 이번 seed용 신규 SQL은 없다.
+- 실데이터 QA 샘플: Supabase service role로 내일 회사 관리자 테스트 범위(회사/계정 식별자 마스킹)에 `contract_check_14day_seed_20260623` 샘플을 생성/갱신했다. `QA_14일경과_문채원`, `QA_14일경과_강태오`, `QA_14일경과_이서준` 3건은 모두 `계약완료`, `leadStage=candidate`, 연결 후보지 1건, 정보공개서 발송 이력 `sent_at=2026-06-01 01:00:00+00`, `send_status=recorded`를 가진다. 2026-06-23 기준 21일 경과로 14일 계약 게이트 통과를 DB 재조회로 확인했다. 이번 seed용 신규 SQL은 없다.
 - 가맹점 정보 탭 보정: 연결 후보지 선택 후 기존 가맹점 조회가 끝나면서 폼이 기본값으로 덮여 후보지 주소가 비는 문제를 수정했다. 후보지 선택 주소/지역/좌표는 가맹 운영 마스터 생성 폼에 유지되고, 직접 입력 주소도 자유입력이 아니라 Kakao 주소 검색 컴포넌트로 선택하도록 바꿨다. 주소 없이 가맹 운영점을 생성하지 못하도록 API와 폼 검증을 막고, 생성 버튼 문구는 `후보지로 생성`에서 `가맹 운영에 생성`으로 변경했다.
 - 가맹점 정보 보정 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/franchise-contract-store.test.mts`, `git diff --check`, `npm run build` 통과. `npm run start -- --hostname 127.0.0.1 --port 3067` production build에 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads` 계약 완료 상세의 `가맹점 정보` 탭을 1280px/390px에서 확인했다. 후보지 주소 `서울 광진구 능동로50길 8`이 주소 필드에 유지되고, 지역 `서울 광진구`, `가맹 운영에 생성` 버튼, 후보지 주소 표시를 확인했다. 모바일 page-level overflow는 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-store-address-copy-desktop.png`, `ERP/web/.omo/evidence/contract-store-address-copy-mobile.png`.
 - 배포: `9322175 feat(franchise): refine contract readiness workflows`를 Vercel `naeilsajang` production에 CLI 직접 배포했다. `dpl_7b4n3rGnyENexpdjaS43X3gdVzxT`가 READY이고 `https://naeilsajang.vercel.app`에 alias 처리되었다. main/dev 브랜치 merge 또는 push는 하지 않았다.
 - 코드 리뷰 보정: 후보지 선택으로 가맹 운영 마스터를 만들 때 선택 후보지의 주소는 복사되지만 지역이 lead 희망지역으로 남을 수 있는 문제를 수정했다. 후보지/외부 상가 source의 `region`을 폼 초기값에 포함하고, 순수 helper `franchise-contract-store-form` 테스트로 후보지 지역/주소/좌표 복사를 고정했다. 점주 문서함의 `문서 삭제` 액션은 더 이상 `status='archived'` soft-delete가 아니라 `franchise_lead_documents` 레코드를 실제 삭제하며, 체크 항목 링크는 FK cascade에 맡겨 중간 실패로 문서만 미연결되는 상태를 피한다. 업로드 문서는 `/api/upload` 응답의 Storage path를 문서 `data`에 저장하고, 삭제 시 해당 Storage 파일도 best-effort로 정리한다.
-- 코드 리뷰 보정 검증: `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-contract-store.test.mts src/lib/franchise-contract-store-form.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 27건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. production build `http://127.0.0.1:3069`에 Playwright auth/API mock을 주입해 계약 완료 탭 상세의 `구비서류 체크리스트`, `업로드`, `1건 연결` 표시를 확인했다. 가맹점 정보 탭의 후보지 주소/지역 복사는 순수 helper/API 테스트와 기존 Playwright 주소 복사 QA로 회귀 고정했다.
+- 코드 리뷰 보정 검증: `npx tsx --test src/lib/franchise-lead-contract-checklist.test.mts src/lib/franchise-lead-documents.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-contract-store.test.mts src/lib/franchise-contract-store-form.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 27건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. production build `http://127.0.0.1:3069`에 Playwright auth/API mock을 주입해 계약 완료 탭 상세의 `구비서류`, `업로드`, `1건 연결` 표시를 확인했다. 가맹점 정보 탭의 후보지 주소/지역 복사는 순수 helper/API 테스트와 기존 Playwright 주소 복사 QA로 회귀 고정했다.
 - 가맹 운영 마스터 UI 보정: `/dashboard/franchise-operations`의 가맹점 마스터를 `대시보드 / 가맹점 목록 / 가맹점 등록` 탭으로 분리했다. 대시보드에는 운영 상태 그래프와 지역 분포 패널을 추가했고, 목록과 등록 폼은 한 화면에서 섞이지 않게 했다. 경쟁스캔 입력/요약/버튼과 가맹 운영 내 `외부 승격 물건지 운영 전환`, `오픈 준비 프로젝트` 패널은 임시 숨김 처리했다. 오픈 준비 프로젝트는 계약완료 점주 상세의 가맹점 정보/인계 흐름으로 고도화하는 방향을 로드맵에 기록했다. 이번 변경의 신규 SQL은 없다.
 - 가맹 운영 마스터 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. production build `http://127.0.0.1:3071`에 Playwright auth/API mock을 주입해 `/dashboard/franchise-operations`를 1280px/390px에서 확인했다. `대시보드 / 가맹점 목록 / 가맹점 등록` 탭, 운영 상태 그래프, 지역 분포, 목록/등록 전환이 보이고 `경쟁스캔`, `키워드필요`, `외부 승격 물건지 운영 전환`, `오픈 준비 프로젝트` 문구는 노출되지 않았다. 두 viewport 모두 page-level horizontal overflow 0건, console error 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/franchise-operations-master-desktop-dashboard.png`, `ERP/web/.omo/evidence/franchise-operations-master-mobile-dashboard.png`.
 - 문서 정리: 프랜차이즈 하위에 `물건지 지도` 서비스 축을 두고 `가맹 운영점 / 출점 후보지 / 외부 상가 수집`을 탭처럼 묶는 방향을 로드맵에 추가했다. 브랜드가 `애플치킨`처럼 정해졌을 때 검색량, 블로그/뉴스/카페/웹 언급, Threads 공개 글, 위험 키워드, 경쟁 브랜드 비교를 브랜드 인사이트 고도화 후보로 기록했고, 각 가맹점별 네이버/카카오맵/배달앱 리뷰 최신화는 매장 평판 모니터링 고도화 범위로 기록했다. 이번 작업은 문서 정리만 수행했으며 신규 SQL은 없다.
@@ -640,10 +650,61 @@
 - `지도 분석` 패널로 `반경분석`, `거리재기`, `면적재기`를 통합했다. 기존처럼 반경분석과 지도 도구가 떨어져 보이지 않게 하고, 모바일에서는 한 패널 안에서 탭으로 전환한다.
 - 반경분석은 선택 물건지 또는 직접 찍은 지도 기준점으로 500m/1km/2km를 분석한다. Kakao 지도에는 반경 원을 표시하고, 반경 내 `가맹 운영점`, `출점 후보지`, `운영중`, `오픈준비`, `검토중` 개수와 최대 12개 주변 물건지 목록을 가까운 순으로 보여준다.
 - 거리재기는 지도 클릭 지점들을 polyline으로 연결해 누적 거리를 계산한다. 면적재기는 3점 이상을 polygon으로 표시하고 면적(`㎡`, `평`)과 둘레를 계산한다. 두 도구 모두 되돌리기/초기화를 제공한다.
-- 실데이터 목록 확인용으로 `내일` 회사(`92924bd6-b2a1-49bb-844b-05eabcc51bbf`)에 `지도QA_20260624_01`부터 `지도QA_20260624_30`까지 30개 샘플 가맹 운영점/출점 후보지를 기존 `/api/franchise-locations` API로 생성했다. 신규 SQL은 없고, 샘플은 이름 prefix와 `location_map_sample_20260624` 메모 태그로 식별할 수 있다.
+- 실데이터 목록 확인용으로 내일 회사(회사 식별자 마스킹)에 `지도QA_20260624_01`부터 `지도QA_20260624_30`까지 30개 샘플 가맹 운영점/출점 후보지를 기존 `/api/franchise-locations` API로 생성했다. 신규 SQL은 없고, 샘플은 이름 prefix와 `location_map_sample_20260624` 메모 태그로 식별할 수 있다.
 - 사이드바의 `물건지 지도`는 `가맹 운영` 바로 아래 같은 레벨 메뉴로 표시한다. 하위 메뉴용 가로 선이 아이콘 왼쪽에 보이는 문제를 제거했고, 메뉴명과 아이콘만 표시된다.
 - 검증: `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts` 19건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
-- 브라우저 QA: `http://localhost:3000/dashboard/franchise-locations`에 `내일 / admin / 1234`로 로그인해 확인했다. 데스크톱에서 `물건지 지도` 메뉴의 `::before` content가 `none`이고, 모바일 390px에서 `지도 분석` 패널이 `반경분석/거리재기/면적재기` 탭으로 전환되며 console error 0건이었다. 증거 스크린샷: `franchise-location-map-nav-same-level.png`, `franchise-location-map-mobile-analysis-same-level-final.png`.
+- 브라우저 QA: `http://localhost:3000/dashboard/franchise-locations`에 내일 회사 관리자 테스트 세션(자격증명 마스킹)으로 로그인해 확인했다. 데스크톱에서 `물건지 지도` 메뉴의 `::before` content가 `none`이고, 모바일 390px에서 `지도 분석` 패널이 `반경분석/거리재기/면적재기` 탭으로 전환되며 console error 0건이었다. 증거 스크린샷: `franchise-location-map-nav-same-level.png`, `franchise-location-map-mobile-analysis-same-level-final.png`.
+
+## 2026-06-24 가맹 운영 대시보드 지역 분포 개선 QA
+
+- `/dashboard/franchise-operations` 대시보드의 시도별 한국 지도 SVG를 제거했다. 기존 지도는 실제 행정구역 라벨이 작게 겹쳐 운영자가 지역별 분포를 읽기 어려웠으므로, 운영 상태 그래프 옆에 `지역별 운영 분포` 분석 패널을 배치했다.
+- 새 패널은 저장된 `franchise_locations`의 `region`, `address`, `status`를 기반으로 시도별 점포 수, 전체 비중, 상태별 건수를 보여준다. 데이터 품질/주소 등록 카드는 운영 판단에서 우선순위가 낮아 제거했고, 상단 요약의 빈 칸은 `운영 안정률`로 대체했다. `기타` 합산과 `시도 미분류` 행은 의미가 모호해 지역 분포 본문에서 제거하고, 실제 시도명으로 분류된 지역만 보여준다. 기본 화면은 상위 5개 지역만 노출하며 나머지는 중앙 정렬된 긴 `더보기` 버튼으로 확장한다. 지역명 하단의 `지역 등록 점포` 보조 문구도 제거했다.
+- 이번 변경은 기존 `franchise_locations` 데이터만 사용하며 신규 SQL은 없다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. Playwright production QA에서 mock 지역 7개 기준 기본 5개만 노출, `더보기 2개` 클릭 후 7개 노출, `접기` 버튼, 더보기 버튼 360px 중앙 정렬, `지역 등록 점포`/`기타`/`시도 미분류`/`데이터 품질`/`주소 등록` 미노출, 390px overflow 0, console error 0건을 확인했다. 증거 스크린샷: `franchise-operations-region-top5-centered-more.png`, `franchise-operations-region-expanded-no-helper.png`, `franchise-operations-region-mobile-top5.png`.
+
+## 2026-06-24 문서함/업로드 보안 핫픽스 QA
+
+- `/api/franchise-lead-documents` GET/POST/PATCH/DELETE는 bearer 세션의 `getAuthenticatedRequesterProfile`만 신뢰하도록 보정했다. `requesterId`, `userId`, `managerId` body/query fallback은 제거했고, 인증이 없으면 `401 AUTH_REQUIRED`로 실패한다.
+- 점주 문서함과 구비서류의 문서 등록/삭제 요청은 `getApiAuthHeaders()`를 사용한다. 업로드 결과는 Storage `path` 중심으로 저장하며, 점주 문서함 업로드 문서는 공개 URL을 저장하지 않는다.
+- 업로드 문서 열람은 `/api/franchise-lead-documents?action=open&documentId=...`에서 lead/company 권한을 확인한 뒤 Supabase Storage signed URL을 발급한다. 기존 과거 업로드 문서의 public URL은 Storage path 추론용 fallback으로만 사용하고, 신규 점주 문서함 업로드는 `data.storageBucket/storagePath`를 우선한다.
+- `/api/upload`는 20MB 초과 파일을 차단하고, `property-images`는 JPEG/PNG/WebP만, `property-documents`는 PDF/이미지/doc/docx/xls/xlsx만 허용한다. PDF/JPEG/PNG/WebP는 매직바이트를 확인하고, Office 계열은 확장자/MIME/시그니처 조합을 확인한다.
+- 코드리뷰 재검토에서 `/api/franchise-lead-documents` 라우트 직접 테스트 부족과 대용량 파일 선검사 위치가 지적되어 추가 보정했다. 라우트 핸들러에 테스트용 dependency injection을 얇게 열고, `requesterId` query 사칭 401, 업로드 문서 Storage path 필수/public URL suppression, 전자계약 `sourceId` lead scope 403, signed URL 발급을 직접 테스트한다. `/api/upload`는 권한 확인 후 `file.arrayBuffer()` 호출 전에 `file.size` 20MB 초과를 먼저 거절한다.
+- 전자계약 문서함 연결은 `sourceType='electronic_contract'`일 때 `sourceId`가 현재 lead/company의 전자계약인지 검증한다. 범위가 다르면 등록을 차단한다.
+- 회사 템플릿 발송은 UCanSign 발송과 `electronic_contracts.status='sent'` 저장이 성공한 뒤 문서함 링크 저장만 실패하면 계약 상태를 `send_failed`로 되돌리지 않는다. 링크 실패는 서버 로그와 응답 `warning='DOCUMENT_LINK_FAILED'`로만 남긴다.
+- 기존 매물 이미지/문서 및 정보공개서 업로드는 기존 UI가 공개 URL을 소비하므로 public URL 반환을 유지했다. 이번 보안 기준에서 공개 URL 제거 대상은 점주 문서함 업로드 문서다.
+- 검증: `npx tsx --test src/app/api/franchise-lead-documents/route.test.mts src/lib/upload-file-validation.test.mts src/app/api/upload/route.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts` 25건 통과. 확장 회귀로 `npx tsx --test src/app/api/franchise-lead-documents/route.test.mts src/lib/upload-file-validation.test.mts src/app/api/upload/route.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts src/lib/api-auth.test.mts src/lib/franchise-lead-access.test.mts src/lib/upload-storage-access.test.mts src/lib/upload-storage-policy.test.mts src/lib/franchise-lead-contract-checklist.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 51건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과.
+- Dev 배포: `58363c9 fix(franchise): harden lead document uploads`를 dev worktree에 cherry-pick해 `0e4ad3f`로 반영했다. Dev worktree에서 같은 51건 확장 회귀, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했고, Vercel Dev deployment `dpl_GkjHTqcgdaP8ARfUXBvS6An4X4yd`가 `READY`이며 `0e4ad3f`와 매칭됨을 확인했다. Dev 도메인은 Vercel SSO 보호로 외부 `curl -I -L /login`이 SSO 로그인으로 리다이렉트된다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3079`에 Playwright auth/API mock을 주입해 `/dashboard/franchise-locations`, `/contracts/electronic`를 1280px/390px에서 smoke 확인했다. 두 화면 모두 page-level overflow 0건, console/page error 0건이었다. 로컬 도메인은 Kakao JavaScript 키 제한으로 지도 타일 대신 도메인 설정 안내가 표시됐다.
+- 신규 SQL은 없다.
+
+## 2026-06-24 계약완료 상세 오픈 준비 탭 QA
+
+- 계약완료 점주 상세 탭을 `오픈 준비 / 구비서류 / 점주 문서함 / 가맹점 정보`로 확장했다. `오픈 준비` 탭은 `lead.status === '계약완료'`일 때만 노출하며, 기존 `franchise_opening_projects` 테이블과 `/api/franchise-opening-projects` API를 재사용한다. 신규 SQL은 없다.
+- 오픈 준비 프로젝트는 lead id가 아니라 해당 lead에서 생성된 `franchise_locations.id`에 연결한다. 탭 진입 시 `/api/franchise-locations?contractLeadId=...`로 연결 가맹 운영점을 찾고, 연결 가맹점이 없으면 `가맹점 정보` 탭 이동 CTA를 보여준다. 연결 가맹점이 `오픈준비`이면 프로젝트 상태/목표 오픈일/메모와 `계약 / 인테리어 / 교육 / 초도물류 / 홍보 / 오픈일` 체크리스트를 시작/저장할 수 있다. `운영중/휴점/폐점` 상태에서는 읽기 중심 안내로 제한한다.
+- UI 보정: 오픈 준비 섹션 우측 상단의 별도 `오픈준비` 상태 배지를 제거했다. 프로젝트 요약의 `막힘` 표기는 사용자 화면에서 `진행 이슈`/`이슈`로 바꾸고, 내부 저장 상태값은 기존 `막힘`을 유지한다. 구비서류 필수 그룹 헤더는 `필수 / 계약 전 필수 서류 / 미완료 또는 문서 누락 시 계약 진행을 막습니다.`가 데스크톱에서 한 줄로 보이도록 압축했다.
+- 검증: `npx tsx --test src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-opening-projects.test.mts src/lib/franchise-contract-store.test.mts` 13건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3081`에서 내일 회사 관리자 세션으로 `/dashboard/franchise-leads` 계약완료 상세를 열고 `오픈 준비` 탭을 확인했다. 1280px/390px 모두 `오픈 준비` 탭과 프로젝트 체크리스트가 표시되고 page-level horizontal overflow 0건, console/page error 0건이었다. 추가 QA에서 탭 첫 항목이 `오픈 준비`인 것, 오픈 준비 섹션 상단 배지가 제거된 것, 화면 본문에 `막힘` 문구가 남지 않은 것, 체크리스트 필수 그룹 설명이 데스크톱에서 한 줄로 압축된 것을 확인했다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-owner-opening-tab-final-desktop.png`, `ERP/web/.omo/evidence/contract-owner-opening-tab-final-mobile.png`, `ERP/web/.omo/evidence/contract-owner-opening-checklist-compact-desktop.png`.
+
+## 2026-06-24 오픈 준비 체크리스트 1차 고도화 QA
+
+- 기존 6개 오픈 준비 항목을 `계약/행정`, `인테리어`, `교육`, `초도물류`, `홍보`, `오픈일` 6단계 25개 하위 체크로 확장했다. 기존 저장 데이터는 task `id` 기준으로 병합하며, 과거 `contract`, `interior`, `training`, `initial-stock`, `promotion`, `open-date` 상태는 각 단계의 대표 항목에 이어받는다.
+- 상태값은 기존 내부 `막힘`을 유지하고 화면 표기는 `이슈`로 유지한다. 새 상태 `확인요청`을 추가해 점주/본사 확인이 필요한 항목을 이슈보다 낮은 강도로 구분한다.
+- 계약완료 상세 `오픈 준비` 상단 요약은 `오늘 처리`, `기한 임박`, `진행 이슈`, `오픈 가능도`로 바꿨다. 체크리스트 본문은 단계별 접힘 섹션으로 정리하고 각 하위 항목에 설명, 필수 배지, 상태, 담당, 기한, 메모를 표시한다.
+- 검증: `npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-contract-store.test.mts` 15건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 dev 서버 `localhost:3000`에서 내일 회사 관리자 세션으로 `/dashboard/franchise-leads` 계약완료 상세를 열고 1280px/390px를 확인했다. 탭은 `오픈 준비 / 구비서류 / 점주 문서함 / 가맹점 정보`로 표시되고, `체크리스트 열기` 문구가 남지 않으며 page-level horizontal overflow 0건이었다. 증거 스크린샷: `ERP/web/.omo/evidence/contract-owner-supplies-label-desktop.png`, `ERP/web/.omo/evidence/contract-owner-supplies-label-mobile.png`.
+- Dev 배포: 선행 오픈 준비 탭 커밋과 1차 고도화 커밋을 dev worktree에 각각 `6859dca`, `e4ad21d`로 cherry-pick했다. dev worktree에서 같은 15건 테스트, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했고, Vercel Dev deployment `dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`가 `READY`이며 `e4ad21d`와 매칭됨을 확인했다. Dev alias는 `https://naeilsajang-dev.vercel.app`이다.
+- 신규 SQL은 없다.
+
+## 2026-06-24 /demo 전용 접근 게이트 QA
+
+- `/demo`와 `/demo/[role]` 샘플 데이터 화면에 Supabase 로그인과 분리된 데모 전용 접근 게이트를 추가했다. `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`, `DEMO_ACCESS_COOKIE_SECRET`가 모두 설정되어야 진입할 수 있고, 환경변수가 없으면 fail-closed 상태로 `데모 접근 설정이 필요합니다.`를 표시한다.
+- `POST /api/demo/access`는 ID/PW 검증 후 8시간짜리 httpOnly `demo_access` 쿠키를 `/demo` 경로로 발급한다. `DELETE /api/demo/access`는 같은 쿠키를 삭제한다. 쿠키는 `sameSite=lax`, production에서 `secure`로 설정된다.
+- 기존 데모 API guard는 유지하되 `/api/demo/access`만 허용했다. 데모 화면 내부의 실제 ERP `/api/**` 호출 차단 정책은 그대로 유지한다.
+- 데모 헤더에 `데모 로그아웃` 액션을 추가했다. 모바일에서도 로그아웃 버튼은 노출하고, 설명 다시 보기와 샘플 배지는 작은 화면에서 숨긴다.
+- `ERP/web/README.md`에 데모 접근 환경변수와 운영 주의사항을 추가했다.
+- 검증: `npx tsx --test src/lib/demo-access.test.mts src/app/api/demo/access/route.test.mts src/app/demo/demoContent.test.mts` 12건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했고 `/demo`, `/demo/[role]`는 dynamic route로 확인했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3047`에서 임시 데모 env를 주입해 `/demo`, `/demo/manager`, `/demo/partner`를 확인했다. 로그인 전 접근 게이트, 잘못된 비밀번호 오류, 정상 로그인, 딥링크 유지, 로그아웃 후 로그인 화면 복귀, 모바일 390px 로그인 화면 horizontal overflow 0건을 확인했다.
+- 신규 SQL은 없다.
 
 ## 2026-06-24 /demo 전용 접근 게이트 QA
 
@@ -672,7 +733,7 @@
 - Meta 실제 유입은 계정/env 준비 전까지 HOLD. 엑셀 업로드 runner 기준 `1차 유입 DB` 저장과 후보자 승격은 2026-06-11 통과했으며, 실제 운영 엑셀 샘플 파일이 생기면 같은 runner로 추가 회귀한다.
 - 실운영 계정 role matrix 기준으로 모객 DB, 후보지 연결, 외부 상가 수집 범위 회귀 QA
 - 계약 가능 상태 리드가 업무 큐에서 별도 `계약 가능` 필터로 노출되지 않는지 확인
-- 오픈 준비 프로젝트 브라우저 UI 저장과 새로고침 persistence 확인
+- 계약완료 상세 `오픈 준비` 탭에서 프로젝트 저장 후 새로고침 persistence를 실운영 세션으로 한 번 더 확인
 - Gmail OAuth 운영 env(`GOOGLE_GMAIL_CLIENT_ID`, `GOOGLE_GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_APP_URL`) 준비 후 dev 서버 재시작, Google Cloud OAuth client에 `localhost`/`127.0.0.1` callback URI 모두 등록, 테스트 모드라면 실제 담당자 Gmail을 테스트 사용자에 추가, 실제 담당자 계정 연결, 저장 문서 발송, 고객 확인 링크 클릭, 중복 클릭 idempotency, 14일 잠금 기준 유지 확인
 - `supabase_franchise_gmail_disclosures_migration.sql`을 대상 Supabase 환경에 적용한 뒤 `profile_gmail_connections`와 확장된 `franchise_lead_disclosure_deliveries` schema cache가 반영됐는지 확인
 
@@ -701,7 +762,7 @@
 - 가맹 운영 화면에서도 같은 `LocationCompetitionPanel`이 깨지지 않는지 확인
 - 정보공개서 브랜드 검색이 공식 API 지연/실패 시 로컬 캐시로 fallback 되는지 확인
 - 계약 전 준비 체크리스트 MVP와 목록 진행률, `계약 점주` 탭은 2026-06-12 구현했다. 남은 live QA는 로그인 세션에서 후보자별 체크 저장/새로고침 유지, 완료일/처리자/메모 저장, 다른 담당자/회사 범위 접근 차단, 14일 계약 잠금 기준이 수령 체크가 아니라 발송 이력 기준으로 유지되는지 확인하는 것이다.
-- 계약 전 준비 체크리스트의 미완료 필수 스텝 필터, 계약 준비 완료 필터, 계약 점주 상세 오픈 준비 체크리스트 통합은 후속 UI 범위로 남김
+- 계약 전 준비 체크리스트의 미완료 필수 스텝 필터와 계약 준비 완료 필터는 후속 UI 범위로 남김
 - 브랜드 모니터링에서 Naver 공식 API 키 설정 후 스냅샷 저장/조회 확인
 
 ### P2

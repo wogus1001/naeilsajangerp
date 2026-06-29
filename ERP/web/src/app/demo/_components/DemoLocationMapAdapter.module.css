@@ -1,0 +1,237 @@
+.mapGuideStack {
+    display: grid;
+    gap: 16px;
+}
+
+.mapWorkspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 12px;
+    height: min(680px, calc(100dvh - 250px));
+    min-height: 600px;
+}
+
+.mapCanvasTarget,
+.mapPanelTarget {
+    min-height: 0;
+    height: 100%;
+}
+
+.staticMapCanvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background:
+        linear-gradient(90deg, rgb(255 255 255 / 58%) 1px, transparent 1px) 0 0 / 54px 54px,
+        linear-gradient(rgb(255 255 255 / 58%) 1px, transparent 1px) 0 0 / 54px 54px,
+        #eef5ec;
+}
+
+.staticMapCanvas::before {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background:
+        radial-gradient(circle at 22% 28%, rgb(199 224 199 / 68%) 0 11%, transparent 12%),
+        radial-gradient(circle at 78% 18%, rgb(199 224 199 / 58%) 0 16%, transparent 17%),
+        radial-gradient(circle at 52% 74%, rgb(199 224 199 / 62%) 0 18%, transparent 19%),
+        linear-gradient(135deg, transparent 0 42%, rgb(255 255 255 / 70%) 43% 45%, transparent 46% 100%);
+    opacity: 0.88;
+}
+
+.waterway {
+    position: absolute;
+    left: -8%;
+    top: 60%;
+    width: 118%;
+    height: 110px;
+    transform: rotate(-8deg);
+    border: 1px solid rgb(70 157 218 / 22%);
+    background: #b8def3;
+    opacity: 0.9;
+}
+
+.roadPrimary,
+.roadSecondary {
+    position: absolute;
+    z-index: 1;
+    transform-origin: center;
+    border-radius: 999px;
+    background: #f7c46c;
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 76%);
+}
+
+.roadPrimary {
+    left: 6%;
+    top: 48%;
+    width: 88%;
+    height: 10px;
+    transform: rotate(-19deg);
+}
+
+.roadSecondary {
+    left: 42%;
+    top: 8%;
+    width: 8px;
+    height: 78%;
+    transform: rotate(22deg);
+}
+
+.radiusPreview {
+    position: absolute;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgb(49 130 246 / 56%);
+    border-radius: 999px;
+    background: rgb(49 130 246 / 9%);
+    pointer-events: none;
+}
+
+.measureLinePreview,
+.measureAreaPreview {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.measureLinePreview {
+    left: 30%;
+    top: 43%;
+    width: 46%;
+    height: 4px;
+    transform: rotate(11deg);
+    border-radius: 999px;
+    background: #2272eb;
+}
+
+.measureAreaPreview {
+    left: 34%;
+    top: 30%;
+    width: 260px;
+    height: 170px;
+    clip-path: polygon(12% 74%, 48% 16%, 90% 40%, 64% 88%);
+    background: rgb(49 130 246 / 16%);
+    border: 2px solid #2272eb;
+}
+
+.operationMarker,
+.candidateMarker {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    max-width: 190px;
+    min-height: 42px;
+    align-items: center;
+    gap: 6px;
+    transform: translate(-50%, -100%);
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    padding: 7px 10px;
+    box-shadow: 0 6px 18px rgb(25 31 40 / 14%);
+    cursor: pointer;
+}
+
+.candidateMarker {
+    border-color: #fed7aa;
+    background: #fff7ed;
+}
+
+.markerActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    box-shadow: 0 8px 22px rgb(49 130 246 / 22%);
+}
+
+.operationMarker span,
+.candidateMarker span {
+    display: inline-grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.operationMarker svg,
+.candidateMarker svg {
+    color: #3182f6;
+}
+
+.operationMarker strong,
+.candidateMarker strong {
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mapHint,
+.mapScale {
+    position: absolute;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: rgb(255 255 255 / 92%);
+    color: #4e5968;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgb(25 31 40 / 8%);
+}
+
+.mapHint {
+    left: 16px;
+    top: 16px;
+}
+
+.mapScale {
+    left: 16px;
+    bottom: 16px;
+}
+
+@media (max-width: 1380px) {
+    .mapWorkspace {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .mapCanvasTarget,
+    .mapPanelTarget {
+        height: auto;
+    }
+
+    .staticMapCanvas {
+        min-height: 520px;
+    }
+}
+
+@media (max-width: 680px) {
+    .staticMapCanvas {
+        min-height: 440px;
+    }
+
+    .operationMarker,
+    .candidateMarker {
+        max-width: 150px;
+    }
+
+    .operationMarker strong,
+    .candidateMarker strong {
+        max-width: 82px;
+    }
+
+    .mapHint {
+        max-width: calc(100% - 32px);
+    }
+}
