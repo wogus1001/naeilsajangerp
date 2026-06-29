@@ -9,6 +9,7 @@ import {
 test('new company signup always becomes a manager request waiting for admin approval', () => {
     const policy = resolveSignupApprovalPolicy({
         companyExists: false,
+        companyHasManager: false,
         requestedRole: 'staff'
     });
 
@@ -21,24 +22,42 @@ test('new company signup always becomes a manager request waiting for admin appr
     });
 });
 
-test('existing company staff signup waits for manager approval', () => {
+test('existing company brand employee signup becomes manager request when no team lead exists', () => {
     const policy = resolveSignupApprovalPolicy({
         companyExists: true,
+        companyHasManager: false,
         requestedRole: 'staff'
     });
 
     assert.deepEqual(policy, {
         kind: 'allow',
-        role: 'staff',
+        role: 'manager',
+        status: 'pending_approval',
+        approvalOwner: 'admin',
+        message: '회사에 등록된 팀장이 없어 팀장 권한으로 접수되었습니다. 관리자 승인 후 로그인이 가능합니다.'
+    });
+});
+
+test('existing company brand employee signup becomes sub manager request when team lead exists', () => {
+    const policy = resolveSignupApprovalPolicy({
+        companyExists: true,
+        companyHasManager: true,
+        requestedRole: 'staff'
+    });
+
+    assert.deepEqual(policy, {
+        kind: 'allow',
+        role: 'sub_manager',
         status: 'pending_approval',
         approvalOwner: 'manager',
-        message: '가입 요청이 완료되었습니다. 팀장 승인 후 로그인이 가능합니다.'
+        message: '가입 요청이 완료되었습니다. 매니저 권한으로 접수되며, 팀장 승인 후 로그인이 가능합니다.'
     });
 });
 
 test('existing company partner vendor signup waits for manager approval', () => {
     const policy = resolveSignupApprovalPolicy({
         companyExists: true,
+        companyHasManager: true,
         requestedRole: 'partner_vendor'
     });
 
@@ -54,6 +73,7 @@ test('existing company partner vendor signup waits for manager approval', () => 
 test('existing company cannot request another manager from public signup', () => {
     const policy = resolveSignupApprovalPolicy({
         companyExists: true,
+        companyHasManager: true,
         requestedRole: 'manager'
     });
 

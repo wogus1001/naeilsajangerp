@@ -25,6 +25,16 @@
 
 ## 개발 과정 로그
 
+### 2026-06-29
+
+- 회원가입 화면 입력 순서를 회사 찾기 우선 흐름으로 변경했다. 회사명 선택 후 아이디, 이메일, 비밀번호, 비밀번호 확인, 이름, 휴대폰 번호를 입력하도록 정리했다.
+- 회원가입 클라이언트/서버 양쪽에 이메일 `@` 누락 안내와 비밀번호 확인 불일치 안내를 추가했다. 휴대폰 번호는 숫자 입력만으로 `010-1234-5678` 형태로 표시되며 서버 저장용 정규화는 기존처럼 숫자만 사용한다.
+- 브랜드 임직원 가입 승인 정책을 백엔드 기준으로 보정했다. 기존 회사에 팀장이 없으면 팀장 권한으로 관리자 승인 대기, 팀장이 있으면 매니저 권한으로 팀장 승인 대기 상태가 된다.
+- Solapi SDK 기반 회원가입 문자 알림을 추가했다. 회원가입 요청 시 관리자 수신 번호로 `[ERP] 회원가입 요청` 문자를 보내고, 승인 완료 시 신청자에게 `[ERP] 회원가입 승인` 문자를 보낸다. 문자 발송 실패는 가입/승인 트랜잭션을 실패시키지 않고 서버 로그로만 남긴다.
+- `/demo`는 대시보드와 모객 DB 가이드 단계를 실제 설명 흐름에 맞춰 조정했다. 필터, 1차 유입 DB, 개별 상세, 승격, 가맹 희망자 단계와 상세 드로어가 안내 순서에 맞게 이어지며, `건너뛰기` 버튼은 `둘러보기`로 바꿨다.
+- 검증: `npx tsx --test src/lib/signup-approval-policy.test.mts`, `npx tsx --test src/lib/solapi-notifications.test.mts`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. Playwright로 `/signup` 390px에서 필드 순서, 이메일 `@` 안내, 비밀번호 불일치 안내, 휴대폰 자동 하이픈을 확인했다.
+- 남은 QA: Solapi 실문자 발송은 운영 환경변수와 실제 수신 번호가 설정된 실서버에서 승인/가입 요청 흐름으로 확인한다. 이번 작업의 신규 SQL은 없다.
+
 ### 2026-06-09
 
 - Meta Lead Ads는 계정/앱 설정 이슈 때문에 HOLD로 전환했다.
@@ -644,6 +654,13 @@
 - 사이드바의 `물건지 지도`는 `가맹 운영` 바로 아래 같은 레벨 메뉴로 표시한다. 하위 메뉴용 가로 선이 아이콘 왼쪽에 보이는 문제를 제거했고, 메뉴명과 아이콘만 표시된다.
 - 검증: `npx tsx --test src/components/franchise/location-map/mapUtils.test.mts src/lib/company-menu-features.test.mts` 19건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: `http://localhost:3000/dashboard/franchise-locations`에 내일 회사 관리자 테스트 세션(자격증명 마스킹)으로 로그인해 확인했다. 데스크톱에서 `물건지 지도` 메뉴의 `::before` content가 `none`이고, 모바일 390px에서 `지도 분석` 패널이 `반경분석/거리재기/면적재기` 탭으로 전환되며 console error 0건이었다. 증거 스크린샷: `franchise-location-map-nav-same-level.png`, `franchise-location-map-mobile-analysis-same-level-final.png`.
+
+## 2026-06-24 가맹 운영 대시보드 지역 분포 개선 QA
+
+- `/dashboard/franchise-operations` 대시보드의 시도별 한국 지도 SVG를 제거했다. 기존 지도는 실제 행정구역 라벨이 작게 겹쳐 운영자가 지역별 분포를 읽기 어려웠으므로, 운영 상태 그래프 옆에 `지역별 운영 분포` 분석 패널을 배치했다.
+- 새 패널은 저장된 `franchise_locations`의 `region`, `address`, `status`를 기반으로 시도별 점포 수, 전체 비중, 상태별 건수를 보여준다. 데이터 품질/주소 등록 카드는 운영 판단에서 우선순위가 낮아 제거했고, 상단 요약의 빈 칸은 `운영 안정률`로 대체했다. `기타` 합산과 `시도 미분류` 행은 의미가 모호해 지역 분포 본문에서 제거하고, 실제 시도명으로 분류된 지역만 보여준다. 기본 화면은 상위 5개 지역만 노출하며 나머지는 중앙 정렬된 긴 `더보기` 버튼으로 확장한다. 지역명 하단의 `지역 등록 점포` 보조 문구도 제거했다.
+- 이번 변경은 기존 `franchise_locations` 데이터만 사용하며 신규 SQL은 없다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. Playwright production QA에서 mock 지역 7개 기준 기본 5개만 노출, `더보기 2개` 클릭 후 7개 노출, `접기` 버튼, 더보기 버튼 360px 중앙 정렬, `지역 등록 점포`/`기타`/`시도 미분류`/`데이터 품질`/`주소 등록` 미노출, 390px overflow 0, console error 0건을 확인했다. 증거 스크린샷: `franchise-operations-region-top5-centered-more.png`, `franchise-operations-region-expanded-no-helper.png`, `franchise-operations-region-mobile-top5.png`.
 
 ## 2026-06-24 문서함/업로드 보안 핫픽스 QA
 

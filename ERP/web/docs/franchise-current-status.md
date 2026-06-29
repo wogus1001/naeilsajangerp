@@ -11,14 +11,15 @@
 - 긴 명령 출력, 브라우저 QA 상세, 코드 변경 이력은 이 문서에 누적하지 않고 관련 문서로 링크한다.
 - `ERP/web/handoff.md`는 단일 작성자 규칙 때문에 수정하지 않는다.
 
-## 2026-06-24 기준 현재 상태
+## 2026-06-29 기준 현재 상태
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 최신 dev 배포 기준 커밋: `e4ad21d feat(franchise): refine opening readiness checklist`.
-- 최근 작업 범위: 오픈 준비 체크리스트 1차 고도화. 기존 `franchise_opening_projects.tasks` JSON을 확장해 계약/행정, 인테리어, 교육, 초도물류, 홍보, 오픈일 6단계 25개 하위 항목을 제공하고, `확인요청`, 오늘 처리, 기한 임박, 진행 이슈, 오픈 가능도 요약을 추가했다. 계약완료 상세의 계약 전 서류 탭/버튼 표기는 `구비서류`로 통일했다. 신규 SQL은 없다.
-- 최근 커밋 범위: `0e336e2 feat(franchise): add contract opening preparation tab`, `c65bdf8 feat(franchise): refine opening readiness checklist`로 계약완료 점주 상세 `오픈 준비` 탭과 1차 고도화를 커밋했다.
-- 배포 상태: 오픈 준비 탭/체크리스트 1차 고도화는 `dev`에 `6859dca`, `e4ad21d`로 반영했고 Vercel Dev deployment `dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`가 READY다. Dev alias는 `https://naeilsajang-dev.vercel.app`이다. main 반영은 아직 없다. 직전 실서버 배포는 2026-06-23 계약 준비/가맹 운영/물건지 지도 v1 묶음이다.
-- 신규 SQL: 2026-06-24 문서함/업로드 보안 핫픽스, 물건지 지도 고도화, 계약완료 상세 오픈 준비 탭에는 신규 SQL 없음.
+- 최신 dev 배포 기준 커밋: 이번 회원가입 승인/Solapi/데모 가이드 릴리즈 커밋을 dev와 main에 반영한다.
+- 최근 작업 범위: 회원가입 화면을 `회사명 -> 아이디 -> 이메일 -> 비밀번호 -> 비밀번호 확인 -> 이름 -> 휴대폰 번호` 순서로 정리하고, 이메일 `@` 누락, 비밀번호 확인 불일치, 휴대폰 자동 하이픈 정책을 추가했다. 브랜드 임직원 가입은 백엔드에서 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 자동 접수한다.
+- 알림 연동: Solapi SDK를 추가하고 회원가입 요청 시 관리자 문자, 승인 완료 시 신청자 문자를 발송한다. 문구 prefix는 `[ERP]`로 통일했다. Solapi env가 없거나 수신 번호가 없으면 발송만 skip하고 가입/승인 본 흐름은 막지 않는다.
+- 데모 정리: `/demo` 가이드 오버레이와 상세 드로어를 실제 업무 흐름에 더 가깝게 맞추고, 대시보드/모객 DB/상세/승격 단계 설명과 딤드 위치를 조정했다.
+- 배포 상태: 사용자가 dev와 실서버 배포를 명시 요청했다. 배포 결과는 이번 커밋 반영 후 최종 보고한다.
+- 신규 SQL: 이번 회원가입 승인/Solapi/데모 가이드 릴리즈에는 신규 SQL 없음.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:
   - 계약 체크 14일 경과 샘플: `contract_check_14day_seed_20260623`

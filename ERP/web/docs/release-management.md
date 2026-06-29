@@ -63,6 +63,50 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-29
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 회원가입 승인/Solapi/데모 가이드 릴리즈 커밋
+  - 주요 기능: 회원가입 화면의 입력 순서를 회사 찾기 우선으로 정리하고, 이메일 `@` 누락/비밀번호 확인 불일치/휴대폰 자동 하이픈 정책을 추가했다. 기존 회사 브랜드 임직원 가입은 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 백엔드에서 자동 접수한다. Solapi SDK로 회원가입 요청 관리자 알림과 승인 완료 신청자 알림을 추가했고, 문자 문구 prefix는 `[ERP]`로 통일했다. `/demo` 가이드는 대시보드와 모객 DB의 필터, 1차 유입 DB, 개별 상세, 승격, 가맹 희망자 단계 설명과 상세 드로어를 실제 업무 흐름에 맞게 조정했다.
+  - dev 반영: 이번 커밋 반영 예정
+  - main 반영: 이번 커밋 반영 예정
+  - 배포 URL: 배포 후 최종 보고
+  - 검증: `npx tsx --test src/lib/signup-approval-policy.test.mts`, `npx tsx --test src/lib/solapi-notifications.test.mts`, `npx tsx --test src/app/demo/demoContent.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright로 `/signup` 390px 입력 순서/검증 메시지/휴대폰 자동 포맷을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. Solapi 실문자 발송은 운영 환경변수와 관리자 수신 번호 설정이 완료된 배포 환경에서 실제 가입/승인 흐름으로 확인한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 `/demo` 접근 게이트 커밋
+  - 주요 기능: `/demo`와 `/demo/[role]` 샘플 데이터 화면을 데모 전용 ID/PW 접근 게이트로 보호했다. 실제 Supabase 로그인과 분리하고, `POST /api/demo/access`에서 httpOnly `/demo` 범위 쿠키를 발급하며 `DELETE /api/demo/access`에서 로그아웃한다. 기존 데모 API guard는 `/api/demo/access`만 예외로 허용하고 실제 ERP API 호출 차단을 유지한다. 데모 헤더에는 `데모 로그아웃` 액션을 추가했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/demo-access.test.mts src/app/api/demo/access/route.test.mts src/app/demo/demoContent.test.mts` 12건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3047`에서 `/demo`, `/demo/manager`, `/demo/partner` 로그인/오류/딥링크/로그아웃 흐름과 모바일 390px 접근 게이트 overflow 0건을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. Vercel Production, Development, Preview(dev) 환경에 `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`, `DEMO_ACCESS_COOKIE_SECRET` 등록은 완료했다. 기존 배포에는 자동 반영되지 않으므로 다음 dev/main 재배포 후 `/demo` 접근 게이트를 실서버에서 확인한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `c65bdf8 feat(franchise): refine opening readiness checklist`
+  - 주요 기능: 오픈 준비 체크리스트 1차 고도화. 기존 `franchise_opening_projects.tasks` JSON을 확장해 6단계 25개 하위 체크를 제공하고, `확인요청`, 오늘 처리, 기한 임박, 진행 이슈, 오픈 가능도 요약을 추가했다. 단계별 접힘 섹션에서 항목 설명, 필수 배지, 상태, 담당, 기한, 메모를 관리한다. 계약완료 상세의 계약 전 서류 탭/버튼 표기는 `구비서류`로 통일했다. 기존 저장 데이터는 task `id` 기준으로 병합하므로 신규 SQL은 없다.
+  - dev 반영: `e4ad21d feat(franchise): refine opening readiness checklist`
+  - main 반영: none
+  - 배포 URL: `https://naeilsajang-dev.vercel.app` (`dpl_7cvvF2ttQNnoPDu1Vdv9gEomFozX`, READY; source `https://naeilsajang-chtpaq0ki-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증 진행: `npx tsx --test src/lib/franchise-opening-projects.test.mts src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-contract-store.test.mts` 15건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 기존 dev 서버 `localhost:3000`에서 내일 회사 관리자 세션으로 계약완료 상세 `구비서류` 탭 표기와 1280px/390px overflow 0건을 확인했다. dev worktree 반영 후 같은 15건 테스트, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했다. Vercel API로 최신 dev deployment가 `e4ad21d`와 매칭되고 `READY`이며 `naeilsajang-dev.vercel.app` alias가 연결됐음을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `0e336e2 feat(franchise): add contract opening preparation tab`
+  - 주요 기능: 계약완료 점주 상세 탭을 `오픈 준비 / 구비서류 / 점주 문서함 / 가맹점 정보`로 확장했다. `오픈 준비` 탭은 기존 `franchise_opening_projects` 테이블과 `/api/franchise-opening-projects` API를 재사용하고, 프로젝트는 lead가 아니라 해당 lead에서 생성된 `franchise_locations.id`에 연결한다. 연결 가맹점이 없으면 `가맹점 정보` 탭 이동 CTA를 보여주며, `오픈준비` 상태 가맹점에서만 프로젝트 시작/저장을 허용한다. 구비서류 필수 그룹 헤더는 한 줄형으로 압축하고, 오픈 준비 화면의 별도 우측 상단 상태 배지는 제거했다. `막힘` 상태는 데이터 값으로 유지하되 화면 표기는 `진행 이슈`/`이슈`로 정리했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/components/franchise/leads/LeadOpeningProjectSection.utils.test.mts src/lib/franchise-opening-projects.test.mts src/lib/franchise-contract-store.test.mts` 13건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3081`에서 내일 회사 관리자 세션으로 계약완료 상세 `오픈 준비` 탭을 1280px/390px에서 확인했고, page-level horizontal overflow 0건, console/page error 0건이었다. 추가 QA로 탭 첫 항목 `오픈 준비`, 오픈 준비 상단 상태 배지 제거, 본문 `막힘` 문구 미노출, 체크리스트 필수 헤더 한 줄 압축을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. 실운영 세션에서 오픈 준비 프로젝트 저장 후 새로고침 persistence를 한 번 더 확인한다.
+- 2026-06-24
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `58363c9 fix(franchise): harden lead document uploads`
+  - 주요 기능: `/api/franchise-lead-documents` GET/POST/PATCH/DELETE에서 `requesterId`/`userId`/`managerId` fallback 경로를 제거하고 bearer 세션 기반 `getAuthenticatedRequesterProfile`만 사용한다. 업로드 문서 열람은 `/api/franchise-lead-documents?action=open&documentId=...` 인증 경로에서 lead/company 권한 확인 후 짧은 TTL signed URL을 발급한다. 점주 문서함 UI와 구비서류 빠른 등록/삭제는 `getApiAuthHeaders()`로 요청하고, 점주 문서함 업로드 문서는 `publicUrl` 대신 Storage `path`를 저장한다. `/api/upload`는 권한 확인 후 파일을 메모리에 읽기 전에 20MB 초과를 먼저 차단하고, MIME/확장자/매직바이트 검증, 허용 bucket/path/권한 검증을 통과한 파일만 Storage에 쓴다. 기존 매물/정보공개서 공개 URL 소비 흐름은 유지하되, 점주 문서함 업로드는 공개 URL을 반환·저장하지 않는다. 전자계약 문서함 연결은 현재 lead/company에 속한 전자계약 `sourceId`만 허용하고, UCanSign 발송 성공 후 문서함 링크 저장만 실패하면 계약 상태를 `send_failed`로 덮지 않고 응답 warning과 서버 로그로 분리한다.
+  - dev 반영: `0e4ad3f fix(franchise): harden lead document uploads`
+  - main 반영: none
+  - 배포 URL: `https://naeilsajang-dev.vercel.app` (`dpl_GkjHTqcgdaP8ARfUXBvS6An4X4yd`, READY; source `https://naeilsajang-eivq6v86h-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증: 코드품질 재리뷰에서 지적된 라우트 직접 테스트 부족과 대용량 파일 선검사 위치를 보정했다. `npx tsx --test src/app/api/franchise-lead-documents/route.test.mts src/lib/upload-file-validation.test.mts src/app/api/upload/route.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts` 25건 통과. 확장 회귀로 `npx tsx --test src/app/api/franchise-lead-documents/route.test.mts src/lib/upload-file-validation.test.mts src/app/api/upload/route.test.mts src/lib/franchise-lead-document-storage.test.mts src/lib/franchise-lead-documents.test.mts src/lib/api-auth.test.mts src/lib/franchise-lead-access.test.mts src/lib/upload-storage-access.test.mts src/lib/upload-storage-policy.test.mts src/lib/franchise-lead-contract-checklist.test.mts "src/app/(main)/contracts/electronic/_components/companyTemplateRoutes.test.mts"` 51건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. Dev worktree 반영 후 같은 51건 확장 회귀, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 재통과했다. Vercel API로 최신 dev deployment가 `0e4ad3f`와 매칭되고 `READY`임을 확인했다. 로컬 production 서버 `127.0.0.1:3079`에 Playwright auth/API mock을 주입해 `/dashboard/franchise-locations`, `/contracts/electronic`를 1280px/390px에서 smoke 확인했다. 두 화면 모두 page-level overflow 0건, console/page error 0건이며, 로컬 도메인은 Kakao JavaScript 키 제한으로 지도 타일 대신 도메인 설정 안내가 표시됐다. Dev 도메인은 Vercel SSO 보호로 외부 `curl -I -L /login`이 Vercel SSO 로그인으로 리다이렉트되는 것을 확인했다.
+  - 남은 이슈: 신규 SQL 없음. 실제 운영 세션에서 점주 문서함 signed 열람/삭제, 완료 전자계약 연결, UCanSign 발송 후 링크 warning 케이스를 live QA한다.
 - 2026-06-24
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 `/demo` 접근 게이트 커밋

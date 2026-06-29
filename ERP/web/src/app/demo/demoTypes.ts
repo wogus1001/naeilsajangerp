@@ -5,6 +5,7 @@ export type DemoScreenId =
     | 'leadDb'
     | 'contractOwners'
     | 'location'
+    | 'locationMap'
     | 'operations';
 
 export type DemoRoleCard = {
@@ -31,8 +32,47 @@ export type DemoMetric = {
 export type DemoTourStep = {
     readonly id: string;
     readonly targetId: string;
+    readonly targetSelector?: string;
+    readonly emphasisTargetIds?: readonly string[];
+    readonly emphasisTargetSelectors?: readonly string[];
     readonly title: string;
     readonly description: string;
+};
+
+export const DEMO_TOUR_STEP_ADVANCE_EVENT = 'demo-tour-step-advance' as const;
+
+export type DemoTourStepAdvanceEventDetail = {
+    readonly screen: DemoScreenId;
+    readonly fromTargetId: string;
+    readonly toTargetId: string | undefined;
+};
+
+declare global {
+    interface WindowEventMap {
+        'demo-tour-step-advance': CustomEvent<DemoTourStepAdvanceEventDetail>;
+    }
+}
+
+export type DemoGuideAction = {
+    readonly label: string;
+    readonly screen: DemoScreenId;
+};
+
+export type DemoGuideStep = {
+    readonly targetId: string;
+    readonly targetSelector?: string;
+    readonly emphasisTargetIds?: readonly string[];
+    readonly emphasisTargetSelectors?: readonly string[];
+    readonly title: string;
+    readonly description: string;
+};
+
+export type DemoScreenGuide = {
+    readonly badge: string;
+    readonly title: string;
+    readonly description: string;
+    readonly steps: readonly DemoGuideStep[];
+    readonly actions: readonly DemoGuideAction[];
 };
 
 export type DemoScenario = {

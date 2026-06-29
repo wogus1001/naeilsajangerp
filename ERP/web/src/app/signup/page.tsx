@@ -17,9 +17,27 @@ function findSameNameCompany(companies: readonly Company[], companyName: string)
     return companies.find((company) => normalizeCompanyName(company.name) === normalizedCompanyName);
 }
 
+function formatPhoneNumber(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+
+    if (digits.startsWith('02')) {
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 6) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+        return `${digits.slice(0, 2)}-${digits.slice(2, digits.length - 4)}-${digits.slice(-4)}`;
+    }
+
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+
 export default function SignupPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [emailValue, setEmailValue] = useState('');
+    const [passwordValue, setPasswordValue] = useState('');
+    const [passwordConfirmValue, setPasswordConfirmValue] = useState('');
+    const [phoneValue, setPhoneValue] = useState('');
 
     // Search Modal State
     const [showSearchModal, setShowSearchModal] = useState(false);
@@ -103,12 +121,18 @@ export default function SignupPage() {
         }
 
         if (password !== passwordConfirm) {
-            showAlert('비밀번호가 일치하지 않습니다.', 'error');
+            showAlert('비밀번호가 다릅니다.', 'error');
             setIsLoading(false);
             return;
         }
 
         // Email Validation Policy
+        if (!email.includes('@')) {
+            showAlert('이메일 주소에 @를 포함해주세요.', 'error');
+            setIsLoading(false);
+            return;
+        }
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             showAlert('이메일 형식이 올바르지 않습니다.', 'error');
@@ -275,8 +299,10 @@ export default function SignupPage() {
         : selectedCompany
             ? signupRole === 'partner_vendor'
                 ? '협력업체 계정은 소속 회사 팀장 승인 후 로그인할 수 있습니다.'
-                : '이미 등록된 회사의 추가 계정은 브랜드 임직원으로 접수되며, 소속 회사 팀장 승인 후 로그인할 수 있습니다.'
+                : '브랜드 임직원은 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 자동 접수됩니다.'
             : '회사 찾기에서 기존 회사를 선택하거나 신규 회사명을 등록해주세요.';
+    const passwordMismatch = passwordConfirmValue.length > 0 && passwordValue !== passwordConfirmValue;
+    const emailMissingAt = emailValue.length > 0 && !emailValue.includes('@');
 
     return (
         <div className={styles.container}>
@@ -290,6 +316,38 @@ export default function SignupPage() {
                 </div>
 
                 <form onSubmit={handleSignup} className={styles.form}>
+                    <div className={styles.inputGroup}>
+                        <label htmlFor="companyName" className={styles.label}>회사명</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                                type="text"
+                                id="companyName"
+                                placeholder="회사 찾기 버튼을 이용해주세요"
+                                className={styles.input}
+                                required
+                                readOnly
+                                onClick={() => setShowSearchModal(true)}
+                                style={{ flex: 1, backgroundColor: '#f8f9fa', cursor: 'pointer' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowSearchModal(true)}
+                                style={{
+                                    padding: '0 12px',
+                                    height: '42px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #ced4da',
+                                    backgroundColor: '#f8f9fa',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                회사 찾기
+                            </button>
+                        </div>
+                    </div>
+
                     <div className={styles.inputGroup}>
                         <label htmlFor="loginId" className={styles.label}>아이디</label>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -342,7 +400,14 @@ export default function SignupPage() {
                             className={styles.input}
                             required
                             autoComplete="email"
+                            value={emailValue}
+                            onChange={(event) => setEmailValue(event.target.value)}
                         />
+                        {emailMissingAt && (
+                            <p style={{ fontSize: '12px', color: '#f04452', marginTop: '4px' }}>
+                                이메일 주소에 @를 포함해주세요.
+                            </p>
+                        )}
                     </div>
 
                     <div className={styles.inputGroup}>
@@ -353,6 +418,8 @@ export default function SignupPage() {
                             placeholder="비밀번호 (6자 이상)"
                             className={styles.input}
                             required
+                            value={passwordValue}
+                            onChange={(event) => setPasswordValue(event.target.value)}
                         />
                     </div>
 
@@ -364,7 +431,14 @@ export default function SignupPage() {
                             placeholder="비밀번호를 한 번 더 입력하세요"
                             className={styles.input}
                             required
+                            value={passwordConfirmValue}
+                            onChange={(event) => setPasswordConfirmValue(event.target.value)}
                         />
+                        {passwordMismatch && (
+                            <p style={{ fontSize: '12px', color: '#f04452', marginTop: '4px' }}>
+                                비밀번호가 다릅니다.
+                            </p>
+                        )}
                     </div>
 
                     <div className={styles.inputGroup}>
@@ -388,39 +462,9 @@ export default function SignupPage() {
                             required
                             inputMode="numeric"
                             autoComplete="tel"
+                            value={phoneValue}
+                            onChange={(event) => setPhoneValue(formatPhoneNumber(event.target.value))}
                         />
-                    </div>
-
-                    <div className={styles.inputGroup}>
-                        <label htmlFor="companyName" className={styles.label}>회사명</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                                type="text"
-                                id="companyName"
-                                placeholder="회사 찾기 버튼을 이용해주세요"
-                                className={styles.input}
-                                required
-                                readOnly
-                                onClick={() => setShowSearchModal(true)}
-                                style={{ flex: 1, backgroundColor: '#f8f9fa', cursor: 'pointer' }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowSearchModal(true)}
-                                style={{
-                                    padding: '0 12px',
-                                    height: '42px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #ced4da',
-                                    backgroundColor: '#f8f9fa',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                회사 찾기
-                            </button>
-                        </div>
                     </div>
 
                     {selectedCompany && !isNewCompanyRequest && (

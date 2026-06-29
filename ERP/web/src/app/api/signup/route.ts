@@ -5,6 +5,7 @@ import {
     type SignupApprovalStatus
 } from '@/lib/signup-approval-policy';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
+import { notifyAdminsOfSignupRequest } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 function normalizePhone(value: unknown): string {
@@ -43,7 +44,11 @@ export async function POST(request: Request) {
         }
 
         if (password !== passwordConfirm) {
-            return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 400 });
+            return NextResponse.json({ error: '비밀번호가 다릅니다.' }, { status: 400 });
+        }
+
+        if (!email.includes('@')) {
+            return NextResponse.json({ error: '이메일 주소에 @를 포함해주세요.' }, { status: 400 });
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -185,6 +190,7 @@ export async function POST(request: Request) {
 
         const approvalPolicy = resolveSignupApprovalPolicy({
             companyExists: !isNewCompany,
+            companyHasManager: Boolean(existingCompany?.manager_id),
             requestedRole
         });
 
@@ -247,6 +253,19 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'SQL 등록 필요: supabase_login_id_migration.sql 적용 후 다시 가입해주세요.' }, { status: 500 });
             }
             return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+        }
+
+        try {
+            await notifyAdminsOfSignupRequest({
+                companyName: trimmedCompanyName,
+                name,
+                phone: phoneNormalized
+            });
+        } catch (error) {
+            console.error(
+                'Signup admin SMS notification failed:',
+                error instanceof Error ? error.message : String(error)
+            );
         }
 
         return NextResponse.json({

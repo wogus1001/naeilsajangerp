@@ -22,7 +22,6 @@ type OperationsCounts = {
     readonly activeCount: number;
     readonly openingCount: number;
     readonly pausedCount: number;
-    readonly addressedCount: number;
 };
 
 export function useFranchiseOperationsController() {
@@ -68,8 +67,7 @@ export function useFranchiseOperationsController() {
     const counts: OperationsCounts = {
         activeCount: operationalLocations.filter(location => location.status === '운영중').length,
         openingCount: operationalLocations.filter(location => location.status === '오픈준비').length,
-        pausedCount: operationalLocations.filter(location => location.status === '휴점').length,
-        addressedCount: operationalLocations.filter(location => location.address.trim()).length
+        pausedCount: operationalLocations.filter(location => location.status === '휴점').length
     };
 
     const resetLocationForm = () => setLocationForm(EMPTY_LOCATION_FORM);

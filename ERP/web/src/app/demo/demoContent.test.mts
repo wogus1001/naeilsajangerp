@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DEMO_BLOCKED_REQUEST_PREFIX } from './_components/DemoApiGuard';
-import { DEMO_ROLES, DEMO_SCENARIOS, DEMO_SIMULATION_ACTIONS } from './demoContent';
+import { DEMO_ROLES, DEMO_SCENARIOS, DEMO_SCREEN_GUIDES, DEMO_SIMULATION_ACTIONS } from './demoContent';
 
 test('Given public demo roles When checking links Then every role has a matching scenario', () => {
     for (const role of DEMO_ROLES) {
@@ -16,6 +16,20 @@ test('Given demo tour steps When checking ids Then step ids and target ids are u
         assert.ok(scenario.tourSteps.length <= 5);
         assert.equal(new Set(scenario.tourSteps.map(step => step.id)).size, scenario.tourSteps.length);
         assert.equal(scenario.tourSteps.every(step => step.targetId.length > 0), true);
+    }
+});
+
+test('Given demo navigation When checking guides Then every screen has guide content', () => {
+    for (const scenario of Object.values(DEMO_SCENARIOS)) {
+        for (const item of scenario.navItems) {
+            const guide = DEMO_SCREEN_GUIDES[item.id];
+            assert.ok(guide);
+            assert.ok(guide.steps.length >= 3);
+            assert.ok(guide.steps.every(step => step.targetSelector === undefined || step.targetSelector.length > 0));
+            assert.ok(guide.steps.every(step => step.emphasisTargetIds === undefined || step.emphasisTargetIds.every(targetId => targetId.length > 0)));
+            assert.ok(guide.steps.every(step => step.emphasisTargetSelectors === undefined || step.emphasisTargetSelectors.every(selector => selector.length > 0)));
+            assert.ok(guide.actions.length >= 1);
+        }
     }
 });
 
