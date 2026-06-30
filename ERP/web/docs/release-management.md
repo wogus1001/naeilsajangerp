@@ -150,6 +150,15 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 개인정보 저장/진행현황 작성자 핫픽스 커밋 예정
+  - 주요 기능: 실서버 개인정보 수정에서 저장 후 `사용자 정보를 다시 불러오지 못했습니다.`가 표시되던 문제를 수정한다. 최종 프로필 재조회 쿼리가 `company:companies(...)` 암묵 관계 대신 `company:companies!company_id(...)`를 사용하도록 보강하고, 프로필 업데이트 오류를 무시하지 않게 했다. 진행현황 입점 요청 행에는 회사명 옆 작성자 표시를 추가했다.
+  - dev 반영: none
+  - main 반영: 실서버 장애 대응으로 운영 배포 예정
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/app/api/franchise-work-intake/route.test.mts src/app/api/user/update/route.test.mts src/lib/profile-contact.test.mts src/lib/user-role-policy.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3106`에서 Playwright auth/API mock으로 `/profile` 저장 요청과 성공 모달, `/dashboard/franchise-leads/work-intake` 작성자 표시, console/page error 0건, 1440px body overflow 0건을 확인했다.
+  - 남은 이슈: 이번 핫픽스의 신규 SQL은 없다. 실제 미래 회사 계정 저장 persistence는 운영 배포 후 실계정에서 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 직원 관리/개인정보 수정 보강 커밋 예정
   - 주요 기능: 기존 회사 브랜드 임직원 가입자가 `sub_manager`(매니저)로 접수되는 정책과 직원 관리 화면/API 분류를 맞췄다. `sub_manager`와 `staff`를 회사 직원 그룹으로 함께 표시하고, 승인 대기와 팀장 승격 대상에도 매니저를 포함한다. 개인정보 수정 화면은 등록 이메일/휴대폰 수정이 가능하며, 회사 로고 등록/삭제는 팀장(`manager`)에게만 노출 및 허용한다.
   - dev 반영: none
