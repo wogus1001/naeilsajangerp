@@ -32,6 +32,7 @@
 - 검증: `npx tsx --test src/app/api/user/update/route.test.mts src/lib/profile-contact.test.mts src/lib/user-role-policy.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 추가 단위 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/app/api/franchise-work-intake/route.test.mts src/app/api/user/update/route.test.mts`를 통과했다.
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3106`에서 Playwright auth/API mock으로 `/profile`을 열고 이메일 `manager-updated@mirae.test`, 휴대폰 `010-9999-8888` 저장 요청과 성공 모달 `회원정보가 수정되었습니다.`를 확인했다. 같은 세션에서 `/dashboard/franchise-leads/work-intake`를 열고 입점 요청 행의 `미래 / 작성자 김팀장 / 공실` 표시를 확인했다. console/page error 0건, 1440px body overflow 0건이었다.
+- 운영 배포 확인: `naeilsajang` production 배포가 Ready 상태이고 `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias가 연결된 것을 `vercel inspect`로 확인했다. `https://www.fcerp.co.kr/login`은 HTTP 200, apex 도메인 `/login`은 `www`로 308 redirect 후 HTTP 200을 반환했다.
 - 이번 개인정보 저장 핫픽스 범위의 신규 SQL은 없다.
 - 직원 관리에서 기존 회사 브랜드 임직원 가입자가 `sub_manager`(매니저)로 접수되는 정책과 화면 분류가 어긋나 직원 목록/승인 대기에서 누락될 수 있던 문제를 수정했다. `sub_manager`와 `staff`를 회사 직원 그룹으로 함께 표시하고, 팀장 승인/팀장 승격 대상에도 매니저를 포함했다.
 - 개인정보 수정 화면에 등록 이메일과 휴대폰 번호 입력을 추가했다. 저장 API는 본인 인증 세션 기준으로만 수정되며, 이메일 변경 시 Supabase Auth 이메일과 `profiles.email`을 함께 갱신하고 휴대폰은 `profiles.phone`, `profiles.phone_normalized`에 저장한다. 회사 로고 등록/삭제 UI와 API는 팀장(`manager`)만 사용할 수 있도록 제한했다.
