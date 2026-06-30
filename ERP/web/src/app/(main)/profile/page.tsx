@@ -5,6 +5,13 @@ import styles from './page.module.css';
 import { Save } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import {
+    formatProfilePhoneInput,
+    isValidProfileEmail,
+    isValidProfilePhone,
+    normalizeProfileEmail
+} from '@/lib/profile-contact';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { BasicInfoSection } from './components/BasicInfoSection';
 import { PasswordSection } from './components/PasswordSection';
 import { WithdrawalSection } from './components/WithdrawalSection';
@@ -15,6 +22,8 @@ export default function ProfilePage() {
     const [formData, setFormData] = useState({
         id: '',
         name: '',
+        email: '',
+        phone: '',
         companyName: '',
         oldPassword: '',
         newPassword: '',
@@ -70,6 +79,8 @@ export default function ProfilePage() {
                 ...prev,
                 id: parsed.id || '',
                 name: parsed.name || '',
+                email: parsed.email || '',
+                phone: formatProfilePhoneInput(parsed.phone || ''),
                 companyName: parsed.companyName || ''
             }));
             setIsIdChecked(true); // Initial ID is valid
@@ -78,7 +89,8 @@ export default function ProfilePage() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const nextValue = name === 'phone' ? formatProfilePhoneInput(value) : value;
+        setFormData(prev => ({ ...prev, [name]: nextValue }));
 
         if (name === 'id') {
             if (value !== user?.id) {
@@ -131,6 +143,17 @@ export default function ProfilePage() {
             return;
         }
 
+        const normalizedEmail = normalizeProfileEmail(formData.email);
+        if (!isValidProfileEmail(normalizedEmail)) {
+            showAlert('이메일 형식을 확인해주세요.', 'error');
+            return;
+        }
+
+        if (!isValidProfilePhone(formData.phone)) {
+            showAlert('휴대폰 번호를 정확히 입력해주세요.', 'error');
+            return;
+        }
+
         // Validation for password change
         if (formData.newPassword) {
             if (!formData.oldPassword) {
@@ -147,12 +170,14 @@ export default function ProfilePage() {
         try {
             const res = await fetch('/api/user/update', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     targetUuid: user.uid, // Explicitly target by UUID
                     currentId: user.id,
                     newId: formData.id !== user.id ? formData.id : undefined,
                     name: formData.name,
+                    email: normalizedEmail,
+                    phone: formData.phone,
                     companyName: formData.companyName,
                     oldPassword: formData.newPassword ? formData.oldPassword : undefined,
                     newPassword: formData.newPassword || undefined

@@ -1,9 +1,10 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { isBrandStaffUserRole } from '@/lib/user-role-policy';
 import { NextResponse } from 'next/server';
 
 type StaffAction = 'approve' | 'promote' | 'demote';
-const APPROVABLE_ROLES = new Set(['staff', 'partner_vendor']);
+const APPROVABLE_ROLES = new Set(['sub_manager', 'staff', 'partner_vendor']);
 
 type ProfileRow = {
     readonly id: string;
@@ -145,8 +146,8 @@ export async function PUT(request: Request) {
         }
 
         if (action === 'promote') {
-            if (targetUser.role !== 'staff' || targetUser.status !== 'active') {
-                return NextResponse.json({ error: '활성 직원만 팀장으로 승격할 수 있습니다.' }, { status: 400 });
+            if (!isBrandStaffUserRole(targetUser.role) || targetUser.status !== 'active') {
+                return NextResponse.json({ error: '활성 직원 또는 매니저만 팀장으로 승격할 수 있습니다.' }, { status: 400 });
             }
             if ((managerCount || 0) >= 2) {
                 return NextResponse.json({ error: '팀장은 최대 2명까지만 지정할 수 있습니다.' }, { status: 400 });

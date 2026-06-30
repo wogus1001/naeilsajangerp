@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { canAccessCompanyScope, getRequesterProfile } from '@/lib/api-auth';
+import { canAccessCompanyScope, getRequesterProfile, type RequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
     buildCompanyLogoStoragePath,
@@ -53,6 +53,10 @@ type CompanyLogoView = {
     readonly maxFileSizeBytes: number;
     readonly allowedMimeTypes: readonly string[];
 };
+
+function canManageCompanyLogo(requester: RequesterProfile): boolean {
+    return requester.role === 'manager';
+}
 
 function toLogoView(row: CompanyBasicRow, logo: CompanyLogoFields): CompanyLogoView {
     return {
@@ -152,6 +156,7 @@ export async function POST(request: Request) {
         const fileValue = formData.get('file');
         const targetCompanyId = normalizeCompanyLogoCompanyId(formData.get('companyId')) || requester.company_id;
         if (!targetCompanyId) return fail(400, 'VALIDATION_ERROR', '회사 정보가 필요합니다.');
+        if (!canManageCompanyLogo(requester)) return fail(403, 'FORBIDDEN', '회사 로고는 팀장만 수정할 수 있습니다.');
         if (!canAccessCompanyScope(requester, targetCompanyId)) return fail(403, 'FORBIDDEN', '회사 로고를 수정할 권한이 없습니다.');
         if (!(fileValue instanceof File)) return fail(400, 'VALIDATION_ERROR', '로고 파일이 필요합니다.');
 
@@ -245,6 +250,7 @@ export async function DELETE(request: Request) {
         const { searchParams } = new URL(request.url);
         const targetCompanyId = normalizeCompanyLogoCompanyId(searchParams.get('companyId')) || requester.company_id;
         if (!targetCompanyId) return fail(400, 'VALIDATION_ERROR', '회사 정보가 필요합니다.');
+        if (!canManageCompanyLogo(requester)) return fail(403, 'FORBIDDEN', '회사 로고는 팀장만 삭제할 수 있습니다.');
         if (!canAccessCompanyScope(requester, targetCompanyId)) return fail(403, 'FORBIDDEN', '회사 로고를 삭제할 권한이 없습니다.');
 
         const { data: currentCompany, error: currentError } = await fetchCompanyLogoView(supabaseAdmin, targetCompanyId);

@@ -7,6 +7,7 @@ export type LoginUser = {
     readonly companyId?: string | null;
     readonly companyLogoUrl?: string;
     readonly email?: string | null;
+    readonly phone?: string | null;
     readonly status?: string;
 };
 

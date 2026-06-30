@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { UserCheck, Shield, Users as UsersIcon, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { getUserRoleLabel } from '@/lib/user-role-policy';
+import { getUserRoleLabel, isBrandStaffUserRole } from '@/lib/user-role-policy';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser, type StoredUser } from '@/utils/userUtils';
 
@@ -157,9 +157,9 @@ export default function StaffManagementPage() {
     if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
     if (!user) return <div style={{ padding: 40 }}>로그인 정보를 확인할 수 없습니다.</div>;
 
-    const pendingStaff = staffList.filter(u => u.status === 'pending_approval' && (u.role === 'staff' || u.role === 'partner_vendor'));
+    const pendingStaff = staffList.filter(u => u.status === 'pending_approval' && (isBrandStaffUserRole(u.role) || u.role === 'partner_vendor'));
     const managers = staffList.filter(u => u.role === 'manager' && u.status === 'active');
-    const activeStaff = staffList.filter(u => u.role === 'staff' && u.status === 'active');
+    const activeStaff = staffList.filter(u => isBrandStaffUserRole(u.role) && u.status === 'active');
     const activePartners = staffList.filter(u => u.role === 'partner_vendor' && u.status === 'active');
 
     return (
@@ -260,6 +260,9 @@ export default function StaffManagementPage() {
                                             <div style={{ fontWeight: 'bold' }}>
                                                 {staff.name}
                                                 {(staff.id === user.uid || staff.id === user.id || staff.email === user.email) && <span style={{ fontSize: '11px', color: '#228be6', marginLeft: '6px' }}>(나)</span>}
+                                                <span style={{ marginLeft: '8px', color: '#1971c2', fontSize: '12px', fontWeight: 700 }}>
+                                                    {getUserRoleLabel(staff.role)}
+                                                </span>
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#868e96' }}>{staff.email || staff.id}</div>
                                         </div>

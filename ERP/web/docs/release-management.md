@@ -150,6 +150,15 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 직원 관리/개인정보 수정 보강 커밋 예정
+  - 주요 기능: 기존 회사 브랜드 임직원 가입자가 `sub_manager`(매니저)로 접수되는 정책과 직원 관리 화면/API 분류를 맞췄다. `sub_manager`와 `staff`를 회사 직원 그룹으로 함께 표시하고, 승인 대기와 팀장 승격 대상에도 매니저를 포함한다. 개인정보 수정 화면은 등록 이메일/휴대폰 수정이 가능하며, 회사 로고 등록/삭제는 팀장(`manager`)에게만 노출 및 허용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 이번 커밋 반영 예정
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/user-role-policy.test.mts src/lib/profile-contact.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3105`에서 Playwright auth/API mock으로 `/company/staff`와 `/profile`을 확인했고, 직원 `sub_manager`/`staff` 표시, 승인 대기 `sub_manager` 표시, 팀장 전용 로고 버튼, 매니저 로고 버튼 숨김, console/page error 0건을 확인했다.
+  - 남은 이슈: 이번 범위의 신규 SQL은 없다. 로컬 `.env.local` 연결 데이터에는 `미래` 회사가 없어 운영 실데이터 직접 조회는 하지 못했으며, 운영 배포 후 `미래` 회사 팀장 실계정으로 목록 표시를 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 점포개발 미팅 도구 코드리뷰 보강 커밋 예정
   - 주요 기능: 출점 검토 리포트 회사 공용 프리셋 API를 보강했다. 빈 `meetingTool` 저장을 차단하고, UUID 검증, 프리셋 테이블 미적용 424 안내, 교차 회사 삭제 404 응답, `reportMemo` 제외 저장 테스트를 추가했다. UI는 후보지/회사 전환 시 이전 프리셋 목록을 비우고, 삭제 확인창과 비율 순차 소수 입력 유지를 보강했다.
   - dev 반영: none

@@ -12,6 +12,7 @@ type LoginProfileRow = {
     name: string | null;
     role: string | null;
     status: string | null;
+    phone: string | null;
     company_id: string | null;
     company: { name: string | null; logo_url?: string | null } | null;
 };
@@ -86,11 +87,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '아이디 또는 비밀번호가 일치하지 않습니다.' }, { status: 401 });
         }
 
-        const profileResult = await supabaseAdmin
+        let profileResult = await supabaseAdmin
             .from('profiles')
-            .select('id, email, name, role, status, company_id, company:companies!company_id(name, logo_url)')
+            .select('id, email, name, role, status, phone, company_id, company:companies!company_id(name, logo_url)')
             .eq('id', signInData.user.id)
             .single<LoginProfileRow>();
+
+        if (profileResult.error) {
+            const fallbackProfileResult = await supabaseAdmin
+                .from('profiles')
+                .select('id, email, name, role, status, company_id, company:companies!company_id(name, logo_url)')
+                .eq('id', signInData.user.id)
+                .single<Omit<LoginProfileRow, 'phone'>>();
+            profileResult = fallbackProfileResult.data
+                ? { data: { ...fallbackProfileResult.data, phone: null }, error: null, count: null, status: 200, statusText: 'OK' }
+                : { ...fallbackProfileResult, data: null };
+        }
 
         const { data: profile, error: profileError } = profileResult;
         if (profileError || !profile) {
@@ -117,6 +129,7 @@ export async function POST(request: Request) {
             companyLogoUrl: company?.logo_url || '',
             status: profile.status,
             email: signInData.user.email || profile.email,
+            phone: profile.phone || '',
             uid: signInData.user.id,
             companyId: profile.company_id
         };
