@@ -70,18 +70,45 @@ export function BasicInfoSection({
                 </div>
 
                 <div className={styles.inputGroup}>
-                    <label>회사 로고</label>
-                    <CompanyLogoManager
-                        companyId={user.companyId || ''}
-                        companyName={formData.companyName || user.companyName || '회사'}
-                        logoUrl={user.companyLogoUrl || null}
-                        onChanged={(logoUrl) => {
-                            const updatedUser = { ...user, companyLogoUrl: logoUrl || '' };
-                            localStorage.setItem('user', JSON.stringify(updatedUser));
-                            onUserChangedAction(updatedUser);
-                        }}
+                    <label>이메일</label>
+                    <input
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={onChangeAction}
+                        placeholder="이메일"
+                        autoComplete="email"
                     />
                 </div>
+
+                <div className={styles.inputGroup}>
+                    <label>휴대폰 번호</label>
+                    <input
+                        name="phone"
+                        type="tel"
+                        inputMode="tel"
+                        value={formData.phone}
+                        onChange={onChangeAction}
+                        placeholder="010-1234-5678"
+                        autoComplete="tel"
+                    />
+                </div>
+
+                {user.role === 'manager' && (
+                    <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
+                        <label>회사 로고</label>
+                        <CompanyLogoManager
+                            companyId={user.companyId || ''}
+                            companyName={formData.companyName || user.companyName || '회사'}
+                            logoUrl={user.companyLogoUrl || null}
+                            onChanged={(logoUrl) => {
+                                const updatedUser = { ...user, companyLogoUrl: logoUrl || '' };
+                                localStorage.setItem('user', JSON.stringify(updatedUser));
+                                onUserChangedAction(updatedUser);
+                            }}
+                        />
+                    </div>
+                )}
 
                 <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
                     <label>직급</label>
