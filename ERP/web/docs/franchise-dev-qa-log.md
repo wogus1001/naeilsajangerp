@@ -139,7 +139,7 @@
 - 2026-06-11 테이블의 핵심 고객 표현은 `중요`로 정리했다. 별표 토글은 `franchise_leads.grade`를 `HOT`/`WARM`으로 전환하며, 기존 `핵심` 값은 데이터 호환용 normalize만 유지하고 화면 문구에서는 노출하지 않는다.
 - 2026-06-15 모객 DB/상세 화면 초기 출시 정리를 진행했다. 일반 가맹 희망자 목록에서 계약 전 체크 컬럼과 신규 고객 DB 연결 UI를 숨기고, 계약 관련 확인은 `계약 점주` 워크스페이스에 집중시켰다. 대시보드 연락 KPI는 제거하고, 연락 실무 처리는 `연락 관리` 탭으로 분리했다.
 - 2026-06-15 후보자 상세 상담 이력은 기본 축약 상태로 두고, 수정/삭제/펼치기 기능을 추가했다. 업무관리 안에 다음 연락 입력과 `오늘 오후`/`내일 오전`/`3일 후`/`1주 후` 프리셋을 넣어 담당자가 후속 연락일을 입력하지 않는 문제를 줄이도록 했다.
-- 2026-06-15 `/landing` 공개 랜딩 페이지를 추가하고 기능 섹션을 고도화했다. 구글시트 대비 ERP 전환 메시지, 모객 파이프라인/유입 경로/DB 유입 추이/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 반영했다. 사용자의 피드백에 따라 CTA 버튼과 하단 도입 문의 카드는 제거하고, 랜딩 상단 브랜드는 `Franchise OS`로 정리했다.
+- 2026-06-15 `/landing` 공개 랜딩 페이지를 추가하고 기능 섹션을 고도화했다. 구글시트 대비 ERP 전환 메시지, 모객 파이프라인/유입 경로/DB 유입 추이/담당자별 모객 그래프 목업, Meta Lead Ads 향후 연동 메시지를 반영했다. 사용자의 피드백에 따라 CTA 버튼과 하단 도입 문의 카드는 제거했다.
 - 2026-06-15 랜딩 메시지 보강: 히어로, 제품 프리뷰, 운영 지표, 모객 DB 기능 설명에 `문의접수 -> 상담중 -> 입지검토 -> 계약예정` 상태별 파이프라인으로 모객 병목과 다음 액션을 한눈에 추적한다는 내용을 추가했다.
 - 2026-06-15 관리자 회사별 메뉴 on/off와 슈퍼어드민 회사 조회 스코프를 추가했다. `/admin`은 회사별 메뉴 기능을 관리하고, 헤더 `조회 회사` 선택은 대시보드/모객 DB/출점 후보지/브랜드 모니터링/가맹 운영/고객/명함/점포/직원 화면의 회사 범위를 바꾼다.
 - 2026-06-15 회사 메뉴 설정 저장용 `supabase_company_menu_features_migration.sql`, `/api/admin/company-access`, `/api/company-menu-features`, 전역 사이드바 메뉴 설정/비활성 안내 컴포넌트를 추가했다. SQL 미적용 환경에서는 메뉴를 기본 ON으로 두고 관리자 저장 API가 migration 필요 상태를 반환한다.
@@ -165,7 +165,7 @@
 - 2026-06-15 좌측 사이드바 회사명 표시 QA 통과: Playwright에서 `/dashboard` 인증 응답과 관리자 `조회 회사` 스코프를 모킹했을 때 좌측 상단이 `민티아 (DEV)`로 표시되고 하드코딩된 `내일사장` 문구가 남지 않는 것을 확인했다.
 - 2026-06-15 모객 DB/랜딩 정리 검증 통과: `npx tsx --test src/lib/franchise-lead-workflow.test.mts src/components/franchise/leads/leadTableConfig.test.mts src/components/franchise/leads/leadActivityLog.test.mts src/components/franchise/leads/leadWorkspaceState.test.mts` 결과 22건 통과.
 - 2026-06-15 최종 정적 검증 통과: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, 변경 TypeScript 20개 파일 no-excuse 규칙 검사, `npm run build` 통과. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
-- 2026-06-15 브라우저 QA 통과: 로컬 `http://localhost:3000/landing`은 로그인 없이 열리고, 1440px에서 `scrollWidth=clientWidth=1425`, 390px에서 `scrollWidth=clientWidth=375`, overflow element 0건을 확인했다. 랜딩에서 `Franchise OS`, 구글시트 비교 메시지, `Meta Lead Ads 유입 연동`, `Meta 광고` 문구는 보이고 `데모 문의`, `로그인`, `내일사장` 문구는 노출되지 않았다.
+- 2026-06-15 브라우저 QA 통과: 로컬 `http://localhost:3000/landing`은 로그인 없이 열리고, 1440px에서 `scrollWidth=clientWidth=1425`, 390px에서 `scrollWidth=clientWidth=375`, overflow element 0건을 확인했다. 랜딩에서 공개 서비스명, 구글시트 비교 메시지, `Meta Lead Ads 유입 연동`, `Meta 광고` 문구는 보이고 `데모 문의`, `로그인`, `내일사장` 문구는 노출되지 않았다.
 - 2026-06-15 랜딩 개발 진행중 배지 정적 검증 통과: `git diff --check`, `npm run lint -- --quiet`, `npx tsc --noEmit --pretty false`, `npm run build`를 통과했다. build는 기존 `baseline-browser-mapping`, workspace root, Browserslist 경고만 출력했다.
 - 2026-06-15 랜딩 개발 진행중 배지 QA 통과: 로컬 `http://localhost:3000/landing` 1440px/390px에서 `개발 진행중` 배지 2개가 노출되고, 각각 `정보공개서/계약`, `가맹 운영` 카드에 연결됨을 확인했다. 390px 기준 page overflow 0, overflow element 0건을 확인했다.
 - 2026-06-15 기존 루트 동선 확인: `http://localhost:3000/` 접근 시 `http://localhost:3000/login`으로 이동하고 로그인 화면 문구가 표시됐다.
@@ -334,8 +334,8 @@
 
 ## 2026-06-16 Google OAuth 개인정보처리방침 페이지 QA
 
-- 공개 개인정보처리방침 페이지를 `/privacy`에 추가했다. Google Cloud OAuth 동의 화면의 개인정보처리방침 URL에는 실서버 기준 `https://naeilsajang.vercel.app/privacy`를 사용한다.
-- Google Cloud 홈페이지 URL에는 실서버 기준 `https://naeilsajang.vercel.app/landing`을 사용한다. 랜딩 푸터에서 `/privacy`로 이동하는 개인정보처리방침 링크를 제공한다.
+- 공개 개인정보처리방침 페이지를 `/privacy`에 추가했다. Google Cloud OAuth 동의 화면의 개인정보처리방침 URL에는 실서버 기준 `https://www.fcerp.co.kr/privacy`를 사용한다.
+- Google Cloud 홈페이지 URL에는 실서버 기준 `https://www.fcerp.co.kr/landing`을 사용한다. 랜딩 푸터에서 `/privacy`로 이동하는 개인정보처리방침 링크를 제공한다.
 - 본문에는 `gmail.send` 최소 범위 사용, Gmail 수신함 미조회, 토큰 암호화 저장, 정보공개서 이메일 발송과 발송 기록 외 목적 미사용을 명시했다.
 - Google 공식 민감 범위 검증 문서 기준으로, 공개 개인정보처리방침과 별도로 비공개 YouTube 데모 영상 링크를 준비해야 한다. 영상에는 OAuth 동의 화면, 앱 이름, client ID가 보이는 주소창, Gmail 발송 기능 사용 장면을 포함한다.
 - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
@@ -550,7 +550,7 @@
 - 남은 UI 정리: `권리금 전자계약` 메뉴명을 `전자계약`으로 바꾸고 프랜차이즈 하위 메뉴 하단에 배치한다. 개인정보 수정 화면의 개인 UCanSign 서비스 연동 영역은 삭제한다.
 - 남은 UCanSign 검토: `내용 확인 후 서명`과 `서명취소`는 UCanSign API/문서별 URL 지원 여부 확인이 필요하다. 지원되면 ERP 문서함 액션으로 연결하고, 취소는 ERP 상태와 webhook idempotency까지 검증한다.
 - 남은 어드민 작업: 회사별 전자계약 사용량 집계와 사용자별 `login_id` 노출을 추가한다. 우선 기존 테이블 조회 기반으로 구현하고, 별도 집계 테이블이 필요하면 SQL 작성 후 사용자가 직접 등록한다.
-- 운영 설정 체크: production UCanSign은 `UCANSIGN_API_KEY`, webhook secret, UCanSign 개발자센터 webhook URL `https://naeilsajang.vercel.app/api/electronic-contracts/webhooks/ucansign` 등록 상태를 확인해야 한다.
+- 운영 설정 체크: production UCanSign은 `UCANSIGN_API_KEY`, webhook secret, UCanSign 개발자센터 webhook URL `https://www.fcerp.co.kr/api/electronic-contracts/webhooks/ucansign?secret=...` 등록 상태를 확인해야 한다.
 - 다음 QA 포인트: 메뉴 위치, 개인정보 수정 화면 노출 여부, 어드민 사용량/아이디 표, 문서함 상태 동기화, webhook 수신 후 완료 상태 반영, 권한별 문서 조회 범위를 확인한다.
 
 ## 2026-06-23 전자계약/어드민 후속 구현 QA
@@ -709,24 +709,31 @@
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3047`에서 임시 데모 env를 주입해 `/demo`, `/demo/manager`, `/demo/partner`를 확인했다. 로그인 전 접근 게이트, 잘못된 비밀번호 오류, 정상 로그인, 딥링크 유지, 로그아웃 후 로그인 화면 복귀, 모바일 390px 로그인 화면 horizontal overflow 0건을 확인했다.
 - 신규 SQL은 없다.
 
-## 2026-06-24 /demo 전용 접근 게이트 QA
-
-- `/demo`와 `/demo/[role]` 샘플 데이터 화면에 Supabase 로그인과 분리된 데모 전용 접근 게이트를 추가했다. `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`, `DEMO_ACCESS_COOKIE_SECRET`가 모두 설정되어야 진입할 수 있고, 환경변수가 없으면 fail-closed 상태로 `데모 접근 설정이 필요합니다.`를 표시한다.
-- `POST /api/demo/access`는 ID/PW 검증 후 8시간짜리 httpOnly `demo_access` 쿠키를 `/demo` 경로로 발급한다. `DELETE /api/demo/access`는 같은 쿠키를 삭제한다. 쿠키는 `sameSite=lax`, production에서 `secure`로 설정된다.
-- 기존 데모 API guard는 유지하되 `/api/demo/access`만 허용했다. 데모 화면 내부의 실제 ERP `/api/**` 호출 차단 정책은 그대로 유지한다.
-- 데모 헤더에 `데모 로그아웃` 액션을 추가했다. 모바일에서도 로그아웃 버튼은 노출하고, 설명 다시 보기와 샘플 배지는 작은 화면에서 숨긴다.
-- `ERP/web/README.md`에 데모 접근 환경변수와 운영 주의사항을 추가했다.
-- 검증: `npx tsx --test src/lib/demo-access.test.mts src/app/api/demo/access/route.test.mts src/app/demo/demoContent.test.mts` 12건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했고 `/demo`, `/demo/[role]`는 dynamic route로 확인했다.
-- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3047`에서 임시 데모 env를 주입해 `/demo`, `/demo/manager`, `/demo/partner`를 확인했다. 로그인 전 접근 게이트, 잘못된 비밀번호 오류, 정상 로그인, 딥링크 유지, 로그아웃 후 로그인 화면 복귀, 모바일 390px 로그인 화면 horizontal overflow 0건을 확인했다.
-- 신규 SQL은 없다.
-
 ## 2026-06-26 회사 검색/메뉴 설정 핫픽스 QA
 
 - 회사 검색 API의 후처리 매칭이 대소문자를 구분해 `Platinum Partners`가 소문자 `p` 검색에서 누락될 수 있던 문제를 수정했다. 회사명과 검색어를 NFC, 공백 제거, lowercase 기준으로 정규화한 뒤 비교한다.
 - 회사 검색 후보 수집 상한을 10건에서 30건으로 늘리고, 한 글자 검색에서도 fallback 후보 수집이 동작하게 보정했다.
 - `company_menu_features`에 선택 메뉴 행만 들어간 신규 회사가 나머지 메뉴까지 모두 켜져 보이는 문제를 수정했다. 유효한 메뉴 설정 행이 하나라도 있으면 누락 메뉴는 OFF, 설정 행이 전혀 없는 기존 회사는 기존 전체 ON fallback을 유지한다.
 - 검증: 작업 브랜치와 main release worktree에서 `npx tsx --test src/lib/company-search.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
-- 실서버 확인: `https://naeilsajang.vercel.app/api/companies/search?query=p` 응답에 `Platinum Partners`가 포함되고, `query=platinumpartners`는 `Platinum Partners` 1건을 반환했다.
+- 실서버 확인: 기존 운영 도메인 기준 회사 검색 API에서 `query=p` 응답에 `Platinum Partners`가 포함되고, `query=platinumpartners`는 `Platinum Partners` 1건을 반환했다.
+
+## 2026-06-29 점포개발 미팅 도구 1차 QA
+
+- `/dashboard/franchise-leads/market-insights`의 출점 후보지 목록 액션에 `리포트` 버튼을 추가했다. 후보지별 `출점 검토 리포트` 다이얼로그에서 목표매출과 재료비/인건비/월세·관리비/로열티/기타비용 금액·비율을 입력하고 세전수익/세전 수익률을 즉시 계산한다.
+- 후보지별 리포트는 신규 테이블 없이 기존 `franchise_locations.data.meetingTool`에 저장한다. 저장 API는 `/api/franchise-locations/meeting-tool` PATCH로 분리해 기존 후보지 수정 API와 충돌하지 않게 했다. 신규 SQL은 없다.
+- PDF 저장과 인쇄는 브라우저 인쇄 화면을 사용한다. 보고서에는 후보지 요약, 수익분석표, 보고 메모, 내부 검토용 면책 문구가 포함된다.
+- 순수 계산 유틸 `franchise-location-meeting-tool`을 추가해 목표매출 변경 시 비율 재계산, 비율 입력 시 금액 역산, 월세·관리비 기본값 보강을 테스트로 고정했다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 4건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3098`에서 Playwright auth/API mock을 주입해 `/dashboard/franchise-leads/market-insights?view=location-list`를 1365px/390px에서 확인했다. 후보지 `리포트` 버튼 클릭, `출점 검토 리포트` 다이얼로그 열림, 목표매출/재료비 입력, 저장 성공 메시지 유지, page-level horizontal overflow 0건, console/page error 0건을 확인했다. 증거 스크린샷: `ERP/web/.omo/evidence/location-meeting-tool-dialog.png`, `ERP/web/.omo/evidence/location-meeting-tool-dialog-mobile.png`.
+
+## 2026-06-29 점포개발 미팅 도구 보강 QA
+
+- 간단 수익분석표 입력 단위를 화면과 출력물에서 모두 `만원` 기준으로 명시했다. 목표매출 placeholder는 `4500`으로 정리하고, 비용 금액 컬럼은 `금액(만원)`으로 표시한다.
+- 레퍼런스 양식에 맞춰 기본 비용 항목을 `재료비 / 인건비 / 관리비·공과금 / 기타잡비 / 로열티` 순서로 정리했다.
+- 목표매출 변화 `1차 / 2차 / 3차` 전환을 추가했다. 각 차수별 목표매출을 `meetingTool.targetScenarios`에 저장하고, 전환 시 현재 비용 항목 기준으로 비율을 다시 계산한다.
+- `배달수수료·광고비`처럼 미팅 중 필요한 자유 비용 항목을 추가/삭제할 수 있게 했다. 추가 항목은 해당 후보지 리포트의 `meetingTool.costRows`에 저장한다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 6건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 dev 서버 3000과 production 서버 3099에서 Playwright auth/API mock으로 `/dashboard/franchise-leads/market-insights?view=location-list` 접근을 시도했으나, headless mock 세션에서는 본문이 빈 상태로 남아 다이얼로그 캡처를 확보하지 못했다. 실제 로그인 세션 또는 기존 사용자 브라우저에서 리포트 버튼, `목표매출(만원)`, `1차/2차/3차`, `금액(만원)`, 자유 항목 추가를 추가 확인한다.
 - 신규 SQL은 없다.
 
 ## 다음 QA 체크리스트

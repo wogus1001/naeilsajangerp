@@ -4,8 +4,8 @@ import { DemoShell } from './_components/DemoShell';
 import { getDemoAccessState } from './demoAccessState';
 
 export const metadata: Metadata = {
-    title: 'Franchise OS 데모 | 제품 체험',
-    description: '운영 DB를 변경하지 않는 실제형 샘플 데이터와 화면별 가이드로 Franchise OS의 현재 UI 흐름을 체험합니다.'
+    title: 'FC ERP 데모 | 제품 체험',
+    description: '운영 DB를 변경하지 않는 실제형 샘플 데이터와 화면별 가이드로 FC ERP의 현재 UI 흐름을 체험합니다.'
 };
 
 export const dynamic = 'force-dynamic';

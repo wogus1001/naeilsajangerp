@@ -2,6 +2,9 @@ import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import type {
+    MeetingToolDraft
+} from '@/lib/franchise-location-meeting-tool';
+import type {
     FranchiseLead,
     FranchiseLocation,
     LeadListResponse,
@@ -36,6 +39,16 @@ type DeleteFranchiseLocationParams = RequestScope & {
 type ScanLocationCompetitorsParams = RequestScope & {
     readonly locationId: string;
     readonly query: string;
+};
+
+type SaveLocationMeetingToolParams = {
+    readonly locationId: string;
+    readonly meetingTool: MeetingToolDraft;
+};
+
+type SaveLocationMeetingToolResponse = {
+    readonly locationId: string;
+    readonly meetingTool: MeetingToolDraft;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -183,6 +196,21 @@ export async function scanLocationCompetitorsRequest({
     });
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(readApiError(payload));
+}
+
+export async function saveLocationMeetingToolRequest({
+    locationId,
+    meetingTool
+}: SaveLocationMeetingToolParams): Promise<MeetingToolDraft> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-locations/meeting-tool', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ locationId, meetingTool })
+    });
+    const payload: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(readApiError(payload));
+    return unwrapApiData<SaveLocationMeetingToolResponse>(payload).meetingTool;
 }
 
 export function getSelectedBrandKeyword(brand: FranchiseBrand): string {

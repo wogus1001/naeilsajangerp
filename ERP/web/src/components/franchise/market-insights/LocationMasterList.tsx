@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ExternalLink, MessageSquare } from 'lucide-react';
+import { ExternalLink, FileText, MessageSquare } from 'lucide-react';
 import { ExportActions } from '@/components/franchise/ExportActions';
 import {
     buildNaverMapSearchUrl,
@@ -25,8 +25,10 @@ import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import type { FranchiseLocation, LocationManagerOption } from './locationMasterTypes';
 import type { FranchiseLocationMessageSummary } from './locationMessageTypes';
 import { LocationMessagePanel } from './LocationMessagePanel';
+import { LocationMeetingToolDialog } from './LocationMeetingToolDialog';
 import { fetchLocationMessageSummaries } from './locationMessageRequests';
 import { formatDate } from './locationMasterUtils';
+import type { MeetingToolDraft } from '@/lib/franchise-location-meeting-tool';
 
 const LOCATION_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
@@ -150,11 +152,19 @@ export function LocationMasterList({
     const [messageSummaries, setMessageSummaries] = React.useState<ReadonlyMap<string, FranchiseLocationMessageSummary>>(
         () => new Map<string, FranchiseLocationMessageSummary>()
     );
+    const [reportLocationId, setReportLocationId] = React.useState('');
+    const [meetingToolOverrides, setMeetingToolOverrides] = React.useState<ReadonlyMap<string, MeetingToolDraft>>(
+        () => new Map<string, MeetingToolDraft>()
+    );
     const [pageSize, setPageSize] = React.useState<LocationPageSize>(20);
     const [currentPage, setCurrentPage] = React.useState(1);
     const [sortKey, setSortKey] = React.useState<LocationSortKey>('updated-desc');
     const [visibleColumns, setVisibleColumns] = React.useState<readonly LocationColumnKey[]>(DEFAULT_VISIBLE_LOCATION_COLUMNS);
     const selectedRecordLocation = locations.find(location => location.id === recordLocationId) || null;
+    const reportLocationBase = locations.find(location => location.id === reportLocationId) || null;
+    const selectedReportLocation = reportLocationBase
+        ? { ...reportLocationBase, meetingTool: meetingToolOverrides.get(reportLocationBase.id) || reportLocationBase.meetingTool }
+        : null;
     const visibleColumnSet = React.useMemo(() => new Set(visibleColumns), [visibleColumns]);
     const displayColumns = React.useMemo(
         () => LOCATION_COLUMNS.filter(column => column.key === 'actions' || visibleColumnSet.has(column.key)),
@@ -202,6 +212,14 @@ export function LocationMasterList({
         setMessageSummaries(prev => {
             const next = new Map(prev);
             next.set(summary.locationId, summary);
+            return next;
+        });
+    }, []);
+
+    const updateMeetingTool = React.useCallback((locationId: string, draft: MeetingToolDraft) => {
+        setMeetingToolOverrides(prev => {
+            const next = new Map(prev);
+            next.set(locationId, draft);
             return next;
         });
     }, []);
@@ -357,6 +375,13 @@ export function LocationMasterList({
                                         >
                                             <MessageSquare size={13} /> 기록
                                         </button>
+                                        <button
+                                            type="button"
+                                            className={styles.locationRecordButton}
+                                            onClick={() => setReportLocationId(location.id)}
+                                        >
+                                            <FileText size={13} /> 리포트
+                                        </button>
                                         {recordBadge ? (
                                             <span className={messageSummary?.openRequestCount ? styles.locationOpenRequestBadge : styles.locationRecordBadge}>
                                                 {recordBadge}
@@ -418,6 +443,17 @@ export function LocationMasterList({
                         if (!open) setRecordLocationId('');
                     }}
                     onSummaryChange={updateMessageSummary}
+                />
+            ) : null}
+            {selectedReportLocation ? (
+                <LocationMeetingToolDialog
+                    open={Boolean(selectedReportLocation)}
+                    location={selectedReportLocation}
+                    managerName={getManagerDisplayName(selectedReportLocation, managerOptions)}
+                    onOpenChange={(open) => {
+                        if (!open) setReportLocationId('');
+                    }}
+                    onSaved={updateMeetingTool}
                 />
             ) : null}
         </div>

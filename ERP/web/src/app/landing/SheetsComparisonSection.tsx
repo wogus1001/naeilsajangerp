@@ -11,7 +11,7 @@ export function SheetsComparisonSection() {
                 </div>
                 <div className={styles.sheetComparisonGrid}>
                     {SHEET_COMPARISON.map(column => {
-                        const cardClassName = column.title === 'Franchise OS'
+                        const cardClassName = column.title === 'FC ERP'
                             ? `${styles.sheetComparisonCard} ${styles.sheetComparisonCardPrimary}`
                             : styles.sheetComparisonCard;
 
