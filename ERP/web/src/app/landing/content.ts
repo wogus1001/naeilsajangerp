@@ -54,7 +54,7 @@ export const SHEET_COMPARISON = [
         items: ['담당자마다 입력 기준 다름', '다음 연락일 누락', '상태 변경 이력 확인 어려움', '계약·오픈 인계 별도 관리']
     },
     {
-        title: 'Franchise OS',
+        title: 'FC ERP',
         description: '모객 DB가 상담, 계약, 오픈 준비로 이어지는 공통 업무 기준이 됩니다.',
         items: ['담당자·상태·다음 연락 기준 통일', '중요 희망자 표시', '상담 이력 누적', '계약·오픈 준비로 연결']
     }

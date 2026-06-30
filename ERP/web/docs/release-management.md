@@ -54,7 +54,7 @@ YYYY-MM-DD
 - 상태: 현재까지 구현된 전자계약 v2, 회사별 템플릿 관리, UCanSign API KEY 발송, 문서 다운로드, 회사별 아이디 로그인은 유지한다. 아래 항목은 다음 작업 범위로 남긴다.
 - 전자계약 메뉴 정리: 사이드바/메뉴 관리의 `권리금 전자계약` 표기를 `전자계약`으로 바꾸고, 프랜차이즈 하위 메뉴 가장 하단에 배치한다.
 - 개인정보 수정 정리: 개인정보 수정 화면의 `서비스 연동 > 유캔싸인` 영역은 사용자에게 노출하지 않는다. UCanSign은 내일사장 공용 API KEY 운영이므로 개인별 연결 UI가 필요 없다.
-- UCanSign 운영 설정: 실서버에는 `UCANSIGN_API_KEY`, `UCANSIGN_WEBHOOK_SECRET` 등 production env를 확인하고, UCanSign 개발자 설정에는 `https://naeilsajang.vercel.app/api/electronic-contracts/webhooks/ucansign` webhook URL을 등록한다.
+- UCanSign 운영 설정: 실서버에는 `UCANSIGN_API_KEY`, `UCANSIGN_WEBHOOK_SECRET` 등 production env를 확인하고, UCanSign 개발자 설정에는 `https://www.fcerp.co.kr/api/electronic-contracts/webhooks/ucansign?secret=...` webhook URL을 등록한다.
 - 문서 접근 액션: UCanSign read/embedding URL은 운영 샘플에서 빈 화면, `reason=1docError`, 또는 UCanSign 로그인 페이지가 확인되어 ERP 문서함 액션에서 제외한다. 서명자는 UCanSign이 발송한 이메일/카카오톡 링크를 사용한다.
 - 서명 취소 검토: UCanSign 문서 취소 API가 제공되면 ERP에서 `서명취소` 액션을 추가하고, 취소 성공 시 ERP 문서 상태를 `canceled` 계열로 동기화한다. API 미지원이면 UCanSign 관리자 화면 이동 또는 운영 안내로 처리한다.
 - 어드민 사용량: 어드민에서 회사별 전자계약 사용량을 볼 수 있게 한다. 우선 컬럼은 회사명, 전체 문서 수, 초안/발송/완료/실패/취소 건수, 최근 발송일, 최근 완료일을 검토한다.
@@ -63,6 +63,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-29
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 점포개발 미팅 도구 커밋
+  - 주요 기능: 출점 후보지 목록에 `출점 검토 리포트`를 추가했다. 후보지별 목표매출과 주요 비용 금액/비율을 만원 단위로 입력해 세전수익과 세전 수익률을 계산하고, 목표매출 변화 `1차 / 2차 / 3차` 전환과 자유 비용 항목 추가/삭제를 지원한다. 보고 메모와 함께 브라우저 PDF 저장/인쇄가 가능하다. 리포트는 기존 `franchise_locations.data.meetingTool`에 저장하므로 신규 SQL은 없다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: 1차 구현에서 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 4건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 보강 후 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 6건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. headless Playwright mock 세션에서는 대상 페이지 본문이 빈 상태로 남아 브라우저 캡처를 확보하지 못했으므로 실제 로그인 세션에서 리포트 다이얼로그 시각 QA를 추가 확인한다.
+  - 남은 이슈: 회사/브랜드별 비용 항목 라이브러리, 선긋기 상권 지도 이미지 첨부, 리포트 버전 이력은 후속 고도화로 분리한다.
 - 2026-06-29
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회원가입 승인/Solapi/데모 가이드 릴리즈 커밋

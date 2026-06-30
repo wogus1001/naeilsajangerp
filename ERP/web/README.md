@@ -258,8 +258,8 @@ If the three Gmail-specific variables are missing, the disclosure panel shows `�
 
 Google OAuth verification support URLs:
 
-- App home page URI: `https://naeilsajang.vercel.app/landing`
-- Privacy policy URI: `https://naeilsajang.vercel.app/privacy`
+- App home page URI: `https://www.fcerp.co.kr/landing`
+- Privacy policy URI: `https://www.fcerp.co.kr/privacy`
 - Local privacy page: `/privacy`
 - Public sample demo: `/demo`. It opens the franchise demo directly without a role selection step. Hidden role-specific URLs remain available for compatibility, but the public flow focuses on franchise screens (`대시보드`, `DB 관리`, `계약 완료`, `출점 후보지`, `가맹 운영`), uses sample data only, and blocks real ERP API calls.
 - Demo video: use an unlisted YouTube video that shows the Gmail OAuth consent flow and the information disclosure email send flow.
