@@ -42,6 +42,11 @@ npm run build
 npm run start -- -p 3000
 ```
 
+## RELEASE / DEPLOYMENT
+- For any user deployment request, follow `docs/release-management.md` Fast Release Runbook as the operating checklist.
+- Before deploying, run its start checks, verify/stage/commit/push the requested scope, and preserve unrelated untracked `.omo/*` work.
+- Production deployment must target the Vercel `naeilsajang` project/domain, not the locally linked `web` project.
+
 ## CONVENTIONS
 - **Encoding Gate (Required):** All source/text files must be saved as UTF-8, and any PR that introduces mojibake is blocked until fixed.
 - API routes that read live data commonly export `dynamic = 'force-dynamic'`.
