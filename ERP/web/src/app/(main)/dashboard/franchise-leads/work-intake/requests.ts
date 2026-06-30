@@ -38,10 +38,14 @@ export function buildWorkIntakeEditRequestBody(
     requesterId: string
 ): Record<string, unknown> {
     if (target.kind === 'properties' && form.kind === 'properties') {
-        return buildPropertyRegistrationPayload(form.value, {
+        const payload = buildPropertyRegistrationPayload(form.value, {
             requesterId,
             companyName: target.item.companyName
         });
+        return {
+            ...payload,
+            managerId: target.item.managerId || target.item.authorId || requesterId
+        };
     }
 
     if (target.kind === 'leadRegistrations' && form.kind === 'leadRegistrations') {
@@ -57,7 +61,8 @@ export function buildWorkIntakeEditRequestBody(
             ...buildMatchingRequestPayload(form.value, {
                 requesterId,
                 companyName: ''
-            })
+            }),
+            managerId: target.item.managerId || target.item.authorId || requesterId
         };
     }
 
@@ -74,7 +79,7 @@ export async function saveWorkIntakeEdit(
     requesterId: string
 ): Promise<void> {
     if (target.kind === 'properties') {
-        const response = await fetch(`/api/properties?id=${encodeURIComponent(target.item.id)}`, {
+        const response = await fetch(`/api/franchise-work-intake/properties/${encodeURIComponent(target.item.id)}`, {
             method: 'PUT',
             headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(buildWorkIntakeEditRequestBody(target, form, requesterId))
@@ -85,7 +90,7 @@ export async function saveWorkIntakeEdit(
     }
 
     if (target.kind === 'leadRegistrations') {
-        const response = await fetch(`/api/franchise-lead-registration-requests/${encodeURIComponent(target.item.id)}`, {
+        const response = await fetch(`/api/franchise-work-intake/leadRegistrations/${encodeURIComponent(target.item.id)}`, {
             method: 'PUT',
             headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(buildWorkIntakeEditRequestBody(target, form, requesterId))
@@ -95,10 +100,20 @@ export async function saveWorkIntakeEdit(
         return;
     }
 
-    const response = await fetch('/api/franchise-leads', {
+    const response = await fetch(`/api/franchise-work-intake/matchingRequests/${encodeURIComponent(target.item.id)}`, {
         method: 'PUT',
         headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(buildWorkIntakeEditRequestBody(target, form, requesterId))
+    });
+    const payload = await readPayload(response);
+    if (!response.ok) throw new Error(readApiError(payload));
+}
+
+export async function deleteWorkIntakeItem(target: WorkIntakeEditTarget, requesterId: string): Promise<void> {
+    const params = new URLSearchParams({ requesterId });
+    const response = await fetch(`/api/franchise-work-intake/${target.kind}/${encodeURIComponent(target.item.id)}?${params.toString()}`, {
+        method: 'DELETE',
+        headers: await getApiAuthHeaders()
     });
     const payload = await readPayload(response);
     if (!response.ok) throw new Error(readApiError(payload));

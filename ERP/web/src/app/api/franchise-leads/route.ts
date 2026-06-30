@@ -10,6 +10,7 @@ import {
 import { fail, ok } from '@/lib/api-response';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
+    FRANCHISE_MATCHING_REQUEST_SOURCE,
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadGrade,
     normalizeLeadPhone,
@@ -20,6 +21,7 @@ import {
     canAccessFranchiseLead,
     shouldRestrictFranchiseLeadListToCreator
 } from '@/lib/franchise-lead-access';
+import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 import {
     canEnterContractStatus,
     getContractLockMessage,
@@ -61,6 +63,7 @@ type LeadAccessTarget = {
     readonly company_id: string | null;
     readonly manager_id: string | null;
     readonly created_by?: string | null;
+    readonly source?: string | null;
 };
 type TransformedLead = NonNullable<ReturnType<typeof transformLead>>;
 
@@ -230,6 +233,10 @@ function isTransformedLead(lead: TransformedLead | null): lead is TransformedLea
 
 function isPendingLeadRegistrationRequest(lead: TransformedLead): boolean {
     return lead.data.sourceType === 'franchise_lead_registration' && lead.data.adminIntakeStatus !== 'promoted';
+}
+
+function isMatchingRequestLead(lead: { readonly source?: string | null }): boolean {
+    return lead.source === FRANCHISE_MATCHING_REQUEST_SOURCE;
 }
 
 function matchesLeadSearch(lead: TransformedLead, terms: string[]) {
@@ -425,6 +432,17 @@ function buildUpdatePayload(body: Record<string, unknown>, existingData: Record<
     if (hasAny(body, ['lastContactedAt', 'last_contacted_at', '최근연락일'])) updates.last_contacted_at = parseNullableDate(getFirst(body, ['lastContactedAt', 'last_contacted_at', '최근연락일']));
 
     return updates;
+}
+
+function withoutMatchingRequestOwnershipFields(body: Record<string, unknown>): Record<string, unknown> {
+    const sanitized = { ...body };
+    delete sanitized.companyName;
+    delete sanitized.companyId;
+    delete sanitized.managerId;
+    delete sanitized.manager_id;
+    delete sanitized.source;
+    delete sanitized['유입경로'];
+    return sanitized;
 }
 
 function getErrorCode(error: unknown) {
@@ -713,19 +731,36 @@ export async function PUT(request: Request) {
             return fail(404, 'NOT_FOUND', 'Franchise lead not found');
         }
 
+        const existingIsMatchingRequest = isMatchingRequestLead(existing as FranchiseLeadRow);
         if (!canAccessFranchiseLead(requesterProfile, existing as FranchiseLeadRow)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
+        if (existingIsMatchingRequest && !canManageWorkIntakeRecord(requesterProfile, existing as FranchiseLeadRow)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
+        }
 
-        const updates = buildUpdatePayload(body, existing.data || {});
+        if (existingIsMatchingRequest && hasAny(body, ['source', '유입경로'])) {
+            const requestedSource = cleanString(getFirst(body, ['source', '유입경로']));
+            if (requestedSource && requestedSource !== existing.source) {
+                return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 유형은 변경할 수 없습니다.');
+            }
+        }
+
+        const updateBody = existingIsMatchingRequest ? withoutMatchingRequestOwnershipFields(body) : body;
+        const updates = buildUpdatePayload(updateBody, existing.data || {});
         let targetCompanyId = existing.company_id;
 
         const companyName = cleanString(body.companyName);
         if (companyName) {
             const companyId = await resolveCompanyIdByName(supabaseAdmin, companyName);
             if (companyId) {
-                updates.company_id = companyId;
-                targetCompanyId = companyId;
+                if (existingIsMatchingRequest && companyId !== existing.company_id) {
+                    return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 회사는 변경할 수 없습니다.');
+                }
+                if (!existingIsMatchingRequest) {
+                    updates.company_id = companyId;
+                    targetCompanyId = companyId;
+                }
             }
         }
 
@@ -746,7 +781,11 @@ export async function PUT(request: Request) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: manager/company mismatch');
             }
 
-            updates.manager_id = managerUuid;
+            if (existingIsMatchingRequest && managerUuid !== existing.manager_id) {
+                return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 작성자는 변경할 수 없습니다.');
+            }
+
+            if (!existingIsMatchingRequest) updates.manager_id = managerUuid;
         }
 
         if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, targetCompanyId)) {
@@ -826,12 +865,15 @@ export async function DELETE(request: Request) {
 
         const { data: targets, error: targetError } = await supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id, created_by')
+            .select('id, company_id, manager_id, created_by, source')
             .in('id', ids);
 
         if (targetError) throw targetError;
 
-        const forbidden = (targets || []).some((target: LeadAccessTarget) => !canAccessFranchiseLead(requesterProfile, target));
+        const forbidden = (targets || []).some((target: LeadAccessTarget) => {
+            if (!canAccessFranchiseLead(requesterProfile, target)) return true;
+            return isMatchingRequestLead(target) && !canManageWorkIntakeRecord(requesterProfile, target);
+        });
         if (forbidden) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
         }

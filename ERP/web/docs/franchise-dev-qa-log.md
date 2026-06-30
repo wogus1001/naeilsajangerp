@@ -27,6 +27,12 @@
 
 ### 2026-06-30
 
+- `/dashboard/franchise-leads/work-intake` 진행현황의 입점 요청/예비 창업자 등록에 삭제 기능을 추가했다. 수정과 삭제 권한은 실제 작성자, 같은 회사 팀장(`manager`), 관리자 예외로 제한하고, 팀장/관리자가 수정해도 기존 작성자/담당자 값이 바뀌지 않도록 전용 mutation API에서 기존 row의 `manager_id`를 보존한다.
+- 진행현황 전용 mutation API(`/api/franchise-work-intake/[kind]/[id]`)를 추가하고, 기존 `properties`, `franchise_leads`, `franchise_lead_registration_requests` 직접 수정/삭제 API로 진행현황 레코드를 우회 변경하는 경로도 같은 권한 정책으로 막았다.
+- 출점 검토 리포트의 수익분석표 프리셋 UI를 `목표매출` 입력 아래 보조 옵션처럼 보이지 않도록 `분석표 프리셋` 툴바로 분리했다. 회사 공용 성격은 배지로 표시하고, 목표매출 변화/목표매출 입력보다 앞에 배치했다.
+- 검증: `npx tsx --test src/lib/work-intake-access.test.mts src/app/(main)/dashboard/franchise-leads/work-intake/requests.test.mts src/app/api/franchise-work-intake/route.test.mts src/lib/franchise-lead-access.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3108`에서 실제 보호 라우트는 Supabase 세션 없이 `/login`으로 리다이렉트되는 것을 확인했다. 대신 현재 CSS module과 JSX 상태를 반영한 Playwright harness로 진행현황 desktop/mobile의 수정/삭제/권한 안내 상태, 프리셋 desktop/mobile의 `분석표 프리셋` 선배치와 모바일 overflow 0건을 확인했다.
+- 이번 진행현황 권한/삭제 및 프리셋 UI 정리 범위의 신규 SQL은 없다.
 - 실서버 개인정보 수정에서 `수정 실패: 사용자 정보를 다시 불러오지 못했습니다.`가 표시되던 문제를 수정했다. 저장 API의 최종 프로필 재조회가 다른 인증/로그인 라우트와 달리 `company:companies(...)` 관계를 암묵 추론에 맡겨 production PostgREST에서 빈 재조회로 떨어질 수 있었고, 이를 `company:companies!company_id(...)`로 명시했다. 프로필 업데이트 실패도 무시하지 않고 즉시 오류로 처리하도록 보강했다.
 - `/dashboard/franchise-leads/work-intake` 진행현황의 입점 요청 목록에서 회사명 옆에 작성자 표시를 추가했다. API는 `properties.manager_id`를 함께 조회해 회사 프로필 표시명으로 변환하고, 행 메타는 `회사명 / 작성자 이름 / 상태` 형태로 표시한다.
 - 검증: `npx tsx --test src/app/api/user/update/route.test.mts src/lib/profile-contact.test.mts src/lib/user-role-policy.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.

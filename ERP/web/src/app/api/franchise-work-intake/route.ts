@@ -1,4 +1,4 @@
-import { getRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
+import { getRequesterProfile, isAdmin, resolveCompanyIdByName, type RequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
     LEAD_REGISTRATION_INITIAL_FORM,
@@ -21,6 +21,7 @@ import {
     normalizeFranchiseFileNames
 } from '@/lib/franchise-file-attachments';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -231,14 +232,18 @@ function toMatchingRequestForm(row: LeadLikeRow): MatchingRequestForm {
 function toPropertyView(
     row: PropertyRow,
     companies: ReadonlyMap<string, string>,
-    managerNames: ReadonlyMap<string, string>
+    managerNames: ReadonlyMap<string, string>,
+    requester: RequesterProfile
 ) {
     const companyId = row.company_id || '';
     const form = toPropertyForm(row);
+    const canManage = canManageWorkIntakeRecord(requester, row);
     return {
         id: row.id,
         companyId,
         companyName: companies.get(companyId) || '회사명 없음',
+        managerId: row.manager_id || '',
+        authorId: row.manager_id || '',
         authorName: row.manager_id ? managerNames.get(row.manager_id) || '' : '',
         name: row.name || form.propertyName || '이름 없는 물건',
         status: row.status || form.currentStatus,
@@ -249,14 +254,19 @@ function toPropertyView(
         deposit: form.deposit,
         monthlyRent: form.monthlyRent,
         createdAt: row.created_at || '',
+        canEdit: canManage,
+        canDelete: canManage,
         form
     };
 }
 
-function toLeadRegistrationView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>) {
+function toLeadRegistrationView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>, requester: RequesterProfile) {
     const form = toLeadRegistrationForm(row);
+    const canManage = canManageWorkIntakeRecord(requester, row);
     return {
         id: row.id,
+        managerId: row.manager_id || '',
+        authorId: row.created_by || row.manager_id || '',
         managerName: row.manager_id ? managerNames.get(row.manager_id) || '' : '',
         name: form.name || '이름 없음',
         mobile: form.mobile,
@@ -272,15 +282,20 @@ function toLeadRegistrationView(row: LeadLikeRow, managerNames: ReadonlyMap<stri
         promotedAt: row.promoted_at || '',
         promotedLeadId: row.promoted_lead_id || '',
         createdAt: row.created_at || '',
+        canEdit: canManage,
+        canDelete: canManage,
         form
     };
 }
 
-function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>) {
+function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>, requester: RequesterProfile) {
     const data = row.data || {};
     const form = toMatchingRequestForm(row);
+    const canManage = canManageWorkIntakeRecord(requester, row);
     return {
         id: row.id,
+        managerId: row.manager_id || '',
+        authorId: row.created_by || row.manager_id || '',
         managerName: row.manager_id ? managerNames.get(row.manager_id) || '' : '',
         name: form.name || '이름 없음',
         mobile: form.mobile,
@@ -294,6 +309,8 @@ function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<strin
         urgency: form.urgency,
         memo: row.memo || '',
         createdAt: row.created_at || '',
+        canEdit: canManage,
+        canDelete: canManage,
         form
     };
 }
@@ -374,9 +391,9 @@ export async function GET(request: Request) {
         if (matchingError) throw matchingError;
 
         return ok({
-            properties: (properties || []).map(row => toPropertyView(row, companyNames, managerNames)),
-            leadRegistrationRequests: leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationView(row, managerNames)),
-            matchingRequests: (matchingRequests || []).map(row => toMatchingRequestView(row, managerNames))
+            properties: (properties || []).map(row => toPropertyView(row, companyNames, managerNames, requester)),
+            leadRegistrationRequests: leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationView(row, managerNames, requester)),
+            matchingRequests: (matchingRequests || []).map(row => toMatchingRequestView(row, managerNames, requester))
         });
     } catch (error) {
         console.error('Franchise work intake GET error:', error);

@@ -1,12 +1,13 @@
 "use client";
 
 import React from 'react';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, Pencil, Trash2 } from 'lucide-react';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredUser } from '@/utils/userUtils';
 import { formatWorkIntakePropertyMeta } from '@/lib/work-intake-display';
 import { WorkIntakeEditModal } from './WorkIntakeEditModal';
+import { deleteWorkIntakeItem } from './requests';
 import type { WorkIntakeData, WorkIntakeEditTarget, WorkIntakeTab } from './types';
 import styles from './page.module.css';
 
@@ -41,6 +42,7 @@ export default function FranchiseWorkIntakePage() {
     const [editTarget, setEditTarget] = React.useState<WorkIntakeEditTarget | null>(null);
     const [message, setMessage] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(true);
+    const [deletingId, setDeletingId] = React.useState('');
 
     const loadData = React.useCallback(async () => {
         const nextRequesterId = getRequesterId(getStoredUser());
@@ -72,6 +74,27 @@ export default function FranchiseWorkIntakePage() {
     React.useEffect(() => {
         void loadData();
     }, [loadData]);
+
+    const deleteItem = async (target: WorkIntakeEditTarget) => {
+        if (!requesterId) {
+            setMessage('로그인 정보를 확인할 수 없습니다.');
+            return;
+        }
+        const label = target.kind === 'properties' ? '입점 요청' : '예비 창업자 등록';
+        if (!window.confirm(`${label}을 삭제할까요? 삭제 후에는 진행현황 목록에서 사라집니다.`)) return;
+
+        setDeletingId(target.item.id);
+        setMessage('');
+        try {
+            await deleteWorkIntakeItem(target, requesterId);
+            await loadData();
+            setMessage('삭제했습니다.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.');
+        } finally {
+            setDeletingId('');
+        }
+    };
 
     return (
         <main className={styles.page}>
@@ -108,7 +131,21 @@ export default function FranchiseWorkIntakePage() {
                                     <td><span>{item.region || '-'}</span><small>{item.address || '-'}</small></td>
                                     <td><span>{joinParts([item.deposit ? `보증금 ${formatManwon(item.deposit)}` : '', item.monthlyRent ? `월세 ${formatManwon(item.monthlyRent)}` : ''])}</span></td>
                                     <td>{formatDate(item.createdAt)}</td>
-                                    <td><button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'properties', item })}>수정</button></td>
+                                    <td>
+                                        <div className={styles.actionGroup}>
+                                            {item.canEdit ? (
+                                                <button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'properties', item })}>
+                                                    <Pencil size={14} /> 수정
+                                                </button>
+                                            ) : null}
+                                            {item.canDelete ? (
+                                                <button className={styles.deleteButton} onClick={() => void deleteItem({ kind: 'properties', item })} disabled={deletingId === item.id}>
+                                                    <Trash2 size={14} /> {deletingId === item.id ? '삭제 중' : '삭제'}
+                                                </button>
+                                            ) : null}
+                                            {!item.canEdit && !item.canDelete ? <span className={styles.actionMuted}>작성자/팀장/관리자만 가능</span> : null}
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                             {data.properties.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 입점 요청이 없습니다.</td></tr>}
@@ -129,7 +166,21 @@ export default function FranchiseWorkIntakePage() {
                                     <td><span>총예산 {formatManwon(item.totalBudget)}</span><small>{item.ownedPropertyStatus || '-'}</small></td>
                                     <td><span>{joinParts([item.matchPriority, item.urgency])}</span><small>{item.memo || '-'}</small></td>
                                     <td><span>{item.managerName || '-'}</span><small>{formatDate(item.createdAt)}</small></td>
-                                    <td><button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'matchingRequests', item })}>수정</button></td>
+                                    <td>
+                                        <div className={styles.actionGroup}>
+                                            {item.canEdit ? (
+                                                <button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'matchingRequests', item })}>
+                                                    <Pencil size={14} /> 수정
+                                                </button>
+                                            ) : null}
+                                            {item.canDelete ? (
+                                                <button className={styles.deleteButton} onClick={() => void deleteItem({ kind: 'matchingRequests', item })} disabled={deletingId === item.id}>
+                                                    <Trash2 size={14} /> {deletingId === item.id ? '삭제 중' : '삭제'}
+                                                </button>
+                                            ) : null}
+                                            {!item.canEdit && !item.canDelete ? <span className={styles.actionMuted}>작성자/팀장/관리자만 가능</span> : null}
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                             {data.matchingRequests.length === 0 && <tr><td colSpan={6} className={styles.emptyCell}>등록된 예비 창업자 정보가 없습니다.</td></tr>}
