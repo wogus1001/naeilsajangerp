@@ -4,6 +4,7 @@ import React from 'react';
 import { FileText, Plus, Printer, Save, Trash2, X } from 'lucide-react';
 import {
     addMeetingToolCustomCostRow,
+    applyMeetingToolPreset,
     calculateMeetingToolSummary,
     getMeetingToolDefaultsFromLocation,
     MEETING_TOOL_DISCLAIMER,
@@ -15,7 +16,8 @@ import {
     updateMeetingToolCostRatio,
     updateMeetingToolTargetSales,
     type MeetingToolCostKey,
-    type MeetingToolDraft
+    type MeetingToolDraft,
+    type MeetingToolPreset
 } from '@/lib/franchise-location-meeting-tool';
 import {
     formatLocationMoney,
@@ -24,7 +26,12 @@ import {
 } from '@/lib/franchise-location-master';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import type { FranchiseLocation } from './locationMasterTypes';
-import { saveLocationMeetingToolRequest } from './locationMasterRequests';
+import {
+    deleteLocationMeetingToolPresetRequest,
+    fetchLocationMeetingToolPresetsRequest,
+    saveLocationMeetingToolPresetRequest,
+    saveLocationMeetingToolRequest
+} from './locationMasterRequests';
 
 type LocationMeetingToolDialogProps = {
     readonly open: boolean;
@@ -36,13 +43,17 @@ type LocationMeetingToolDialogProps = {
 
 type PrintMode = 'print' | 'pdf';
 
+const NUMBER_INPUT_FORMATTER = new Intl.NumberFormat('ko-KR', {
+    maximumFractionDigits: 3
+});
+
 function parseNumberInput(value: string): number | null {
     const parsed = Number(value.replace(/,/g, '').trim());
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function formatInputValue(value: number | null): string {
-    return value === null ? '' : String(value);
+    return value === null ? '' : NUMBER_INPUT_FORMATTER.format(value);
 }
 
 function escapeHtml(value: string | number | null | undefined): string {
@@ -137,24 +148,40 @@ ${modeGuide}
 <div class="box memo">${escapeHtml(draft.reportMemo || '-')}</div>
 <p class="notice">${escapeHtml(MEETING_TOOL_DISCLAIMER)}</p>
 </section>
+<script>
+(function () {
+    function printReport() {
+        window.focus();
+        window.setTimeout(function () {
+            window.print();
+        }, 300);
+    }
+
+    if (document.readyState === 'complete') {
+        printReport();
+    } else {
+        window.addEventListener('load', printReport, { once: true });
+    }
+})();
+</script>
 </body>
 </html>`;
 }
 
 function openReport(location: FranchiseLocation, draft: MeetingToolDraft, managerName: string, mode: PrintMode): void {
-    const printWindow = window.open('', '_blank', 'width=980,height=760');
+    const reportHtml = buildReportHtml(location, draft, managerName, mode);
+    const reportUrl = window.URL.createObjectURL(new Blob([reportHtml], { type: 'text/html;charset=utf-8' }));
+    const printWindow = window.open(reportUrl, '_blank', 'width=980,height=760');
     if (!printWindow) {
+        window.URL.revokeObjectURL(reportUrl);
         window.alert('팝업이 차단되어 보고서 화면을 열 수 없습니다. 브라우저 팝업 허용 후 다시 시도해주세요.');
         return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(buildReportHtml(location, draft, managerName, mode));
-    printWindow.document.close();
     printWindow.focus();
-    printWindow.setTimeout(() => {
-        printWindow.print();
-    }, 250);
+    window.setTimeout(() => {
+        window.URL.revokeObjectURL(reportUrl);
+    }, 60_000);
 }
 
 export function LocationMeetingToolDialog({
@@ -166,9 +193,15 @@ export function LocationMeetingToolDialog({
 }: LocationMeetingToolDialogProps) {
     const [draft, setDraft] = React.useState<MeetingToolDraft>(() => normalizeMeetingToolDraft(null));
     const [customCostLabel, setCustomCostLabel] = React.useState('');
+    const [presets, setPresets] = React.useState<readonly MeetingToolPreset[]>([]);
+    const [selectedPresetId, setSelectedPresetId] = React.useState('');
+    const [presetName, setPresetName] = React.useState('');
+    const [presetLoading, setPresetLoading] = React.useState(false);
+    const [presetSaving, setPresetSaving] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
     const [message, setMessage] = React.useState('');
     const locationId = location?.id || '';
+    const companyId = location?.companyId || '';
     const initializedLocationIdRef = React.useRef('');
 
     React.useEffect(() => {
@@ -177,12 +210,36 @@ export function LocationMeetingToolDialog({
         initializedLocationIdRef.current = locationId;
         setDraft(normalizeMeetingToolDraft(location.meetingTool, getMeetingToolDefaultsFromLocation(location)));
         setCustomCostLabel('');
+        setSelectedPresetId('');
+        setPresetName('');
         setMessage('');
     }, [locationId, location, open]);
 
     React.useEffect(() => {
         if (!open) initializedLocationIdRef.current = '';
     }, [open]);
+
+    React.useEffect(() => {
+        if (!open) return;
+        let alive = true;
+        setPresetLoading(true);
+        fetchLocationMeetingToolPresetsRequest({ companyId })
+            .then(nextPresets => {
+                if (!alive) return;
+                setPresets(nextPresets);
+            })
+            .catch(error => {
+                if (!alive) return;
+                setMessage(error instanceof Error ? error.message : '회사 공용 프리셋을 불러오지 못했습니다.');
+            })
+            .finally(() => {
+                if (alive) setPresetLoading(false);
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, [companyId, open]);
 
     if (!open || !location) return null;
 
@@ -217,6 +274,56 @@ export function LocationMeetingToolDialog({
             setMessage(error instanceof Error ? error.message : '출점 검토 리포트 저장에 실패했습니다.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const selectedPreset = presets.find(preset => preset.id === selectedPresetId) || null;
+
+    const applySelectedPreset = () => {
+        if (!selectedPreset) return;
+        setDraft(prev => applyMeetingToolPreset(prev, selectedPreset));
+        setPresetName(selectedPreset.name);
+        setMessage('회사 공용 프리셋을 적용했습니다. 후보지 리포트에 반영하려면 저장을 눌러주세요.');
+    };
+
+    const savePreset = async () => {
+        const name = presetName.trim();
+        if (!name) {
+            setMessage('프리셋명을 입력해주세요.');
+            return;
+        }
+        setPresetSaving(true);
+        setMessage('');
+        try {
+            const savedPreset = await saveLocationMeetingToolPresetRequest({ companyId, name, meetingTool: draft });
+            setPresets(prev => {
+                const withoutSame = prev.filter(preset => preset.id !== savedPreset.id && preset.name !== savedPreset.name);
+                return [savedPreset, ...withoutSame];
+            });
+            setSelectedPresetId(savedPreset.id);
+            setPresetName(savedPreset.name);
+            setMessage('회사 공용 프리셋으로 저장했습니다.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : '회사 공용 프리셋 저장에 실패했습니다.');
+        } finally {
+            setPresetSaving(false);
+        }
+    };
+
+    const deletePreset = async () => {
+        if (!selectedPresetId) return;
+        setPresetSaving(true);
+        setMessage('');
+        try {
+            await deleteLocationMeetingToolPresetRequest({ presetId: selectedPresetId });
+            setPresets(prev => prev.filter(preset => preset.id !== selectedPresetId));
+            setSelectedPresetId('');
+            setPresetName('');
+            setMessage('회사 공용 프리셋을 삭제했습니다.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : '회사 공용 프리셋 삭제에 실패했습니다.');
+        } finally {
+            setPresetSaving(false);
         }
     };
 
@@ -278,13 +385,56 @@ export function LocationMeetingToolDialog({
                             <label>
                                 목표매출(만원)
                                 <input
-                                    type="number"
-                                    min="0"
+                                    type="text"
+                                    inputMode="decimal"
                                     value={formatInputValue(draft.targetSales)}
                                     onChange={(event) => setDraft(prev => updateMeetingToolTargetSales(prev, parseNumberInput(event.target.value)))}
                                     placeholder="4500"
                                 />
                             </label>
+                        </div>
+                        <div className={styles.meetingToolPresetBar}>
+                            <div className={styles.meetingToolPresetIntro}>
+                                <strong>회사 공용 프리셋</strong>
+                                <span>비용 항목과 목표매출 변화를 다른 후보지에도 재사용합니다.</span>
+                            </div>
+                            <label>
+                                불러오기
+                                <select
+                                    value={selectedPresetId}
+                                    onChange={(event) => {
+                                        const presetId = event.target.value;
+                                        const preset = presets.find(item => item.id === presetId) || null;
+                                        setSelectedPresetId(presetId);
+                                        if (preset) setPresetName(preset.name);
+                                    }}
+                                    disabled={presetLoading || presets.length === 0}
+                                >
+                                    <option value="">{presetLoading ? '불러오는 중' : '프리셋 선택'}</option>
+                                    {presets.map(preset => (
+                                        <option key={preset.id} value={preset.id}>{preset.name}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>
+                                프리셋명
+                                <input
+                                    value={presetName}
+                                    onChange={(event) => setPresetName(event.target.value)}
+                                    placeholder="예: 기본 수익비율"
+                                />
+                            </label>
+                            <div className={styles.meetingToolPresetActions}>
+                                <button type="button" className={styles.secondaryButton} onClick={applySelectedPreset} disabled={!selectedPreset || presetSaving}>
+                                    적용
+                                </button>
+                                <button type="button" className={styles.secondaryButton} onClick={savePreset} disabled={presetSaving}>
+                                    <Save size={14} /> {presetSaving ? '저장 중' : '프리셋 저장'}
+                                </button>
+                                <button type="button" className={styles.dangerOutlineButton} onClick={deletePreset} disabled={!selectedPresetId || presetSaving}>
+                                    <Trash2 size={14} /> 삭제
+                                </button>
+                            </div>
                         </div>
                         <div className={styles.meetingToolRows}>
                             <div className={styles.meetingToolRowHead}>
@@ -308,16 +458,15 @@ export function LocationMeetingToolDialog({
                                         ) : null}
                                     </div>
                                     <input
-                                        type="number"
-                                        min="0"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={formatInputValue(row.amount)}
                                         onChange={(event) => updateAmount(row.key, event.target.value)}
                                         placeholder="만원"
                                     />
                                     <input
-                                        type="number"
-                                        min="0"
-                                        step="0.1"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={formatInputValue(row.ratio)}
                                         onChange={(event) => updateRatio(row.key, event.target.value)}
                                         placeholder="%"

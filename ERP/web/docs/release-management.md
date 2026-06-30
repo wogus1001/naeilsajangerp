@@ -65,6 +65,24 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 출점 검토 리포트 PDF/인쇄 blank 핫픽스 커밋 예정
+  - 주요 기능: 출점 검토 리포트의 `PDF 저장`/`인쇄` 새 창이 `about:blank`로 남는 문제를 수정했다. 새 창은 완성된 보고서 HTML을 Blob URL로 열고 로드 완료 후 브라우저 인쇄를 실행한다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, Playwright 브라우저 스모크 통과.
+  - 남은 이슈: 신규 SQL 없음. 실제 로그인 세션에서 리포트 버튼을 눌러 PDF 저장/인쇄 미리보기가 보고서 내용으로 열리는지 최종 육안 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 점포개발 미팅 도구 회사 공용 프리셋/숫자 표시 커밋 예정
+  - 주요 기능: 출점 검토 리포트의 간단 수익분석표에 회사 공용 프리셋 저장/적용/삭제를 추가한다. 프리셋은 목표매출 변화 차수와 비용 항목만 저장하고 후보지별 보고 메모는 덮어쓰지 않는다. 프리셋 행은 제목과 보조 문구가 잘리지 않도록 정리했고 금액 입력은 콤마 표시를 적용했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. Playwright CSS 스모크로 프리셋 문구 노출과 `4,500`/`2,100` 콤마 표시를 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 남은 이슈: `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료. 실제 로그인 세션에서 프리셋 저장/불러오기/삭제 UX를 배포 후 추가 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 OAuth 심사 영상 준비/공개 진입점 정리 커밋
   - 주요 기능: `/landing` 상단 메뉴에 `로그인` 링크를 추가해 신규 도메인 랜딩에서 실제 로그인 화면으로 이동할 수 있게 했다. 로그인 화면 브랜드명은 `FC ERP`로 변경하고, 가입/개인정보처리방침/앱 metadata도 같은 브랜드 기준으로 정리했다.
   - dev 반영: none

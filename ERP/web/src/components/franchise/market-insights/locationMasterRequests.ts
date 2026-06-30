@@ -2,7 +2,8 @@ import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import type {
-    MeetingToolDraft
+    MeetingToolDraft,
+    MeetingToolPreset
 } from '@/lib/franchise-location-meeting-tool';
 import type {
     FranchiseLead,
@@ -49,6 +50,27 @@ type SaveLocationMeetingToolParams = {
 type SaveLocationMeetingToolResponse = {
     readonly locationId: string;
     readonly meetingTool: MeetingToolDraft;
+};
+
+type FetchLocationMeetingToolPresetsParams = {
+    readonly companyId?: string | null;
+};
+
+type SaveLocationMeetingToolPresetParams = FetchLocationMeetingToolPresetsParams & {
+    readonly name: string;
+    readonly meetingTool: MeetingToolDraft;
+};
+
+type DeleteLocationMeetingToolPresetParams = {
+    readonly presetId: string;
+};
+
+type LocationMeetingToolPresetsResponse = {
+    readonly presets: readonly MeetingToolPreset[];
+};
+
+type LocationMeetingToolPresetResponse = {
+    readonly preset: MeetingToolPreset;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -211,6 +233,50 @@ export async function saveLocationMeetingToolRequest({
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<SaveLocationMeetingToolResponse>(payload).meetingTool;
+}
+
+export async function fetchLocationMeetingToolPresetsRequest({
+    companyId
+}: FetchLocationMeetingToolPresetsParams): Promise<readonly MeetingToolPreset[]> {
+    const params = new URLSearchParams();
+    if (companyId) params.set('companyId', companyId);
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations/meeting-tool-presets?${params.toString()}`, {
+        cache: 'no-store',
+        headers
+    });
+    const payload: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(readApiError(payload));
+    return unwrapApiData<LocationMeetingToolPresetsResponse>(payload).presets;
+}
+
+export async function saveLocationMeetingToolPresetRequest({
+    companyId,
+    name,
+    meetingTool
+}: SaveLocationMeetingToolPresetParams): Promise<MeetingToolPreset> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-locations/meeting-tool-presets', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ companyId, name, meetingTool })
+    });
+    const payload: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(readApiError(payload));
+    return unwrapApiData<LocationMeetingToolPresetResponse>(payload).preset;
+}
+
+export async function deleteLocationMeetingToolPresetRequest({
+    presetId
+}: DeleteLocationMeetingToolPresetParams): Promise<void> {
+    const params = new URLSearchParams({ presetId });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-locations/meeting-tool-presets?${params.toString()}`, {
+        method: 'DELETE',
+        headers
+    });
+    const payload: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(readApiError(payload));
 }
 
 export function getSelectedBrandKeyword(brand: FranchiseBrand): string {
