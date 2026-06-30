@@ -200,8 +200,8 @@ export default function LoginPage() {
                     <div className={styles.logoIcon}>
                         <div className={styles.gridIcon} />
                     </div>
-                    <h1 className={styles.title}>부동산 ERP</h1>
-                    <p className={styles.subtitle}>부동산 전문가를 위한 통합 솔루션</p>
+                    <h1 className={styles.title}>FC ERP</h1>
+                    <p className={styles.subtitle}>창업 및 부동산 전문가를 위한 통합 솔루션</p>
                 </div>
 
                 {loggedInUser ? (

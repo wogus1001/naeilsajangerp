@@ -24,6 +24,7 @@ export default function LandingPage() {
                         <a href="#metrics">지표</a>
                         <a href="#workflow">업무 흐름</a>
                         <Link href="/demo">데모</Link>
+                        <Link href="/login" className={styles.loginLink}>로그인</Link>
                     </nav>
                 </div>
             </header>
