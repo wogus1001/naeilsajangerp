@@ -33,7 +33,7 @@
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: 로컬 production 서버 `http://localhost:3114`에서 Playwright로 1280px/390px `/landing` 로그인 링크 노출, 클릭 시 `/login` 이동, `/login`의 `FC ERP` 노출과 `부동산 ERP` 미노출, `/signup`/`/privacy`의 `FC ERP` 문구를 확인했다. console/page error는 없었다.
 - 추가 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright 브라우저 스모크로 보고서 새 창이 `blob:` URL로 열리고 본문 `출점 검토 리포트`가 비어 있지 않게 로드되는 것을 확인했다.
-- 신규 SQL은 없다.
+- 이번 OAuth 공개 진입점/리포트 PDF·인쇄 blank 핫픽스 범위의 신규 SQL은 없다.
 
 ### 2026-06-29
 
@@ -747,6 +747,15 @@
 - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: Playwright로 실제 CSS 모듈을 주입한 프리셋 행 스모크를 확인했다. `목표매출(만원)`은 `4,500`, `재료비`는 `2,100`으로 표시됐고, 보조 문구는 컨테이너 내부에 정상 노출됐다. 로컬 headless 인증 세션에서는 메인 앱 본문이 빈 화면으로 남아 실제 로그인 세션에서 저장/불러오기/삭제 UX는 배포 후 추가 확인한다.
 - 신규 SQL: `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료.
+
+## 2026-06-30 점포개발 미팅 도구 코드리뷰 보강 QA
+
+- 전체 코드리뷰 후 프리셋 API의 빈 `meetingTool` 저장, 잘못된 UUID 입력, 누락된 프리셋 테이블 응답, 교차 회사 삭제 응답 노출 가능성을 보강했다. `meetingTool`은 객체만 허용하고, 프리셋 테이블 미적용 시 424와 SQL 적용 안내를 반환하며, 교차 회사 삭제는 존재 여부를 드러내지 않도록 404로 응답한다.
+- 라우트 단위 테스트를 추가해 인증 없음 401, malformed body 400, 정상 upsert의 `reportMemo` 제외 저장, missing table 424, 교차 회사 삭제 404, malformed UUID 400을 고정했다.
+- UI는 후보지/회사 전환 시 이전 프리셋 목록을 즉시 비우고, 프리셋 삭제 전 확인창을 추가했다. 목표매출과 비용 금액은 콤마 표시를 유지하되, 비율 입력은 편집 중 문자열 상태를 별도로 두어 `4` -> `4.` -> `4.5` 순차 입력이 끊기지 않도록 분리했다.
+- 검증: `npx tsx --test src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool.test.mts` 14건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `http://localhost:3126`의 `/demo`에서 데모 게이트 로그인, `출점 후보지`, `리포트` 모달 진입을 1280px/390px으로 확인했다. 목표매출 `4500` 입력은 `4,500`으로 표시되고, 비율은 실제 키 입력 순서로 `4` 입력 후 `4`, `.` 입력 후 `4.`, `5` 입력 후 `4.5`, blur 후 `4.5`가 유지됐으며 금액은 `203`으로 계산됐다. dialog overflow와 console/page error는 없었다.
+- 신규 SQL: 이번 보강의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료 상태다.
 
 ## 다음 QA 체크리스트
 

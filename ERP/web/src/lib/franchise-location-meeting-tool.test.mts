@@ -68,6 +68,15 @@ test('updates amount and ratio both directions', () => {
     assert.equal(royaltyRow?.ratio, 4);
 });
 
+test('keeps decimal cost ratios for meeting calculations', () => {
+    const initial = normalizeMeetingToolDraft({ targetSales: 4_500 });
+    const updated = updateMeetingToolCostRatio(initial, 'royalty', 4.5);
+    const royaltyRow = updated.costRows.find(row => row.key === 'royalty');
+
+    assert.equal(royaltyRow?.amount, 203);
+    assert.equal(royaltyRow?.ratio, 4.5);
+});
+
 test('recalculates ratios when target sales changes and summarizes profit', () => {
     const initial = normalizeMeetingToolDraft({ targetSales: 3_000 });
     const withAmount = updateMeetingToolCostAmount(initial, 'materialCost', 900);

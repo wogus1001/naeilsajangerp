@@ -30,6 +30,91 @@
 6. 실서버 배포 요청 시: `my_project_main_release`에서 검증 후 `main`으로 push한다.
 7. 배포 후 확인: Vercel READY 상태, 주요 URL, API 상태, known env gap을 기록한다.
 
+## Fast Release Runbook
+
+문서 작성, 커밋, 푸시, 배포 요청이 반복될 때는 아래 순서를 기본값으로 사용한다. 요청 범위가 작은 문구 수정이어도 순서는 유지하되, 검증 범위만 축소한다.
+
+### 1. 시작 확인
+
+```bash
+git status --short
+git branch --show-current
+git rev-parse --short origin/dev
+git rev-parse --short origin/main
+```
+
+- 기존 미추적 `.omo/*` 작업물은 사용자/에이전트 작업일 수 있으므로 임의로 삭제하거나 커밋하지 않는다.
+- `ERP/web/handoff.md`, `.env*`, provider token, 서비스 키는 읽거나 커밋하지 않는다.
+- SQL을 작성하거나 migration 파일을 바꾸면 최종 보고에 반드시 `SQL 등록 필요` 또는 `SQL 등록 완료 확인` 상태를 적는다.
+
+### 2. 변경 반영과 검증
+
+```bash
+cd ERP/web
+npx tsc --noEmit --pretty false
+npm run lint -- --quiet
+npm run build
+```
+
+- 라이브러리/유틸 변경이 있으면 관련 `npx tsx --test ...`를 먼저 실행한다.
+- UI 변경이면 Playwright 또는 실제 브라우저로 해당 화면을 직접 열어 확인한다.
+- 문서만 변경한 경우에는 `git diff --check`와 문서 diff 확인을 최소 검증으로 둔다.
+
+### 3. 문서 갱신
+
+- 현재 상태 요약: `ERP/web/docs/franchise-current-status.md`
+- 긴 릴리즈 ledger: `ERP/web/docs/release-management.md`
+- QA와 실제 확인 내역: `ERP/web/docs/franchise-dev-qa-log.md`
+- 장기 방향/후속 아이디어: `ERP/web/docs/franchise-growth-roadmap.md`
+- 실행/env/SQL 안내가 바뀐 경우: `ERP/web/README.md`
+
+문서에는 긴 명령 출력 대신 통과한 명령, 브라우저 QA 대상 URL/화면, 미검증 리스크만 남긴다.
+
+### 4. 커밋
+
+```bash
+git diff --check
+git status --short
+git diff --stat
+git add <changed-files>
+git diff --staged --stat
+git commit -m "<type(scope): summary>"
+git log -1 --oneline
+```
+
+- 최근 커밋 스타일은 `feat(scope): ...`, `fix(scope): ...`, `docs(scope): ...`를 우선한다.
+- 구현 파일과 그 검증 테스트는 같은 커밋에 묶는다.
+- unrelated 문서/설정 변경은 별도 커밋으로 분리한다.
+
+### 5. 푸시
+
+```bash
+git push origin HEAD
+```
+
+- 사용자가 `dev/main 반영`을 명시하지 않았으면 작업 브랜치만 push한다.
+- `dev` 또는 `main`으로 직접 push/merge/promotion은 사용자가 명시적으로 요청한 경우에만 진행한다.
+
+### 6. 배포
+
+배포 대상은 요청 문구로 고정한다.
+
+- `Dev 실서버`, `dev 배포`: Vercel dev 환경과 `https://naeilsajang-dev.vercel.app` 확인.
+- `실서버`, `운영`, `production`, `main 배포`: Vercel production 환경과 `https://www.fcerp.co.kr` 확인.
+
+운영 도메인 `www.fcerp.co.kr`은 Vercel `naeilsajang` 프로젝트에 연결되어 있다. `web` 프로젝트로 배포하면 preview URL은 뜨지만 운영 도메인에는 반영되지 않는다.
+
+운영 배포 확인 기준:
+
+```bash
+npx vercel projects ls --scope team_NcWNRifDHvr7GdFW0rcpR3ym
+npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym
+```
+
+- `name`이 `naeilsajang`, `target`이 `production`, `status`가 `Ready`여야 한다.
+- Aliases에 `https://www.fcerp.co.kr`와 `https://fcerp.co.kr`가 보여야 한다.
+- 배포 후 사용자에게 deployment id, 커밋 해시, 검증 명령, 남은 미추적 파일을 보고한다.
+
 ## Version Ledger Format
 
 업데이트 이력은 다음 형식으로 남긴다.
@@ -65,13 +150,22 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 점포개발 미팅 도구 코드리뷰 보강 커밋 예정
+  - 주요 기능: 출점 검토 리포트 회사 공용 프리셋 API를 보강했다. 빈 `meetingTool` 저장을 차단하고, UUID 검증, 프리셋 테이블 미적용 424 안내, 교차 회사 삭제 404 응답, `reportMemo` 제외 저장 테스트를 추가했다. UI는 후보지/회사 전환 시 이전 프리셋 목록을 비우고, 삭제 확인창과 비율 순차 소수 입력 유지를 보강했다.
+  - dev 반영: none
+  - main 반영: 이번 커밋 반영 예정
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool.test.mts` 14건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `http://localhost:3126`의 `/demo`에서 1280px/390px 리포트 모달, 목표매출 `4,500` 표시, 비율 순차 입력 `4` -> `4.` -> `4.5` 유지, 금액 `203` 역산, dialog overflow 0건, console/page error 0건을 확인했다.
+  - 남은 이슈: 이번 보강의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료. 실제 로그인 세션에서 프리셋 persistence는 배포 후 추가 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 출점 검토 리포트 PDF/인쇄 blank 핫픽스 커밋 예정
   - 주요 기능: 출점 검토 리포트의 `PDF 저장`/`인쇄` 새 창이 `about:blank`로 남는 문제를 수정했다. 새 창은 완성된 보고서 HTML을 Blob URL로 열고 로드 완료 후 브라우저 인쇄를 실행한다.
   - dev 반영: none
   - main 반영: none
   - 배포 URL: none
   - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, Playwright 브라우저 스모크 통과.
-  - 남은 이슈: 신규 SQL 없음. 실제 로그인 세션에서 리포트 버튼을 눌러 PDF 저장/인쇄 미리보기가 보고서 내용으로 열리는지 최종 육안 확인한다.
+  - 남은 이슈: 이번 PDF/인쇄 blank 핫픽스의 신규 SQL은 없다. 실제 로그인 세션에서 리포트 버튼을 눌러 PDF 저장/인쇄 미리보기가 보고서 내용으로 열리는지 최종 육안 확인한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 점포개발 미팅 도구 회사 공용 프리셋/숫자 표시 커밋 예정

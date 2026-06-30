@@ -1,4 +1,8 @@
-import { canAccessCompanyScope, getAuthenticatedRequesterProfile } from '@/lib/api-auth';
+import {
+    canAccessCompanyScope,
+    getAuthenticatedRequesterProfile,
+    type RequesterProfile
+} from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { isRecord } from '@/lib/franchise-location-api-payload';
 import {
@@ -6,9 +10,20 @@ import {
     toMeetingToolPresetData,
     type MeetingToolPreset
 } from '@/lib/franchise-location-meeting-tool';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin as createSupabaseAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type SupabaseAdminClient = ReturnType<typeof createSupabaseAdminClient>;
+type MeetingToolPresetRouteDependencies = {
+    readonly getSupabaseAdmin: () => SupabaseAdminClient;
+    readonly resolveRequester: (
+        supabaseAdmin: SupabaseAdminClient,
+        request: Request
+    ) => Promise<RequesterProfile | null>;
+};
 
 type MeetingToolPresetRow = {
     readonly id: string;
@@ -23,10 +38,29 @@ function cleanString(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+function createDefaultRouteDependencies(): MeetingToolPresetRouteDependencies {
+    return {
+        getSupabaseAdmin: createSupabaseAdminClient,
+        resolveRequester: getAuthenticatedRequesterProfile
+    };
+}
+
+function isUuid(value: string): boolean {
+    return UUID_REGEX.test(value);
+}
+
 function isMissingPresetTableError(value: unknown): boolean {
     if (!isRecord(value)) return false;
     const code = cleanString(value.code);
     return code === '42P01' || code === 'PGRST205';
+}
+
+function missingPresetTableResponse() {
+    return fail(
+        424,
+        'VALIDATION_ERROR',
+        '수익분석표 프리셋 테이블이 아직 적용되지 않았습니다. supabase_franchise_location_meeting_tool_presets_migration.sql 적용 후 다시 확인해주세요.'
+    );
 }
 
 function resolveCompanyId(request: Request, requesterCompanyId: string | null | undefined, parsed?: unknown): string {
@@ -52,14 +86,18 @@ function toPresetList(rows: readonly MeetingToolPresetRow[] | null): readonly Me
         .filter((preset): preset is MeetingToolPreset => preset !== null);
 }
 
-export async function GET(request: Request) {
+export async function handleMeetingToolPresetsGET(
+    request: Request,
+    dependencies: MeetingToolPresetRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
-        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
+        const requesterProfile = await dependencies.resolveRequester(supabaseAdmin, request);
         if (!requesterProfile) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
 
         const companyId = resolveCompanyId(request, requesterProfile.company_id);
         if (!companyId) return fail(400, 'VALIDATION_ERROR', 'companyId is required');
+        if (!isUuid(companyId)) return fail(400, 'VALIDATION_ERROR', 'companyId must be a valid UUID');
         if (!canAccessCompanyScope(requesterProfile, companyId)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
@@ -72,7 +110,7 @@ export async function GET(request: Request) {
             .returns<MeetingToolPresetRow[]>();
 
         if (error) {
-            if (isMissingPresetTableError(error)) return ok({ presets: [] });
+            if (isMissingPresetTableError(error)) return missingPresetTableResponse();
             throw error;
         }
 
@@ -83,10 +121,13 @@ export async function GET(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+export async function handleMeetingToolPresetsPOST(
+    request: Request,
+    dependencies: MeetingToolPresetRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
-        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
+        const requesterProfile = await dependencies.resolveRequester(supabaseAdmin, request);
         if (!requesterProfile) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
 
         const parsed: unknown = await request.json().catch(() => null);
@@ -94,6 +135,7 @@ export async function POST(request: Request) {
 
         const companyId = resolveCompanyId(request, requesterProfile.company_id, parsed);
         if (!companyId) return fail(400, 'VALIDATION_ERROR', 'companyId is required');
+        if (!isUuid(companyId)) return fail(400, 'VALIDATION_ERROR', 'companyId must be a valid UUID');
         if (!canAccessCompanyScope(requesterProfile, companyId)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
@@ -101,7 +143,10 @@ export async function POST(request: Request) {
         const name = cleanString(parsed.name);
         if (!name) return fail(400, 'VALIDATION_ERROR', 'preset name is required');
 
-        const meetingTool = isRecord(parsed.meetingTool) ? parsed.meetingTool : {};
+        if (!isRecord(parsed.meetingTool)) {
+            return fail(400, 'VALIDATION_ERROR', 'meetingTool is required');
+        }
+        const meetingTool = parsed.meetingTool;
         const data = toMeetingToolPresetData(meetingTool);
         const now = new Date().toISOString();
 
@@ -120,7 +165,7 @@ export async function POST(request: Request) {
 
         if (error) {
             if (isMissingPresetTableError(error)) {
-                return fail(500, 'INTERNAL_ERROR', 'Meeting tool preset table is not ready');
+                return missingPresetTableResponse();
             }
             throw error;
         }
@@ -134,15 +179,19 @@ export async function POST(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+export async function handleMeetingToolPresetsDELETE(
+    request: Request,
+    dependencies: MeetingToolPresetRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
-        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
+        const requesterProfile = await dependencies.resolveRequester(supabaseAdmin, request);
         if (!requesterProfile) return fail(401, 'AUTH_REQUIRED', 'authenticated session is required');
 
         const { searchParams } = new URL(request.url);
         const presetId = cleanString(searchParams.get('presetId'));
         if (!presetId) return fail(400, 'VALIDATION_ERROR', 'presetId is required');
+        if (!isUuid(presetId)) return fail(400, 'VALIDATION_ERROR', 'presetId must be a valid UUID');
 
         const { data: row, error: fetchError } = await supabaseAdmin
             .from('franchise_location_meeting_tool_presets')
@@ -156,7 +205,7 @@ export async function DELETE(request: Request) {
         }
         if (!row) return fail(404, 'NOT_FOUND', 'Meeting tool preset not found');
         if (!canAccessCompanyScope(requesterProfile, row.company_id)) {
-            return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+            return fail(404, 'NOT_FOUND', 'Meeting tool preset not found');
         }
 
         const { error: deleteError } = await supabaseAdmin
@@ -171,4 +220,16 @@ export async function DELETE(request: Request) {
         console.error('Franchise location meeting tool presets DELETE error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to delete meeting tool preset');
     }
+}
+
+export async function GET(request: Request) {
+    return handleMeetingToolPresetsGET(request);
+}
+
+export async function POST(request: Request) {
+    return handleMeetingToolPresetsPOST(request);
+}
+
+export async function DELETE(request: Request) {
+    return handleMeetingToolPresetsDELETE(request);
 }
