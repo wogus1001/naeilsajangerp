@@ -3303,7 +3303,7 @@
 
 .meetingToolSummaryGrid span,
 .meetingToolResultGrid span,
-.meetingToolSectionHeader label,
+.meetingToolTargetSalesLabel,
 .meetingToolMemo {
     color: #6b7684;
     font-size: 11px;
@@ -3331,9 +3331,7 @@
 
 .meetingToolSectionHeader {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.32fr);
-    gap: 12px;
-    align-items: end;
+    gap: 4px;
 }
 
 .meetingToolSectionHeader h4 {
@@ -3355,7 +3353,7 @@
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .meetingToolTargetLabel {
@@ -3391,16 +3389,17 @@
     color: #ffffff;
 }
 
-.meetingToolSectionHeader label,
+.meetingToolTargetSalesLabel,
 .meetingToolMemo {
     display: grid;
     gap: 6px;
 }
 
-.meetingToolSectionHeader input,
+.meetingToolTargetSalesLabel input,
 .meetingToolRow input,
 .meetingToolCustomRow input,
 .meetingToolMemo textarea {
+    box-sizing: border-box;
     width: 100%;
     border: 1px solid #d8dee8;
     border-radius: 8px;
@@ -3410,11 +3409,18 @@
     font-weight: 700;
 }
 
-.meetingToolSectionHeader input,
+.meetingToolTargetSalesLabel input,
 .meetingToolRow input,
 .meetingToolCustomRow input {
     height: 38px;
     padding: 0 10px;
+}
+
+.meetingToolControlRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.32fr);
+    gap: 12px;
+    align-items: end;
 }
 
 .meetingToolPresetBar {
@@ -3441,6 +3447,26 @@
     font-weight: 850;
 }
 
+.meetingToolPresetTitleLine {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.meetingToolPresetBadge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid #d8e7ff;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    font-size: 11px;
+    font-weight: 850;
+}
+
 .meetingToolPresetIntro span {
     color: #6b7684;
     font-size: 12px;
@@ -3458,6 +3484,7 @@
 
 .meetingToolPresetBar input,
 .meetingToolPresetBar select {
+    box-sizing: border-box;
     width: 100%;
     height: 36px;
     border: 1px solid #d8dee8;
@@ -10444,6 +10471,7 @@
     .meetingToolSummaryGrid,
     .meetingToolResultGrid,
     .meetingToolSectionHeader,
+    .meetingToolControlRow,
     .meetingToolPresetBar,
     .meetingToolRowHead,
     .meetingToolRow,

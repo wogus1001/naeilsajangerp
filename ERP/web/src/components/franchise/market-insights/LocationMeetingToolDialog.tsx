@@ -254,7 +254,7 @@ export function LocationMeetingToolDialog({
             })
             .catch(error => {
                 if (!alive) return;
-                setMessage(error instanceof Error ? error.message : '회사 공용 프리셋을 불러오지 못했습니다.');
+                setMessage(error instanceof Error ? error.message : '분석표 프리셋을 불러오지 못했습니다.');
             })
             .finally(() => {
                 if (alive) setPresetLoading(false);
@@ -310,7 +310,7 @@ export function LocationMeetingToolDialog({
         setRatioInputValues({});
         setDraft(prev => applyMeetingToolPreset(prev, selectedPreset));
         setPresetName(selectedPreset.name);
-        setMessage('회사 공용 프리셋을 적용했습니다. 후보지 리포트에 반영하려면 저장을 눌러주세요.');
+        setMessage('분석표 프리셋을 적용했습니다. 후보지 리포트에 반영하려면 저장을 눌러주세요.');
     };
 
     const savePreset = async () => {
@@ -329,9 +329,9 @@ export function LocationMeetingToolDialog({
             });
             setSelectedPresetId(savedPreset.id);
             setPresetName(savedPreset.name);
-            setMessage('회사 공용 프리셋으로 저장했습니다.');
+            setMessage('분석표 프리셋으로 저장했습니다.');
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : '회사 공용 프리셋 저장에 실패했습니다.');
+            setMessage(error instanceof Error ? error.message : '분석표 프리셋 저장에 실패했습니다.');
         } finally {
             setPresetSaving(false);
         }
@@ -339,7 +339,7 @@ export function LocationMeetingToolDialog({
 
     const deletePreset = async () => {
         if (!selectedPresetId) return;
-        if (!window.confirm('선택한 회사 공용 프리셋을 삭제할까요?')) return;
+        if (!window.confirm('선택한 분석표 프리셋을 삭제할까요?')) return;
         setPresetSaving(true);
         setMessage('');
         try {
@@ -347,9 +347,9 @@ export function LocationMeetingToolDialog({
             setPresets(prev => prev.filter(preset => preset.id !== selectedPresetId));
             setSelectedPresetId('');
             setPresetName('');
-            setMessage('회사 공용 프리셋을 삭제했습니다.');
+            setMessage('분석표 프리셋을 삭제했습니다.');
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : '회사 공용 프리셋 삭제에 실패했습니다.');
+            setMessage(error instanceof Error ? error.message : '분석표 프리셋 삭제에 실패했습니다.');
         } finally {
             setPresetSaving(false);
         }
@@ -394,43 +394,15 @@ export function LocationMeetingToolDialog({
                             <div>
                                 <h4>간단 수익분석표</h4>
                                 <p>목표매출 변화에 따라 비용 비율과 세전수익을 비교합니다.</p>
-                                <div className={styles.meetingToolTargetGroup}>
-                                    <span className={styles.meetingToolTargetLabel}>목표매출 변화</span>
-                                    <div className={styles.meetingToolTargetSwitch} aria-label="목표매출 변화 차수">
-                                        {MEETING_TOOL_TARGET_SCENARIOS.map(scenario => (
-                                            <button
-                                                key={scenario.key}
-                                                type="button"
-                                                className={scenario.key === draft.activeTargetKey ? styles.meetingToolTargetButtonActive : styles.meetingToolTargetButton}
-                                                onClick={() => {
-                                                    setRatioInputValues({});
-                                                    setDraft(prev => setMeetingToolActiveTarget(prev, scenario.key));
-                                                }}
-                                            >
-                                                {scenario.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
                             </div>
-                            <label>
-                                목표매출(만원)
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={formatMoneyInputValue(draft.targetSales)}
-                                    onChange={(event) => {
-                                        setRatioInputValues({});
-                                        setDraft(prev => updateMeetingToolTargetSales(prev, parseNumberInput(event.target.value)));
-                                    }}
-                                    placeholder="4500"
-                                />
-                            </label>
                         </div>
                         <div className={styles.meetingToolPresetBar}>
                             <div className={styles.meetingToolPresetIntro}>
-                                <strong>회사 공용 프리셋</strong>
-                                <span>비용 항목과 목표매출 변화를 다른 후보지에도 재사용합니다.</span>
+                                <div className={styles.meetingToolPresetTitleLine}>
+                                    <strong>분석표 프리셋</strong>
+                                    <span className={styles.meetingToolPresetBadge}>회사 공용</span>
+                                </div>
+                                <span>목표매출 1~3차 시나리오와 비용 항목을 저장해 다른 후보지에 재사용합니다.</span>
                             </div>
                             <label>
                                 불러오기
@@ -469,6 +441,39 @@ export function LocationMeetingToolDialog({
                                     <Trash2 size={14} /> 삭제
                                 </button>
                             </div>
+                        </div>
+                        <div className={styles.meetingToolControlRow}>
+                            <div className={styles.meetingToolTargetGroup}>
+                                <span className={styles.meetingToolTargetLabel}>목표매출 변화</span>
+                                <div className={styles.meetingToolTargetSwitch} aria-label="목표매출 변화 차수">
+                                    {MEETING_TOOL_TARGET_SCENARIOS.map(scenario => (
+                                        <button
+                                            key={scenario.key}
+                                            type="button"
+                                            className={scenario.key === draft.activeTargetKey ? styles.meetingToolTargetButtonActive : styles.meetingToolTargetButton}
+                                            onClick={() => {
+                                                setRatioInputValues({});
+                                                setDraft(prev => setMeetingToolActiveTarget(prev, scenario.key));
+                                            }}
+                                        >
+                                            {scenario.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <label className={styles.meetingToolTargetSalesLabel}>
+                                목표매출(만원)
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={formatMoneyInputValue(draft.targetSales)}
+                                    onChange={(event) => {
+                                        setRatioInputValues({});
+                                        setDraft(prev => updateMeetingToolTargetSales(prev, parseNumberInput(event.target.value)));
+                                    }}
+                                    placeholder="4500"
+                                />
+                            </label>
                         </div>
                         <div className={styles.meetingToolRows}>
                             <div className={styles.meetingToolRowHead}>

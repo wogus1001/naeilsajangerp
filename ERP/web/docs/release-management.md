@@ -150,6 +150,15 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 진행현황 권한/삭제 및 프리셋 UI 정리 커밋 예정
+  - 주요 기능: `/dashboard/franchise-leads/work-intake` 진행현황에서 입점 요청과 예비 창업자 등록을 삭제할 수 있게 하고, 수정/삭제 권한을 실제 작성자, 같은 회사 팀장(`manager`), 관리자 예외로 제한한다. 팀장/관리자 수정 시 기존 작성자/담당자 값은 유지한다. 출점 검토 리포트 수익분석표의 회사 공용 프리셋 UI는 `분석표 프리셋` 툴바로 분리해 목표매출 입력의 하위 옵션처럼 보이지 않도록 정리했다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청 시 Fast Release Runbook 기준으로 반영
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인
+  - 검증: `npx tsx --test src/lib/work-intake-access.test.mts src/app/(main)/dashboard/franchise-leads/work-intake/requests.test.mts src/app/api/franchise-work-intake/route.test.mts src/lib/franchise-lead-access.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 보호 라우트는 실 Supabase 세션 없이 로그인으로 리다이렉트되어, 현재 CSS module/JSX 상태를 반영한 Playwright harness로 진행현황 수정/삭제 버튼과 프리셋 UI desktop/mobile overflow 0건을 확인했다.
+  - 남은 이슈: 이번 범위의 신규 SQL은 없다. 운영 배포 후 미래 회사 실계정으로 작성자/팀장/관리자/일반 직원 권한 표시와 삭제 persistence를 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 개인정보 저장/진행현황 작성자 핫픽스 커밋 예정
   - 주요 기능: 실서버 개인정보 수정에서 저장 후 `사용자 정보를 다시 불러오지 못했습니다.`가 표시되던 문제를 수정한다. 최종 프로필 재조회 쿼리가 `company:companies(...)` 암묵 관계 대신 `company:companies!company_id(...)`를 사용하도록 보강하고, 프로필 업데이트 오류를 무시하지 않게 했다. 진행현황 입점 요청 행에는 회사명 옆 작성자 표시를 추가했다.
   - dev 반영: none

@@ -11,6 +11,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
 const SHARED_TOP_LEVEL_BLOCKLIST = new Set([
@@ -65,6 +66,10 @@ function canAccessProperty(
     property: { company_id: string | null; manager_id: string | null }
 ) {
     return canAccessCompanyResource(requester, property);
+}
+
+function isWorkIntakeProperty(property: { operation_type?: string | null }): boolean {
+    return property.operation_type === '물건등록';
 }
 
 function requesterFallbackFromBody(body: unknown): string | null {
@@ -428,8 +433,12 @@ export async function PUT(request: Request) {
         // 1. Fetch existing to merge JSONB
         const { data: existing, error: fetchError } = await supabaseAdmin.from('properties').select('*').eq('id', id).single();
         if (fetchError || !existing) return fail(404, 'NOT_FOUND', 'Property not found');
+        const existingIsWorkIntake = isWorkIntakeProperty(existing);
         if (!canAccessProperty(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+        if (existingIsWorkIntake && !canManageWorkIntakeRecord(requesterProfile, existing)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
         }
 
         // 2. Prepare updates
@@ -445,8 +454,13 @@ export async function PUT(request: Request) {
         if (companyName) {
             const companyId = await resolveCompanyIdByName(supabaseAdmin, companyName);
             if (!companyId) return fail(400, 'VALIDATION_ERROR', 'Invalid companyName');
-            updates.company_id = companyId;
-            targetCompanyId = companyId;
+            if (existingIsWorkIntake && companyId !== existing.company_id) {
+                return fail(403, 'FORBIDDEN', '진행현황 입점 요청의 회사는 변경할 수 없습니다.');
+            }
+            if (!existingIsWorkIntake) {
+                updates.company_id = companyId;
+                targetCompanyId = companyId;
+            }
         }
         updates.data = mergedData;
 
@@ -468,13 +482,22 @@ export async function PUT(request: Request) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: manager/company mismatch');
             }
 
-            updates.manager_id = mgrUuid;
-            mergedData.managerId = managerId;
+            if (existingIsWorkIntake && mgrUuid !== existing.manager_id) {
+                return fail(403, 'FORBIDDEN', '진행현황 입점 요청의 작성자는 변경할 수 없습니다.');
+            }
+
+            if (!existingIsWorkIntake) {
+                updates.manager_id = mgrUuid;
+                mergedData.managerId = managerId;
+            }
         }
 
         if (name !== undefined) updates.name = name;
         if (status !== undefined) updates.status = status;
-        if (operationType !== undefined) updates.operation_type = operationType;
+        if (operationType !== undefined && existingIsWorkIntake && operationType !== existing.operation_type) {
+            return fail(403, 'FORBIDDEN', '진행현황 입점 요청의 유형은 변경할 수 없습니다.');
+        }
+        if (operationType !== undefined && !existingIsWorkIntake) updates.operation_type = operationType;
         if (address !== undefined) updates.address = address;
         if (isFavorite !== undefined) updates.is_favorite = isFavorite;
 
@@ -511,7 +534,7 @@ export async function DELETE(request: Request) {
 
         const { data: targetProperty, error: targetError } = await supabaseAdmin
             .from('properties')
-            .select('id, company_id, manager_id')
+            .select('id, company_id, manager_id, operation_type')
             .eq('id', id)
             .single();
         if (targetError || !targetProperty) {
@@ -519,6 +542,9 @@ export async function DELETE(request: Request) {
         }
         if (!canAccessProperty(requesterProfile, targetProperty)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+        if (isWorkIntakeProperty(targetProperty) && !canManageWorkIntakeRecord(requesterProfile, targetProperty)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
         }
 
         if (!isAdmin(requesterProfile) && company) {

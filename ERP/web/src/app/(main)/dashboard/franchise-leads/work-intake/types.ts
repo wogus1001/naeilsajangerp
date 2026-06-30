@@ -9,6 +9,8 @@ export type WorkIntakeKind = WorkIntakeTab;
 export type PropertyItem = {
     readonly id: string;
     readonly companyName: string;
+    readonly managerId: string;
+    readonly authorId: string;
     readonly authorName: string;
     readonly name: string;
     readonly status: string;
@@ -19,11 +21,15 @@ export type PropertyItem = {
     readonly deposit: string;
     readonly monthlyRent: string;
     readonly createdAt: string;
+    readonly canEdit: boolean;
+    readonly canDelete: boolean;
     readonly form: PropertyRegistrationForm;
 };
 
 export type LeadRegistrationItem = {
     readonly id: string;
+    readonly managerId: string;
+    readonly authorId: string;
     readonly managerName: string;
     readonly name: string;
     readonly mobile: string;
@@ -39,11 +45,15 @@ export type LeadRegistrationItem = {
     readonly promotedAt: string;
     readonly promotedLeadId: string;
     readonly createdAt: string;
+    readonly canEdit: boolean;
+    readonly canDelete: boolean;
     readonly form: LeadRegistrationForm;
 };
 
 export type MatchingRequestItem = {
     readonly id: string;
+    readonly managerId: string;
+    readonly authorId: string;
     readonly managerName: string;
     readonly name: string;
     readonly mobile: string;
@@ -57,6 +67,8 @@ export type MatchingRequestItem = {
     readonly urgency: string;
     readonly memo: string;
     readonly createdAt: string;
+    readonly canEdit: boolean;
+    readonly canDelete: boolean;
     readonly form: MatchingRequestForm;
 };
 
