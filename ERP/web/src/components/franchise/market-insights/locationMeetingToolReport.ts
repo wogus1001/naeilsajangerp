@@ -1,6 +1,7 @@
 import {
     calculateMeetingToolSummary,
     MEETING_TOOL_DISCLAIMER,
+    MEETING_TOOL_MARKET_REPORT_FIELDS,
     MEETING_TOOL_TARGET_SCENARIOS,
     setMeetingToolActiveTarget,
     type MeetingToolDraft
@@ -60,6 +61,14 @@ function buildCostRows(draft: MeetingToolDraft): string {
 </tr>`).join('');
 }
 
+function buildMarketReportCards(draft: MeetingToolDraft): string {
+    return MEETING_TOOL_MARKET_REPORT_FIELDS.map(field => `
+<div class="analysis-card">
+<span>${escapeHtml(field.label)}</span>
+<p>${escapeHtml(draft.marketReport[field.key] || '-')}</p>
+</div>`).join('');
+}
+
 export function buildMeetingToolReportHtml({
     location,
     draft,
@@ -92,10 +101,14 @@ p { margin: 0; color: #6b7684; font-size: 12px; line-height: 1.6; }
 .meta { min-width: 190px; padding: 10px 12px; border: 1px solid #e5e8eb; border-radius: 8px; background: #f9fafb; }
 .guide { margin-top: 8px; color: #2272eb; font-weight: 700; }
 .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.metric, .memo, .notice { border: 1px solid #e5e8eb; border-radius: 8px; background: #ffffff; }
+.analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.metric, .memo, .notice, .analysis-card { border: 1px solid #e5e8eb; border-radius: 8px; background: #ffffff; }
 .metric { min-height: 64px; padding: 10px; }
 .metric span { display: block; color: #6b7684; font-size: 11px; font-weight: 800; }
 .metric strong { display: block; margin-top: 6px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.analysis-card { min-height: 86px; padding: 10px 12px; }
+.analysis-card span { display: block; color: #4e5968; font-size: 11px; font-weight: 800; }
+.analysis-card p { margin-top: 6px; color: #333d4b; font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .highlight { border-color: #b9d7ff; background: #f5f9ff; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th, td { padding: 8px 7px; border: 1px solid #e5e8eb; font-size: 11px; line-height: 1.45; text-align: left; vertical-align: top; word-break: keep-all; overflow-wrap: anywhere; }
@@ -139,6 +152,10 @@ ${modeGuide}
 <thead><tr><th>시나리오</th><th>목표매출(만원)</th><th>비용 합계</th><th>세전수익</th><th>세전 수익률</th></tr></thead>
 <tbody>${buildScenarioRows(draft)}</tbody>
 </table>
+</section>
+<section>
+<h2>상권분석·목표매출 근거</h2>
+<div class="analysis-grid">${buildMarketReportCards(draft)}</div>
 </section>
 <section>
 <h2>현재 선택안 비용 구조</h2>

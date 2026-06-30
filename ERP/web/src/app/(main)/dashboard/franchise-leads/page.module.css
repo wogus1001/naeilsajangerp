@@ -3329,6 +3329,15 @@
     background: #ffffff;
 }
 
+.meetingToolMarketReport {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
 .meetingToolSectionHeader {
     display: grid;
     gap: 4px;
@@ -3398,7 +3407,8 @@
 .meetingToolTargetSalesLabel input,
 .meetingToolRow input,
 .meetingToolCustomRow input,
-.meetingToolMemo textarea {
+.meetingToolMemo textarea,
+.meetingToolMarketGrid textarea {
     box-sizing: border-box;
     width: 100%;
     border: 1px solid #d8dee8;
@@ -3517,6 +3527,33 @@
     padding: 0 10px;
     border-radius: 8px;
     font-size: 12px;
+}
+
+.meetingToolMarketGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.meetingToolMarketGrid label {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.meetingToolMarketGrid span {
+    color: #4e5968;
+}
+
+.meetingToolMarketGrid textarea {
+    min-height: 92px;
+    resize: vertical;
+    padding: 10px;
+    line-height: 1.5;
+    word-break: keep-all;
 }
 
 .meetingToolRows {
@@ -10590,6 +10627,7 @@
     .meetingToolSectionHeader,
     .meetingToolControlRow,
     .meetingToolPresetBar,
+    .meetingToolMarketGrid,
     .meetingToolVersionHeader,
     .meetingToolVersionSave,
     .meetingToolVersionItem,

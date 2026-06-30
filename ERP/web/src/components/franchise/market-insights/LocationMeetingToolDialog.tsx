@@ -13,12 +13,14 @@ import {
     updateMeetingToolCostRatio,
     updateMeetingToolTargetSales,
     type MeetingToolCostKey,
-    type MeetingToolDraft
+    type MeetingToolDraft,
+    type MeetingToolMarketReportKey
 } from '@/lib/franchise-location-meeting-tool';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import type { FranchiseLocation } from './locationMasterTypes';
 import { LocationMeetingToolActions } from './LocationMeetingToolActions';
 import { LocationMeetingToolCalculatorSection } from './LocationMeetingToolCalculatorSection';
+import { LocationMeetingToolMarketReportSection } from './LocationMeetingToolMarketReportSection';
 import { LocationMeetingToolPresetPanel } from './LocationMeetingToolPresetPanel';
 import { LocationMeetingToolResultSection } from './LocationMeetingToolResultSection';
 import { LocationMeetingToolSummaryCards } from './LocationMeetingToolSummaryCards';
@@ -152,6 +154,16 @@ export function LocationMeetingToolDialog({
         setDraft(prev => removeMeetingToolCustomCostRow(prev, key));
     };
 
+    const updateMarketReport = (key: MeetingToolMarketReportKey, value: string) => {
+        setDraft(prev => ({
+            ...prev,
+            marketReport: {
+                ...prev.marketReport,
+                [key]: value
+            }
+        }));
+    };
+
     return (
         <div className={styles.meetingToolBackdrop} role="dialog" aria-modal="true" aria-label="출점 검토 리포트">
             <section className={styles.meetingToolPanel}>
@@ -204,6 +216,11 @@ export function LocationMeetingToolDialog({
                             onAddCustomCost={addCustomCost}
                         />
                     </section>
+
+                    <LocationMeetingToolMarketReportSection
+                        marketReport={draft.marketReport}
+                        onMarketReportChange={updateMarketReport}
+                    />
 
                     <LocationMeetingToolResultSection
                         totalCost={summary.totalCost}

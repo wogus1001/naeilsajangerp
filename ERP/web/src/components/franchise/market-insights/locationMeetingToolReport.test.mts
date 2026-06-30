@@ -55,6 +55,12 @@ test('Given three target scenarios When building report HTML Then the printout i
             { key: 'materialCost', amount: 1_750, ratio: 35, memo: '표준 원가' },
             { key: 'laborCost', amount: 1_000, ratio: 20, memo: '2인 기준' }
         ],
+        marketReport: {
+            demandEvidence: '점심 피크 유동인구 확인',
+            riskNotes: '경쟁점 <2곳> 재확인',
+            targetSalesBasis: '객단가 12,000원 x 예상 125건',
+            tradeAreaSummary: '역세권 1층\n오피스 배후'
+        },
         reportMemo: '상권 <재확인> 필요',
         targetScenarios: [
             { key: 'first', label: '1차', targetSales: 4_500 },
@@ -74,6 +80,9 @@ test('Given three target scenarios When building report HTML Then the printout i
     assert.match(html, /1차/);
     assert.match(html, /2차/);
     assert.match(html, /3차/);
+    assert.match(html, /상권분석·목표매출 근거/);
+    assert.match(html, /객단가 12,000원 x 예상 125건/);
+    assert.match(html, /경쟁점 &lt;2곳&gt; 재확인/);
     assert.match(html, /검토 의견/);
     assert.match(html, /상권 &lt;재확인&gt; 필요/);
     assert.match(html, /내부 검토 안내/);

@@ -14,8 +14,16 @@ export const MEETING_TOOL_TARGET_SCENARIOS = [
     { key: 'third', label: '3차' }
 ] as const;
 
+export const MEETING_TOOL_MARKET_REPORT_FIELDS = [
+    { key: 'tradeAreaSummary', label: '상권 요약', placeholder: '상권 특성, 입지 장점, 배후 수요를 입력하세요.' },
+    { key: 'demandEvidence', label: '수요 근거', placeholder: '유동인구, 배후세대, 시간대별 수요를 입력하세요.' },
+    { key: 'targetSalesBasis', label: '목표매출 산정 근거', placeholder: '객단가, 예상 방문수, 회전율 등 산정 근거를 입력하세요.' },
+    { key: 'riskNotes', label: '리스크/확인사항', placeholder: '경쟁점, 임대 조건, 추가 확인사항을 입력하세요.' }
+] as const;
+
 export type MeetingToolBaseCostKey = typeof MEETING_TOOL_COST_ROWS[number]['key'];
 export type MeetingToolCostKey = string;
+export type MeetingToolMarketReportKey = typeof MEETING_TOOL_MARKET_REPORT_FIELDS[number]['key'];
 export type MeetingToolTargetKey = typeof MEETING_TOOL_TARGET_SCENARIOS[number]['key'];
 
 export type MeetingToolTargetScenario = {
@@ -33,11 +41,16 @@ export type MeetingToolCostRow = {
     readonly custom: boolean;
 };
 
+export type MeetingToolMarketReport = {
+    readonly [key in MeetingToolMarketReportKey]: string;
+};
+
 export type MeetingToolDraft = {
     readonly activeTargetKey: MeetingToolTargetKey;
     readonly targetSales: number | null;
     readonly targetScenarios: readonly MeetingToolTargetScenario[];
     readonly costRows: readonly MeetingToolCostRow[];
+    readonly marketReport: MeetingToolMarketReport;
     readonly reportMemo: string;
     readonly updatedAt: string | null;
 };
@@ -71,6 +84,7 @@ type MutableMeetingToolDraft = {
     targetSales?: unknown;
     targetScenarios?: unknown;
     costRows?: unknown;
+    marketReport?: unknown;
     reportMemo?: unknown;
     updatedAt?: unknown;
 };
@@ -94,6 +108,18 @@ function parseNullableNumber(value: unknown): number | null {
 function cleanString(value: unknown): string {
     if (value === null || value === undefined) return '';
     return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function cleanMultilineText(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    return value
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
 
 function roundRatio(value: number): number {
@@ -188,6 +214,16 @@ function normalizeCustomCostRows(rows: readonly unknown[], targetSales: number |
         .filter((row): row is MeetingToolCostRow => row !== null);
 }
 
+function normalizeMarketReport(value: unknown): MeetingToolMarketReport {
+    const source = isRecord(value) ? value : {};
+    return {
+        tradeAreaSummary: cleanMultilineText(source.tradeAreaSummary),
+        demandEvidence: cleanMultilineText(source.demandEvidence),
+        targetSalesBasis: cleanMultilineText(source.targetSalesBasis),
+        riskNotes: cleanMultilineText(source.riskNotes)
+    };
+}
+
 export function getMeetingToolDefaultsFromLocation(location: Partial<FranchiseLocationMasterData>): Partial<Record<MeetingToolBaseCostKey, number | null>> {
     const monthlyRent = parseLocationMoney(location.lease?.monthlyRent);
     const maintenanceFee = parseLocationMoney(location.lease?.maintenanceFee);
@@ -234,6 +270,7 @@ export function normalizeMeetingToolDraft(
             )),
             ...normalizeCustomCostRows(sourceCostRows, targetSales)
         ],
+        marketReport: normalizeMarketReport(source.marketReport),
         reportMemo: typeof source.reportMemo === 'string' ? source.reportMemo.trim() : '',
         updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null
     };
@@ -271,6 +308,7 @@ export function applyMeetingToolPreset(draft: MeetingToolDraft, preset: MeetingT
         targetSales: preset.targetSales,
         targetScenarios: preset.targetScenarios,
         costRows: preset.costRows,
+        marketReport: draft.marketReport,
         reportMemo: draft.reportMemo,
         updatedAt: draft.updatedAt
     });

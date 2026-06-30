@@ -797,6 +797,17 @@
 - 검증: `npx tsx --test src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 2건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과했다.
 - 브라우저 QA: Playwright print media 렌더에서 헤더 텍스트가 `하남 미사 후보지 출점 검토 리포트 / 경기 하남시 조정대로45 / 2026. 06. 30. / 담당 김팀장`으로 표시되는 것을 확인했다. 헤더에 `내부 검토 자료`, `생성일`, `오전/오후`, `hh:mm` 시간 표기, PDF 안내 문구가 노출되지 않았다.
 
+## 2026-06-30 점포개발 미팅 도구 2차-5 QA
+
+- 2차-5 상권분석·목표매출 보고서 형태 고도화: 출점 검토 리포트 다이얼로그에 `상권분석·목표매출 근거` 섹션을 추가했다. 입력 필드는 `상권 요약`, `수요 근거`, `목표매출 산정 근거`, `리스크/확인사항` 4개이며 후보지별 `meetingTool.marketReport`에 저장된다.
+- 프리셋 분리: `marketReport`는 후보지 전용 보고서 근거이므로 회사 공용 프리셋 저장 데이터에서는 제외한다. 프리셋 적용 시 기존 후보지의 `marketReport`와 `reportMemo`는 유지된다.
+- 출력물 반영: PDF/인쇄 HTML의 목표매출 시나리오 비교표 아래에 `상권분석·목표매출 근거` 섹션을 추가했다. HTML escape와 줄바꿈 표시를 테스트로 고정했다.
+- 버전 이력 연동: 후보지별 버전 이력은 `MeetingToolDraft` snapshot을 저장하므로, `marketReport`도 버전 저장/불러오기 대상에 자연스럽게 포함된다. 별도 SQL은 추가하지 않았다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 12건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 30건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 local dev 서버 `http://localhost:3000`의 `/demo`에서 데모 게이트 로그인 후 `출점 후보지` -> `리포트` 다이얼로그를 1280px/390px로 확인했다. `상권분석·목표매출 근거` 섹션 노출, `목표매출 산정 근거` 입력 유지, textarea 5개 노출, page horizontal overflow 0, textarea clipping 0을 확인했다. console page error는 없고, 기존 Supabase GoTrue 다중 인스턴스 warning만 관찰했다.
+- 코드리뷰: 새 subagent 코드리뷰 결과 actionable finding은 없었다. 권고한 프리셋 POST의 `marketReport` 제외 저장 테스트와 버전 POST/GET의 `marketReport` snapshot 왕복 테스트는 같은 회귀 묶음에 반영했다.
+- 신규 SQL: 이번 2차-5 범위의 신규 SQL은 없다. 기존 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 SQL 등록 필요 상태다.
+
 ## 다음 QA 체크리스트
 
 ### P0

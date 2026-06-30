@@ -54,6 +54,12 @@ test('Given an accessible location When saving a version Then the route incremen
         locationId,
         meetingTool: {
             costRows: [{ key: 'materialCost', amount: '1,750' }],
+            marketReport: {
+                demandEvidence: '점심 피크 유동인구 확인',
+                riskNotes: '경쟁점 <2곳> 재확인',
+                targetSalesBasis: '객단가 12,000원 x 예상 125건',
+                tradeAreaSummary: '역세권 1층'
+            },
             reportMemo: '검토 메모',
             targetSales: '5,000'
         },
@@ -73,8 +79,13 @@ test('Given an accessible location When saving a version Then the route incremen
     assert.ok(isJsonRecord(insert.meeting_tool));
     assert.equal(insert.meeting_tool.targetSales, 5_000);
     assert.equal(insert.meeting_tool.reportMemo, '검토 메모');
+    assert.ok(isJsonRecord(insert.meeting_tool.marketReport));
+    assert.equal(insert.meeting_tool.marketReport.targetSalesBasis, '객단가 12,000원 x 예상 125건');
     assert.ok(isJsonRecord(payload.data));
     assert.ok(isJsonRecord(payload.data.version));
+    assert.ok(isJsonRecord(payload.data.version.meetingTool));
+    assert.ok(isJsonRecord(payload.data.version.meetingTool.marketReport));
+    assert.equal(payload.data.version.meetingTool.marketReport.riskNotes, '경쟁점 <2곳> 재확인');
     assert.equal(payload.data.version.versionNumber, 3);
 });
 
@@ -97,7 +108,12 @@ test('Given saved versions When loading Then only the selected location history 
                 created_by: managerId,
                 id: '99999999-9999-9999-9999-999999999999',
                 location_id: locationId,
-                meeting_tool: { targetSales: 5_000 },
+                meeting_tool: {
+                    marketReport: {
+                        targetSalesBasis: '저장된 목표매출 근거'
+                    },
+                    targetSales: 5_000
+                },
                 title: '수정안',
                 version_number: 2
             },
@@ -120,6 +136,10 @@ test('Given saved versions When loading Then only the selected location history 
     assert.ok(isJsonRecord(payload.data));
     assert.ok(Array.isArray(payload.data.versions));
     assert.deepEqual(payload.data.versions.map(version => version.versionNumber), [2, 1]);
+    assert.ok(isJsonRecord(payload.data.versions[0]));
+    assert.ok(isJsonRecord(payload.data.versions[0].meetingTool));
+    assert.ok(isJsonRecord(payload.data.versions[0].meetingTool.marketReport));
+    assert.equal(payload.data.versions[0].meetingTool.marketReport.targetSalesBasis, '저장된 목표매출 근거');
 });
 
 test('Given a cross-company location When saving a version Then the route blocks mutation', async () => {
