@@ -9,6 +9,7 @@ export type WorkIntakeKind = WorkIntakeTab;
 export type PropertyItem = {
     readonly id: string;
     readonly companyName: string;
+    readonly authorName: string;
     readonly name: string;
     readonly status: string;
     readonly address: string;

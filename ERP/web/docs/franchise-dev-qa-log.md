@@ -27,6 +27,12 @@
 
 ### 2026-06-30
 
+- 실서버 개인정보 수정에서 `수정 실패: 사용자 정보를 다시 불러오지 못했습니다.`가 표시되던 문제를 수정했다. 저장 API의 최종 프로필 재조회가 다른 인증/로그인 라우트와 달리 `company:companies(...)` 관계를 암묵 추론에 맡겨 production PostgREST에서 빈 재조회로 떨어질 수 있었고, 이를 `company:companies!company_id(...)`로 명시했다. 프로필 업데이트 실패도 무시하지 않고 즉시 오류로 처리하도록 보강했다.
+- `/dashboard/franchise-leads/work-intake` 진행현황의 입점 요청 목록에서 회사명 옆에 작성자 표시를 추가했다. API는 `properties.manager_id`를 함께 조회해 회사 프로필 표시명으로 변환하고, 행 메타는 `회사명 / 작성자 이름 / 상태` 형태로 표시한다.
+- 검증: `npx tsx --test src/app/api/user/update/route.test.mts src/lib/profile-contact.test.mts src/lib/user-role-policy.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 추가 단위 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/app/api/franchise-work-intake/route.test.mts src/app/api/user/update/route.test.mts`를 통과했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3106`에서 Playwright auth/API mock으로 `/profile`을 열고 이메일 `manager-updated@mirae.test`, 휴대폰 `010-9999-8888` 저장 요청과 성공 모달 `회원정보가 수정되었습니다.`를 확인했다. 같은 세션에서 `/dashboard/franchise-leads/work-intake`를 열고 입점 요청 행의 `미래 / 작성자 김팀장 / 공실` 표시를 확인했다. console/page error 0건, 1440px body overflow 0건이었다.
+- 이번 개인정보 저장 핫픽스 범위의 신규 SQL은 없다.
 - 직원 관리에서 기존 회사 브랜드 임직원 가입자가 `sub_manager`(매니저)로 접수되는 정책과 화면 분류가 어긋나 직원 목록/승인 대기에서 누락될 수 있던 문제를 수정했다. `sub_manager`와 `staff`를 회사 직원 그룹으로 함께 표시하고, 팀장 승인/팀장 승격 대상에도 매니저를 포함했다.
 - 개인정보 수정 화면에 등록 이메일과 휴대폰 번호 입력을 추가했다. 저장 API는 본인 인증 세션 기준으로만 수정되며, 이메일 변경 시 Supabase Auth 이메일과 `profiles.email`을 함께 갱신하고 휴대폰은 `profiles.phone`, `profiles.phone_normalized`에 저장한다. 회사 로고 등록/삭제 UI와 API는 팀장(`manager`)만 사용할 수 있도록 제한했다.
 - 검증: `npx tsx --test src/lib/user-role-policy.test.mts src/lib/profile-contact.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.

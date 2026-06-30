@@ -40,6 +40,7 @@ type ProfileRow = {
 type PropertyRow = {
     readonly id: string;
     readonly company_id: string | null;
+    readonly manager_id: string | null;
     readonly name: string | null;
     readonly status: string | null;
     readonly address: string | null;
@@ -105,6 +106,8 @@ function displayName(profile: ProfileRow): string {
         role: profile.role
     });
 }
+
+export const WORK_INTAKE_PROPERTY_SELECT = 'id, company_id, manager_id, name, status, address, created_at, data';
 
 function toPropertyForm(row: PropertyRow): PropertyRegistrationForm {
     const data = row.data || {};
@@ -225,13 +228,18 @@ function toMatchingRequestForm(row: LeadLikeRow): MatchingRequestForm {
     };
 }
 
-function toPropertyView(row: PropertyRow, companies: ReadonlyMap<string, string>) {
+function toPropertyView(
+    row: PropertyRow,
+    companies: ReadonlyMap<string, string>,
+    managerNames: ReadonlyMap<string, string>
+) {
     const companyId = row.company_id || '';
     const form = toPropertyForm(row);
     return {
         id: row.id,
         companyId,
         companyName: companies.get(companyId) || '회사명 없음',
+        authorName: row.manager_id ? managerNames.get(row.manager_id) || '' : '',
         name: row.name || form.propertyName || '이름 없는 물건',
         status: row.status || form.currentStatus,
         address: row.address || form.propertyAddress,
@@ -327,7 +335,7 @@ export async function GET(request: Request) {
         const managerNames = new Map((profiles || []).map(profile => [profile.id, displayName(profile)]));
 
         let propertyQuery = supabaseAdmin.from('properties')
-            .select('id, company_id, name, status, address, created_at, data')
+            .select(WORK_INTAKE_PROPERTY_SELECT)
             .eq('operation_type', '물건등록')
             .in('company_id', companyIds)
             .order('created_at', { ascending: false })
@@ -366,7 +374,7 @@ export async function GET(request: Request) {
         if (matchingError) throw matchingError;
 
         return ok({
-            properties: (properties || []).map(row => toPropertyView(row, companyNames)),
+            properties: (properties || []).map(row => toPropertyView(row, companyNames, managerNames)),
             leadRegistrationRequests: leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationView(row, managerNames)),
             matchingRequests: (matchingRequests || []).map(row => toMatchingRequestView(row, managerNames))
         });

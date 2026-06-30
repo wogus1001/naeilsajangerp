@@ -4,66 +4,15 @@ import { getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { isLoginIdSchemaMissing, isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 import { isValidProfileEmail, normalizeProfileEmail, normalizeProfilePhone } from '@/lib/profile-contact';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import {
+    PROFILE_UPDATE_SELECTS,
+    selectProfileByEmail,
+    selectProfileById,
+    type ProfileUpdates,
+    type ResolvedProfile
+} from '@/lib/user-profile-update';
 
-type ResolvedProfile = {
-    id: string;
-    email: string | null;
-    company_id: string | null;
-    login_id?: string | null;
-};
-
-type ProfileUpdates = {
-    name?: string;
-    email?: string;
-    phone?: string;
-    phone_normalized?: string;
-};
-
-async function selectProfileById(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
-    id: string
-): Promise<ResolvedProfile | null> {
-    const result = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id, login_id')
-        .eq('id', id)
-        .single<ResolvedProfile>();
-
-    if (!isLoginIdSchemaMissing(result.error)) {
-        return result.data;
-    }
-
-    const fallbackResult = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id')
-        .eq('id', id)
-        .single<Omit<ResolvedProfile, 'login_id'>>();
-
-    return fallbackResult.data ? { ...fallbackResult.data, login_id: null } : null;
-}
-
-async function selectProfileByEmail(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
-    email: string
-): Promise<ResolvedProfile | null> {
-    const result = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id, login_id')
-        .eq('email', email)
-        .single<ResolvedProfile>();
-
-    if (!isLoginIdSchemaMissing(result.error)) {
-        return result.data;
-    }
-
-    const fallbackResult = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id')
-        .eq('email', email)
-        .single<Omit<ResolvedProfile, 'login_id'>>();
-
-    return fallbackResult.data ? { ...fallbackResult.data, login_id: null } : null;
-}
+export { PROFILE_UPDATE_SELECTS };
 
 export async function PUT(request: Request) {
     try {
@@ -257,19 +206,20 @@ export async function PUT(request: Request) {
         }
 
         if (Object.keys(updates).length > 0) {
-            await supabaseAdmin.from('profiles').update(updates).eq('id', userId);
+            const { error: updateProfileError } = await supabaseAdmin.from('profiles').update(updates).eq('id', userId);
+            if (updateProfileError) throw updateProfileError;
         }
 
         let finalProfileResult = await supabaseAdmin
             .from('profiles')
-            .select(`*, company:companies(name, logo_url)`)
+            .select(PROFILE_UPDATE_SELECTS.withLogo)
             .eq('id', userId)
             .single();
 
         if (finalProfileResult.error) {
             finalProfileResult = await supabaseAdmin
                 .from('profiles')
-                .select(`*, company:companies(name)`)
+                .select(PROFILE_UPDATE_SELECTS.fallback)
                 .eq('id', userId)
                 .single();
         }

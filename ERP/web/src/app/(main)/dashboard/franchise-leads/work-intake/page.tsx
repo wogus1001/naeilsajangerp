@@ -5,6 +5,7 @@ import { ListChecks } from 'lucide-react';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredUser } from '@/utils/userUtils';
+import { formatWorkIntakePropertyMeta } from '@/lib/work-intake-display';
 import { WorkIntakeEditModal } from './WorkIntakeEditModal';
 import type { WorkIntakeData, WorkIntakeEditTarget, WorkIntakeTab } from './types';
 import styles from './page.module.css';
@@ -102,7 +103,7 @@ export default function FranchiseWorkIntakePage() {
                         <tbody>
                             {data.properties.map(item => (
                                 <tr key={item.id}>
-                                    <td><strong>{item.name}</strong><small>{joinParts([item.companyName, item.status])}</small></td>
+                                    <td><strong>{item.name}</strong><small>{formatWorkIntakePropertyMeta(item)}</small></td>
                                     <td><span>{joinParts([item.desiredBrand, item.desiredCategory])}</span></td>
                                     <td><span>{item.region || '-'}</span><small>{item.address || '-'}</small></td>
                                     <td><span>{joinParts([item.deposit ? `보증금 ${formatManwon(item.deposit)}` : '', item.monthlyRent ? `월세 ${formatManwon(item.monthlyRent)}` : ''])}</span></td>
