@@ -64,7 +64,7 @@ export type MeetingToolSummary = {
 };
 
 export const MEETING_TOOL_DISCLAIMER =
-    '본 자료는 내부 검토용 참고 추정치이며 실제 수익을 보장하지 않습니다. 실제 계약·투자 판단은 원자료와 별도 검토를 함께 진행해야 합니다.';
+    '내부 검토용 추정치입니다. 수익 보장 자료가 아니며, 계약·투자는 원자료 확인 후 판단하세요.';
 
 type MutableMeetingToolDraft = {
     activeTargetKey?: unknown;

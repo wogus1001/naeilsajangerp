@@ -779,6 +779,24 @@
 - 브라우저 QA: 로컬 production 서버 `http://localhost:3126`의 `/demo`에서 데모 게이트 로그인, `출점 후보지`, `리포트` 모달 진입을 1280px/390px으로 확인했다. 목표매출 `4500` 입력은 `4,500`으로 표시되고, 비율은 실제 키 입력 순서로 `4` 입력 후 `4`, `.` 입력 후 `4.`, `5` 입력 후 `4.5`, blur 후 `4.5`가 유지됐으며 금액은 `203`으로 계산됐다. dialog overflow와 console/page error는 없었다.
 - 신규 SQL: 이번 보강의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료 상태다.
 
+## 2026-06-30 점포개발 미팅 도구 2차-1/2차-4 QA
+
+- 2차-1 출력물 고도화: 출점 검토 리포트 PDF/인쇄 HTML을 다이얼로그에서 분리한 순수 유틸로 옮기고, 후보지 요약, 목표매출 1차/2차/3차 비교표, 현재 선택안 비용 구조, 검토 의견, 내부 검토 안내가 보이는 미팅 자료형 레이아웃으로 정리했다. 기존 Blob URL 기반 인쇄 방식은 유지한다.
+- 2차-4 후보지별 버전 이력: 신규 `/api/franchise-locations/meeting-tool-versions` GET/POST와 `franchise_location_meeting_tool_versions` 테이블 migration을 추가했다. 현재안 저장은 기존 `franchise_locations.data.meetingTool` PATCH를 유지하고, 버전 이력은 후보지별 snapshot으로 별도 저장한다.
+- 권한 정책: 버전 이력 API는 `getAuthenticatedRequesterProfile`과 `canAccessFranchiseLocation`을 사용한다. 관리자 예외, 브랜드 직원 회사 범위, 협력업체 작성자 전용 접근 규칙을 기존 후보지 접근 정책과 동일하게 적용한다.
+- UI: 리포트 다이얼로그에 `리포트 버전 이력` 영역을 추가했다. 담당자는 버전명을 입력해 `현재안 버전 저장`을 누르고, 목록에서 목표매출/수익률이 표시된 이전안을 `불러오기`로 되돌릴 수 있다. 이전안을 불러온 뒤 후보지 현재안에 반영하려면 기존 `저장` 버튼을 누른다.
+- 구조 정리: 기존 대형 다이얼로그에서 프리셋/버전 이력 상태 훅과 계산표/프리셋/결과/액션 렌더 섹션을 분리했다. `LocationMeetingToolDialog.tsx`는 217 pure LOC로 낮추고, 신규 기능/API/테스트 지원 파일은 모두 250 pure LOC 이하로 유지했다.
+- 데모 모드: 데모 가드가 신규 버전 이력 API를 차단할 때 원문 `Demo mode blocked real API request`가 사용자 화면에 노출되지 않게 했다. 데모에서는 빈 버전 이력으로 보이고, 저장류 액션은 데모 비활성화 안내 문구로 처리한다.
+- 코드리뷰 후 보강: 기본 버전명이 목록에서 `v2 v2 검토안`처럼 중복 표시되지 않도록 display title 유틸과 테스트를 추가했다. 동시 저장으로 DB unique 제약 `23505`가 발생하면 500 대신 409 재시도 안내를 반환하도록 보강했고, 중복키 메시지를 테이블 미적용 424로 오인하지 않게 missing-table 판별을 `42P01`/`PGRST205`로 좁혔다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 기존 local dev 서버 `http://localhost:3000`의 `/demo`에서 출점 후보지 `리포트` 다이얼로그를 desktop/mobile로 확인했고, `분석표 프리셋`과 `리포트 버전 이력` 노출, dialog horizontal overflow 0, console/page error 없음, 데모 API 차단 원문 미노출을 확인했다.
+- 신규 SQL: `supabase_franchise_location_meeting_tool_versions_migration.sql`은 SQL 등록 필요. SQL 등록 전 버전 이력 API는 424와 SQL 적용 안내를 반환한다.
+
+## 2026-06-30 출점 검토 리포트 인쇄/PDF 헤더 QA
+
+- 요청 반영: PDF 저장 및 인쇄용 출점 검토 리포트 상단에서 `내부 검토 자료` 배지를 제거했다. 우측 메타 영역의 `생성일` 라벨도 제거하고, 날짜는 시간 없이 `YYYY. MM. DD.` 형식으로만 표시한다.
+- 검증: `npx tsx --test src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 2건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과했다.
+- 브라우저 QA: Playwright print media 렌더에서 헤더 텍스트가 `하남 미사 후보지 출점 검토 리포트 / 경기 하남시 조정대로45 / 2026. 06. 30. / 담당 김팀장`으로 표시되는 것을 확인했다. 헤더에 `내부 검토 자료`, `생성일`, `오전/오후`, `hh:mm` 시간 표기, PDF 안내 문구가 노출되지 않았다.
+
 ## 다음 QA 체크리스트
 
 ### P0

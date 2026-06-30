@@ -104,6 +104,35 @@ git push origin HEAD
 
 운영 도메인 `www.fcerp.co.kr`은 Vercel `naeilsajang` 프로젝트에 연결되어 있다. `web` 프로젝트로 배포하면 preview URL은 뜨지만 운영 도메인에는 반영되지 않는다.
 
+운영 배포 CLI는 반드시 repo root에서 `naeilsajang` 프로젝트를 명시해 실행한다. `ERP/web` 안에서 실행하면 Vercel 프로젝트의 Root Directory 설정(`ERP/web`)이 한 번 더 붙어 `ERP/web/ERP/web` 경로 오류가 날 수 있고, repo root에서 프로젝트를 명시하지 않으면 새 Vercel 프로젝트가 생성될 수 있다.
+
+```bash
+# repo root: /Users/kimjaehyun/Documents/project/erp_workspace/my_project_main_release
+npx vercel deploy --dry --project naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym --yes
+npx vercel deploy --prod --project naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym --yes
+```
+
+dry-run에서 다음을 먼저 확인한 뒤 실제 production 배포를 실행한다.
+
+- `framework`가 `Next.js`로 감지된다.
+- 배포 대상 프로젝트가 `naeilsajang`이다.
+- `ERP/web/.env.local`, `ERP/web/.next`, `ERP/web/node_modules`, `ERP/web/.vercel`은 ignored 목록에 포함된다.
+- `.env*`, provider token, service-role key, 개인 인증 정보가 업로드 목록에 없어야 한다.
+
+실수로 다른 프로젝트가 생성되거나 다른 preview URL이 뜨면 운영 도메인과 무관하더라도 즉시 정리하고, 다시 `naeilsajang` 기준으로 배포한다.
+
+```bash
+npx vercel project list --scope team_NcWNRifDHvr7GdFW0rcpR3ym
+npx vercel project remove <wrong-project-name> --scope team_NcWNRifDHvr7GdFW0rcpR3ym
+```
+
+정리 후에는 local root `.vercel/` 같은 잘못 생성된 링크와 `.gitignore` 변경이 남지 않았는지 확인한다.
+
+```bash
+git status --short
+find . -maxdepth 2 -path '*/.vercel/project.json' -print
+```
+
 운영 배포 확인 기준:
 
 ```bash
@@ -148,6 +177,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 점포개발 미팅 도구 2차-1/2차-4 커밋 예정
+  - 주요 기능: 출점 검토 리포트 PDF/인쇄 출력물을 후보지 요약, 목표매출 1차/2차/3차 비교표, 비용 구조, 검토 의견, 내부 검토 안내 중심의 미팅 자료형 레이아웃으로 고도화했다. 후보지별 `리포트 버전 이력`을 추가해 현재안을 version snapshot으로 저장하고, 이전안을 불러온 뒤 기존 저장 버튼으로 현재안에 반영할 수 있게 했다. 다이얼로그는 프리셋/버전 이력 훅과 렌더 섹션 컴포넌트로 분리해 `LocationMeetingToolDialog.tsx`를 217 pure LOC로 낮췄다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. local dev 서버 데모에서 출점 후보지 `리포트` 다이얼로그를 열어 `분석표 프리셋`과 `리포트 버전 이력` 영역을 desktop/mobile로 확인했고, dialog horizontal overflow 0, console/page error 없음, 데모 API 차단 원문 미노출을 확인했다.
+  - 남은 이슈: `supabase_franchise_location_meeting_tool_versions_migration.sql` SQL 등록 필요. SQL 등록 후 실계정에서 현재안 버전 저장, 목록 최신순 표시, 이전안 불러오기, 저장 persistence를 확인한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 공개 사업자정보/진행현황 권한 안내 문구 정리 커밋 예정
