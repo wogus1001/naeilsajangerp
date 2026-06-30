@@ -152,8 +152,7 @@
 }
 
 .footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
   gap: 16px;
   margin-top: 16px;
   padding: 20px 32px;
@@ -164,9 +163,20 @@
   font-size: 13px;
 }
 
+.footerTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .footer a {
   color: #3182f6;
   font-weight: 700;
+}
+
+.businessInfo {
+  padding-top: 16px;
+  border-top: 1px solid #f2f4f6;
 }
 
 @media (max-width: 760px) {
@@ -187,7 +197,10 @@
   }
 
   .footer {
-    flex-direction: column;
     padding: 18px 20px;
+  }
+
+  .footerTop {
+    flex-direction: column;
   }
 }

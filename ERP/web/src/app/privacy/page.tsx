@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BusinessInfoFooter } from "@/components/common/BusinessInfoFooter";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 const effectiveDate = "2026년 6월 16일";
 const appName = "FC ERP";
-const contactEmail = "naeilsajang@gmail.com";
+const contactEmail = "cs@sajang.app";
 
 const policySections = [
   {
@@ -139,8 +140,11 @@ export default function PrivacyPage() {
         </div>
 
         <footer className={styles.footer}>
-          <Link href="/login">로그인으로 돌아가기</Link>
-          <span>{contactEmail}</span>
+          <div className={styles.footerTop}>
+            <Link href="/login">로그인으로 돌아가기</Link>
+            <span>{contactEmail}</span>
+          </div>
+          <BusinessInfoFooter className={styles.businessInfo} />
         </footer>
       </div>
     </main>

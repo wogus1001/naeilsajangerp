@@ -27,6 +27,11 @@
 
 ### 2026-06-30
 
+- Kakao 비즈니스 심사 대응을 위해 공개 화면 하단에 사업자정보 푸터를 추가했다. `/landing`, `/login`, `/signup`, `/privacy`에 `상호: 주식회사 내일사장`, `대표: 박규태`, `사업자등록번호: 448-81-03095`, `주소: 경기도 하남시 조정대로45 미사센텀비즈 F922`, `이메일: cs@sajang.app`, `연락처: 070-8095-2881`을 노출한다. 개인정보처리방침 문의 이메일도 `cs@sajang.app`로 맞췄다.
+- `/dashboard/franchise-leads/work-intake` 진행현황 표에서 수정/삭제 권한이 없는 행의 관리 칸에 `작성자/팀장/관리자만 가능` 안내 문구를 표시하지 않고 빈칸으로 남기도록 정리했다. 권한 정책 자체는 기존 작성자, 같은 회사 팀장, 관리자 예외를 유지한다.
+- 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `127.0.0.1:3107`에서 Playwright로 `/landing`, `/login`, `/signup`, `/privacy`를 1280px/390px에서 확인했다. 각 화면의 사업자정보 푸터 노출, 텍스트 일치, horizontal overflow 0건을 확인했다. `작성자/팀장/관리자만 가능` 문구는 `src`와 `.next` 산출물에서 미노출을 확인했다.
+- 이번 공개 사업자정보/진행현황 권한 안내 문구 정리 범위의 신규 SQL은 없다.
 - `/dashboard/franchise-leads/work-intake` 진행현황의 입점 요청/예비 창업자 등록에 삭제 기능을 추가했다. 수정과 삭제 권한은 실제 작성자, 같은 회사 팀장(`manager`), 관리자 예외로 제한하고, 팀장/관리자가 수정해도 기존 작성자/담당자 값이 바뀌지 않도록 전용 mutation API에서 기존 row의 `manager_id`를 보존한다.
 - 진행현황 전용 mutation API(`/api/franchise-work-intake/[kind]/[id]`)를 추가하고, 기존 `properties`, `franchise_leads`, `franchise_lead_registration_requests` 직접 수정/삭제 API로 진행현황 레코드를 우회 변경하는 경로도 같은 권한 정책으로 막았다.
 - 출점 검토 리포트의 수익분석표 프리셋 UI를 `목표매출` 입력 아래 보조 옵션처럼 보이지 않도록 `분석표 프리셋` 툴바로 분리했다. 회사 공용 성격은 배지로 표시하고, 목표매출 변화/목표매출 입력보다 앞에 배치했다.

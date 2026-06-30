@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BusinessInfoFooter } from '@/components/common/BusinessInfoFooter';
 import { DemoCtaSection } from './DemoCtaSection';
 import { FeatureDetailsSection } from './FeatureDetailsSection';
 import { MetricsPreviewSection } from './MetricsPreviewSection';
@@ -56,13 +57,16 @@ export default function LandingPage() {
 
             <footer className={styles.footer}>
                 <div className={styles.inner}>
-                    <div className={styles.footerCopy}>
-                        <strong>FC ERP</strong>
-                        <span>프랜차이즈 본사를 위한 모객, 출점, 계약, 오픈, 운영 통합 솔루션</span>
+                    <div className={styles.footerTop}>
+                        <div className={styles.footerCopy}>
+                            <strong>FC ERP</strong>
+                            <span>프랜차이즈 본사를 위한 모객, 출점, 계약, 오픈, 운영 통합 솔루션</span>
+                        </div>
+                        <nav className={styles.footerLinks} aria-label="서비스 정책">
+                            <Link href="/privacy">개인정보처리방침</Link>
+                        </nav>
                     </div>
-                    <nav className={styles.footerLinks} aria-label="서비스 정책">
-                        <Link href="/privacy">개인정보처리방침</Link>
-                    </nav>
+                    <BusinessInfoFooter className={styles.businessInfo} />
                 </div>
             </footer>
         </main>

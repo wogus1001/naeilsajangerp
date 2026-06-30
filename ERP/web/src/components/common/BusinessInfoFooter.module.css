@@ -1,0 +1,13 @@
+.footer {
+    display: grid;
+    gap: 4px;
+    color: #8b95a1;
+    font-size: 12px;
+    line-height: 1.6;
+    word-break: keep-all;
+}
+
+.footer p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
