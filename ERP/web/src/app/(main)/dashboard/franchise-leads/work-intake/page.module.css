@@ -174,15 +174,6 @@
     background: #fff1f2;
 }
 
-.actionMuted {
-    display: inline-flex;
-    align-items: center;
-    min-height: 32px;
-    color: #8b95a1;
-    font-size: 12px;
-    font-weight: 700;
-}
-
 .secondaryButton {
     border: 1px solid #e5e8eb;
     color: #333d4b;

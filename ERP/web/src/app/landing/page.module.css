@@ -668,6 +668,11 @@
 }
 
 .footer .inner {
+    display: grid;
+    gap: 16px;
+}
+
+.footerTop {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -700,6 +705,11 @@
 
 .footerLinks a:hover {
     color: #3182f6;
+}
+
+.businessInfo {
+    padding-top: 16px;
+    border-top: 1px solid #f2f4f6;
 }
 
 @media (max-width: 1040px) {
@@ -861,7 +871,7 @@
         line-height: 1.42;
     }
 
-    .footer .inner {
+    .footerTop {
         align-items: flex-start;
         flex-direction: column;
     }

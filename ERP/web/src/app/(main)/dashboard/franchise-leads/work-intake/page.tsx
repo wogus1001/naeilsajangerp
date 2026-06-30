@@ -143,7 +143,6 @@ export default function FranchiseWorkIntakePage() {
                                                     <Trash2 size={14} /> {deletingId === item.id ? '삭제 중' : '삭제'}
                                                 </button>
                                             ) : null}
-                                            {!item.canEdit && !item.canDelete ? <span className={styles.actionMuted}>작성자/팀장/관리자만 가능</span> : null}
                                         </div>
                                     </td>
                                 </tr>
@@ -178,7 +177,6 @@ export default function FranchiseWorkIntakePage() {
                                                     <Trash2 size={14} /> {deletingId === item.id ? '삭제 중' : '삭제'}
                                                 </button>
                                             ) : null}
-                                            {!item.canEdit && !item.canDelete ? <span className={styles.actionMuted}>작성자/팀장/관리자만 가능</span> : null}
                                         </div>
                                     </td>
                                 </tr>

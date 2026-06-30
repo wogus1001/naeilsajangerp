@@ -150,6 +150,15 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 공개 사업자정보/진행현황 권한 안내 문구 정리 커밋 예정
+  - 주요 기능: Kakao 비즈니스 심사 대응을 위해 `/landing`, `/login`, `/signup`, `/privacy` 하단에 주식회사 내일사장 사업자정보 푸터를 추가했다. 개인정보처리방침 문의 이메일은 `cs@sajang.app`로 맞췄다. 진행현황 표의 관리 칸은 수정/삭제 권한이 없는 행에서 권한 안내 문구를 표시하지 않고 빈칸으로 남긴다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 이번 커밋 반영 예정
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 로컬 production 서버 `127.0.0.1:3107`에서 `/landing`, `/login`, `/signup`, `/privacy` 사업자정보 푸터를 1280px/390px Playwright로 확인했고, horizontal overflow 0건을 확인했다.
+  - 남은 이슈: 이번 범위의 신규 SQL은 없다. 운영 배포 후 `www.fcerp.co.kr`에서 공개 페이지 푸터와 Kakao 비즈니스 심사 제출 화면의 사업자정보 인식 여부를 확인한다.
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 진행현황 권한/삭제 및 프리셋 UI 정리 커밋 예정
   - 주요 기능: `/dashboard/franchise-leads/work-intake` 진행현황에서 입점 요청과 예비 창업자 등록을 삭제할 수 있게 하고, 수정/삭제 권한을 실제 작성자, 같은 회사 팀장(`manager`), 관리자 예외로 제한한다. 팀장/관리자 수정 시 기존 작성자/담당자 값은 유지한다. 출점 검토 리포트 수익분석표의 회사 공용 프리셋 UI는 `분석표 프리셋` 툴바로 분리해 목표매출 입력의 하위 옵션처럼 보이지 않도록 정리했다.
   - dev 반영: none
