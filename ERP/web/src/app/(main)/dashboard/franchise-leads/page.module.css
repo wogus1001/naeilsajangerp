@@ -49,7 +49,8 @@
 
 .primaryButton,
 .secondaryButton,
-.secondaryButtonSuccess {
+.secondaryButtonSuccess,
+.dangerOutlineButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -82,16 +83,24 @@
     color: #047857;
 }
 
+.dangerOutlineButton {
+    border: 1px solid #fecdd3;
+    background: #fff7f8;
+    color: #e42939;
+}
+
 .primaryButton:hover,
 .secondaryButton:hover,
-.secondaryButtonSuccess:hover {
+.secondaryButtonSuccess:hover,
+.dangerOutlineButton:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .primaryButton:disabled,
 .secondaryButton:disabled,
-.secondaryButtonSuccess:disabled {
+.secondaryButtonSuccess:disabled,
+.dangerOutlineButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
@@ -3406,6 +3415,80 @@
 .meetingToolCustomRow input {
     height: 38px;
     padding: 0 10px;
+}
+
+.meetingToolPresetBar {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.7fr) minmax(180px, 0.75fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.meetingToolPresetIntro {
+    display: grid;
+    align-self: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.meetingToolPresetIntro strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.meetingToolPresetIntro span {
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal;
+}
+
+.meetingToolPresetBar label {
+    display: grid;
+    gap: 5px;
+    color: #4e5968;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.meetingToolPresetBar input,
+.meetingToolPresetBar select {
+    width: 100%;
+    height: 36px;
+    border: 1px solid #d8dee8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.meetingToolPresetBar input {
+    padding: 0 10px;
+}
+
+.meetingToolPresetBar select {
+    padding: 0 28px 0 10px;
+}
+
+.meetingToolPresetActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.meetingToolPresetActions .secondaryButton,
+.meetingToolPresetActions .dangerOutlineButton {
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 12px;
 }
 
 .meetingToolRows {
@@ -10361,9 +10444,19 @@
     .meetingToolSummaryGrid,
     .meetingToolResultGrid,
     .meetingToolSectionHeader,
+    .meetingToolPresetBar,
     .meetingToolRowHead,
     .meetingToolRow,
     .meetingToolCustomRow {
+        grid-template-columns: 1fr;
+    }
+
+    .meetingToolPresetIntro span {
+        white-space: normal;
+    }
+
+    .meetingToolPresetActions {
+        display: grid;
         grid-template-columns: 1fr;
     }
 

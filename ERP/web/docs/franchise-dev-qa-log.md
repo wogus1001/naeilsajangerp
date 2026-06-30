@@ -29,8 +29,10 @@
 
 - OAuth 심사 영상과 신규 도메인 공개 진입을 위해 `/landing` 상단 메뉴에 `로그인` 링크를 추가했다. 사용자는 랜딩 페이지에서 바로 `/login`으로 이동할 수 있다.
 - 로그인 화면의 브랜드명을 `부동산 ERP`에서 `FC ERP`로 변경하고, 부제도 `창업 및 부동산 전문가를 위한 통합 솔루션`으로 정리했다. `/signup`, `/privacy`, 앱 metadata도 `FC ERP` 기준으로 맞췄다.
+- 출점 검토 리포트의 `PDF 저장`/`인쇄`가 새 창에서 `about:blank`로 남는 문제를 수정했다. 보고서 새 창은 `document.write` 대신 Blob URL로 완성된 HTML을 열고, 로드 완료 후 브라우저 인쇄를 실행한다.
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: 로컬 production 서버 `http://localhost:3114`에서 Playwright로 1280px/390px `/landing` 로그인 링크 노출, 클릭 시 `/login` 이동, `/login`의 `FC ERP` 노출과 `부동산 ERP` 미노출, `/signup`/`/privacy`의 `FC ERP` 문구를 확인했다. console/page error는 없었다.
+- 추가 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright 브라우저 스모크로 보고서 새 창이 `blob:` URL로 열리고 본문 `출점 검토 리포트`가 비어 있지 않게 로드되는 것을 확인했다.
 - 신규 SQL은 없다.
 
 ### 2026-06-29
@@ -735,6 +737,16 @@
 - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 6건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: 기존 dev 서버 3000과 production 서버 3099에서 Playwright auth/API mock으로 `/dashboard/franchise-leads/market-insights?view=location-list` 접근을 시도했으나, headless mock 세션에서는 본문이 빈 상태로 남아 다이얼로그 캡처를 확보하지 못했다. 실제 로그인 세션 또는 기존 사용자 브라우저에서 리포트 버튼, `목표매출(만원)`, `1차/2차/3차`, `금액(만원)`, 자유 항목 추가를 추가 확인한다.
 - 신규 SQL은 없다.
+
+## 2026-06-30 점포개발 미팅 도구 회사 공용 프리셋 QA
+
+- 출점 검토 리포트의 `간단 수익분석표`에 회사 공용 프리셋을 추가했다. 프리셋은 목표매출 변화 `1차/2차/3차`와 비용 항목 금액·비율·메모만 저장하고, 후보지별 `보고 메모`는 적용 시 덮어쓰지 않는다.
+- 프리셋은 `/api/franchise-locations/meeting-tool-presets`에서 회사 범위로 조회/저장/삭제한다. 일반 브랜드 구성원은 자기 회사 범위만 접근하고, admin은 선택 후보지의 `companyId` 범위를 사용할 수 있다.
+- 같은 회사에서 같은 프리셋명으로 다시 저장하면 기존 프리셋을 갱신한다. UI에서는 `불러오기`, `프리셋명`, `적용`, `프리셋 저장`, `삭제`를 제공한다.
+- 프리셋 행은 제목이 세로 중앙에 오도록 정렬하고 보조 문구가 잘리지 않게 했다. 목표매출과 비용 금액 입력은 `4,500`, `2,100`처럼 콤마가 표시된다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: Playwright로 실제 CSS 모듈을 주입한 프리셋 행 스모크를 확인했다. `목표매출(만원)`은 `4,500`, `재료비`는 `2,100`으로 표시됐고, 보조 문구는 컨테이너 내부에 정상 노출됐다. 로컬 headless 인증 세션에서는 메인 앱 본문이 빈 화면으로 남아 실제 로그인 세션에서 저장/불러오기/삭제 UX는 배포 후 추가 확인한다.
+- 신규 SQL: `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료.
 
 ## 다음 QA 체크리스트
 

@@ -42,6 +42,20 @@ export type MeetingToolDraft = {
     readonly updatedAt: string | null;
 };
 
+export type MeetingToolPresetData = {
+    readonly activeTargetKey: MeetingToolTargetKey;
+    readonly targetSales: number | null;
+    readonly targetScenarios: readonly MeetingToolTargetScenario[];
+    readonly costRows: readonly MeetingToolCostRow[];
+};
+
+export type MeetingToolPreset = MeetingToolPresetData & {
+    readonly id: string;
+    readonly name: string;
+    readonly createdAt: string | null;
+    readonly updatedAt: string | null;
+};
+
 export type MeetingToolSummary = {
     readonly targetSales: number | null;
     readonly totalCost: number;
@@ -59,6 +73,12 @@ type MutableMeetingToolDraft = {
     costRows?: unknown;
     reportMemo?: unknown;
     updatedAt?: unknown;
+};
+
+type MutableMeetingToolPreset = MutableMeetingToolDraft & {
+    id?: unknown;
+    name?: unknown;
+    createdAt?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -217,6 +237,43 @@ export function normalizeMeetingToolDraft(
         reportMemo: typeof source.reportMemo === 'string' ? source.reportMemo.trim() : '',
         updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null
     };
+}
+
+export function toMeetingToolPresetData(value: unknown): MeetingToolPresetData {
+    const draft = normalizeMeetingToolDraft(value);
+    return {
+        activeTargetKey: draft.activeTargetKey,
+        targetSales: draft.targetSales,
+        targetScenarios: draft.targetScenarios,
+        costRows: draft.costRows
+    };
+}
+
+export function normalizeMeetingToolPreset(value: unknown): MeetingToolPreset | null {
+    const source: MutableMeetingToolPreset = isRecord(value) ? value : {};
+    const id = cleanString(source.id);
+    const name = cleanString(source.name);
+    if (!id || !name) return null;
+
+    const data = toMeetingToolPresetData(source);
+    return {
+        id,
+        name,
+        ...data,
+        createdAt: typeof source.createdAt === 'string' ? source.createdAt : null,
+        updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null
+    };
+}
+
+export function applyMeetingToolPreset(draft: MeetingToolDraft, preset: MeetingToolPreset): MeetingToolDraft {
+    return normalizeMeetingToolDraft({
+        activeTargetKey: preset.activeTargetKey,
+        targetSales: preset.targetSales,
+        targetScenarios: preset.targetScenarios,
+        costRows: preset.costRows,
+        reportMemo: draft.reportMemo,
+        updatedAt: draft.updatedAt
+    });
 }
 
 export function calculateMeetingToolSummary(draft: MeetingToolDraft): MeetingToolSummary {

@@ -3,9 +3,11 @@ import test from 'node:test';
 
 import {
     addMeetingToolCustomCostRow,
+    applyMeetingToolPreset,
     calculateMeetingToolSummary,
     getMeetingToolDefaultsFromLocation,
     normalizeMeetingToolDraft,
+    normalizeMeetingToolPreset,
     setMeetingToolActiveTarget,
     updateMeetingToolCostAmount,
     updateMeetingToolCostRatio,
@@ -105,4 +107,37 @@ test('adds custom cost row for meeting-specific expense items', () => {
     assert.equal(customRow?.label, '배달수수료·광고비');
     assert.equal(customRow?.custom, true);
     assert.equal(customRow?.amount, 225);
+});
+
+test('applies company shared preset without overwriting meeting-specific report memo', () => {
+    const draft = normalizeMeetingToolDraft({
+        targetSales: 3_000,
+        costRows: [{ key: 'materialCost', amount: 900 }],
+        reportMemo: '이 후보지 전용 검토 메모'
+    });
+    const preset = normalizeMeetingToolPreset({
+        id: 'preset-1',
+        name: '기본 수익비율',
+        activeTargetKey: 'second',
+        targetScenarios: [
+            { key: 'first', label: '1차', targetSales: 4_500 },
+            { key: 'second', label: '2차', targetSales: 5_000 },
+            { key: 'third', label: '3차', targetSales: null }
+        ],
+        costRows: [
+            { key: 'materialCost', label: '재료비', amount: 1_750, ratio: 35, memo: '표준', custom: false },
+            { key: 'laborCost', label: '인건비', amount: 1_000, ratio: 20, memo: '', custom: false }
+        ],
+        createdAt: '2026-06-30T00:00:00.000Z',
+        updatedAt: '2026-06-30T00:00:00.000Z'
+    });
+
+    assert.ok(preset);
+    const applied = applyMeetingToolPreset(draft, preset);
+    const materialRow = applied.costRows.find(row => row.key === 'materialCost');
+
+    assert.equal(applied.activeTargetKey, 'second');
+    assert.equal(applied.targetSales, 5_000);
+    assert.equal(materialRow?.amount, 1_750);
+    assert.equal(applied.reportMemo, '이 후보지 전용 검토 메모');
 });
