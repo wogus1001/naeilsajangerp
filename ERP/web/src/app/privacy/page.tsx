@@ -3,13 +3,13 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 | 부동산 ERP",
+  title: "개인정보처리방침 | FC ERP",
   description:
-    "부동산 ERP(erpsolution)의 개인정보 처리 및 Google Gmail API 데이터 사용 정책입니다.",
+    "FC ERP의 개인정보 처리 및 Google Gmail API 데이터 사용 정책입니다.",
 };
 
 const effectiveDate = "2026년 6월 16일";
-const appName = "부동산 ERP(erpsolution)";
+const appName = "FC ERP";
 const contactEmail = "naeilsajang@gmail.com";
 
 const policySections = [

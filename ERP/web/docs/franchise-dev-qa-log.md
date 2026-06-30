@@ -25,6 +25,14 @@
 
 ## 개발 과정 로그
 
+### 2026-06-30
+
+- OAuth 심사 영상과 신규 도메인 공개 진입을 위해 `/landing` 상단 메뉴에 `로그인` 링크를 추가했다. 사용자는 랜딩 페이지에서 바로 `/login`으로 이동할 수 있다.
+- 로그인 화면의 브랜드명을 `부동산 ERP`에서 `FC ERP`로 변경하고, 부제도 `창업 및 부동산 전문가를 위한 통합 솔루션`으로 정리했다. `/signup`, `/privacy`, 앱 metadata도 `FC ERP` 기준으로 맞췄다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 로컬 production 서버 `http://localhost:3114`에서 Playwright로 1280px/390px `/landing` 로그인 링크 노출, 클릭 시 `/login` 이동, `/login`의 `FC ERP` 노출과 `부동산 ERP` 미노출, `/signup`/`/privacy`의 `FC ERP` 문구를 확인했다. console/page error는 없었다.
+- 신규 SQL은 없다.
+
 ### 2026-06-29
 
 - 회원가입 화면 입력 순서를 회사 찾기 우선 흐름으로 변경했다. 회사명 선택 후 아이디, 이메일, 비밀번호, 비밀번호 확인, 이름, 휴대폰 번호를 입력하도록 정리했다.

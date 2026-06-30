@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "부동산 ERP",
-  description: "부동산 물건지 관리 솔루션",
+  title: "FC ERP",
+  description: "창업 및 부동산 전문가를 위한 통합 솔루션",
 };
 
 export default function RootLayout({

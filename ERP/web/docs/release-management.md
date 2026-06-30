@@ -63,6 +63,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-06-30
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 OAuth 심사 영상 준비/공개 진입점 정리 커밋
+  - 주요 기능: `/landing` 상단 메뉴에 `로그인` 링크를 추가해 신규 도메인 랜딩에서 실제 로그인 화면으로 이동할 수 있게 했다. 로그인 화면 브랜드명은 `FC ERP`로 변경하고, 가입/개인정보처리방침/앱 metadata도 같은 브랜드 기준으로 정리했다.
+  - dev 반영: none
+  - main 반영: 이번 커밋 반영 예정
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 로컬 production 서버 `http://localhost:3114`에서 1280px/390px `/landing` 로그인 링크, `/login` 이동, `FC ERP` 브랜드 문구, `/signup`/`/privacy` 브랜드 문구를 Playwright로 확인했다.
+  - 남은 이슈: Google OAuth 심사 화면의 앱 이름/홈페이지 정보는 Google Cloud Console에서 `FC ERP`/`https://www.fcerp.co.kr` 기준으로 별도 확인한다. 이번 변경의 신규 SQL은 없다.
 - 2026-06-29
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 점포개발 미팅 도구 커밋

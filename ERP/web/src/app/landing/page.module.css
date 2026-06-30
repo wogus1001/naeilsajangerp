@@ -49,6 +49,24 @@
     color: #3182f6;
 }
 
+.nav .loginLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 0 14px;
+    color: #333d4b;
+    background: #ffffff;
+}
+
+.nav .loginLink:hover {
+    border-color: #3182f6;
+    color: #3182f6;
+    background: #f9fafb;
+}
+
 .hero {
     border-bottom: 1px solid #e5e8eb;
     background: #f9fafb;
