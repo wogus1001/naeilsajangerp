@@ -48,12 +48,25 @@ const NUMBER_INPUT_FORMATTER = new Intl.NumberFormat('ko-KR', {
 });
 
 function parseNumberInput(value: string): number | null {
-    const parsed = Number(value.replace(/,/g, '').trim());
+    const normalized = value.replace(/,/g, '').trim();
+    if (!normalized) return null;
+    const parsed = Number(normalized);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function formatInputValue(value: number | null): string {
+function formatMoneyInputValue(value: number | null): string {
     return value === null ? '' : NUMBER_INPUT_FORMATTER.format(value);
+}
+
+function formatRatioInputValue(value: number | null): string {
+    return value === null ? '' : String(value);
+}
+
+function removeRatioInputValue(source: Record<MeetingToolCostKey, string>, key: MeetingToolCostKey): Record<MeetingToolCostKey, string> {
+    if (!(key in source)) return source;
+    const next = { ...source };
+    delete next[key];
+    return next;
 }
 
 function escapeHtml(value: string | number | null | undefined): string {
@@ -198,6 +211,7 @@ export function LocationMeetingToolDialog({
     const [presetName, setPresetName] = React.useState('');
     const [presetLoading, setPresetLoading] = React.useState(false);
     const [presetSaving, setPresetSaving] = React.useState(false);
+    const [ratioInputValues, setRatioInputValues] = React.useState<Record<MeetingToolCostKey, string>>({});
     const [saving, setSaving] = React.useState(false);
     const [message, setMessage] = React.useState('');
     const locationId = location?.id || '';
@@ -212,6 +226,7 @@ export function LocationMeetingToolDialog({
         setCustomCostLabel('');
         setSelectedPresetId('');
         setPresetName('');
+        setRatioInputValues({});
         setMessage('');
     }, [locationId, location, open]);
 
@@ -220,8 +235,17 @@ export function LocationMeetingToolDialog({
     }, [open]);
 
     React.useEffect(() => {
-        if (!open) return;
+        if (!open || !locationId) {
+            setPresets([]);
+            setSelectedPresetId('');
+            setPresetName('');
+            setPresetLoading(false);
+            return;
+        }
         let alive = true;
+        setPresets([]);
+        setSelectedPresetId('');
+        setPresetName('');
         setPresetLoading(true);
         fetchLocationMeetingToolPresetsRequest({ companyId })
             .then(nextPresets => {
@@ -239,7 +263,7 @@ export function LocationMeetingToolDialog({
         return () => {
             alive = false;
         };
-    }, [companyId, open]);
+    }, [companyId, locationId, open]);
 
     if (!open || !location) return null;
 
@@ -247,10 +271,12 @@ export function LocationMeetingToolDialog({
     const summary = calculateMeetingToolSummary(draft);
 
     const updateAmount = (key: MeetingToolCostKey, value: string) => {
+        setRatioInputValues(prev => removeRatioInputValue(prev, key));
         setDraft(prev => updateMeetingToolCostAmount(prev, key, parseNumberInput(value)));
     };
 
     const updateRatio = (key: MeetingToolCostKey, value: string) => {
+        setRatioInputValues(prev => ({ ...prev, [key]: value }));
         setDraft(prev => updateMeetingToolCostRatio(prev, key, parseNumberInput(value)));
     };
 
@@ -281,6 +307,7 @@ export function LocationMeetingToolDialog({
 
     const applySelectedPreset = () => {
         if (!selectedPreset) return;
+        setRatioInputValues({});
         setDraft(prev => applyMeetingToolPreset(prev, selectedPreset));
         setPresetName(selectedPreset.name);
         setMessage('회사 공용 프리셋을 적용했습니다. 후보지 리포트에 반영하려면 저장을 눌러주세요.');
@@ -312,6 +339,7 @@ export function LocationMeetingToolDialog({
 
     const deletePreset = async () => {
         if (!selectedPresetId) return;
+        if (!window.confirm('선택한 회사 공용 프리셋을 삭제할까요?')) return;
         setPresetSaving(true);
         setMessage('');
         try {
@@ -374,7 +402,10 @@ export function LocationMeetingToolDialog({
                                                 key={scenario.key}
                                                 type="button"
                                                 className={scenario.key === draft.activeTargetKey ? styles.meetingToolTargetButtonActive : styles.meetingToolTargetButton}
-                                                onClick={() => setDraft(prev => setMeetingToolActiveTarget(prev, scenario.key))}
+                                                onClick={() => {
+                                                    setRatioInputValues({});
+                                                    setDraft(prev => setMeetingToolActiveTarget(prev, scenario.key));
+                                                }}
                                             >
                                                 {scenario.label}
                                             </button>
@@ -387,8 +418,11 @@ export function LocationMeetingToolDialog({
                                 <input
                                     type="text"
                                     inputMode="decimal"
-                                    value={formatInputValue(draft.targetSales)}
-                                    onChange={(event) => setDraft(prev => updateMeetingToolTargetSales(prev, parseNumberInput(event.target.value)))}
+                                    value={formatMoneyInputValue(draft.targetSales)}
+                                    onChange={(event) => {
+                                        setRatioInputValues({});
+                                        setDraft(prev => updateMeetingToolTargetSales(prev, parseNumberInput(event.target.value)));
+                                    }}
                                     placeholder="4500"
                                 />
                             </label>
@@ -450,7 +484,10 @@ export function LocationMeetingToolDialog({
                                         {row.custom ? (
                                             <button
                                                 type="button"
-                                                onClick={() => setDraft(prev => removeMeetingToolCustomCostRow(prev, row.key))}
+                                                onClick={() => {
+                                                    setRatioInputValues({});
+                                                    setDraft(prev => removeMeetingToolCustomCostRow(prev, row.key));
+                                                }}
                                                 aria-label={`${row.label} 삭제`}
                                             >
                                                 <Trash2 size={13} /> 삭제
@@ -460,15 +497,16 @@ export function LocationMeetingToolDialog({
                                     <input
                                         type="text"
                                         inputMode="decimal"
-                                        value={formatInputValue(row.amount)}
+                                        value={formatMoneyInputValue(row.amount)}
                                         onChange={(event) => updateAmount(row.key, event.target.value)}
                                         placeholder="만원"
                                     />
                                     <input
                                         type="text"
                                         inputMode="decimal"
-                                        value={formatInputValue(row.ratio)}
+                                        value={ratioInputValues[row.key] ?? formatRatioInputValue(row.ratio)}
                                         onChange={(event) => updateRatio(row.key, event.target.value)}
+                                        onBlur={() => setRatioInputValues(prev => removeRatioInputValue(prev, row.key))}
                                         placeholder="%"
                                     />
                                     <input
