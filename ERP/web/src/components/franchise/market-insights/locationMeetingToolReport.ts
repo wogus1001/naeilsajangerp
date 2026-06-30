@@ -1,11 +1,11 @@
 import {
     calculateMeetingToolSummary,
     MEETING_TOOL_DISCLAIMER,
-    MEETING_TOOL_MARKET_REPORT_FIELDS,
     MEETING_TOOL_TARGET_SCENARIOS,
     setMeetingToolActiveTarget,
     type MeetingToolDraft
 } from '@/lib/franchise-location-meeting-tool';
+import { MEETING_TOOL_MARKET_REPORT_FIELDS } from '@/lib/franchise-location-meeting-tool-market-report';
 import {
     formatLocationMoney,
     getAcquisitionCostTotal,

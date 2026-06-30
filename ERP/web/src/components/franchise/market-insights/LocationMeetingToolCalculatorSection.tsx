@@ -4,7 +4,7 @@ import {
     type MeetingToolCostKey,
     type MeetingToolDraft
 } from '@/lib/franchise-location-meeting-tool';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import styles from './LocationMeetingTool.module.css';
 import {
     formatMoneyInputValue,
     formatRatioInputValue

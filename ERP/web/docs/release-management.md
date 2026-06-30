@@ -179,12 +179,13 @@ YYYY-MM-DD
 
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-  - 기능 커밋: 이번 점포개발 미팅 도구 2차-5 커밋 예정
+  - 기능 커밋: `862c59e feat(franchise): add market report evidence`
+  - 리뷰 보강: 코드리뷰에서 확인된 `franchise-location-meeting-tool.ts` 비대화와 `page.module.css` 미팅 도구 스타일 누적을 해소했다. 미팅 도구 모델/정규화/계산/상권분석 근거 정의를 작은 lib 모듈로 분리하고, `meetingTool*` 스타일은 컴포넌트 전용 CSS module로 이동했다.
   - 주요 기능: 출점 검토 리포트 다이얼로그에 `상권분석·목표매출 근거` 섹션을 추가했다. 상권 요약, 수요 근거, 목표매출 산정 근거, 리스크/확인사항은 후보지별 `meetingTool.marketReport`에 저장하고, PDF/인쇄 출력물과 후보지별 리포트 버전 snapshot에 포함한다. 회사 공용 프리셋 저장/적용에서는 후보지 전용 근거를 제외하고 기존 값을 유지한다.
   - dev 반영: none
   - main 반영: none
   - 배포 URL: none
-  - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 12건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 30건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. local dev 서버 `http://localhost:3000`의 `/demo`에서 출점 후보지 `리포트` 다이얼로그를 1280px/390px으로 확인했고, `상권분석·목표매출 근거` 섹션 노출, 목표매출 산정 근거 입력 유지, horizontal overflow 0, textarea clipping 0을 확인했다.
+  - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 12건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 30건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 코드리뷰/QA artifact는 `.omo/evidence/2cha-5-report-dialog-review-fix/code-review.md`, `.omo/evidence/2cha-5-report-dialog-review-fix/manualQa.json`에 남겼다. fresh local dev QA는 `.omo/evidence/2cha-5-report-dialog-review-fix/fresh-qa-result.json`에 남겼고, `/demo`에서 출점 후보지 `리포트` 다이얼로그를 1280px/390px으로 확인했다. `상권분석·목표매출 근거` 섹션 노출, 목표매출 산정 근거 입력 유지, PDF/인쇄 출력물 섹션 포함 및 HTML escape, horizontal overflow 0을 확인했다.
   - 남은 이슈: 이번 범위의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 SQL 등록 필요. SQL 등록 후 실계정에서 버전 저장/불러오기와 `marketReport` snapshot 왕복을 확인한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`

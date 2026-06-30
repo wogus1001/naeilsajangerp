@@ -2,8 +2,8 @@ import {
     MEETING_TOOL_MARKET_REPORT_FIELDS,
     type MeetingToolMarketReport,
     type MeetingToolMarketReportKey
-} from '@/lib/franchise-location-meeting-tool';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+} from '@/lib/franchise-location-meeting-tool-market-report';
+import styles from './LocationMeetingTool.module.css';
 
 type LocationMeetingToolMarketReportSectionProps = {
     readonly marketReport: MeetingToolMarketReport;

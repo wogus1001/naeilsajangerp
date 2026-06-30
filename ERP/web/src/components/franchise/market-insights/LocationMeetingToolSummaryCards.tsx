@@ -3,7 +3,7 @@ import {
     getAcquisitionCostTotal,
     normalizeFranchiseLocationMasterData
 } from '@/lib/franchise-location-master';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import styles from './LocationMeetingTool.module.css';
 import type { FranchiseLocation } from './locationMasterTypes';
 
 type LocationMeetingToolSummaryCardsProps = {

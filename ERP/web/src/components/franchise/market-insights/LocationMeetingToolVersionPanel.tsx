@@ -5,7 +5,7 @@ import {
     type MeetingToolVersion
 } from '@/lib/franchise-location-meeting-tool-versions';
 import { formatLocationMoney } from '@/lib/franchise-location-master';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import styles from './LocationMeetingTool.module.css';
 
 type LocationMeetingToolVersionPanelProps = {
     readonly versions: readonly MeetingToolVersion[];

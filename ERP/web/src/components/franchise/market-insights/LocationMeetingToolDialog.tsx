@@ -13,10 +13,10 @@ import {
     updateMeetingToolCostRatio,
     updateMeetingToolTargetSales,
     type MeetingToolCostKey,
-    type MeetingToolDraft,
-    type MeetingToolMarketReportKey
+    type MeetingToolDraft
 } from '@/lib/franchise-location-meeting-tool';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import type { MeetingToolMarketReportKey } from '@/lib/franchise-location-meeting-tool-market-report';
+import styles from './LocationMeetingTool.module.css';
 import type { FranchiseLocation } from './locationMasterTypes';
 import { LocationMeetingToolActions } from './LocationMeetingToolActions';
 import { LocationMeetingToolCalculatorSection } from './LocationMeetingToolCalculatorSection';

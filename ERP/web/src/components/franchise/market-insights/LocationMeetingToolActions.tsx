@@ -1,5 +1,5 @@
 import { FileText, Printer, Save } from 'lucide-react';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import styles from './LocationMeetingTool.module.css';
 
 type LocationMeetingToolActionsProps = {
     readonly saving: boolean;

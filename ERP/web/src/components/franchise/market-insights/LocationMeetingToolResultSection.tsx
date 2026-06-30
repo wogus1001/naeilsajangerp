@@ -1,6 +1,6 @@
 import { MEETING_TOOL_DISCLAIMER } from '@/lib/franchise-location-meeting-tool';
 import { formatLocationMoney } from '@/lib/franchise-location-master';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import styles from './LocationMeetingTool.module.css';
 import { formatPercent } from './locationMeetingToolDialogUtils';
 import type { ReactNode } from 'react';
 

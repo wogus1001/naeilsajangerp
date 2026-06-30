@@ -1,6 +1,6 @@
 import { Save, Trash2 } from 'lucide-react';
 import type { MeetingToolPreset } from '@/lib/franchise-location-meeting-tool';
-import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import styles from './LocationMeetingTool.module.css';
 
 type LocationMeetingToolPresetPanelProps = {
     readonly presets: readonly MeetingToolPreset[];
