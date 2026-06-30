@@ -53,6 +53,7 @@ export type FranchiseLocation = FranchiseLocationMasterData & {
     readonly updatedAt?: string;
     readonly competitionScan?: LocationCompetitionScan;
     readonly competitionKeyword?: string;
+    readonly meetingTool?: unknown;
     readonly brandId?: string;
     readonly industry?: string;
     readonly businessType?: string;
