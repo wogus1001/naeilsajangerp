@@ -201,11 +201,14 @@ function BusinessCardListContent() {
             if (requesterId) params.set('requesterId', requesterId);
             const companyQuery = params.toString() ? `?${params.toString()}` : '';
 
-            const res = await fetch(`/api/users${companyQuery}`);
+            const res = await fetch(`/api/users${companyQuery}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const data = await readApiJson<Array<{ id: string; name: string; uuid?: string }>>(res);
                 const map: Record<string, string> = {};
-                data.forEach((u) => {
+                const users = Array.isArray(data) ? data : [];
+                users.forEach((u) => {
                     map[u.id] = u.name;
                     if (u.uuid) map[u.uuid] = u.name; // Map UUIDs for fallback
                 });
@@ -669,9 +672,10 @@ function BusinessCardListContent() {
 
         setLoading(true);
         try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             const results = await Promise.allSettled(targets.map(card => fetch('/api/franchise-leads', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     requesterId,
                     managerId: requesterId,

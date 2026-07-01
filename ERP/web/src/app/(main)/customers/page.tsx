@@ -362,7 +362,10 @@ function CustomerListPageContent() {
 
     const fetchCustomerList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal, search?: string) => {
         const query = buildCustomerQueryString(requestedLimit, search);
-        const res = await fetch(`/api/customers${query}`, { signal });
+        const res = await fetch(`/api/customers${query}`, {
+            signal,
+            headers: await getApiAuthHeaders()
+        });
 
         if (!res.ok) {
             throw new Error(`Failed to fetch customers: ${res.status}`);
@@ -450,11 +453,14 @@ function CustomerListPageContent() {
             if (requesterId) params.set('requesterId', requesterId);
             const companyQuery = params.toString() ? `?${params.toString()}` : '';
 
-            const res = await fetch(`/api/users${companyQuery}`);
+            const res = await fetch(`/api/users${companyQuery}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const data = await readApiJson(res);
                 const map: Record<string, string> = {};
-                data.forEach((u: any) => {
+                const users = Array.isArray(data) ? data : [];
+                users.forEach((u: any) => {
                     if (u.id) map[u.id] = u.name;
                     if (u.uuid) map[u.uuid] = u.name; // Fallback for UUID based lookups
                 });
@@ -625,7 +631,7 @@ function CustomerListPageContent() {
             const requesterId = getRequesterId(getStoredUser());
             await fetch('/api/customers', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ ...updatedCustomer, requesterId })
             });
         } catch (error) {
@@ -762,7 +768,7 @@ function CustomerListPageContent() {
                 // Bulk Delete API Call
                 const res = await fetch(`/api/customers${query}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         ids: selectedIds,
                         requesterId
@@ -831,9 +837,10 @@ function CustomerListPageContent() {
 
         setLoading(true);
         try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             const results = await Promise.allSettled(targets.map(customer => fetch('/api/franchise-leads', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     requesterId,
                     managerId: requesterId,

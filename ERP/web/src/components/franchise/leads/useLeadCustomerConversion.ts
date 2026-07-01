@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { normalizeLeadPhone } from '@/lib/franchise-leads';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import {
     createActivityId,
@@ -47,7 +48,10 @@ export function useLeadCustomerConversion({
         const targetCompanyName = lead.companyName || companyName;
         if (targetCompanyName) params.set('company', targetCompanyName);
 
-        const response = await fetch(`/api/customers?${params.toString()}`, { cache: 'no-store' });
+        const response = await fetch(`/api/customers?${params.toString()}`, {
+            cache: 'no-store',
+            headers: await getApiAuthHeaders()
+        });
         const payload = await response.json();
         if (!response.ok) throw new Error(readApiError(payload));
 
@@ -126,7 +130,7 @@ export function useLeadCustomerConversion({
 
             const customerResponse = await fetch('/api/customers', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     requesterId: userId,
                     managerId: lead.managerId || userId,

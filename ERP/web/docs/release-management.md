@@ -179,6 +179,15 @@ YYYY-MM-DD
 
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 서비스 화면 세션 헤더/Node 24 전환 커밋 예정
+  - 주요 기능: 모객 DB, 고객 목록/상세, 명함 목록/상세, 고객/명함 -> 모객 DB 전환, 점포 목록/상세/신규등록/선택 모달/물건지도에서 legacy service API 호출에 Supabase 세션 auth header를 붙였다. `/api/users` 응답이 배열이 아닐 때 화면이 client-side exception으로 떨어지지 않도록 guard를 추가했고, 명함 신규입력의 `BusinessCard` -> `PropertyCard` 정적 순환 import는 동적 import로 끊었다. Vercel Node.js 20 deprecation 대응을 위해 `package.json`에 Node.js `24.x` engine을 명시했다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 이번 커밋 반영 예정
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx -p node@24 -c 'node ./node_modules/typescript/bin/tsc --noEmit --pretty false'`, `npx -p node@24 -c 'npm run lint -- --quiet'`, `npx -p node@24 -c 'npm run build'`, `npx -p node@24 -p tsx -c 'tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts'` 10건, `git diff --check` 통과. preview `https://naeilsajang-g9878xa3f-jaehyuns-projects-b4d20c6f.vercel.app`에서 사용자 Chrome 로그인 세션으로 `모객 DB`, `명함관리 > 신규입력`, `점포 목록`을 실제 클릭 확인했고, `requesterId is required` 모달과 명함 신규입력 client-side exception은 재현되지 않았다.
+  - 남은 이슈: 이번 범위의 신규 SQL은 없다. preview 물건지도 타일 공백은 Kakao JavaScript 키 허용 도메인에 preview host가 없어 발생한 `domain mismatched`로 확인되어 이번 범위에서 제외했다. 운영 도메인 `www.fcerp.co.kr` 기준 Kakao SDK 응답은 정상이다. 운영 배포 후 실계정으로 모객 DB/고객/명함/점포개발 주요 화면을 live QA한다.
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `9e69b3c fix(security): require sessions for legacy service routes`
   - 배포 보강 커밋: `e4fe6e7 chore(deploy): ignore local artifacts in vercel uploads`
   - 주요 기능: 출점 검토 리포트 2차-1/2차-4/2차-5, 공개 사업자정보 푸터, 진행현황 작성자·수정·삭제 권한, 직원 관리/개인정보 저장 핫픽스, legacy requester/admin fallback 제거 보안 하드닝을 운영 배포했다. Vercel dry-run에서 루트 `.omo`, `.claude`, `.agents`, `MAC_CONTEXT.md`, `ERP/web/handoff.md`, `.env*`, `.next`, `.vercel`, `node_modules`가 업로드에서 제외되는 것을 확인하고 `.vercelignore`를 추가했다.

@@ -2,15 +2,17 @@
 
 import { readApiJson } from '@/utils/apiResponse';
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Save, Plus, X, Trash2, Star, List, RefreshCw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import styles from '@/app/(main)/customers/register/page.module.css'; // Reusing Customer styles for consistency
 import WorkHistoryModal from '../customers/WorkHistoryModal';
 import PropertySelector from '../customers/PropertySelector';
-import PropertyCard from '../properties/PropertyCard';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId as resolveRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+
+const PropertyCard = dynamic(() => import('../properties/PropertyCard'), { ssr: false });
 
 interface BusinessCardData {
     id?: string;
@@ -154,10 +156,15 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
                     managerParams.set('company', myCompany);
                     if (myId) managerParams.set('requesterId', myId);
                     const managerQuery = managerParams.toString();
-                    fetch(`/api/users${managerQuery ? `?${managerQuery}` : ''}`)
-                        .then(readApiJson)
-                        .then(data => setManagers(data))
-                        .catch(err => console.error(err));
+                    const managerResponse = await fetch(`/api/users${managerQuery ? `?${managerQuery}` : ''}`, {
+                        headers: await getApiAuthHeaders()
+                    });
+                    if (managerResponse.ok) {
+                        const data = await readApiJson(managerResponse);
+                        setManagers(Array.isArray(data) ? data : []);
+                    } else {
+                        setManagers([]);
+                    }
                 }
 
                 // Set default manager for new

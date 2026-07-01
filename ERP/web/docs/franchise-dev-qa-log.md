@@ -830,6 +830,16 @@
 - 신규 SQL: 없음.
 - 남은 후속 감사: 공개 회원가입, webhook/외부 callback, 도메인별 custom guard를 쓰는 일부 franchise/integration route는 의도된 공개/도메인 정책을 확인하며 별도 정규화한다.
 
+## 2026-07-01 서비스 화면 세션 헤더/Node 24 전환 QA
+
+- 범위: 운영 preview QA 중 `고객 DB 조회 실패: requesterId is required`와 명함 신규입력 client-side exception이 확인되어, 모객 DB/고객/명함/점포개발 화면의 legacy service route 호출부에 Supabase 세션 auth header를 붙였다.
+- 보강: 고객 목록/상세, 명함 목록/상세, 모객 DB, 고객/명함 -> 모객 DB 전환, 점포 목록/상세/신규등록/선택 모달/물건지도 fetch 호출에 `getApiAuthHeaders()`를 적용했다. `/api/users` 응답이 오류 payload일 때 `.forEach`가 터지지 않도록 배열 guard를 추가했다. `BusinessCard`와 `PropertyCard`의 정적 순환 import는 `next/dynamic`으로 끊어 명함 신규입력 client-side exception 재발 가능성을 낮췄다.
+- Node 24 전환: `ERP/web/package.json`에 `"engines": { "node": "24.x" }`를 추가했고, 로컬 검증은 `node@24`로 실행했다.
+- 검증: `npx -p node@24 -c 'node ./node_modules/typescript/bin/tsc --noEmit --pretty false'`, `npx -p node@24 -c 'npm run lint -- --quiet'`, `npx -p node@24 -c 'npm run build'`, `npx -p node@24 -p tsx -c 'tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts'` 10건, `git diff --check` 통과.
+- 브라우저 QA: 로컬 production 서버에서 `/dashboard/franchise-leads`, `/business-cards/register`, `/properties`, `/properties/map`의 client-side exception/pageerror가 없는 것을 확인했다. preview 배포 `https://naeilsajang-g9878xa3f-jaehyuns-projects-b4d20c6f.vercel.app`에서 사용자 Chrome 로그인 세션으로 `모객 DB`, `명함관리 > 신규입력`, `점포 목록`을 실제 클릭 확인했고, `requesterId is required` 모달과 명함 신규입력 client-side exception은 재현되지 않았다.
+- 제외: preview `물건지도`의 지도 타일 공백은 Kakao JavaScript 키 허용 도메인에 preview host가 없어 `domain mismatched`가 발생한 것이므로 이번 수정 범위에서 제외했다. 운영 도메인 `www.fcerp.co.kr` 기준 SDK 응답은 정상이다.
+- 신규 SQL: 없음.
+
 ## 다음 QA 체크리스트
 
 ### P0

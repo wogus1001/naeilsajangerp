@@ -231,6 +231,7 @@ export default function FranchiseLeadsPage() {
 
         setIsLoading(true);
         try {
+            const headers = await getApiAuthHeaders();
             const params = new URLSearchParams({
                 requesterId: userId,
                 limit: searchTerm.trim() ? 'all' : '500',
@@ -245,7 +246,10 @@ export default function FranchiseLeadsPage() {
             if (createdFrom) params.set('createdFrom', createdFrom);
             if (createdTo) params.set('createdTo', createdTo);
 
-            const response = await fetch(`/api/franchise-leads?${params.toString()}`, { cache: 'no-store' });
+            const response = await fetch(`/api/franchise-leads?${params.toString()}`, {
+                cache: 'no-store',
+                headers
+            });
             const payload = await response.json();
 
             if (!response.ok) {
@@ -263,7 +267,10 @@ export default function FranchiseLeadsPage() {
             } else {
                 const stageParams = new URLSearchParams(params);
                 stageParams.delete('status');
-                const stageResponse = await fetch(`/api/franchise-leads?${stageParams.toString()}`, { cache: 'no-store' });
+                const stageResponse = await fetch(`/api/franchise-leads?${stageParams.toString()}`, {
+                    cache: 'no-store',
+                    headers
+                });
                 const stagePayload = await stageResponse.json();
 
                 if (!stageResponse.ok) {
@@ -292,6 +299,7 @@ export default function FranchiseLeadsPage() {
 
     const fetchLeadExportRows = React.useCallback(async (): Promise<readonly FranchiseLead[]> => {
         if (!userId) return [];
+        const headers = await getApiAuthHeaders();
 
         const params = new URLSearchParams({
             requesterId: userId,
@@ -306,7 +314,10 @@ export default function FranchiseLeadsPage() {
         if (createdFrom) params.set('createdFrom', createdFrom);
         if (createdTo) params.set('createdTo', createdTo);
 
-        const response = await fetch(`/api/franchise-leads?${params.toString()}`, { cache: 'no-store' });
+        const response = await fetch(`/api/franchise-leads?${params.toString()}`, {
+            cache: 'no-store',
+            headers
+        });
         const payload = await response.json();
 
         if (!response.ok) {
@@ -386,7 +397,8 @@ export default function FranchiseLeadsPage() {
 
                 const response = await fetch(`/api/users?${params.toString()}`, {
                     cache: 'no-store',
-                    signal: controller.signal
+                    signal: controller.signal,
+                    headers: await getApiAuthHeaders()
                 });
 
                 if (!response.ok) {
@@ -763,7 +775,7 @@ export default function FranchiseLeadsPage() {
 
             const response = await fetch('/api/franchise-leads', {
                 method: form.id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(body)
             });
             const payload = await response.json();
@@ -837,7 +849,7 @@ export default function FranchiseLeadsPage() {
 
         const response = await fetch('/api/franchise-leads', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 id: lead.id,
                 requesterId: userId,
@@ -1117,7 +1129,7 @@ export default function FranchiseLeadsPage() {
         try {
             const response = await fetch(`/api/franchise-leads?id=${encodeURIComponent(leadId)}`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ requesterId: userId })
             });
             const payload = await response.json();

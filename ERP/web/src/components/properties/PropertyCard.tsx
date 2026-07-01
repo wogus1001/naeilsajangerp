@@ -400,7 +400,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             try {
                 const res = await fetch(withRequesterId(`/api/properties?id=${data.id}`), {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(data)),
                 });
                 if (res.ok) {
@@ -435,7 +435,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
     // Helper to refresh property data
     const fetchProperty = async (id: string) => {
         try {
-            const res = await fetch(withRequesterId(`/api/properties?id=${id}`));
+            const res = await fetch(withRequesterId(`/api/properties?id=${id}`), {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const data = await readApiJson(res);
                 setFormData(data);
@@ -840,7 +842,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 try {
                     const res = await fetch(withRequesterId(`/api/properties?id=${formData.id}`), {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify(withRequesterPayload(updatedFormData)),
                     });
                     if (res.ok) {
@@ -945,7 +947,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             try {
                 const res = await fetch(withRequesterId(`/api/properties?id=${formData.id}`), {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(updatedFormData)),
                 });
                 if (res.ok) {
@@ -1003,7 +1005,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 try {
                     const res = await fetch(withRequesterId(`/api/properties?id=${formData.id}`), {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify(withRequesterPayload(updatedFormData)),
                     });
                     if (res.ok) {
@@ -1245,7 +1247,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             try {
                 const res = await fetch(withRequesterId(`/api/properties?id=${formData.id}`), {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(updatedFormData)),
                 });
                 if (res.ok) {
@@ -1709,10 +1711,12 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                         });
                         const requesterId = resolveRequesterId(currentUser);
                         if (requesterId) query.set('requesterId', requesterId);
-                        const res = await fetch(`/api/users?${query.toString()}`);
+                        const res = await fetch(`/api/users?${query.toString()}`, {
+                            headers: await getApiAuthHeaders()
+                        });
                         if (res.ok) {
                             const data = await readApiJson(res);
-                            setManagers(data);
+                            setManagers(Array.isArray(data) ? data : []);
                         }
                     } else {
                         setManagers([currentUser]);
@@ -2323,7 +2327,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
                 const res = await fetch(url, {
                     method: method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(finalFormData)),
                 });
 
@@ -2393,6 +2397,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
                 const res = await fetch(`/api/properties?id=${formData.id}&company=${encodeURIComponent(companyName)}&requesterId=${encodeURIComponent(requesterId)}`, {
                     method: 'DELETE',
+                    headers: await getApiAuthHeaders()
                 });
                 if (res.ok) {
                     showAlert('삭제되었습니다.', 'success', () => {
@@ -2467,7 +2472,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
                 const res = await fetch('/api/properties', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(newProperty)),
                 });
 

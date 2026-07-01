@@ -11,6 +11,7 @@ import DaumPostcodeEmbed from 'react-daum-postcode';
 import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 const KAKAO_SDK_URL = `//dapi.kakao.com/v2/maps/sdk.js?appkey=26c1197bae99e17f8c1f3e688e22914d&libraries=services,drawing&autoload=false`;
 
@@ -587,10 +588,12 @@ export default function RegisterPropertyPage() {
                             company: companyName
                         });
                         if (requesterId) query.set('requesterId', requesterId);
-                        const res = await fetch(`/api/users?${query.toString()}`);
+                        const res = await fetch(`/api/users?${query.toString()}`, {
+                            headers: await getApiAuthHeaders()
+                        });
                         if (res.ok) {
                             const data = await readApiJson(res);
-                            setManagers(data);
+                            setManagers(Array.isArray(data) ? data : []);
                         }
                     } else {
                         setManagers([user as ManagerOption]);
@@ -807,7 +810,7 @@ export default function RegisterPropertyPage() {
         try {
             const response = await fetch('/api/properties', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload),
             });
 
