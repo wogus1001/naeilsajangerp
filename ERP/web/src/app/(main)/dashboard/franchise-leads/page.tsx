@@ -34,6 +34,7 @@ import {
 } from '@/lib/franchise-leads';
 import { formatManagerDisplayName, formatManagerOptionLabel } from '@/lib/franchise-manager-display';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     EMPTY_FORM, ENABLE_LEAD_CUSTOMER_DB_LINKING,
     PAGE_SIZE_OPTIONS,
@@ -457,20 +458,31 @@ export default function FranchiseLeadsPage() {
         if (companyName) params.set('company', companyName);
 
         setIsRelatedLoading(true);
-        Promise.all([
-            fetch(`/api/customers?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
-                .then(async response => {
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(readApiError(payload));
-                    return unwrapApiData<RelatedCustomer[]>(payload);
-                }),
-            fetch(`/api/business-cards?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
-                .then(async response => {
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(readApiError(payload));
-                    return unwrapApiData<RelatedBusinessCard[]>(payload);
+        void (async () => {
+            const headers = await getApiAuthHeaders();
+            return Promise.all([
+                fetch(`/api/customers?${params.toString()}`, {
+                    cache: 'no-store',
+                    signal: controller.signal,
+                    headers
                 })
-        ])
+                    .then(async response => {
+                        const payload = await response.json();
+                        if (!response.ok) throw new Error(readApiError(payload));
+                        return unwrapApiData<RelatedCustomer[]>(payload);
+                    }),
+                fetch(`/api/business-cards?${params.toString()}`, {
+                    cache: 'no-store',
+                    signal: controller.signal,
+                    headers
+                })
+                    .then(async response => {
+                        const payload = await response.json();
+                        if (!response.ok) throw new Error(readApiError(payload));
+                        return unwrapApiData<RelatedBusinessCard[]>(payload);
+                    })
+            ]);
+        })()
             .then(([customers, cards]) => {
                 setRelatedCustomers((customers || []).slice(0, 5));
                 setRelatedCards((cards || []).slice(0, 5));

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredUser, type StoredUser } from '@/utils/userUtils';
 
 export default function NoticeWritePage() {
@@ -38,7 +39,7 @@ export default function NoticeWritePage() {
         try {
             const res = await fetch('/api/notices', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     title,
                     content,

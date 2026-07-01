@@ -6,6 +6,7 @@ import {
     Ban, Send, ShieldCheck, MoreVertical, CheckCircle2, History, RefreshCcw
 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 interface ContractDetailPanelProps {
     contract: any;
@@ -57,11 +58,15 @@ export default function ContractDetailPanel({ contract, onClose, onAction, loadi
         setLoadingTab(true);
         try {
             if (tab === 'history') {
-                const res = await fetch(`/api/contracts/${cid}/history?userId=${userId}`);
+                const res = await fetch(`/api/contracts/${cid}/history?userId=${userId}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 const data = await res.json();
                 if (Array.isArray(data)) setHistoryData(data);
             } else if (tab === 'attachments') {
-                const res = await fetch(`/api/contracts/${cid}/attachments?userId=${userId}`);
+                const res = await fetch(`/api/contracts/${cid}/attachments?userId=${userId}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 const data = await res.json();
                 if (Array.isArray(data)) setAttachmentsData(data);
             }
@@ -97,7 +102,9 @@ export default function ContractDetailPanel({ contract, onClose, onAction, loadi
             if (attachmentId) url += `&attachmentId=${attachmentId}`;
 
             console.log(`[Frontend] Fetching download URL: ${url}`);
-            const res = await fetch(url);
+            const res = await fetch(url, {
+                headers: await getApiAuthHeaders()
+            });
 
             if (!res.ok) {
                 console.error(`[Frontend] Download API failed with status: ${res.status}`);

@@ -809,6 +809,19 @@
 - 후속 QA evidence: 코드리뷰/QA artifact를 `.omo/evidence/2cha-5-report-dialog-review-fix/code-review.md`, `.omo/evidence/2cha-5-report-dialog-review-fix/manualQa.json`에 남겼다. fresh local dev QA는 `.omo/evidence/2cha-5-report-dialog-review-fix/fresh-qa-result.json`에 남겼다. `/demo`에서 출점 후보지 `리포트` 다이얼로그를 열고 4개 상권분석 입력값 유지, PDF/인쇄 출력물의 섹션 포함 및 HTML escape, 1280px/390px horizontal overflow 0, page error 0을 확인했다.
 - 신규 SQL: 이번 2차-5 범위의 신규 SQL은 없다. 기존 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료 상태다.
 
+## 2026-07-01 플랫폼 코드리뷰 보안 하드닝 QA
+
+- 범위: 플랫폼 전체 코드리뷰에서 서비스-role API와 legacy requester 신뢰 경로를 우선 점검했다. 새 subagent 2개를 병렬로 사용해 프론트 호출부 인증 헤더 누락과 mutating route 권한 누락 후보를 교차 확인했다.
+- 인증 공통화: `api-auth`의 요청자 해석은 Supabase access token이 확인된 경우에만 허용하도록 정리했다. query/header의 `requesterId`, `userId`, `x-user-id`는 토큰 사용자와 일치할 때만 보조 검증값으로 사용하며, literal `admin` alias/legacy fallback은 제거했다.
+- UCanSign/계약 legacy API: `/api/contracts`, `/api/contracts/templates`, `/api/points`, `/api/folders`, `/api/embedding`, `/api/ucansign/*`, `/api/user/status` 계열을 `requireAuthenticatedUcansignUser` 중심으로 통일했다. UCanSign OAuth callback은 unsigned base64 `state.uid`를 신뢰하지 않고, httpOnly pending cookie와 sanitised return path만 사용한다.
+- 관리자/운영자 API: `system/settings`, debug route는 admin 세션을 요구한다. 고객/물건지 batch/sync와 명함 DB sync는 admin 또는 팀장만 실행 가능하며, 팀장은 자기 회사 범위에서만 실행된다.
+- 명함/대시보드 메모: `/api/business-cards`는 자체 legacy requester 해석기를 제거하고 공통 인증 헬퍼를 사용한다. 관련 명함 목록/상세/매물카드/선택 모달/프랜차이즈 리드 연동 호출부에 auth headers를 붙였다. `/api/dashboard/memo`는 더 이상 `userId` 파라미터로 대상 사용자를 고르지 않고, 인증된 본인 메모만 읽고 저장한다.
+- 공지/프로젝트/템플릿/내보내기: 공지 작성/수정/삭제는 인증된 작성자, 같은 회사 팀장, admin 권한으로 제한했다. 프로젝트/템플릿 API는 legacy `admin` fallback을 제거했다. 관리자 설정의 JSON 내보내기는 새 탭 raw API open 대신 auth header가 붙는 fetch 후 blob 다운로드 방식으로 변경했다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts` 10건, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 검색 검증: `rg "admin%|legacyId === 'admin'|legacyUser === 'admin'" ERP/web/src -n` 결과 없음. UCanSign auth 검색에 남는 2건은 직접 `window.location` 이동이 아니라 auth header를 붙이는 `response=json` redirect 요청이다.
+- 신규 SQL: 없음.
+- 남은 후속 감사: 공개 회원가입, webhook/외부 callback, 도메인별 custom guard를 쓰는 일부 franchise/integration route는 의도된 공개/도메인 정책을 확인하며 별도 정규화한다.
+
 ## 다음 QA 체크리스트
 
 ### P0

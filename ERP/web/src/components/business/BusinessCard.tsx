@@ -9,7 +9,8 @@ import PropertySelector from '../customers/PropertySelector';
 import PropertyCard from '../properties/PropertyCard';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { getRequesterId as resolveRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+import { getRequesterId as resolveRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 interface BusinessCardData {
     id?: string;
@@ -169,7 +170,10 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
                 if (myId) listParams.set('userId', myId);
 
                 const query = listParams.toString();
-                const res = await fetch(`/api/business-cards${query ? `?${query}` : ''}`, { cache: 'no-store' });
+                const res = await fetch(`/api/business-cards${query ? `?${query}` : ''}`, {
+                    cache: 'no-store',
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     const cards: BusinessCardData[] = await readApiJson(res);
                     const categories = Array.from(new Set(['기타', ...cards.map(c => c.category).filter(Boolean)])).sort();
@@ -324,7 +328,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
             const method = currentId ? 'PUT' : 'POST';
             const res = await fetch('/api/business-cards', {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
 
@@ -374,7 +378,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
             try {
                 await fetch('/api/business-cards', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(updatedData)
                 });
                 await createScheduleSync(newHistory, formData.name, formData.id);
@@ -382,7 +386,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
         }
     };
 
-    const handleSaveWorkHistory = (data: any) => {
+    const handleSaveWorkHistory = async (data: any) => {
         const userStr = localStorage.getItem('user');
         let managerName = 'Unknown';
         if (userStr) {
@@ -415,7 +419,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
             if (formData.id) {
                 fetch('/api/business-cards', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ ...formData, history: newHistoryList })
                 }).catch(console.error);
 
@@ -537,7 +541,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
                 try {
                     await fetch('/api/business-cards', {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify(updatedData)
                     });
                     // Sync Delete to Property
@@ -633,7 +637,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
             try {
                 const res = await fetch('/api/business-cards/promoted/link', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         promotedId: linkingPromotedItem.id,
                         propertyId: property.id
@@ -654,7 +658,9 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
                     }));
 
                     // Reload for consistency
-                    const loadRes = await fetch(withRequesterId(`/api/business-cards?id=${id}`));
+                    const loadRes = await fetch(withRequesterId(`/api/business-cards?id=${id}`), {
+                        headers: await getApiAuthHeaders()
+                    });
                     if (loadRes.ok) {
                         const refreshed = await readApiJson(loadRes);
                         setFormData(prev => ({
@@ -700,7 +706,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
             // Save local change
             await fetch('/api/business-cards', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(updatedData)
             });
 
@@ -714,7 +720,17 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
     const handleSync = async () => {
         showConfirm('DB 데이터와 동기화하시겠습니까?', async () => {
             try {
-                const res = await fetch('/api/business-cards/sync', { method: 'POST' });
+                const companyId = getStoredCompanyId(getStoredUser());
+                if (!companyId) {
+                    showAlert('회사 정보가 없습니다. 다시 로그인 해주세요.', 'error');
+                    return;
+                }
+
+                const res = await fetch('/api/business-cards/sync', {
+                    method: 'POST',
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ companyId })
+                });
                 const result = await readApiJson(res);
                 if (res.ok) {
                     const dbg = result.debug || {};
@@ -725,7 +741,9 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
 
                     // Refresh data
                     if (id) {
-                        const loadRes = await fetch(withRequesterId(`/api/business-cards?id=${id}`));
+                        const loadRes = await fetch(withRequesterId(`/api/business-cards?id=${id}`), {
+                            headers: await getApiAuthHeaders()
+                        });
                         if (loadRes.ok) {
                             const newData = await readApiJson(loadRes);
                             // Sanitize nulls
@@ -808,7 +826,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
             if (formData.id) {
                 await fetch('/api/business-cards', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(updatedData)
                 });
 
@@ -835,7 +853,10 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
                     return;
                 }
 
-                const res = await fetch(`/api/business-cards?id=${id}&requesterId=${encodeURIComponent(requesterId)}`, { method: 'DELETE' });
+                const res = await fetch(`/api/business-cards?id=${id}&requesterId=${encodeURIComponent(requesterId)}`, {
+                    method: 'DELETE',
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     showAlert('삭제되었습니다.', 'success', () => {
                         if (onSuccess) onSuccess();

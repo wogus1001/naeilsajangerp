@@ -10,6 +10,7 @@ import BusinessCard from '@/components/business/BusinessCard';
 import ViewModeSwitcher, { ViewMode } from '@/components/properties/ViewModeSwitcher';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { parseSearchTerms } from '@/utils/search';
 import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
@@ -241,7 +242,10 @@ function BusinessCardListContent() {
 
     const fetchBusinessCardList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal, search?: string) => {
         const query = buildBusinessCardQueryString(requestedLimit, search);
-        const res = await fetch(`/api/business-cards${query}`, { signal });
+        const res = await fetch(`/api/business-cards${query}`, {
+            signal,
+            headers: await getApiAuthHeaders()
+        });
 
         if (!res.ok) {
             throw new Error(`Failed to fetch business cards: ${res.status}`);
@@ -380,7 +384,7 @@ function BusinessCardListContent() {
 
                 const res = await fetch('/api/business-cards', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(payload)
                 });
 
@@ -414,7 +418,7 @@ function BusinessCardListContent() {
 
                 const res = await fetch('/api/business-cards/sync', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ companyId: getStoredCompanyId(user) })
                 });
                 const result = await readApiJson(res);
@@ -541,7 +545,10 @@ function BusinessCardListContent() {
                 const requesterId = getRequesterId(getStoredUser());
 
                 for (const id of selectedIds) {
-                    await fetch(`/api/business-cards?id=${id}&requesterId=${encodeURIComponent(requesterId)}`, { method: 'DELETE' });
+                    await fetch(`/api/business-cards?id=${id}&requesterId=${encodeURIComponent(requesterId)}`, {
+                        method: 'DELETE',
+                        headers: await getApiAuthHeaders()
+                    });
                 }
                 showAlert('삭제되었습니다.', 'success');
                 setSelectedIds([]);
@@ -567,7 +574,7 @@ function BusinessCardListContent() {
 
             await fetch('/api/business-cards', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ id, isFavorite: newStatus, requesterId })
             });
         } catch (e) {

@@ -1,12 +1,16 @@
 
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireCompanyOperatorRequester } from '@/lib/admin-route-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
+        const adminGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
+        if (!adminGuard.ok) return adminGuard.response;
+
         const { companyId } = await request.json(); // Optional security scope
 
         // Fetch all customers (Optimize: Filter by company if provided)

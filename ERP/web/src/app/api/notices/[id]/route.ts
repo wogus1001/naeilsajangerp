@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
+    canManageNotice,
     formatNoticeRows,
+    type NoticeViewer,
     type NoticeAuthor,
     type NoticeRow
 } from '@/lib/notices';
+import type { RequesterProfile } from '@/lib/api-auth';
+import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Service Role Client
@@ -24,9 +28,6 @@ export async function GET(request: Request, context: any) {
         if (error || !notice) {
             return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
         }
-
-        // Increment views (Non-blocking or simple await)
-        await supabaseAdmin.from('notices').update({ views: (notice.views || 0) + 1 }).eq('id', id);
 
         const rows: NoticeRow[] = [notice];
         const authors = await fetchNoticeAuthors(rows);
@@ -66,11 +67,33 @@ async function fetchNoticeAuthors(rows: readonly NoticeRow[]): Promise<Map<strin
     return authors;
 }
 
+function toNoticeViewer(requester: RequesterProfile): NoticeViewer {
+    return {
+        id: requester.id,
+        role: requester.role || undefined,
+        company_id: requester.company_id || undefined
+    };
+}
+
 export async function DELETE(request: Request, context: any) {
     const supabaseAdmin = getSupabaseAdmin();
     try {
         const params = await context.params;
         const id = params.id;
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
+
+        const { data: notice, error: fetchError } = await supabaseAdmin
+            .from('notices')
+            .select('id, author_id, company_id, type')
+            .eq('id', id)
+            .single();
+        if (fetchError || !notice) return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
+        if (!canManageNotice(toNoticeViewer(requester), notice)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
         const { error } = await supabaseAdmin.from('notices').delete().eq('id', id);
 
@@ -93,6 +116,23 @@ export async function PUT(request: Request, context: any) {
         const id = params.id;
         const body = await request.json();
         const { title, content, type, isPinned } = body;
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
+
+        const { data: notice, error: fetchError } = await supabaseAdmin
+            .from('notices')
+            .select('id, author_id, company_id, type')
+            .eq('id', id)
+            .single();
+        if (fetchError || !notice) return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
+        if (!canManageNotice(toNoticeViewer(requester), notice)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+        if (type === 'system' && !isAdmin(requester)) {
+            return NextResponse.json({ error: '관리자 권한이 필요합니다.', code: 'FORBIDDEN' }, { status: 403 });
+        }
 
         const updates: any = {};
         if (title !== undefined) updates.title = title;

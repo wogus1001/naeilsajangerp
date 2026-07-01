@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
+import { requireCompanyOperatorRequester } from '@/lib/admin-route-auth';
 
 // --- Constants & Helpers from Frontend (Mirrored for Backend Processing) ---
 
@@ -197,6 +198,9 @@ const parseAndTransformRevenue = (str: any): any[] => {
 export async function POST(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
     try {
+        const adminGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
+        if (!adminGuard.ok) return adminGuard.response;
+
         const body = await request.json();
         const { main = [], work = [], price = [], contracts = [], meta = {} } = body;
         const { userCompanyName, managerId } = meta;
@@ -740,4 +744,3 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
     }
 }
-

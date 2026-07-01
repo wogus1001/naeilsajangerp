@@ -1,11 +1,16 @@
 
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireCompanyOperatorRequester } from '@/lib/admin-route-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const adminGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
+        if (!adminGuard.ok) return adminGuard.response;
+
         const payload = await request.json();
         return handleBatchUpload(payload);
     } catch (error) {

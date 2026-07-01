@@ -10,6 +10,7 @@ import CustomerCard from '@/components/customers/CustomerCard';
 import ViewModeSwitcher, { ViewMode } from '@/components/properties/ViewModeSwitcher';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { parseSearchTerms } from '@/utils/search';
 import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
@@ -276,7 +277,7 @@ function CustomerListPageContent() {
 
                     const res = await fetch('/api/customers/batch', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify(payload)
                     });
 
@@ -312,7 +313,7 @@ function CustomerListPageContent() {
 
                 const res = await fetch('/api/customers/sync', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ companyId: getStoredCompanyId(user) })
                 });
                 const result = await readApiJson(res);

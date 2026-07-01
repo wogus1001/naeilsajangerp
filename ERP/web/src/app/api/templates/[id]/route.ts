@@ -1,63 +1,29 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { canAccessCompanyResource, getRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-
-async function resolveUserId(legacyId: string) {
-    if (!legacyId) return null;
-    if (legacyId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) return legacyId;
-
-    const supabaseAdmin = getSupabaseAdmin();
-    const email = `${legacyId}@example.com`;
-    const { data: u } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
-    if (u) return u.id;
-
-    if (legacyId === 'admin') {
-        const { data: a } = await supabaseAdmin.from('profiles').select('id').ilike('email', 'admin%').limit(1).single();
-        return a?.id;
-    }
-    return null;
-}
 
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    let supabase = await createClient();
+    const supabase = getSupabaseAdmin();
     const { id } = await params;
     const body = await request.json();
 
     const { searchParams } = new URL(request.url);
     const userIdParam = searchParams.get('userId');
 
-    let userId = null;
-    let usingFallback = false;
-
-    // 1. Try Supabase Auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-        userId = user.id;
-    } else {
-        // 2. Fallback
-        if (userIdParam) {
-            userId = await resolveUserId(userIdParam);
-            usingFallback = true;
-        }
-    }
-
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // FORCE ADMIN: Always switch to Admin client for DB operations
-    supabase = getSupabaseAdmin() as any;
+    const requester = await getRequesterProfile(supabase, request, userIdParam);
+    if (!requester) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Check if system template
-    const { data: existing } = await supabase.from('contract_templates').select('is_system, created_by').eq('id', id).single();
-    if (existing?.is_system) {
-        // Only allow admins to edit system templates? 
-        // For now, let's strictly protect them or allow admins.
-        // Let's rely on RLS, but also check here for clarity.
-        // Assuming RLS allows admins.
+    const { data: existing } = await supabase.from('contract_templates').select('is_system, created_by, company_id').eq('id', id).single();
+    if (!existing) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+    if (existing.is_system && !isAdmin(requester)) {
+        return NextResponse.json({ error: '기본 템플릿은 관리자만 수정할 수 있습니다.' }, { status: 403 });
+    }
+    if (!canAccessCompanyResource(requester, { company_id: existing.company_id, user_id: existing.created_by })) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Map camelCase (Frontend) to snake_case (DB)
@@ -88,38 +54,23 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    let supabase = await createClient();
+    const supabase = getSupabaseAdmin();
     const { id } = await params;
 
     const { searchParams } = new URL(request.url);
     const userIdParam = searchParams.get('userId');
 
-    let userId = null;
-    let usingFallback = false;
-
-    // 1. Try Supabase Auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-        userId = user.id;
-    } else {
-        // 2. Fallback
-        if (userIdParam) {
-            userId = await resolveUserId(userIdParam);
-            usingFallback = true;
-        }
-    }
-
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // FORCE ADMIN: Always switch to Admin client for DB operations
-    supabase = getSupabaseAdmin() as any;
+    const requester = await getRequesterProfile(supabase, request, userIdParam);
+    if (!requester) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Explicit check for system template protection
-    const { data: existing } = await supabase.from('contract_templates').select('is_system').eq('id', id).single();
+    const { data: existing } = await supabase.from('contract_templates').select('is_system, company_id, created_by').eq('id', id).single();
+    if (!existing) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     if (existing?.is_system) {
         return NextResponse.json({ error: '기본 템플릿은 삭제할 수 없습니다.' }, { status: 403 });
+    }
+    if (!canAccessCompanyResource(requester, { company_id: existing.company_id, user_id: existing.created_by })) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { error } = await supabase

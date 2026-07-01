@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import { uCanSignClient } from '@/lib/ucansign/client';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAuthenticatedUcansignUser } from '@/lib/ucansign/route-auth';
 
 export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const userIdParam = searchParams.get('userId');
+    const supabaseAdmin = getSupabaseAdmin();
 
-    if (!userId) {
-        return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+    const authResult = await requireAuthenticatedUcansignUser(supabaseAdmin, request, userIdParam);
+    if (!authResult.ok) return authResult.response;
 
     try {
         const body = await request.json();

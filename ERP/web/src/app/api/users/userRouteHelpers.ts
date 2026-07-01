@@ -56,23 +56,12 @@ export async function resolveUserUuid(supabaseAdmin: SupabaseClient, rawId: stri
 export async function getRequesterProfile(
     supabaseAdmin: SupabaseClient,
     request: Request,
-    searchParams: URLSearchParams
+    _searchParams: URLSearchParams
 ): Promise<RequesterLookupResult> {
     const authenticatedProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
     if (authenticatedProfile) return { profile: authenticatedProfile };
 
-    const requesterRaw = searchParams.get('requesterId') || request.headers.get('x-user-id');
-    const requesterUuid = await resolveUserUuid(supabaseAdmin, requesterRaw);
-    if (!requesterUuid) return { error: NextResponse.json({ error: 'requesterId is required' }, { status: 401 }) };
-
-    const { data: requesterProfile, error: requesterError } = await supabaseAdmin
-        .from('profiles')
-        .select('id, role, company_id')
-        .eq('id', requesterUuid)
-        .single<RequesterProfileRow>();
-    if (requesterError || !requesterProfile) return { error: NextResponse.json({ error: 'Requester profile not found' }, { status: 401 }) };
-
-    return { profile: requesterProfile };
+    return { error: NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 }) };
 }
 
 export async function requireAdminRequester(

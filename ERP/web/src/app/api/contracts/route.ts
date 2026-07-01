@@ -1,22 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getContracts, uCanSignClient } from '@/lib/ucansign/client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAuthenticatedUcansignUser } from '@/lib/ucansign/route-auth';
 
 // Service Role Client removed from top-level
-
-async function resolveUserId(legacyId: string) {
-    if (!legacyId) return null;
-    const supabaseAdmin = getSupabaseAdmin();
-    const email = `${legacyId}@example.com`;
-    const { data: u } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
-    if (u) return u.id;
-    // fallback for admin if email is different?
-    if (legacyId === 'admin') {
-        const { data: a } = await supabaseAdmin.from('profiles').select('id').ilike('email', 'admin%').limit(1).single();
-        return a?.id;
-    }
-    return null;
-}
 
 // Transform DB -> Frontend
 function transformContract(row: any) {
@@ -37,19 +24,17 @@ function transformContract(row: any) {
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId'); // Legacy 'admin'
+        const legacyUserId = searchParams.get('userId');
         const supabaseAdmin = getSupabaseAdmin();
 
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-        }
-
         const status = searchParams.get('status');
-        const userUuid = await resolveUserId(userId);
+        const authResult = await requireAuthenticatedUcansignUser(supabaseAdmin, request, legacyUserId);
+        if (!authResult.ok) return authResult.response;
+        const userUuid = authResult.userId;
 
         // 1. Fetch from External API (Source of Truth for Status)
         // Fix: Use resolved UUID for database lookups in getContracts -> getUserToken
-        console.log(`[API] Fetching contracts from uCanSign for ${userId} (UUID: ${userUuid})`);
+        console.log(`[API] Fetching contracts from uCanSign for ${userUuid}`);
         let apiContracts: any[] = [];
         try {
             if (userUuid) {

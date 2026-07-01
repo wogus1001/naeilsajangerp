@@ -6,6 +6,7 @@ import { ArrowLeft, Eye, Trash2, Edit3 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { canManageNotice } from '@/lib/notices';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getStoredUser, type StoredUser } from '@/utils/userUtils';
 
 type NoticeDetail = {
@@ -108,7 +109,10 @@ export default function NoticeDetailPage() {
     const handleDelete = async () => {
         showConfirm('정말로 이 공지사항을 삭제하시겠습니까?', async () => {
             try {
-                const res = await fetch(`/api/notices/${params.id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/notices/${params.id}`, {
+                    method: 'DELETE',
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     showAlert('삭제되었습니다.');
                     router.push('/board/notices');

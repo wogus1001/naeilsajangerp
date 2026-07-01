@@ -1,22 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getRequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-
-// Helper to resolve ID (Match legacy @example.com)
-async function resolveUserId(id: string) {
-    if (id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) return id;
-
-    const supabaseAdmin = getSupabaseAdmin();
-    // Try email as is if it has @
-    const targetEmail = id.includes('@') ? id : `${id}@example.com`;
-    const { data } = await supabaseAdmin.from('profiles').select('id').eq('email', targetEmail).single();
-    if (data) return data.id;
-
-    if (id === 'admin') {
-        const { data: a } = await supabaseAdmin.from('profiles').select('id').ilike('email', 'admin%').limit(1).single();
-        return a?.id;
-    }
-    return null;
-}
 
 export async function GET(request: Request) {
     try {
@@ -24,25 +8,8 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const userIdParam = searchParams.get('userId');
 
-        if (!userIdParam) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-        }
-
-        const resolvedUserId = await resolveUserId(userIdParam);
-        if (!resolvedUserId) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
-        }
-
-        // Fetch user's profile
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('company_id, id')
-            .eq('id', resolvedUserId)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
+        const profile = await getRequesterProfile(supabase, request, userIdParam);
+        if (!profile) return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
 
         let query = supabase.from('projects').select('*');
 
@@ -94,10 +61,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
         }
 
-        const resolvedUserId = await resolveUserId(targetUserId);
-        if (!resolvedUserId) {
-            return NextResponse.json({ error: 'User not found' }, { status: 401 });
-        }
+        const requester = await getRequesterProfile(supabase, request, targetUserId);
+        if (!requester) return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
 
         // Ensure we have a valid UUID for the project id
         let projectId = id;
@@ -108,13 +73,6 @@ export async function POST(request: Request) {
             console.log(`Generated new UUID for project: ${projectId} (received: ${id})`);
         }
 
-        // Get user company
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('company_id')
-            .eq('id', resolvedUserId)
-            .single();
-
         const { data: project, error } = await supabase
             .from('projects')
             .insert({
@@ -124,8 +82,8 @@ export async function POST(request: Request) {
                 category,
                 participants,
                 data,
-                company_id: profile?.company_id,
-                created_by: resolvedUserId
+                company_id: requester.company_id,
+                created_by: requester.id
             })
             .select()
             .single();

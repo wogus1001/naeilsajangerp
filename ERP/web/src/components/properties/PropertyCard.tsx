@@ -20,6 +20,7 @@ import { getSupabase } from '@/lib/supabase';
 import BusinessCard from '../business/BusinessCard';
 import Customer from '../customers/CustomerCard';
 import { PropertyShareButton } from './PropertyShareButton';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId as resolveRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 import { readApiJson } from '@/utils/apiResponse';
@@ -553,7 +554,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 ? withRequesterId(`/api/customers?id=${personId}`)
                 : withRequesterId(`/api/business-cards?id=${personId}`);
 
-            const res = await fetch(endpoint);
+            const res = await fetch(endpoint, {
+                headers: await getApiAuthHeaders()
+            });
             if (!res.ok) return;
             const personData = await readApiJson(res);
 
@@ -602,7 +605,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 const updateUrl = type === 'customer' ? '/api/customers' : '/api/business-cards';
                 await fetch(updateUrl, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(updatedPerson))
                 });
             }
@@ -1029,7 +1032,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 ? withRequesterId(`/api/customers?id=${personId}`)
                 : withRequesterId(`/api/business-cards?id=${personId}`);
 
-            const res = await fetch(endpoint);
+            const res = await fetch(endpoint, {
+                headers: await getApiAuthHeaders()
+            });
             if (!res.ok) return;
             const personData = await readApiJson(res);
 
@@ -1060,7 +1065,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             const updateUrl = type === 'customer' ? '/api/customers' : '/api/business-cards';
             await fetch(updateUrl, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(withRequesterPayload(updatedPerson))
             });
         } catch (e) {
@@ -1074,7 +1079,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 ? withRequesterId(`/api/customers?id=${personId}`)
                 : withRequesterId(`/api/business-cards?id=${personId}`);
 
-            const res = await fetch(endpoint);
+            const res = await fetch(endpoint, {
+                headers: await getApiAuthHeaders()
+            });
             if (!res.ok) return;
             const personData = await readApiJson(res);
 
@@ -1091,7 +1098,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             const updateUrl = type === 'customer' ? '/api/customers' : '/api/business-cards';
             await fetch(updateUrl, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(withRequesterPayload(updatedPerson))
             });
         } catch (e) {
@@ -1105,7 +1112,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 ? withRequesterId(`/api/customers?id=${personId}`)
                 : withRequesterId(`/api/business-cards?id=${personId}`);
 
-            const res = await fetch(endpoint);
+            const res = await fetch(endpoint, {
+                headers: await getApiAuthHeaders()
+            });
             if (!res.ok) {
                 console.error(`Sync Error: Failed to fetch person data (Status: ${res.status})`);
                 return;
@@ -1132,7 +1141,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             const updateUrl = type === 'customer' ? '/api/customers' : '/api/business-cards';
             const putRes = await fetch(updateUrl, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(withRequesterPayload(updatedPerson))
             });
 
@@ -1156,7 +1165,9 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
             const endpoint = type === 'customer'
                 ? withRequesterId(`/api/customers?id=${personId}`)
                 : withRequesterId(`/api/business-cards?id=${personId}`);
-            const res = await fetch(endpoint);
+            const res = await fetch(endpoint, {
+                headers: await getApiAuthHeaders()
+            });
             if (!res.ok) {
                 console.error(`Sync Error: Failed to fetch person data (Status: ${res.status})`);
                 return;
@@ -1181,7 +1192,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
                 const updateUrl = type === 'customer' ? '/api/customers' : '/api/business-cards';
                 await fetch(updateUrl, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(withRequesterPayload(updatedPerson))
                 });
             }
