@@ -65,6 +65,16 @@ create index if not exists idx_franchise_vendor_contracts_owner
 create index if not exists idx_franchise_vendor_contracts_electronic_contract
   on public.franchise_vendor_contracts (electronic_contract_id);
 
+create or replace function public.set_updated_at_timestamp()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
 alter table public.franchise_vendor_contracts enable row level security;
 
 drop policy if exists "Company members can view franchise_vendor_contracts" on public.franchise_vendor_contracts;
@@ -116,4 +126,4 @@ create policy "Company members can update franchise_vendor_contracts" on public.
 drop trigger if exists trg_franchise_vendor_contracts_updated_at on public.franchise_vendor_contracts;
 create trigger trg_franchise_vendor_contracts_updated_at
 before update on public.franchise_vendor_contracts
-for each row execute procedure public.update_updated_at_column();
+for each row execute function public.set_updated_at_timestamp();
