@@ -10,6 +10,11 @@ import {
     type FranchiseNotificationRow,
     type NotificationLead
 } from '@/lib/franchise-notifications';
+import {
+    buildVendorContractNotifications,
+    type VendorContractNotificationContract,
+    type VendorContractNotificationRecipient
+} from '@/lib/franchise-vendor-contract-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +37,19 @@ type NotificationUpdateBody = {
 };
 
 type ExistingNotificationRow = { readonly id: string; readonly source_id: string };
+type VendorContractNotificationRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly owner_profile_id: string | null;
+    readonly vendor_name: string | null;
+    readonly contract_title: string | null;
+    readonly contract_end_date: string | null;
+    readonly status: string | null;
+};
+type NotificationRecipientProfileRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+};
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
@@ -48,6 +66,13 @@ function isMissingNotificationSchemaError(error: unknown): boolean {
     const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
     const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_notifications/i.test(message);
+}
+
+function isMissingVendorContractSchemaError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_vendor_contracts/i.test(message);
 }
 
 function mapLeadRow(row: LeadNotificationRow): NotificationLead {
@@ -120,6 +145,68 @@ async function fetchNotificationLeads(
     return attachDisclosureSummariesToLeads(supabaseAdmin, leads);
 }
 
+async function fetchVendorContractsForNotifications(
+    companyId: string | null,
+    requesterIsAdmin: boolean
+): Promise<readonly VendorContractNotificationContract[]> {
+    const supabaseAdmin = getSupabaseAdmin();
+    let query = supabaseAdmin
+        .from('franchise_vendor_contracts')
+        .select('id, company_id, owner_profile_id, vendor_name, contract_title, contract_end_date, status')
+        .neq('status', 'archived')
+        .limit(500);
+
+    if (companyId) query = query.eq('company_id', companyId);
+    if (!companyId && !requesterIsAdmin) return [];
+
+    const { data, error } = await query.returns<VendorContractNotificationRow[]>();
+    if (error) {
+        if (isMissingVendorContractSchemaError(error)) return [];
+        throw error;
+    }
+
+    return (data || []).map(row => ({
+        companyId: row.company_id,
+        contractEndDate: row.contract_end_date,
+        contractTitle: row.contract_title || '업체 계약',
+        id: row.id,
+        ownerProfileId: row.owner_profile_id,
+        status: row.status || 'active',
+        vendorName: row.vendor_name || '업체'
+    }));
+}
+
+async function fetchVendorContractNotificationRecipients(
+    companyId: string | null,
+    requesterId: string,
+    requesterIsAdmin: boolean
+): Promise<readonly VendorContractNotificationRecipient[]> {
+    const supabaseAdmin = getSupabaseAdmin();
+    let query = supabaseAdmin
+        .from('profiles')
+        .select('id, company_id')
+        .in('role', ['manager'])
+        .eq('status', 'active')
+        .limit(500);
+
+    if (companyId) query = query.eq('company_id', companyId);
+    if (!companyId && !requesterIsAdmin) query = query.eq('id', requesterId);
+
+    const { data, error } = await query.returns<NotificationRecipientProfileRow[]>();
+    if (error) throw error;
+
+    const recipients = (data || [])
+        .filter(row => row.company_id)
+        .map(row => ({
+            companyId: row.company_id || '',
+            profileId: row.id
+        }));
+
+    return requesterIsAdmin || recipients.some(recipient => recipient.profileId === requesterId)
+        ? recipients
+        : [...recipients, { companyId: companyId || '', profileId: requesterId }].filter(recipient => recipient.companyId);
+}
+
 async function syncAutomaticNotifications(
     candidates: readonly FranchiseNotificationCandidate[],
     scope: { readonly companyId: string | null; readonly requesterId: string; readonly requesterIsAdmin: boolean }
@@ -177,8 +264,15 @@ export async function GET(request: Request) {
         const limit = parseLimit(searchParams.get('limit'));
 
         const requesterIsAdmin = isAdmin(requester);
-        const leads = await fetchNotificationLeads(companyId, requester.id, requesterIsAdmin, requester.role);
-        await syncAutomaticNotifications(buildAutomaticFranchiseNotifications(leads), {
+        const [leads, vendorContracts, vendorRecipients] = await Promise.all([
+            fetchNotificationLeads(companyId, requester.id, requesterIsAdmin, requester.role),
+            fetchVendorContractsForNotifications(companyId, requesterIsAdmin),
+            fetchVendorContractNotificationRecipients(companyId, requester.id, requesterIsAdmin)
+        ]);
+        await syncAutomaticNotifications([
+            ...buildAutomaticFranchiseNotifications(leads),
+            ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
+        ], {
             companyId,
             requesterId: requester.id,
             requesterIsAdmin

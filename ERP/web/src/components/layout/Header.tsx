@@ -77,6 +77,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
         if (path === '/contracts') return { category: '계약', title: '계약관리' };
         if (path === '/contracts/electronic') return { category: '프랜차이즈', title: '전자계약' };
         if (path === '/contracts/electronic/create') return { category: '프랜차이즈', title: '전자계약 작성' };
+        if (path === '/contracts/vendor') return { category: '프랜차이즈', title: '업체 계약함' };
         if (path === '/contracts/create') return { category: '계약', title: '간편 서명 시작(전자)' };
         if (path === '/contracts/builder') return { category: '계약', title: '새 계약 양식 만들기' };
         if (path.startsWith('/contracts/')) return { category: '계약', title: '계약 상세' };

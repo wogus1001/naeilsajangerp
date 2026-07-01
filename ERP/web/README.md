@@ -72,11 +72,20 @@ supabase_franchise_lead_documents_migration.sql
 supabase_franchise_contract_store_linkage_migration.sql
 supabase_franchise_location_meeting_tool_presets_migration.sql
 supabase_franchise_location_meeting_tool_versions_migration.sql
+supabase_franchise_vendor_contracts_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, 또는 `franchise_location_meeting_tool_versions` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, 또는 `franchise_vendor_contracts` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+## Franchise Vendor Contract Vault Setup
+
+Run `supabase_franchise_vendor_contracts_migration.sql` before enabling `/contracts/vendor`.
+
+The vendor contract vault stores company-scoped contracts with logistics, food material, interior, marketing, lease, and other vendors. Contract files are uploaded to the existing `property-documents` bucket under `franchise-vendor-contracts/<company_id>/<contract_id>/...`; the API issues short-lived signed URLs for viewing instead of storing public document URLs.
+
+The vault can also link a completed or in-progress electronic contract from the same company. Vendor contract D-30 and D-7 expiration alerts are synced into the existing in-app franchise notification table for the contract owner and company team leads. If the SQL is not applied, the page shows a migration notice and the write API returns a migration-required error.
 
 ## Signup And Partner Vendor Setup
 

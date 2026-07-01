@@ -3,7 +3,8 @@ import type { LeadDisclosureSummary } from './franchise-lead-disclosure-summary'
 export const FRANCHISE_NOTIFICATION_SEVERITIES = ['info', 'warning', 'danger', 'success'] as const;
 export const FRANCHISE_NOTIFICATION_SOURCE_TYPES = [
     'disclosure-missing', 'disclosure-failed', 'disclosure-due', 'disclosure-eligible',
-    'contact-overdue', 'contact-today', 'hot-lead-followup'
+    'contact-overdue', 'contact-today', 'hot-lead-followup',
+    'vendor-contract-due'
 ] as const;
 
 export type FranchiseNotificationSeverity = typeof FRANCHISE_NOTIFICATION_SEVERITIES[number];
@@ -14,7 +15,7 @@ export type FranchiseNotificationCandidate = {
     readonly recipientProfileId: string;
     readonly sourceType: FranchiseNotificationSourceType;
     readonly sourceId: string;
-    readonly leadId: string;
+    readonly leadId: string | null;
     readonly severity: FranchiseNotificationSeverity;
     readonly title: string;
     readonly body: string;
@@ -233,7 +234,7 @@ export function transformFranchiseNotification(row: FranchiseNotificationRow): F
         recipientProfileId: row.recipient_profile_id,
         sourceType: normalizeSourceType(row.source_type),
         sourceId: row.source_id,
-        leadId: row.lead_id || '',
+        leadId: row.lead_id || null,
         severity: normalizeSeverity(row.severity),
         title: row.title || '',
         body: row.body || '',

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildLeadDisclosureSummary } from './franchise-lead-disclosure-summary.js';
 import { buildAutomaticFranchiseNotifications } from './franchise-notifications.js';
+import { buildVendorContractNotifications } from './franchise-vendor-contract-notifications.js';
 
 const baseLead = {
     id: 'lead-1',
@@ -43,4 +44,61 @@ test('buildAutomaticFranchiseNotifications creates contact and missing disclosur
         notifications.map(item => item.sourceType).sort(),
         ['contact-overdue', 'disclosure-missing']
     );
+});
+
+test('buildVendorContractNotifications creates D-30 and D-7 alerts for owner and team lead recipients', () => {
+    const notifications = buildVendorContractNotifications([
+        {
+            companyId: 'company-1',
+            contractEndDate: '2026-07-31',
+            contractTitle: '물류 계약',
+            id: 'vendor-contract-1',
+            ownerProfileId: 'owner-1',
+            status: 'active',
+            vendorName: '내일물류'
+        },
+        {
+            companyId: 'company-1',
+            contractEndDate: '2026-07-08',
+            contractTitle: '식자재 공급 계약',
+            id: 'vendor-contract-2',
+            ownerProfileId: 'owner-2',
+            status: 'active',
+            vendorName: '내일식자재'
+        }
+    ], [
+        { companyId: 'company-1', profileId: 'manager-1' }
+    ], new Date('2026-07-01T09:00:00+09:00'));
+
+    assert.equal(notifications.some(item => item.title === '업체 계약 D-30'), true);
+    assert.equal(notifications.some(item => item.title === '업체 계약 D-7' && item.severity === 'danger'), true);
+    assert.equal(notifications.some(item => item.recipientProfileId === 'owner-2'), true);
+    assert.equal(notifications.some(item => item.actionUrl === '/contracts/vendor?contractId=vendor-contract-2'), true);
+});
+
+test('buildVendorContractNotifications skips terminal contracts and non-reminder days', () => {
+    const notifications = buildVendorContractNotifications([
+        {
+            companyId: 'company-1',
+            contractEndDate: '2026-07-31',
+            contractTitle: '종료 계약',
+            id: 'vendor-contract-1',
+            ownerProfileId: 'owner-1',
+            status: 'terminated',
+            vendorName: '내일물류'
+        },
+        {
+            companyId: 'company-1',
+            contractEndDate: '2026-07-30',
+            contractTitle: 'D-29 계약',
+            id: 'vendor-contract-2',
+            ownerProfileId: 'owner-2',
+            status: 'active',
+            vendorName: '내일식자재'
+        }
+    ], [
+        { companyId: 'company-1', profileId: 'manager-1' }
+    ], new Date('2026-07-01T09:00:00+09:00'));
+
+    assert.equal(notifications.length, 0);
 });

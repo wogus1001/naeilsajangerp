@@ -851,6 +851,16 @@
 - 브라우저 QA: 로컬 dev 서버 `http://localhost:3000/demo` 접근과 데모 로그인은 확인했다. MCP Playwright에서는 데모 투어 레이어가 닫힘 클릭 후에도 pointer를 계속 가로채 출점 후보지 리포트 다이얼로그까지 실클릭 확인이 제한됐다. 실제 로그인 세션에서 Kakao 도메인 허용 기준 지도 로딩과 반경 저장을 live QA한다.
 - 신규 SQL: 없음.
 
+## 2026-07-01 업체 계약함 MVP QA
+
+- 범위: 프랜차이즈 메뉴에 `/contracts/vendor` 업체 계약함을 추가했다. 물류, 식자재, 인테리어, 마케팅, 임대차, 기타 업체 계약을 회사 범위로 등록하고, 계약 담당자, 시작일/만료일, 상태, 메모, 기존 전자계약 연결 또는 업로드 파일을 관리한다.
+- 신규 SQL: `supabase_franchise_vendor_contracts_migration.sql`을 추가했다. SQL 미적용 상태에서는 목록 API가 `schemaReady:false`를 반환해 화면에 적용 안내를 표시하고, 저장 API는 migration-required 안내를 반환한다.
+- 업로드 보안: 업체 계약 파일은 기존 `property-documents` bucket의 `franchise-vendor-contracts/<companyId>/<contractId>/...` prefix만 허용한다. 열람은 public URL이 아니라 `/api/franchise-vendor-contracts?action=open`에서 권한 확인 후 5분 signed URL을 발급한다.
+- 알림 연동: 계약 만료 D-30/D-7은 기존 `franchise_notifications`에 `vendor-contract-due` source type으로 동기화한다. 수신자는 계약 담당자와 회사 팀장이고, 종료/갱신/보관 상태는 자동 알림에서 제외한다.
+- UI: 사이드바 프랜차이즈 그룹과 헤더 breadcrumb에 `업체 계약함`을 추가했다. 화면은 필터, 요약, 계약 등록/수정 패널, 계약 목록을 제공한다. 증거 묶음 PDF 출력은 이번 범위에서 제외했다.
+- 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts src/lib/company-menu-features.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `npm run build`는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 병렬 검증 중 build 전 `.next/types`를 읽은 `tsc` 1회가 새 라우트 타입을 못 보고 실패했으나, build 완료 후 순차 재실행한 `npx tsc --noEmit --pretty false`는 통과했다.
+- 남은 live QA: SQL 적용 후 실계정으로 업체 계약 신규 등록, 업로드 문서 열람 signed URL, 전자계약 연결, 수정/삭제, D-30/D-7 알림 생성과 헤더 알림 표시를 확인한다.
+
 ## 다음 QA 체크리스트
 
 ### P0

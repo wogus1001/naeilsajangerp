@@ -17,6 +17,7 @@ export type CompanyMenuFeatureKey =
     | 'businessCardRegister'
     | 'contracts'
     | 'electronicPremiumContracts'
+    | 'vendorContracts'
     | 'contractCreate'
     | 'contractBuilder'
     | 'companyStaff';
@@ -177,6 +178,13 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         routePrefixes: ['/contracts/electronic']
     },
     {
+        key: 'vendorContracts',
+        category: '프랜차이즈',
+        title: '업체 계약함',
+        description: '외부 업체 계약과 만료 알림을 회사 단위로 관리합니다.',
+        routePrefixes: ['/contracts/vendor']
+    },
+    {
         key: 'contractCreate',
         category: '계약',
         title: '간편 서명 시작',
@@ -219,6 +227,7 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
         businessCardRegister: true,
         contracts: true,
         electronicPremiumContracts: true,
+        vendorContracts: true,
         contractCreate: true,
         contractBuilder: true,
         companyStaff: true

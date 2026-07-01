@@ -179,6 +179,15 @@ YYYY-MM-DD
 
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 업체 계약함 MVP 커밋
+  - 주요 기능: 프랜차이즈 메뉴에 `/contracts/vendor` 업체 계약함을 추가했다. 회사 범위로 물류/식자재/인테리어/마케팅/임대차/기타 업체 계약을 등록하고, 파일 업로드 문서 또는 같은 회사 전자계약 문서를 연결한다. 업로드 문서는 `property-documents/franchise-vendor-contracts/<company>/<contract>/...`에 저장하고 signed URL로 열람한다. 계약 만료 D-30/D-7 알림은 기존 프랜차이즈 인앱 알림으로 계약 담당자와 회사 팀장에게 생성한다. 증거 묶음 PDF 출력은 이번 범위에서 제외했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts src/lib/company-menu-features.test.mts` 28건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 남은 이슈: 신규 SQL `supabase_franchise_vendor_contracts_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 한다. SQL 적용 전 `/contracts/vendor`는 SQL 적용 안내 상태로 동작하며, 적용 후 실계정으로 신규 등록, 업로드 문서 열람, 전자계약 연결, 수정/삭제, 만료 알림 sync를 live QA한다.
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `a98c692 feat(franchise): add meeting report market map`
   - 주요 기능: 출점 검토 리포트 다이얼로그에 Kakao 상권 지도 섹션을 추가했다. 후보지 좌표/주소 기반으로 마커와 300m/500m/1km 반경을 표시하고, 선택 반경은 후보지별 `meetingTool.marketMap.radiusMeters`에 저장한다. 지도에는 확대/축소, 일반/스카이뷰/지적편집도 전환, 거리재기, 면적재기 도구를 제공한다. 측정 모드와 클릭 점은 후보지 `meetingTool.marketMap`에 저장해 저장/버전 불러오기 후에도 유지한다. PDF/인쇄 출력물은 Kakao SDK를 새 출력창에서 로드해 지도 타일, 마커, 반경 원, 측정 선·면·점을 표시하고, 별도 좌표 기준 박스는 출력하지 않는다. 저장 좌표가 없는 후보지도 다이얼로그 지도에서 확인된 지오코딩 중심 좌표를 출력 HTML에 전달한다. 출력물의 상권분석·목표매출 근거는 비용 구조 아래에 배치하고, 인쇄 카드가 페이지 경계에서 잘리지 않도록 보강했다. 회사 공용 프리셋에는 포함하지 않고, 프리셋 적용 시 기존 후보지 반경은 유지한다.
   - dev 반영: none
