@@ -1,0 +1,52 @@
+# Local agent/runtime state
+.agents
+.claude
+.codex
+.codegraph
+.cursor
+.omd
+.omo
+.opencode
+AGENTS.md
+CLAUDE.md
+DESIGN.md
+MAC_CONTEXT.md
+
+# Local env and deployment metadata
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+**/.next/
+**/.vercel/
+**/node_modules/
+**/.DS_Store
+
+# Local QA/build artifacts
+ERP/.antigravityrules
+ERP/.vscode/
+ERP/*.csv
+ERP/*.js
+ERP/*.ps1
+ERP/*.py
+ERP/web/.agent/
+ERP/web/.codegraph
+ERP/web/.omo/
+ERP/web/.tmp-download-qa/
+ERP/web/docs/
+ERP/web/handoff.md
+ERP/web/ref.txt
+ERP/web/ref_utf8.txt
+ERP/web/scripts/
+ERP/web/supabase_*.sql
+ERP/web/test-data/
+ERP/web/tsc.log
+ERP/web/tsconfig.tsbuildinfo
+ERP/web/temp_card_check.tsx
+ERP/web/test_*.js
+ERP/web/ucansign_collection.json
+
+# Non-web local assets not needed by the Next.js deployment
+ERP/crawler/
+ERP/premium_model_v2.joblib
