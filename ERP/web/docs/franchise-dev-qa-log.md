@@ -25,6 +25,14 @@
 
 ## 개발 과정 로그
 
+### 2026-07-01
+
+- 운영 배포 전 검증으로 `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts`, `npm run build`를 통과했다.
+- Vercel dry-run에서 배포 대상 프로젝트가 `naeilsajang`, framework가 Next.js로 감지되는 것을 확인했다. 첫 dry-run에서 루트 `.omo`, `.claude`, `.agents` 등 로컬 작업 산출물이 업로드 대상에 포함되는 문제가 보여 `.vercelignore`를 추가했고, 재확인에서 `.env.local`, `.next`, `.vercel`, `node_modules`, `.omo`, `MAC_CONTEXT.md`, `ERP/web/handoff.md`가 ignored 목록에 포함되는 것을 확인했다.
+- 운영 배포는 `dpl_CEyXPQ2hVy5PnifeFkUMpcesxLLN`으로 완료됐다. `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다.
+- 운영 smoke로 `curl -I -L https://www.fcerp.co.kr/login`, `curl -I -L https://www.fcerp.co.kr/landing`이 200 응답을 반환했다. 배포 직후 error log scan은 `No logs found`였다.
+- 이번 배포 중 신규 SQL은 없다. 사용자 확인 기준 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 실서버 등록 완료 상태다. Vercel 원격 빌드는 Node.js 20 deprecation 경고를 출력했으므로 2026-10-01 전 Node.js 24.x 전환을 검토한다.
+
 ### 2026-06-30
 
 - Kakao 비즈니스 심사 대응을 위해 공개 화면 하단에 사업자정보 푸터를 추가했다. `/landing`, `/login`, `/signup`, `/privacy`에 `상호: 주식회사 내일사장`, `대표: 박규태`, `사업자등록번호: 448-81-03095`, `주소: 경기도 하남시 조정대로45 미사센텀비즈 F922`, `이메일: cs@sajang.app`, `연락처: 070-8095-2881`을 노출한다. 개인정보처리방침 문의 이메일도 `cs@sajang.app`로 맞췄다.

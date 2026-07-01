@@ -177,6 +177,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `9e69b3c fix(security): require sessions for legacy service routes`
+  - 배포 보강 커밋: `e4fe6e7 chore(deploy): ignore local artifacts in vercel uploads`
+  - 주요 기능: 출점 검토 리포트 2차-1/2차-4/2차-5, 공개 사업자정보 푸터, 진행현황 작성자·수정·삭제 권한, 직원 관리/개인정보 저장 핫픽스, legacy requester/admin fallback 제거 보안 하드닝을 운영 배포했다. Vercel dry-run에서 루트 `.omo`, `.claude`, `.agents`, `MAC_CONTEXT.md`, `ERP/web/handoff.md`, `.env*`, `.next`, `.vercel`, `node_modules`가 업로드에서 제외되는 것을 확인하고 `.vercelignore`를 추가했다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: `https://www.fcerp.co.kr` / `https://fcerp.co.kr` (`dpl_CEyXPQ2hVy5PnifeFkUMpcesxLLN`, READY; source `https://naeilsajang-6ch94bu1x-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증: `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 20건, `npm run build` 통과. `npx vercel deploy --dry --project naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym --yes`에서 Next.js 감지, `naeilsajang` 프로젝트, 앱 파일 포함, 민감/로컬 파일 제외를 확인했다. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/login`, `curl -I -L https://www.fcerp.co.kr/landing`은 200 응답이었다. `npx vercel logs https://naeilsajang-6ch94bu1x-jaehyuns-projects-b4d20c6f.vercel.app --scope team_NcWNRifDHvr7GdFW0rcpR3ym --level error --since 1h`는 `No logs found`였다.
+  - 남은 이슈: 사용자 확인 기준 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 실서버 등록 완료. 이번 배포 중 신규 SQL은 없다. 실계정으로 관리자 로그인, 미래 회사 직원 관리, 개인정보 이메일/휴대폰 저장, 진행현황 권한/삭제, 리포트 버전/상권분석 근거 persistence를 live QA한다. Vercel 원격 빌드는 Node.js 20 deprecation 경고를 출력했으므로 2026-10-01 전 Project Settings의 Node.js version 24.x 전환을 검토한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `862c59e feat(franchise): add market report evidence`

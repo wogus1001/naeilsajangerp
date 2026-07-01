@@ -14,13 +14,13 @@
 ## 2026-07-01 기준 현재 상태
 
 - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-- 최신 배포 기준 커밋: 이번 공개 사업자정보/진행현황 권한 안내 문구 정리 커밋을 main에 반영한다.
+- 최신 운영 배포 기준 커밋: `e4fe6e7 chore(deploy): ignore local artifacts in vercel uploads` (`dpl_CEyXPQ2hVy5PnifeFkUMpcesxLLN`, `https://www.fcerp.co.kr` READY). 실제 기능 기준은 `9e69b3c fix(security): require sessions for legacy service routes`까지 포함한다.
 - 공개 진입점: `/landing` 상단 메뉴에 `로그인` 링크를 추가했고, 로그인/가입/개인정보처리방침/metadata 브랜드 문구를 `FC ERP`로 정리했다. Kakao 비즈니스 심사 대응을 위해 `/landing`, `/login`, `/signup`, `/privacy` 하단에 주식회사 내일사장 사업자정보 푸터를 노출한다. 신규 도메인 `https://www.fcerp.co.kr` 기준 영상 촬영과 OAuth/Kakao 심사 준비에 맞춘다.
 - 최근 작업 범위: 회원가입 화면을 `회사명 -> 아이디 -> 이메일 -> 비밀번호 -> 비밀번호 확인 -> 이름 -> 휴대폰 번호` 순서로 정리하고, 이메일 `@` 누락, 비밀번호 확인 불일치, 휴대폰 자동 하이픈 정책을 추가했다. 브랜드 임직원 가입은 백엔드에서 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 자동 접수한다. 직원 관리는 `sub_manager` 매니저를 회사 직원 그룹에 포함하도록 보정했고, 개인정보 수정은 등록 이메일/휴대폰 수정과 팀장 전용 회사 로고 등록으로 정리했다. 개인정보 저장 핫픽스로 최종 프로필 재조회 company 관계를 `company_id` FK 명시 방식으로 보강했다. 진행현황의 입점 요청 목록은 회사명 옆에 작성자 표시를 추가했고, 입점 요청/예비 창업자 등록의 수정·삭제는 작성자, 같은 회사 팀장, 관리자만 가능하게 정리했다. 어드민 관리 홈은 전자계약 사용량과 회사별 메뉴 관리를 전용 관리 메뉴로 분리했고, 전자계약 사용량과 회원 및 권한 관리는 검색/필터/정렬/페이지네이션을 지원한다. 2026-07-01 플랫폼 코드리뷰로 legacy requester/admin fallback, UCanSign unsigned state, 서비스-role 주요 mutation route를 세션 기반 권한 검사로 보강했다.
 - 알림 연동: Solapi SDK를 추가하고 회원가입 요청 시 관리자 문자, 승인 완료 시 신청자 문자를 발송한다. 문구 prefix는 `[ERP]`로 통일했다. Solapi env가 없거나 수신 번호가 없으면 발송만 skip하고 가입/승인 본 흐름은 막지 않는다.
 - 데모 정리: `/demo` 가이드 오버레이와 상세 드로어를 실제 업무 흐름에 더 가깝게 맞추고, 대시보드/모객 DB/상세/승격 단계 설명과 딤드 위치를 조정했다.
 - 점포개발 미팅 도구: 출점 검토 리포트의 간단 수익분석표에 회사 공용 프리셋 저장/적용/삭제를 추가했다. 프리셋은 목표매출 변화와 비용 항목만 공유하고 후보지별 보고 메모/상권분석 근거는 유지한다. 코드리뷰 보강으로 빈 `meetingTool` 저장 차단, UUID 검증, 프리셋 테이블 미적용 424 안내, 교차 회사 삭제 404 응답, 프리셋 목록 전환 초기화, 삭제 확인창, 비율 소수 입력 유지를 추가했다. UI는 `분석표 프리셋` 툴바로 분리해 목표매출 입력의 하위 옵션처럼 보이지 않게 정리했다. 2차 고도화로 PDF/인쇄 출력물을 목표매출 1~3차 비교표와 미팅 자료형 레이아웃으로 정리하고, 후보지별 `리포트 버전 이력` 저장/불러오기와 `상권분석·목표매출 근거` 섹션을 추가했다. 후속 코드리뷰로 미팅 도구 도메인 로직과 CSS를 컴포넌트 전용 모듈로 분리해 유지보수 리스크를 낮췄다.
-- 배포 상태: 직원 관리/개인정보 수정 보강과 개인정보 저장 핫픽스는 운영 배포 완료 상태이며, 공개 사업자정보 푸터와 진행현황 권한 안내 문구 정리는 운영 배포 대상으로 검증 완료했다.
+- 배포 상태: 직원 관리/개인정보 수정 보강, 개인정보 저장 핫픽스, 공개 사업자정보 푸터, 진행현황 권한/삭제, 출점 검토 리포트 버전 이력·상권분석 근거, legacy requester/admin fallback 제거 보안 하드닝은 2026-07-01 운영 배포 완료 상태다. 배포 전 Vercel dry-run에서 `.env*`, `.omo`, `MAC_CONTEXT.md`, `ERP/web/handoff.md`, `.next`, `.vercel`, `node_modules` 제외를 확인했고, 운영 inspect에서 `name=naeilsajang`, `target=production`, `status=Ready`를 확인했다.
 - 신규 SQL: 회사 공용 수익분석표 프리셋용 `supabase_franchise_location_meeting_tool_presets_migration.sql`과 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:
