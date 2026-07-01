@@ -58,6 +58,60 @@ test('preserves candidate-specific market report evidence while normalizing meet
     });
 });
 
+test('normalizes candidate market map radius for Kakao map preview', () => {
+    const draft = normalizeMeetingToolDraft({
+        marketMap: {
+            radiusMeters: '1000',
+            measurementMode: 'distance',
+            measurementPoints: [
+                { lat: '37.4', lng: '127.1' },
+                { lat: 37.5, lng: 127.2 },
+                { lat: null, lng: 127.3 }
+            ]
+        }
+    });
+
+    assert.deepEqual(draft.marketMap, {
+        radiusMeters: 1000,
+        measurementMode: 'distance',
+        measurementPoints: [
+            { lat: 37.4, lng: 127.1 },
+            { lat: 37.5, lng: 127.2 }
+        ]
+    });
+});
+
+test('falls back to 500m for unsupported market map radius', () => {
+    const draft = normalizeMeetingToolDraft({
+        marketMap: { radiusMeters: 750 }
+    });
+
+    assert.deepEqual(draft.marketMap, {
+        radiusMeters: 500,
+        measurementMode: 'none',
+        measurementPoints: []
+    });
+});
+
+test('clears market map measurement points when measurement mode is unsupported', () => {
+    const draft = normalizeMeetingToolDraft({
+        marketMap: {
+            radiusMeters: 500,
+            measurementMode: 'legacy-line',
+            measurementPoints: [
+                { lat: 37.4, lng: 127.1 },
+                { lat: 37.5, lng: 127.2 }
+            ]
+        }
+    });
+
+    assert.deepEqual(draft.marketMap, {
+        radiusMeters: 500,
+        measurementMode: 'none',
+        measurementPoints: []
+    });
+});
+
 test('excludes candidate-specific market report evidence from company shared preset data', () => {
     const presetData = toMeetingToolPresetData({
         targetSales: 4_500,
@@ -65,10 +119,12 @@ test('excludes candidate-specific market report evidence from company shared pre
             tradeAreaSummary: '이 후보지 전용 상권 근거',
             demandEvidence: '프리셋에 저장되면 안 됨'
         },
+        marketMap: { radiusMeters: 1000 },
         reportMemo: '이 후보지 전용 검토 메모'
     });
 
     assert.equal(Object.hasOwn(presetData, 'marketReport'), false);
+    assert.equal(Object.hasOwn(presetData, 'marketMap'), false);
     assert.equal(Object.hasOwn(presetData, 'reportMemo'), false);
 });
 
@@ -160,6 +216,7 @@ test('applies company shared preset without overwriting meeting-specific report 
             targetSalesBasis: '이 후보지 전용 목표매출 근거',
             tradeAreaSummary: '역세권 1층'
         },
+        marketMap: { radiusMeters: 1000 },
         reportMemo: '이 후보지 전용 검토 메모'
     });
     const preset = normalizeMeetingToolPreset({
@@ -188,5 +245,10 @@ test('applies company shared preset without overwriting meeting-specific report 
     assert.equal(materialRow?.amount, 1_750);
     assert.equal(applied.marketReport.targetSalesBasis, '이 후보지 전용 목표매출 근거');
     assert.equal(applied.marketReport.tradeAreaSummary, '역세권 1층');
+    assert.deepEqual(applied.marketMap, {
+        radiusMeters: 1000,
+        measurementMode: 'none',
+        measurementPoints: []
+    });
     assert.equal(applied.reportMemo, '이 후보지 전용 검토 메모');
 });

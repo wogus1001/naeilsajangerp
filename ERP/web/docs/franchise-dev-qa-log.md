@@ -840,6 +840,16 @@
 - 제외: preview `물건지도`의 지도 타일 공백은 Kakao JavaScript 키 허용 도메인에 preview host가 없어 `domain mismatched`가 발생한 것이므로 이번 수정 범위에서 제외했다. 운영 도메인 `www.fcerp.co.kr` 기준 SDK 응답은 정상이다.
 - 신규 SQL: 없음.
 
+## 2026-07-01 출점 검토 리포트 Kakao 상권 지도
+
+- 2차-5 후속으로 출점 검토 리포트 다이얼로그에 `상권 지도` 섹션을 추가했다. 후보지 좌표가 있으면 Kakao 지도에 마커와 상권 반경을 표시하고, 좌표가 없으면 후보지 주소로 Kakao 지오코딩을 시도한다.
+- 반경은 300m/500m/1km 중 선택하며 후보지별 `franchise_locations.data.meetingTool.marketMap.radiusMeters`에 저장한다. 후보지 전용 기준이므로 회사 공용 프리셋 저장 데이터에서는 제외하고, 프리셋 적용 시 기존 반경 설정은 유지한다. 후보지별 리포트 버전 이력은 `MeetingToolDraft` snapshot을 저장하므로 반경 기준도 버전 저장/불러오기 대상에 포함된다.
+- 지도에는 확대/축소, 일반/스카이뷰/지적편집도 전환, 거리재기, 면적재기 도구를 추가했다. 거리/면적은 지도 클릭 지점을 기준으로 물건지 지도와 같은 계산 유틸을 사용하며, 되돌리기/초기화를 제공한다. 측정 모드와 클릭 점은 후보지 `meetingTool.marketMap`에 저장해 저장/버전 불러오기 후에도 유지한다. PDF/인쇄 출력물은 새 출력창에서 Kakao SDK를 다시 로드하고, 좌표 또는 주소 지오코딩 결과로 지도 타일, 마커, 반경 원, 측정 선·면·점을 렌더링한 뒤 인쇄창을 열도록 보강했다. 별도 표시 반경/주소/좌표 기준 박스는 출력하지 않는다. 출력물의 `상권분석·목표매출 근거`는 `현재 선택안 비용 구조` 아래로 이동했고, 카드가 페이지 경계에서 반으로 잘리지 않도록 카드 단위 page break를 보강했다.
+- 실서버 인쇄 미리보기에서 저장 좌표가 없는 후보지가 `지도에 표시할 주소나 좌표가 없습니다.`로 떨어지는 사례를 확인해, 리포트 다이얼로그의 Kakao 지도 섹션에서 이미 지오코딩된 중심 좌표를 PDF/인쇄 HTML에 함께 전달하도록 보강했다. 출력 HTML은 저장 좌표보다 전달받은 중심 좌표를 우선 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 17건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: 로컬 dev 서버 `http://localhost:3000/demo` 접근과 데모 로그인은 확인했다. MCP Playwright에서는 데모 투어 레이어가 닫힘 클릭 후에도 pointer를 계속 가로채 출점 후보지 리포트 다이얼로그까지 실클릭 확인이 제한됐다. 실제 로그인 세션에서 Kakao 도메인 허용 기준 지도 로딩과 반경 저장을 live QA한다.
+- 신규 SQL: 없음.
+
 ## 다음 QA 체크리스트
 
 ### P0

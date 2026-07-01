@@ -34,6 +34,7 @@ export function applyMeetingToolPreset(draft: MeetingToolDraft, preset: MeetingT
         targetScenarios: preset.targetScenarios,
         costRows: preset.costRows,
         marketReport: draft.marketReport,
+        marketMap: draft.marketMap,
         reportMemo: draft.reportMemo,
         updatedAt: draft.updatedAt
     });

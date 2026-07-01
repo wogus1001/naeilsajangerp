@@ -179,6 +179,15 @@ YYYY-MM-DD
 
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 출점 검토 리포트 Kakao 상권 지도 커밋 예정
+  - 주요 기능: 출점 검토 리포트 다이얼로그에 Kakao 상권 지도 섹션을 추가했다. 후보지 좌표/주소 기반으로 마커와 300m/500m/1km 반경을 표시하고, 선택 반경은 후보지별 `meetingTool.marketMap.radiusMeters`에 저장한다. 지도에는 확대/축소, 일반/스카이뷰/지적편집도 전환, 거리재기, 면적재기 도구를 제공한다. 측정 모드와 클릭 점은 후보지 `meetingTool.marketMap`에 저장해 저장/버전 불러오기 후에도 유지한다. PDF/인쇄 출력물은 Kakao SDK를 새 출력창에서 로드해 지도 타일, 마커, 반경 원, 측정 선·면·점을 표시하고, 별도 좌표 기준 박스는 출력하지 않는다. 저장 좌표가 없는 후보지도 다이얼로그 지도에서 확인된 지오코딩 중심 좌표를 출력 HTML에 전달한다. 출력물의 상권분석·목표매출 근거는 비용 구조 아래에 배치하고, 인쇄 카드가 페이지 경계에서 잘리지 않도록 보강했다. 회사 공용 프리셋에는 포함하지 않고, 프리셋 적용 시 기존 후보지 반경은 유지한다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://localhost:3000/demo` 접근과 데모 로그인은 확인했으나, MCP Playwright에서는 데모 투어 레이어가 닫힘 클릭 후에도 pointer를 계속 가로채 출점 후보지 리포트 다이얼로그까지 실클릭 확인이 제한됐다.
+  - 남은 이슈: 이번 범위의 신규 SQL은 없다. 실제 로그인 세션에서 Kakao 도메인 허용 기준 지도 로딩, 반경 저장/새로고침, 버전 저장/출력물 기준 포함을 live QA한다.
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `0508a58 fix(auth): send session headers from service screens`
   - 주요 기능: 모객 DB, 고객 목록/상세, 명함 목록/상세, 고객/명함 -> 모객 DB 전환, 점포 목록/상세/신규등록/선택 모달/물건지도에서 legacy service API 호출에 Supabase 세션 auth header를 붙였다. `/api/users` 응답이 배열이 아닐 때 화면이 client-side exception으로 떨어지지 않도록 guard를 추가했고, 명함 신규입력의 `BusinessCard` -> `PropertyCard` 정적 순환 import는 동적 import로 끊었다. Vercel Node.js 20 deprecation 대응을 위해 `package.json`에 Node.js `24.x` engine을 명시했다.
   - dev 반영: none
@@ -295,7 +304,7 @@ YYYY-MM-DD
   - main 반영: none
   - 배포 URL: none
   - 검증: 1차 구현에서 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 4건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. 보강 후 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 6건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. headless Playwright mock 세션에서는 대상 페이지 본문이 빈 상태로 남아 브라우저 캡처를 확보하지 못했으므로 실제 로그인 세션에서 리포트 다이얼로그 시각 QA를 추가 확인한다.
-  - 남은 이슈: 회사/브랜드별 비용 항목 라이브러리, 선긋기 상권 지도 이미지 첨부, 리포트 버전 이력은 후속 고도화로 분리한다.
+  - 남은 이슈: 회사/브랜드별 비용 항목 라이브러리와 브랜드별 기본 원가율 템플릿은 후속 고도화로 분리한다.
 - 2026-06-29
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 회원가입 승인/Solapi/데모 가이드 릴리즈 커밋

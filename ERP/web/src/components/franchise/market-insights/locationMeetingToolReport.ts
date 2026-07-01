@@ -11,6 +11,12 @@ import {
     getAcquisitionCostTotal,
     normalizeFranchiseLocationMasterData
 } from '@/lib/franchise-location-master';
+import {
+    buildMeetingToolReportMapScript,
+    buildMeetingToolReportMapSection,
+    type ReportMapPosition
+} from './locationMeetingToolReportMap';
+import { MEETING_TOOL_REPORT_STYLES } from './locationMeetingToolReportStyles';
 import type { FranchiseLocation } from './locationMasterTypes';
 
 export type MeetingToolPrintMode = 'print' | 'pdf';
@@ -19,6 +25,7 @@ type MeetingToolReportParams = {
     readonly location: FranchiseLocation;
     readonly draft: MeetingToolDraft;
     readonly managerName: string;
+    readonly mapPosition?: ReportMapPosition | null;
     readonly mode: MeetingToolPrintMode;
 };
 
@@ -73,6 +80,7 @@ export function buildMeetingToolReportHtml({
     location,
     draft,
     managerName,
+    mapPosition,
     mode
 }: MeetingToolReportParams): string {
     const data = normalizeFranchiseLocationMasterData(location);
@@ -92,33 +100,7 @@ export function buildMeetingToolReportHtml({
 <meta charset="utf-8" />
 <title>${escapeHtml(location.name)} 출점 검토 리포트</title>
 <style>
-* { box-sizing: border-box; }
-body { margin: 24px; color: #191f28; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif; }
-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; padding-bottom: 16px; border-bottom: 2px solid #191f28; }
-h1 { margin: 0; font-size: 24px; line-height: 1.32; letter-spacing: 0; }
-h2 { margin: 22px 0 9px; color: #191f28; font-size: 15px; line-height: 1.4; }
-p { margin: 0; color: #6b7684; font-size: 12px; line-height: 1.6; }
-.meta { min-width: 190px; padding: 10px 12px; border: 1px solid #e5e8eb; border-radius: 8px; background: #f9fafb; }
-.guide { margin-top: 8px; color: #2272eb; font-weight: 700; }
-.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.metric, .memo, .notice, .analysis-card { border: 1px solid #e5e8eb; border-radius: 8px; background: #ffffff; }
-.metric { min-height: 64px; padding: 10px; }
-.metric span { display: block; color: #6b7684; font-size: 11px; font-weight: 800; }
-.metric strong { display: block; margin-top: 6px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
-.analysis-card { min-height: 86px; padding: 10px 12px; }
-.analysis-card span { display: block; color: #4e5968; font-size: 11px; font-weight: 800; }
-.analysis-card p { margin-top: 6px; color: #333d4b; font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-.highlight { border-color: #b9d7ff; background: #f5f9ff; }
-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-th, td { padding: 8px 7px; border: 1px solid #e5e8eb; font-size: 11px; line-height: 1.45; text-align: left; vertical-align: top; word-break: keep-all; overflow-wrap: anywhere; }
-th { background: #f2f4f6; color: #4e5968; font-weight: 800; }
-.active-row td { background: #f5f9ff; font-weight: 800; }
-.memo { min-height: 78px; padding: 11px 12px; color: #333d4b; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
-.notice { margin-top: 14px; padding: 12px; background: #f9fafb; }
-.notice strong { display: block; margin-bottom: 4px; color: #333d4b; font-size: 12px; }
-@page { size: A4 portrait; margin: 12mm; }
-@media print { body { margin: 0; } .no-print { display: none; } }
+${MEETING_TOOL_REPORT_STYLES}
 </style>
 </head>
 <body>
@@ -154,10 +136,6 @@ ${modeGuide}
 </table>
 </section>
 <section>
-<h2>상권분석·목표매출 근거</h2>
-<div class="analysis-grid">${buildMarketReportCards(draft)}</div>
-</section>
-<section>
 <h2>현재 선택안 비용 구조</h2>
 <div class="summary">
 <div class="metric highlight"><span>목표매출</span><strong>${escapeHtml(formatLocationMoney(summary.targetSales))}</strong></div>
@@ -171,26 +149,16 @@ ${modeGuide}
 </table>
 </section>
 <section>
+<h2>상권분석·목표매출 근거</h2>
+<div class="analysis-grid">${buildMarketReportCards(draft)}</div>
+</section>
+${buildMeetingToolReportMapSection()}
+<section>
 <h2>검토 의견</h2>
 <div class="memo">${escapeHtml(draft.reportMemo || '-')}</div>
 <div class="notice"><strong>내부 검토 안내</strong><p>${escapeHtml(MEETING_TOOL_DISCLAIMER)}</p></div>
 </section>
-<script>
-(function () {
-    function printReport() {
-        window.focus();
-        window.setTimeout(function () {
-            window.print();
-        }, 300);
-    }
-
-    if (document.readyState === 'complete') {
-        printReport();
-    } else {
-        window.addEventListener('load', printReport, { once: true });
-    }
-})();
-</script>
+${buildMeetingToolReportMapScript({ location, draft, mapPosition })}
 </body>
 </html>`;
 }

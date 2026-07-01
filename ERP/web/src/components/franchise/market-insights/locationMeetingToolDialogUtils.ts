@@ -7,6 +7,7 @@ import {
     buildMeetingToolReportHtml,
     type MeetingToolPrintMode
 } from './locationMeetingToolReport';
+import type { ReportMapPosition } from './locationMeetingToolReportMap';
 
 const NUMBER_INPUT_FORMATTER = new Intl.NumberFormat('ko-KR', {
     maximumFractionDigits: 3
@@ -45,8 +46,14 @@ export function isDemoApiBlockedError(error: unknown): boolean {
     );
 }
 
-export function openMeetingToolReport(location: FranchiseLocation, draft: MeetingToolDraft, managerName: string, mode: MeetingToolPrintMode): void {
-    const reportHtml = buildMeetingToolReportHtml({ draft, location, managerName, mode });
+export function openMeetingToolReport(
+    location: FranchiseLocation,
+    draft: MeetingToolDraft,
+    managerName: string,
+    mode: MeetingToolPrintMode,
+    mapPosition?: ReportMapPosition | null
+): void {
+    const reportHtml = buildMeetingToolReportHtml({ draft, location, managerName, mapPosition, mode });
     const reportUrl = window.URL.createObjectURL(new Blob([reportHtml], { type: 'text/html;charset=utf-8' }));
     const printWindow = window.open(reportUrl, '_blank', 'width=980,height=760');
     if (!printWindow) {

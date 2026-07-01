@@ -3,11 +3,17 @@ import { normalizeMeetingToolMarketReport } from '@/lib/franchise-location-meeti
 import { cleanString, isRecord, parseNullableNumber, roundRatio } from '@/lib/franchise-location-meeting-tool-common';
 import {
     MEETING_TOOL_COST_ROWS,
+    MEETING_TOOL_MARKET_MAP_MEASUREMENT_MODES,
+    MEETING_TOOL_MARKET_MAP_RADIUS_OPTIONS,
     MEETING_TOOL_TARGET_SCENARIOS,
     type MeetingToolBaseCostKey,
     type MeetingToolCostKey,
     type MeetingToolCostRow,
     type MeetingToolDraft,
+    type MeetingToolMarketMap,
+    type MeetingToolMarketMapMeasurementMode,
+    type MeetingToolMarketMapPoint,
+    type MeetingToolMarketMapRadiusMeters,
     type MeetingToolPreset,
     type MeetingToolPresetData,
     type MeetingToolTargetKey,
@@ -20,6 +26,7 @@ type MutableMeetingToolDraft = {
     targetScenarios?: unknown;
     costRows?: unknown;
     marketReport?: unknown;
+    marketMap?: unknown;
     reportMemo?: unknown;
     updatedAt?: unknown;
 };
@@ -106,6 +113,45 @@ function normalizeCustomCostRows(rows: readonly unknown[], targetSales: number |
         .filter((row): row is MeetingToolCostRow => row !== null);
 }
 
+function toMarketMapRadiusMeters(value: unknown): MeetingToolMarketMapRadiusMeters {
+    const parsed = parseNullableNumber(value);
+    return MEETING_TOOL_MARKET_MAP_RADIUS_OPTIONS.find(radius => radius === parsed) ?? 500;
+}
+
+function toMarketMapMeasurementMode(value: unknown): MeetingToolMarketMapMeasurementMode {
+    const raw = typeof value === 'string' ? value : '';
+    return MEETING_TOOL_MARKET_MAP_MEASUREMENT_MODES.find(mode => mode === raw) ?? 'none';
+}
+
+function normalizeMarketMapPoint(value: unknown): MeetingToolMarketMapPoint | null {
+    if (!isRecord(value)) return null;
+    const lat = parseNullableNumber(value.lat);
+    const lng = parseNullableNumber(value.lng);
+    if (lat === null || lng === null) return null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+}
+
+function normalizeMarketMapPoints(value: unknown): readonly MeetingToolMarketMapPoint[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .slice(0, 40)
+        .map(normalizeMarketMapPoint)
+        .filter((point): point is MeetingToolMarketMapPoint => point !== null);
+}
+
+function normalizeMarketMap(value: unknown): MeetingToolMarketMap {
+    const source = isRecord(value) ? value : {};
+    const measurementMode = toMarketMapMeasurementMode(source.measurementMode);
+    const measurementPoints = normalizeMarketMapPoints(source.measurementPoints);
+    const nextMeasurementMode = measurementPoints.length === 0 ? 'none' : measurementMode;
+    return {
+        radiusMeters: toMarketMapRadiusMeters(source.radiusMeters),
+        measurementMode: nextMeasurementMode,
+        measurementPoints: nextMeasurementMode === 'none' ? [] : measurementPoints
+    };
+}
+
 export function getMeetingToolDefaultsFromLocation(location: Partial<FranchiseLocationMasterData>): Partial<Record<MeetingToolBaseCostKey, number | null>> {
     const monthlyRent = parseLocationMoney(location.lease?.monthlyRent);
     const maintenanceFee = parseLocationMoney(location.lease?.maintenanceFee);
@@ -152,6 +198,7 @@ export function normalizeMeetingToolDraft(
             ...normalizeCustomCostRows(sourceCostRows, targetSales)
         ],
         marketReport: normalizeMeetingToolMarketReport(source.marketReport),
+        marketMap: normalizeMarketMap(source.marketMap),
         reportMemo: typeof source.reportMemo === 'string' ? source.reportMemo.trim() : '',
         updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null
     };

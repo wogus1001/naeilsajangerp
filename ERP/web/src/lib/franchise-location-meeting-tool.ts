@@ -1,6 +1,7 @@
 export {
     MEETING_TOOL_COST_ROWS,
     MEETING_TOOL_DISCLAIMER,
+    MEETING_TOOL_MARKET_MAP_RADIUS_OPTIONS,
     MEETING_TOOL_TARGET_SCENARIOS
 } from '@/lib/franchise-location-meeting-tool-model';
 export type {
@@ -8,6 +9,10 @@ export type {
     MeetingToolCostKey,
     MeetingToolCostRow,
     MeetingToolDraft,
+    MeetingToolMarketMap,
+    MeetingToolMarketMapMeasurementMode,
+    MeetingToolMarketMapPoint,
+    MeetingToolMarketMapRadiusMeters,
     MeetingToolPreset,
     MeetingToolPresetData,
     MeetingToolSummary,

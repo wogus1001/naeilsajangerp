@@ -120,6 +120,7 @@
 .meetingToolHeader p,
 .meetingToolSectionHeader p,
 .meetingToolPresetIntro span,
+.meetingToolMapFallback span,
 .meetingToolVersionHeader p,
 .meetingToolVersionItem span,
 .meetingToolVersionEmpty,
@@ -160,6 +161,7 @@
 .meetingToolResultGrid div,
 .meetingToolCalculator,
 .meetingToolMarketReport,
+.meetingToolMarketMap,
 .meetingToolVersionPanel,
 .meetingToolDisclaimer,
 .meetingToolMessage {
@@ -204,7 +206,8 @@
 }
 
 .meetingToolCalculator,
-.meetingToolMarketReport {
+.meetingToolMarketReport,
+.meetingToolMarketMap {
     display: grid;
     gap: 12px;
     padding: 14px;
@@ -213,6 +216,11 @@
 .meetingToolSectionHeader {
     display: grid;
     gap: 4px;
+}
+
+.meetingToolMarketMap .meetingToolSectionHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
 }
 
 .meetingToolSectionHeader h4 {
@@ -411,6 +419,156 @@
     min-height: 92px;
 }
 
+.meetingToolRadiusSwitch {
+    display: inline-flex;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.meetingToolMapControls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.meetingToolRadiusButton,
+.meetingToolRadiusButtonActive {
+    height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.meetingToolRadiusButtonActive {
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.meetingToolMapCanvas,
+.meetingToolMapFallback {
+    min-height: 280px;
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.meetingToolMapFallback {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 6px;
+    padding: 20px;
+    color: #6b7684;
+    text-align: center;
+}
+
+.meetingToolMapFallback svg {
+    color: #3182f6;
+}
+
+.meetingToolMapFallback strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.meetingToolMeasurePanel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.meetingToolMeasurePanel span,
+.meetingToolMeasurePanel small,
+.meetingToolMeasurePanel p {
+    color: #6b7684;
+    font-size: 12px;
+}
+
+.meetingToolMeasurePanel strong {
+    display: block;
+    margin-top: 3px;
+    color: #191f28;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.meetingToolMeasurePanel p {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.meetingToolMeasureActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.meetingToolMeasureActions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.meetingToolMeasureActions button:disabled {
+    color: #b0b8c1;
+    cursor: not-allowed;
+}
+
+.meetingToolMeasureDot,
+.meetingToolMeasureOverlay {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    box-shadow: 0 6px 14px rgba(25, 31, 40, 0.12);
+    color: #191f28;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.meetingToolMeasureDot {
+    width: 22px;
+    height: 22px;
+    border-color: #2272eb;
+    border-radius: 999px;
+    color: #2272eb;
+}
+
+.meetingToolMeasureOverlay {
+    gap: 4px;
+    min-width: 72px;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: 999px;
+}
+
 .meetingToolRows {
     display: grid;
     overflow: hidden;
@@ -561,6 +719,7 @@
     .meetingToolControlRow,
     .meetingToolPresetBar,
     .meetingToolMarketGrid,
+    .meetingToolMarketMap .meetingToolSectionHeader,
     .meetingToolVersionHeader,
     .meetingToolVersionSave,
     .meetingToolVersionItem,
@@ -571,8 +730,13 @@
     }
 
     .meetingToolPresetActions,
-    .meetingToolActions {
+    .meetingToolActions,
+    .meetingToolMeasurePanel {
         display: grid;
         grid-template-columns: 1fr;
+    }
+
+    .meetingToolMapControls {
+        justify-content: flex-start;
     }
 }

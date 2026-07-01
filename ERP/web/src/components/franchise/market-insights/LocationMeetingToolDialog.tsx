@@ -20,6 +20,7 @@ import styles from './LocationMeetingTool.module.css';
 import type { FranchiseLocation } from './locationMasterTypes';
 import { LocationMeetingToolActions } from './LocationMeetingToolActions';
 import { LocationMeetingToolCalculatorSection } from './LocationMeetingToolCalculatorSection';
+import { LocationMeetingToolMarketMapSection } from './LocationMeetingToolMarketMapSection';
 import { LocationMeetingToolMarketReportSection } from './LocationMeetingToolMarketReportSection';
 import { LocationMeetingToolPresetPanel } from './LocationMeetingToolPresetPanel';
 import { LocationMeetingToolResultSection } from './LocationMeetingToolResultSection';
@@ -31,6 +32,7 @@ import {
     parseNumberInput,
     removeRatioInputValue
 } from './locationMeetingToolDialogUtils';
+import type { ReportMapPosition } from './locationMeetingToolReportMap';
 import { saveLocationMeetingToolRequest } from './locationMasterRequests';
 import { useLocationMeetingToolPresets } from './useLocationMeetingToolPresets';
 import { useLocationMeetingToolVersions } from './useLocationMeetingToolVersions';
@@ -53,6 +55,7 @@ export function LocationMeetingToolDialog({
     const [draft, setDraft] = React.useState<MeetingToolDraft>(() => normalizeMeetingToolDraft(null));
     const [customCostLabel, setCustomCostLabel] = React.useState('');
     const [ratioInputValues, setRatioInputValues] = React.useState<Record<MeetingToolCostKey, string>>({});
+    const [reportMapPosition, setReportMapPosition] = React.useState<ReportMapPosition | null>(null);
     const [saving, setSaving] = React.useState(false);
     const [message, setMessage] = React.useState('');
     const locationId = location?.id || '';
@@ -84,6 +87,7 @@ export function LocationMeetingToolDialog({
         setDraft(normalizeMeetingToolDraft(location.meetingTool, getMeetingToolDefaultsFromLocation(location)));
         setCustomCostLabel('');
         setRatioInputValues({});
+        setReportMapPosition(null);
         setMessage('');
     }, [locationId, location, open]);
 
@@ -164,6 +168,14 @@ export function LocationMeetingToolDialog({
         }));
     };
 
+    const updateReportMapPosition = React.useCallback((position: ReportMapPosition | null) => {
+        setReportMapPosition(prev => {
+            if (!position) return prev === null ? prev : null;
+            if (prev && prev.lat === position.lat && prev.lng === position.lng) return prev;
+            return position;
+        });
+    }, []);
+
     return (
         <div className={styles.meetingToolBackdrop} role="dialog" aria-modal="true" aria-label="출점 검토 리포트">
             <section className={styles.meetingToolPanel}>
@@ -222,6 +234,13 @@ export function LocationMeetingToolDialog({
                         onMarketReportChange={updateMarketReport}
                     />
 
+                    <LocationMeetingToolMarketMapSection
+                        location={location}
+                        marketMap={draft.marketMap}
+                        onMapPositionChange={updateReportMapPosition}
+                        onMarketMapChange={(marketMap) => setDraft(prev => ({ ...prev, marketMap }))}
+                    />
+
                     <LocationMeetingToolResultSection
                         totalCost={summary.totalCost}
                         preTaxProfit={summary.preTaxProfit}
@@ -245,8 +264,8 @@ export function LocationMeetingToolDialog({
                 <LocationMeetingToolActions
                     saving={saving}
                     onSave={saveReport}
-                    onOpenPdf={() => openMeetingToolReport(location, draft, managerName, 'pdf')}
-                    onPrint={() => openMeetingToolReport(location, draft, managerName, 'print')}
+                    onOpenPdf={() => openMeetingToolReport(location, draft, managerName, 'pdf', reportMapPosition)}
+                    onPrint={() => openMeetingToolReport(location, draft, managerName, 'print', reportMapPosition)}
                 />
             </section>
         </div>

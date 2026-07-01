@@ -14,8 +14,13 @@ export const MEETING_TOOL_TARGET_SCENARIOS = [
     { key: 'third', label: '3차' }
 ] as const;
 
+export const MEETING_TOOL_MARKET_MAP_RADIUS_OPTIONS = [300, 500, 1000] as const;
+export const MEETING_TOOL_MARKET_MAP_MEASUREMENT_MODES = ['none', 'distance', 'area'] as const;
+
 export type MeetingToolBaseCostKey = typeof MEETING_TOOL_COST_ROWS[number]['key'];
 export type MeetingToolCostKey = string;
+export type MeetingToolMarketMapMeasurementMode = typeof MEETING_TOOL_MARKET_MAP_MEASUREMENT_MODES[number];
+export type MeetingToolMarketMapRadiusMeters = typeof MEETING_TOOL_MARKET_MAP_RADIUS_OPTIONS[number];
 export type MeetingToolTargetKey = typeof MEETING_TOOL_TARGET_SCENARIOS[number]['key'];
 
 export type MeetingToolTargetScenario = {
@@ -33,12 +38,24 @@ export type MeetingToolCostRow = {
     readonly custom: boolean;
 };
 
+export type MeetingToolMarketMap = {
+    readonly radiusMeters: MeetingToolMarketMapRadiusMeters;
+    readonly measurementMode: MeetingToolMarketMapMeasurementMode;
+    readonly measurementPoints: readonly MeetingToolMarketMapPoint[];
+};
+
+export type MeetingToolMarketMapPoint = {
+    readonly lat: number;
+    readonly lng: number;
+};
+
 export type MeetingToolDraft = {
     readonly activeTargetKey: MeetingToolTargetKey;
     readonly targetSales: number | null;
     readonly targetScenarios: readonly MeetingToolTargetScenario[];
     readonly costRows: readonly MeetingToolCostRow[];
     readonly marketReport: MeetingToolMarketReport;
+    readonly marketMap: MeetingToolMarketMap;
     readonly reportMemo: string;
     readonly updatedAt: string | null;
 };
