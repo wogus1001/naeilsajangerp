@@ -186,7 +186,7 @@ YYYY-MM-DD
   - main 반영: none
   - 배포 URL: none
   - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 12건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 30건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 코드리뷰/QA artifact는 `.omo/evidence/2cha-5-report-dialog-review-fix/code-review.md`, `.omo/evidence/2cha-5-report-dialog-review-fix/manualQa.json`에 남겼다. fresh local dev QA는 `.omo/evidence/2cha-5-report-dialog-review-fix/fresh-qa-result.json`에 남겼고, `/demo`에서 출점 후보지 `리포트` 다이얼로그를 1280px/390px으로 확인했다. `상권분석·목표매출 근거` 섹션 노출, 목표매출 산정 근거 입력 유지, PDF/인쇄 출력물 섹션 포함 및 HTML escape, horizontal overflow 0을 확인했다.
-  - 남은 이슈: 이번 범위의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 SQL 등록 필요. SQL 등록 후 실계정에서 버전 저장/불러오기와 `marketReport` snapshot 왕복을 확인한다.
+  - 남은 이슈: 이번 범위의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료. 실계정에서 버전 저장/불러오기와 `marketReport` snapshot 왕복을 확인한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 점포개발 미팅 도구 2차-1/2차-4 커밋 예정
@@ -195,7 +195,7 @@ YYYY-MM-DD
   - main 반영: none
   - 배포 URL: none
   - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. local dev 서버 데모에서 출점 후보지 `리포트` 다이얼로그를 열어 `분석표 프리셋`과 `리포트 버전 이력` 영역을 desktop/mobile로 확인했고, dialog horizontal overflow 0, console/page error 없음, 데모 API 차단 원문 미노출을 확인했다.
-  - 남은 이슈: `supabase_franchise_location_meeting_tool_versions_migration.sql` SQL 등록 필요. SQL 등록 후 실계정에서 현재안 버전 저장, 목록 최신순 표시, 이전안 불러오기, 저장 persistence를 확인한다.
+  - 남은 이슈: `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료. 실계정에서 현재안 버전 저장, 목록 최신순 표시, 이전안 불러오기, 저장 persistence를 확인한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 공개 사업자정보/진행현황 권한 안내 문구 정리 커밋 예정

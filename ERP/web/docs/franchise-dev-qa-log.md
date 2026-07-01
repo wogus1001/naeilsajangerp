@@ -789,7 +789,7 @@
 - 데모 모드: 데모 가드가 신규 버전 이력 API를 차단할 때 원문 `Demo mode blocked real API request`가 사용자 화면에 노출되지 않게 했다. 데모에서는 빈 버전 이력으로 보이고, 저장류 액션은 데모 비활성화 안내 문구로 처리한다.
 - 코드리뷰 후 보강: 기본 버전명이 목록에서 `v2 v2 검토안`처럼 중복 표시되지 않도록 display title 유틸과 테스트를 추가했다. 동시 저장으로 DB unique 제약 `23505`가 발생하면 500 대신 409 재시도 안내를 반환하도록 보강했고, 중복키 메시지를 테이블 미적용 424로 오인하지 않게 missing-table 판별을 `42P01`/`PGRST205`로 좁혔다.
 - 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 기존 local dev 서버 `http://localhost:3000`의 `/demo`에서 출점 후보지 `리포트` 다이얼로그를 desktop/mobile로 확인했고, `분석표 프리셋`과 `리포트 버전 이력` 노출, dialog horizontal overflow 0, console/page error 없음, 데모 API 차단 원문 미노출을 확인했다.
-- 신규 SQL: `supabase_franchise_location_meeting_tool_versions_migration.sql`은 SQL 등록 필요. SQL 등록 전 버전 이력 API는 424와 SQL 적용 안내를 반환한다.
+- 신규 SQL: `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료. SQL 등록 전 버전 이력 API는 424와 SQL 적용 안내를 반환하도록 구현되어 있으며, 적용 완료 환경에서는 실계정 버전 저장/불러오기 live QA를 진행한다.
 
 ## 2026-06-30 출점 검토 리포트 인쇄/PDF 헤더 QA
 
@@ -807,7 +807,7 @@
 - 브라우저 QA: 기존 local dev 서버 `http://localhost:3000`의 `/demo`에서 데모 게이트 로그인 후 `출점 후보지` -> `리포트` 다이얼로그를 1280px/390px로 확인했다. `상권분석·목표매출 근거` 섹션 노출, `목표매출 산정 근거` 입력 유지, textarea 5개 노출, page horizontal overflow 0, textarea clipping 0을 확인했다. console page error는 없고, 기존 Supabase GoTrue 다중 인스턴스 warning만 관찰했다.
 - 코드리뷰: 새 subagent 1차 요구사항 리뷰는 PASS였으나, 후속 gate/code review에서 `franchise-location-meeting-tool.ts` 비대화와 `page.module.css` 미팅 도구 스타일 누적이 blocker로 확인됐다. 보강으로 미팅 도구 모델/정규화/계산/상권분석 근거 정의를 작은 lib 모듈로 분리했고, `meetingTool*` 스타일은 `LocationMeetingTool.module.css`로 이동했다.
 - 후속 QA evidence: 코드리뷰/QA artifact를 `.omo/evidence/2cha-5-report-dialog-review-fix/code-review.md`, `.omo/evidence/2cha-5-report-dialog-review-fix/manualQa.json`에 남겼다. fresh local dev QA는 `.omo/evidence/2cha-5-report-dialog-review-fix/fresh-qa-result.json`에 남겼다. `/demo`에서 출점 후보지 `리포트` 다이얼로그를 열고 4개 상권분석 입력값 유지, PDF/인쇄 출력물의 섹션 포함 및 HTML escape, 1280px/390px horizontal overflow 0, page error 0을 확인했다.
-- 신규 SQL: 이번 2차-5 범위의 신규 SQL은 없다. 기존 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 SQL 등록 필요 상태다.
+- 신규 SQL: 이번 2차-5 범위의 신규 SQL은 없다. 기존 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료 상태다.
 
 ## 다음 QA 체크리스트
 
