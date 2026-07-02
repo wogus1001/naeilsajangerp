@@ -7,6 +7,8 @@ import {
     cleanString,
     isElectronicContractInCompany,
     isMissingVendorContractSchemaError,
+    isMissingVendorSchemaError,
+    isVendorInCompany,
     readJsonBody,
     validateRequired
 } from './vendorContractRouteHelpers';
@@ -121,6 +123,10 @@ export async function POST(request: Request) {
         if (!await isElectronicContractInCompany(auth.supabaseAdmin, electronicContractId, scope.companyId)) {
             return fail(403, 'FORBIDDEN', '전자계약 문서의 회사 범위가 일치하지 않습니다.');
         }
+        const vendorId = cleanString(body.vendorId);
+        if (!await isVendorInCompany(auth.supabaseAdmin, vendorId, scope.companyId)) {
+            return fail(403, 'FORBIDDEN', '업체 관리의 회사 범위가 일치하지 않습니다.');
+        }
 
         const { data, error } = await auth.supabaseAdmin
             .from('franchise_vendor_contracts')
@@ -133,6 +139,9 @@ export async function POST(request: Request) {
     } catch (error) {
         if (isMissingVendorContractSchemaError(error)) {
             return fail(424, 'INTERNAL_ERROR', '업체 계약함 SQL이 아직 적용되지 않았습니다. supabase_franchise_vendor_contracts_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        if (isMissingVendorSchemaError(error)) {
+            return fail(424, 'INTERNAL_ERROR', '업체 관리 SQL이 아직 적용되지 않았습니다. supabase_franchise_vendors_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise vendor contracts POST error:', error);
         return fail(500, 'INTERNAL_ERROR', '업체 계약을 저장하지 못했습니다.');
@@ -161,6 +170,10 @@ export async function PATCH(request: Request) {
         if (!await isElectronicContractInCompany(auth.supabaseAdmin, electronicContractId, existing.company_id)) {
             return fail(403, 'FORBIDDEN', '전자계약 문서의 회사 범위가 일치하지 않습니다.');
         }
+        const vendorId = cleanString(body.vendorId);
+        if (!await isVendorInCompany(auth.supabaseAdmin, vendorId, existing.company_id)) {
+            return fail(403, 'FORBIDDEN', '업체 관리의 회사 범위가 일치하지 않습니다.');
+        }
 
         const { data, error } = await auth.supabaseAdmin
             .from('franchise_vendor_contracts')
@@ -172,6 +185,9 @@ export async function PATCH(request: Request) {
 
         return ok({ contract: toVendorContractView(data) });
     } catch (error) {
+        if (isMissingVendorSchemaError(error)) {
+            return fail(424, 'INTERNAL_ERROR', '업체 관리 SQL이 아직 적용되지 않았습니다. supabase_franchise_vendors_migration.sql 적용 후 다시 확인해주세요.');
+        }
         console.error('Franchise vendor contracts PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '업체 계약을 수정하지 못했습니다.');
     }

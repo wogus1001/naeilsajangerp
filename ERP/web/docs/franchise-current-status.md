@@ -20,10 +20,10 @@
 - 알림 연동: Solapi SDK를 추가하고 회원가입 요청 시 관리자 문자, 승인 완료 시 신청자 문자를 발송한다. 문구 prefix는 `[ERP]`로 통일했다. Solapi env가 없거나 수신 번호가 없으면 발송만 skip하고 가입/승인 본 흐름은 막지 않는다.
 - 데모 정리: `/demo` 가이드 오버레이와 상세 드로어를 실제 업무 흐름에 더 가깝게 맞추고, 대시보드/모객 DB/상세/승격 단계 설명과 딤드 위치를 조정했다.
 - 점포개발 미팅 도구: 출점 검토 리포트의 간단 수익분석표에 회사 공용 프리셋 저장/적용/삭제를 추가했다. 프리셋은 목표매출 변화와 비용 항목만 공유하고 후보지별 보고 메모/상권분석 근거는 유지한다. 코드리뷰 보강으로 빈 `meetingTool` 저장 차단, UUID 검증, 프리셋 테이블 미적용 424 안내, 교차 회사 삭제 404 응답, 프리셋 목록 전환 초기화, 삭제 확인창, 비율 소수 입력 유지를 추가했다. UI는 `분석표 프리셋` 툴바로 분리해 목표매출 입력의 하위 옵션처럼 보이지 않게 정리했다. 2차 고도화로 PDF/인쇄 출력물을 목표매출 1~3차 비교표와 미팅 자료형 레이아웃으로 정리하고, 후보지별 `리포트 버전 이력` 저장/불러오기와 `상권분석·목표매출 근거` 섹션을 추가했다. 후보지 주소/좌표 기반 Kakao 상권 지도와 300m/500m/1km 반경 설정을 추가했고, 지도에는 확대/축소, 일반/스카이뷰/지적편집도 전환, 거리재기, 면적재기 도구를 제공한다. 측정 점은 후보지 `meetingTool.marketMap`에 저장되어 저장/버전/출력 후에도 유지되며, PDF/인쇄 출력물은 지도 타일, 마커, 반경 원, 측정 선·면·점만 표시하고 별도 좌표 기준 박스는 출력하지 않는다. 후속 코드리뷰로 미팅 도구 도메인 로직과 CSS를 컴포넌트 전용 모듈로 분리해 유지보수 리스크를 낮췄다.
-- 업체 계약함: 프랜차이즈 메뉴에 `/contracts/vendor` 업체 계약함을 추가했다. 물류, 식자재, 인테리어, 마케팅, 임대차, 기타 계약을 회사 범위로 등록하고, 기존 전자계약 문서 연결 또는 파일 업로드 문서 보관을 지원한다. 업로드 문서는 `property-documents/franchise-vendor-contracts/<company>/<contract>/...` 경로에 저장하고 signed URL로 열람한다. 계약 만료 D-30/D-7 알림은 기존 프랜차이즈 인앱 알림에 연동하며, 수신자는 계약 담당자와 회사 팀장이다. 증거 묶음 PDF 출력은 이번 범위에서 제외했다.
+- 업체 계약함/업체 관리: 프랜차이즈 메뉴에 `/contracts/vendor` 업체 계약함과 `/dashboard/franchise-vendors` 업체 관리를 추가했다. 업체 계약함은 물류, 식자재, 인테리어, 마케팅, 임대차, 기타 계약을 회사 범위로 등록하고, 기존 전자계약 문서 연결 또는 파일 업로드 문서 보관을 지원한다. 업로드 문서는 `property-documents/franchise-vendor-contracts/<company>/<contract>/...` 경로에 저장하고 signed URL로 열람한다. 계약 만료 D-30/D-7 알림은 기존 프랜차이즈 인앱 알림에 연동하며, 수신자는 계약 담당자와 회사 팀장이다. 2차-2A로 만료 업무 큐, 계약 상세 패널, 갱신/종료 처리, 처리 이력 테이블을 추가했다. 갱신은 원본 계약을 `갱신완료`로 닫고 새 `진행중` 계약을 복사 생성하며, 종료는 사유와 함께 `해지` 상태로 기록한다. 업체 관리는 `franchise_vendors` 업체 마스터를 직접 등록/수정하고, 계약함에서 업체 마스터를 선택한 계약은 `vendor_id` 기준으로 우선 병합한다. 기존 직접입력 계약은 업체명 fallback으로 병합해 업체별 계약 수, 진행/관리 필요 건수, 다음 만료 계약, 최근 메모를 보여준다. `업체 생성` 버튼은 업체 목록 섹션 안에서 폼을 열며, 계약함의 `업체 선택`은 업체 관리 마스터를 불러와 구분/업체명을 자동 입력한다. 계약 목록은 계약 등록 폼 우측 상단에 표시하고, 계약 상세는 선택 시 같은 우측 컬럼에서 목록 아래에 열린다. 증거 묶음 PDF 출력은 이번 범위에서 제외했다.
 - 배포 상태: 직원 관리/개인정보 수정 보강, 개인정보 저장 핫픽스, 공개 사업자정보 푸터, 진행현황 권한/삭제, 출점 검토 리포트 버전 이력·상권분석 근거, legacy requester/admin fallback 제거 보안 하드닝, 모객 DB/고객/명함/점포개발 화면 세션 header 보강, Node.js 24.x 전환 설정은 2026-07-01 운영 배포 완료 상태다. 출점 검토 리포트 Kakao 상권 지도는 `a98c692` 커밋으로 정리했고 운영 배포를 진행한다. 배포 전 Vercel dry-run에서 `.env*`, `.omo`, `MAC_CONTEXT.md`, `ERP/web/handoff.md`, `.next`, `.vercel`, `node_modules` 제외를 확인했고, 운영 inspect에서 `name=naeilsajang`, `target=production`, `status=Ready`를 확인한다.
 - 신규 SQL: 회사 공용 수익분석표 프리셋용 `supabase_franchise_location_meeting_tool_presets_migration.sql`과 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료.
-- 신규 SQL: 업체 계약함용 `supabase_franchise_vendor_contracts_migration.sql`은 추가되었으며, 대상 Supabase 환경 적용 전에는 `/contracts/vendor`가 SQL 적용 안내 상태로 동작한다.
+- 신규 SQL: 업체 계약함용 `supabase_franchise_vendor_contracts_migration.sql`은 업체 마스터 연동용 `vendor_id` 컬럼/인덱스/FK를 추가하도록 보강했다. 사용자 확인 기준 `supabase_franchise_vendors_migration.sql`, 보강된 `supabase_franchise_vendor_contracts_migration.sql`, 업체 계약 갱신/종료 이력용 `supabase_franchise_vendor_contract_events_migration.sql`은 Supabase SQL Editor 등록 완료.
 - SQL 적용 확인: 사용자 확인 기준 `supabase_franchise_lead_documents_migration.sql`, `supabase_franchise_contract_store_linkage_migration.sql`은 실서버 등록 완료.
 - 운영 샘플 데이터:
   - 계약 체크 14일 경과 샘플: `contract_check_14day_seed_20260623`
@@ -46,7 +46,7 @@
 - 진행현황에서 입점 요청/예비 창업자 등록의 수정·삭제 버튼이 작성자, 팀장, 관리자에게만 보이고, 일반 직원/협력업체에는 권한 안내만 보이는지 운영 배포 후 실계정으로 확인한다.
 - 공개 페이지 `/landing`, `/login`, `/signup`, `/privacy` 하단의 사업자정보가 운영 도메인에서 노출되고 Kakao 비즈니스 심사 화면에서 동일 정보로 인식되는지 확인한다.
 - 물건지 지도는 실서버 Kakao 도메인에서 타일/마커/반경 원/측정 도구를 확인.
-- 업체 계약함 SQL 적용 후 실계정으로 업체 계약 신규 등록, 업로드 문서 열람 signed URL, 전자계약 연결, 수정/삭제, D-30/D-7 알림 생성을 확인한다.
+- 업체 계약함 SQL 적용 후 실계정으로 업체 계약 신규 등록, 업로드 문서 열람 signed URL, 전자계약 연결, 수정/삭제, D-30/D-7 알림 생성을 확인한다. 이벤트 SQL 적용 후 실계정으로 갱신 처리, 새 계약 생성, 종료/해지 처리, 처리 이력 최신순 표시, 만료 업무 큐 카운트와 필터를 확인한다.
 
 ## 주요 문서 역할
 

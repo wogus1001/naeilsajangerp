@@ -36,9 +36,20 @@
 
 .grid {
     display: grid;
-    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
     gap: 16px;
     align-items: start;
+}
+
+.formColumn,
+.workspaceColumn {
+    min-width: 0;
+}
+
+.workspaceColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .sectionTitle {
@@ -50,33 +61,7 @@
     font-weight: 700;
 }
 
-.filterBar {
-    display: grid;
-    grid-template-columns: minmax(240px, 1fr) 160px 160px;
-    gap: 8px;
-}
-
-.searchBox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    padding: 0 12px;
-    color: #8b95a1;
-}
-
-.searchBox input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    color: #191f28;
-    font-size: 14px;
-}
-
-.filterBar select,
-.formGrid input,
+.formGrid input:not([type="file"]),
 .formGrid select,
 .formGrid textarea {
     width: 100%;
@@ -112,12 +97,6 @@
 
 .wide {
     grid-column: 1 / -1;
-}
-
-.fileHint {
-    grid-column: 1 / -1;
-    color: #6b7684;
-    font-size: 12px;
 }
 
 .formActions {
@@ -279,30 +258,6 @@
     text-align: center;
 }
 
-.error,
-.message,
-.notice {
-    border-radius: 8px;
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.error {
-    background: #fff1f2;
-    color: #e42939;
-}
-
-.message {
-    background: #e8f3ff;
-    color: #1c64d1;
-}
-
-.notice {
-    background: #fff7e6;
-    color: #b75f00;
-}
-
 @media (max-width: 1024px) {
     .grid {
         grid-template-columns: 1fr;
@@ -320,7 +275,6 @@
         flex-direction: column;
     }
 
-    .filterBar,
     .formGrid {
         grid-template-columns: 1fr;
     }

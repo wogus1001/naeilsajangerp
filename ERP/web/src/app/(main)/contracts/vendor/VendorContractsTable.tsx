@@ -12,6 +12,7 @@ type Props = {
     readonly loading: boolean;
     readonly saving: boolean;
     readonly onDelete: (contractId: string) => void;
+    readonly onDetail: (contract: VendorContract) => void;
     readonly onEdit: (contract: VendorContract) => void;
     readonly onOpenUpload: (contractId: string) => void;
 };
@@ -21,6 +22,7 @@ export function VendorContractsTable({
     loading,
     saving,
     onDelete,
+    onDetail,
     onEdit,
     onOpenUpload
 }: Props) {
@@ -64,6 +66,7 @@ export function VendorContractsTable({
                                                 전자계약
                                             </a>
                                         )}
+                                        <button type="button" onClick={() => onDetail(contract)}>상세</button>
                                         <button type="button" onClick={() => onEdit(contract)}>수정</button>
                                         <button type="button" onClick={() => onDelete(contract.id)} disabled={saving}>
                                             <Trash2 size={14} />

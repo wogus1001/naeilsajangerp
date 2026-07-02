@@ -10,6 +10,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export type VendorContractPayload = {
     readonly id?: unknown;
     readonly companyId?: unknown;
+    readonly vendorId?: unknown;
     readonly category?: unknown;
     readonly vendorName?: unknown;
     readonly contractTitle?: unknown;
@@ -30,6 +31,11 @@ type ElectronicContractScopeRow = {
     readonly company_id: string | null;
 };
 
+type VendorScopeRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+};
+
 export function cleanString(value: unknown): string {
     return String(value ?? '').trim();
 }
@@ -41,6 +47,20 @@ export function isMissingVendorContractSchemaError(error: unknown): boolean {
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_vendor_contracts/i.test(message);
 }
 
+export function isMissingVendorContractEventSchemaError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_vendor_contract_events/i.test(message);
+}
+
+export function isMissingVendorSchemaError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_vendors/i.test(message);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -49,7 +69,7 @@ function isUuid(value: string): boolean {
     return UUID_REGEX.test(value);
 }
 
-function normalizeDate(value: unknown): string | null {
+export function normalizeDate(value: unknown): string | null {
     const text = cleanString(value);
     if (!text) return null;
     const parsed = new Date(text);
@@ -85,6 +105,21 @@ export async function isElectronicContractInCompany(
     return Boolean(data && data.company_id === companyId);
 }
 
+export async function isVendorInCompany(
+    supabaseAdmin: SupabaseClient,
+    vendorId: string,
+    companyId: string
+): Promise<boolean> {
+    if (!vendorId) return true;
+    const { data, error } = await supabaseAdmin
+        .from('franchise_vendors')
+        .select('id, company_id')
+        .eq('id', vendorId)
+        .maybeSingle<VendorScopeRow>();
+    if (error) throw error;
+    return Boolean(data && data.company_id === companyId);
+}
+
 export function buildMutationPayload(
     body: VendorContractPayload,
     companyId: string,
@@ -93,6 +128,7 @@ export function buildMutationPayload(
 ) {
     const id = cleanString(body.id);
     const electronicContractId = cleanString(body.electronicContractId);
+    const vendorId = cleanString(body.vendorId);
     const payload = {
         category: normalizeVendorContractCategory(body.category),
         contract_end_date: normalizeDate(body.contractEndDate),
@@ -107,6 +143,7 @@ export function buildMutationPayload(
         storage_bucket: cleanString(body.storageBucket) || null,
         storage_path: cleanString(body.storagePath) || null,
         updated_by: requester.id,
+        vendor_id: vendorId || null,
         vendor_name: cleanString(body.vendorName)
     };
 

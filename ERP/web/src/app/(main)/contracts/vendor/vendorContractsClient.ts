@@ -34,6 +34,7 @@ export function buildContractPayload(form: VendorContractForm, companyId: string
         status: form.status,
         storageBucket: form.storageBucket,
         storagePath: form.storagePath,
+        vendorId: form.vendorId,
         vendorName: form.vendorName
     };
 }

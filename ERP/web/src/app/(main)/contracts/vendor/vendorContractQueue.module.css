@@ -1,0 +1,54 @@
+.queuePanel {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.queueButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.queueButton span {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queueButton strong {
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.queueButtonActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #1c64d1;
+}
+
+@media (max-width: 1024px) {
+    .queuePanel {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .queuePanel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

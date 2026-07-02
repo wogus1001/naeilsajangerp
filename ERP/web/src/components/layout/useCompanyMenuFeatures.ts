@@ -61,6 +61,7 @@ function parseFlagMap(value: unknown): CompanyMenuFlagMap | null {
         contracts: flags.contracts !== false,
         electronicPremiumContracts: flags.electronicPremiumContracts !== false,
         vendorContracts: flags.vendorContracts !== false,
+        vendorManagement: flags.vendorManagement !== false,
         contractCreate: flags.contractCreate !== false,
         contractBuilder: flags.contractBuilder !== false,
         companyStaff: flags.companyStaff !== false

@@ -1,14 +1,36 @@
-import type { VendorContractCategory, VendorContractDocumentSource, VendorContractStatus, VendorContractView } from '@/lib/franchise-vendor-contracts';
+import {
+    canRenewVendorContractStatus,
+    canTerminateVendorContractStatus
+} from '@/lib/franchise-vendor-contracts';
+import type { VendorContractEventView } from '@/lib/franchise-vendor-contract-events';
+import type {
+    VendorContractCategory,
+    VendorContractDocumentSource,
+    VendorContractStatus,
+    VendorContractView
+} from '@/lib/franchise-vendor-contracts';
 
 export type VendorContract = VendorContractView;
+export type VendorContractEvent = VendorContractEventView;
 
 export type VendorContractsResponse = {
     readonly contracts?: readonly VendorContract[];
     readonly schemaReady?: boolean;
 };
 
+export type VendorContractEventsResponse = {
+    readonly events?: readonly VendorContractEvent[];
+    readonly schemaReady?: boolean;
+};
+
+export type VendorContractActionResponse = {
+    readonly contract?: VendorContract;
+    readonly nextContract?: VendorContract;
+};
+
 export type VendorContractForm = {
     readonly id: string;
+    readonly vendorId: string;
     readonly category: VendorContractCategory;
     readonly vendorName: string;
     readonly contractTitle: string;
@@ -38,6 +60,14 @@ export type ElectronicContractOption = {
 
 export type ElectronicContractsResponse = {
     readonly contracts?: readonly ElectronicContractOption[];
+};
+
+export type VendorContractQueueKey = 'all' | 'renewal' | 'expired' | 'ownerless' | 'terminal';
+
+export type VendorContractQueueItem = {
+    readonly key: VendorContractQueueKey;
+    readonly label: string;
+    readonly count: number;
 };
 
 export const CATEGORY_OPTIONS = [
@@ -71,6 +101,7 @@ export const EMPTY_FORM: VendorContractForm = {
     status: 'active',
     storageBucket: '',
     storagePath: '',
+    vendorId: '',
     vendorName: ''
 };
 
@@ -89,6 +120,7 @@ export function formFromContract(contract: VendorContract): VendorContractForm {
         status: contract.status,
         storageBucket: contract.storageBucket,
         storagePath: contract.storagePath,
+        vendorId: contract.vendorId,
         vendorName: contract.vendorName
     };
 }
@@ -98,6 +130,36 @@ export function contractStatusTone(contract: VendorContract): 'toneDanger' | 'to
     if (contract.status === 'renewal_due') return contract.remainingDays !== null && contract.remainingDays <= 7 ? 'toneDanger' : 'toneWarning';
     if (contract.status === 'renewed') return 'toneSuccess';
     return 'neutral';
+}
+
+export function canRenewContract(contract: VendorContract): boolean {
+    return canRenewVendorContractStatus(contract.status);
+}
+
+export function canTerminateContract(contract: VendorContract): boolean {
+    return canTerminateVendorContractStatus(contract.status);
+}
+
+export function isContractInQueue(contract: VendorContract, queue: VendorContractQueueKey): boolean {
+    if (queue === 'all') return true;
+    if (queue === 'renewal') return contract.status === 'renewal_due';
+    if (queue === 'expired') return contract.status === 'expired';
+    if (queue === 'ownerless') return !contract.ownerProfileId;
+    return contract.status === 'terminated' || contract.status === 'renewed' || contract.status === 'archived';
+}
+
+export function buildVendorContractQueue(contracts: readonly VendorContract[]): readonly VendorContractQueueItem[] {
+    return [
+        { count: contracts.length, key: 'all', label: '전체' },
+        { count: contracts.filter(contract => contract.status === 'renewal_due').length, key: 'renewal', label: '갱신 필요' },
+        { count: contracts.filter(contract => contract.status === 'expired').length, key: 'expired', label: '만료' },
+        { count: contracts.filter(contract => !contract.ownerProfileId).length, key: 'ownerless', label: '담당자 미지정' },
+        {
+            count: contracts.filter(contract => contract.status === 'terminated' || contract.status === 'renewed' || contract.status === 'archived').length,
+            key: 'terminal',
+            label: '종료/보관'
+        }
+    ];
 }
 
 export function electronicContractLabel(contract: ElectronicContractOption): string {

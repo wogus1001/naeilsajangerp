@@ -914,3 +914,34 @@
 - 버그를 발견하면 `재현 조건`, `원인`, `수정 파일`, `재검증 결과` 순서로 추가한다.
 - Docs Steward는 QA 결과가 바뀌면 이 문서를 직접 갱신하고 `Doc Update Brief`에 변경 이유를 남긴다.
 - Docs Steward는 `ERP/web/handoff.md`, 코드, SQL migration, env, package 파일을 수정하지 않는다.
+
+## 2026-07-01 업체 계약함 2차-2A 갱신/종료 이력 QA
+
+- 범위: `/contracts/vendor` 업체 계약함에 만료 업무 큐, 계약 상세 패널, 갱신/종료 처리, 처리 이력 조회를 추가했다. 갱신은 기존 계약을 `renewed`로 닫고 새 active 계약을 복사 생성하며, 종료는 사유를 필수로 받아 `terminated` 상태와 이벤트를 남긴다.
+- 신규 SQL: `supabase_franchise_vendor_contract_events_migration.sql`을 추가했다. 이벤트 테이블은 회사 범위, 원본 계약, 연결 신규 계약, 이벤트 타입, 이전/이후 상태, 사유, 생성자를 저장한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다.
+- API: `/api/franchise-vendor-contracts/actions`를 추가했다. `GET`은 선택 계약의 lifecycle 이벤트를 최신순으로 조회하고, `POST`는 `renew`/`terminate` 액션을 처리한다. 이벤트 SQL 미적용 상태에서는 424 SQL 적용 안내를 반환한다.
+- UI: 목록 상단에 `전체`, `갱신 필요`, `만료`, `담당자 미지정`, `종료/보관` 큐를 추가하고, 행의 `상세` 버튼에서 계약 상세와 처리 이력을 확인한다. 상세 패널에서 새 계약명/시작일/만료일/사유로 갱신 처리하고, 별도 종료 사유로 해지 처리한다.
+- 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts` 11건 통과. 확장 회귀 `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 24건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3108`에서 `/login`, `/contracts/vendor` HTTP 200 응답을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: SQL 적용 후 실계정으로 신규 등록, 상세 이력 조회, 갱신 처리 후 새 계약 생성, 종료/해지 처리, 큐 카운트/필터, 기존 D-30/D-7 알림 제외 상태를 확인한다.
+
+## 2026-07-01 업체 관리 별도 메뉴 QA
+
+- 범위: 프랜차이즈 메뉴에 `/dashboard/franchise-vendors` 업체 관리를 별도 메뉴로 추가했다. 새 업체 마스터 테이블은 만들지 않고 기존 업체 계약함 데이터를 업체명 기준으로 집계한다.
+- UI: 업체별 계약 수, 진행 계약 수, 만료/갱신 필요 건수, 다음 계약/만료일, 상태 배지, 최근 메모를 목록으로 보여준다. 상단 요약은 등록 업체, 전체 계약, 진행 계약, 관리 필요 업체를 표시한다. `계약 보기`는 `/contracts/vendor?q=<업체명>`으로 이동하고 계약함은 query string을 초기 검색어로 사용한다.
+- 샘플 데이터: 사용자가 SQL 적용 완료를 알렸으나, 현재 `.env.local`의 Supabase URL이 localhost가 아닌 hosted `supabase.co` 프로젝트라 실데이터 오염 가능성이 있다. 사용자가 hosted DB 샘플 주입을 명시 확인하기 전까지 샘플 주입은 보류한다.
+- 검증: `npx tsx --test src/lib/company-menu-features.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 39건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. production 서버 `http://localhost:3110/dashboard/franchise-vendors`에서 Playwright mock 데이터로 desktop 1280px/mobile 390px 렌더링을 확인했고, 업체 관리 본문 텍스트, 샘플 업체 3개, 관리 필요 업체 요약, horizontal overflow 0, console/page error 0건을 확인했다.
+
+## 2026-07-01 업체 마스터 등록 및 계약 상세 배치 QA
+
+- 범위: `/dashboard/franchise-vendors` 업체 목록 안에 `업체 생성` 버튼을 추가하고, 버튼을 눌렀을 때 같은 목록 섹션 안에서 업체 생성/수정 폼이 열리도록 변경했다. 업체 마스터는 `franchise_vendors`에 저장하고, 기존 계약함 집계와 업체명 기준으로 병합해 계약이 없는 업체도 목록에 표시한다.
+- UI: 업체 목록에는 업체명/구분/거래상태, 담당자 연락처, 계약 수, 진행 계약, 관리 필요 건수, 다음 계약, 최근 메모, `수정`, `계약 보기`를 표시한다. 계약함의 계약 상세 패널은 기존처럼 화면 하단 전체 폭으로 떨어지지 않고, 상단 작업영역의 우측에 표시되도록 배치했다.
+- 신규 SQL: `supabase_franchise_vendors_migration.sql`을 추가했다. 이 SQL은 회사 범위 업체 마스터, 담당자/연락처/이메일/사업자번호/거래상태/메모, 회사별 업체명 unique index, RLS를 포함한다. 사용자 확인 기준 Supabase SQL Editor 등록 완료.
+- 검증: `npx tsx --test src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts` 5건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과. 파일별 pure LOC는 신규/수정 TSX/CSS 모두 250줄 이하로 확인했다.
+
+## 2026-07-01 업체 계약함 목록 배치 및 업체 마스터 연동 QA
+
+- 범위: `/contracts/vendor`에서 상단 `신규 계약` 버튼을 제거하고, 항상 보이는 좌측 `계약 등록` 폼만 등록 진입점으로 남겼다. 계약 목록은 폼 아래 전체 폭이 아니라 폼 우측 상단에 표시되며, 계약 상세는 행의 `상세` 클릭 시 같은 우측 컬럼에서 목록 아래에 열린다.
+- 연동: 계약 등록 폼에 `업체 선택`을 추가했다. `/api/franchise-vendors`의 active 업체 마스터를 불러오고, 업체 관리에서 등록한 업체를 선택하면 계약 구분과 업체명이 자동 입력되며 계약에는 `vendor_id`가 함께 저장된다. 업체 관리 집계는 `vendor_id`를 우선 사용하고 기존 직접입력 계약은 업체명 fallback으로 병합한다. 계약함에만 있는 업체는 기존처럼 `직접 입력`으로 등록할 수 있다.
+- 코드리뷰 보정: 파일 input이 공통 `.formGrid input` 스타일을 받아 페이지 전체 가로 overflow를 만드는 문제를 `input:not([type="file"])`로 수정했다. 업체 관리 SQL 미적용 시 계약함 업체 선택이 조용히 빈 목록이 되지 않도록 별도 안내를 추가했다. 계약 저장 API는 `vendor_id`가 있을 때 해당 업체가 같은 회사인지 확인한다.
+- 신규 SQL: `supabase_franchise_vendor_contracts_migration.sql`에 `vendor_id` 컬럼, 인덱스, `franchise_vendors` FK를 추가했다. `supabase_seed_franchise_vendor_contract_samples.sql`은 샘플 업체 마스터를 먼저 생성하고 계약 샘플에 `vendor_id`를 연결하도록 보강했다. 사용자 확인 기준 Supabase SQL Editor 등록 완료.
+- 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false` 통과. 남은 검증은 lint/build/브라우저 QA다.

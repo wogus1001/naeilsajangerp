@@ -6,6 +6,7 @@ create table if not exists public.franchise_vendor_contracts (
   owner_profile_id uuid references public.profiles(id) on delete set null,
   created_by uuid references public.profiles(id) on delete set null,
   updated_by uuid references public.profiles(id) on delete set null,
+  vendor_id uuid,
   category text default 'other' not null,
   vendor_name text not null,
   contract_title text not null,
@@ -22,6 +23,9 @@ create table if not exists public.franchise_vendor_contracts (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.franchise_vendor_contracts
+  add column if not exists vendor_id uuid;
 
 do $$
 begin
@@ -51,6 +55,16 @@ begin
       add constraint franchise_vendor_contracts_document_source_check
       check (document_source in ('upload', 'electronic_contract', 'manual'));
   end if;
+
+  if to_regclass('public.franchise_vendors') is not null
+     and not exists (
+       select 1 from pg_constraint
+       where conname = 'franchise_vendor_contracts_vendor_id_fkey'
+     ) then
+    alter table public.franchise_vendor_contracts
+      add constraint franchise_vendor_contracts_vendor_id_fkey
+      foreign key (vendor_id) references public.franchise_vendors(id) on delete set null;
+  end if;
 end $$;
 
 create index if not exists idx_franchise_vendor_contracts_company_end_date
@@ -64,6 +78,9 @@ create index if not exists idx_franchise_vendor_contracts_owner
 
 create index if not exists idx_franchise_vendor_contracts_electronic_contract
   on public.franchise_vendor_contracts (electronic_contract_id);
+
+create index if not exists idx_franchise_vendor_contracts_vendor
+  on public.franchise_vendor_contracts (vendor_id);
 
 create or replace function public.update_updated_at_column()
 returns trigger

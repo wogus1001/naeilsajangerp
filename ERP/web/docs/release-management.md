@@ -179,13 +179,41 @@ YYYY-MM-DD
 
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 업체 마스터 등록/계약 상세 배치 보정 커밋 예정
+  - 주요 기능: `/dashboard/franchise-vendors` 업체 목록 안에 `업체 생성` 버튼을 추가했다. 버튼을 누르면 같은 목록 섹션 안에서 업체 생성/수정 폼이 열리고, `franchise_vendors` 업체 마스터와 업체 계약함 집계가 `vendor_id` 우선, 업체명 fallback 방식으로 병합된다. 계약이 없는 업체도 목록에 표시되며, 기존 계약 기반 업체는 `계약 보기`로 계약함 검색 상태에 연결된다. `/contracts/vendor`의 계약 상세 패널은 화면 하단 전체 폭으로 떨어지지 않고 상단 작업영역 우측에 표시되도록 배치했다.
+  - 신규 SQL: `supabase_franchise_vendors_migration.sql` 추가. 회사 범위 업체 마스터, 담당자/연락처/이메일/사업자번호/거래상태/메모, 회사별 업체명 unique index, RLS를 포함한다. `supabase_franchise_vendor_contracts_migration.sql`은 업체 마스터 연동용 `vendor_id` 컬럼/인덱스/FK가 추가됐다. 사용자 확인 기준 Supabase SQL Editor 등록 완료.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts` 5건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과. 파일별 pure LOC는 신규/수정 TSX/CSS 모두 250줄 이하로 확인했다.
+  - 남은 이슈: 실제 계정에서 업체 생성/수정, 계약 없는 업체 표시, 업체 선택 계약의 ID 기반 병합, 기존 직접입력 계약의 업체명 fallback 병합, 계약 상세 우측 배치 live QA를 진행한다.
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 업체 계약함 2차-2A 커밋 예정
+  - 주요 기능: `/contracts/vendor` 업체 계약함에 만료 업무 큐, 계약 상세 패널, 갱신/종료 처리, 처리 이력 조회를 추가했다. 갱신은 기존 계약을 `renewed`로 닫고 새 active 계약을 복사 생성하며, 종료는 사유를 남기고 `terminated`로 처리한다. 처리 이력은 신규 `franchise_vendor_contract_events` 테이블에 회사 범위로 저장한다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts` 11건 통과. 확장 회귀 `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 24건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3108`에서 `/login`, `/contracts/vendor` HTTP 200 응답을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 남은 이슈: 사용자가 신규 SQL 적용 완료를 알렸다. 실계정으로 갱신/종료 처리, 새 계약 생성, 처리 이력 최신순 표시, 만료 업무 큐 카운트/필터를 live QA한다. 로컬 샘플 데이터 주입은 현재 `.env.local`이 hosted Supabase를 가리켜 사용자 확인 전까지 보류한다.
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 업체 관리 별도 메뉴 커밋 예정
+  - 주요 기능: `/dashboard/franchise-vendors` 업체 관리를 프랜차이즈 별도 메뉴로 추가했다. 신규 SQL 없이 업체 계약함 데이터를 업체명 기준으로 집계해 등록 업체 수, 전체 계약, 진행 계약, 관리 필요 업체, 업체별 다음 만료 계약과 최근 메모를 보여준다. 업체 목록의 `계약 보기`는 업체 계약함 검색 query로 연결된다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/company-menu-features.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 39건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. production 서버 `http://localhost:3110/dashboard/franchise-vendors`에서 Playwright mock 데이터로 desktop 1280px/mobile 390px 렌더링을 확인했고, 업체 관리 본문 텍스트, 샘플 업체 3개, 관리 필요 업체 요약, horizontal overflow 0, console/page error 0건을 확인했다.
+  - 남은 이슈: hosted Supabase 샘플 주입 여부 사용자 확인 필요.
+- 2026-07-01
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 업체 계약함 MVP 커밋
   - 주요 기능: 프랜차이즈 메뉴에 `/contracts/vendor` 업체 계약함을 추가했다. 회사 범위로 물류/식자재/인테리어/마케팅/임대차/기타 업체 계약을 등록하고, 파일 업로드 문서 또는 같은 회사 전자계약 문서를 연결한다. 업로드 문서는 `property-documents/franchise-vendor-contracts/<company>/<contract>/...`에 저장하고 signed URL로 열람한다. 계약 만료 D-30/D-7 알림은 기존 프랜차이즈 인앱 알림으로 계약 담당자와 회사 팀장에게 생성한다. 증거 묶음 PDF 출력은 이번 범위에서 제외했다.
   - dev 반영: none
   - main 반영: none
   - 배포 URL: none
   - 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts src/lib/company-menu-features.test.mts` 28건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
-  - 남은 이슈: 신규 SQL `supabase_franchise_vendor_contracts_migration.sql`은 사용자가 Supabase SQL Editor에서 직접 적용해야 한다. SQL 적용 전 `/contracts/vendor`는 SQL 적용 안내 상태로 동작하며, 적용 후 실계정으로 신규 등록, 업로드 문서 열람, 전자계약 연결, 수정/삭제, 만료 알림 sync를 live QA한다.
+  - 남은 이슈: 사용자 확인 기준 신규 SQL `supabase_franchise_vendor_contracts_migration.sql`은 Supabase SQL Editor 등록 완료. 실계정으로 신규 등록, 업로드 문서 열람, 전자계약 연결, 수정/삭제, 만료 알림 sync를 live QA한다.
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `a98c692 feat(franchise): add meeting report market map`

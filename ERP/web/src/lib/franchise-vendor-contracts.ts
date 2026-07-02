@@ -29,6 +29,7 @@ export type VendorContractDocumentSource = typeof VENDOR_CONTRACT_DOCUMENT_SOURC
 export type VendorContractRow = {
     readonly id: string;
     readonly company_id: string | null;
+    readonly vendor_id: string | null;
     readonly owner_profile_id: string | null;
     readonly created_by: string | null;
     readonly category: string | null;
@@ -51,6 +52,7 @@ export type VendorContractRow = {
 export type VendorContractView = {
     readonly id: string;
     readonly companyId: string;
+    readonly vendorId: string;
     readonly ownerProfileId: string;
     readonly createdBy: string;
     readonly category: VendorContractCategory;
@@ -134,6 +136,23 @@ export function statusLabel(status: VendorContractStatus): string {
     return STATUS_LABELS[status];
 }
 
+export function normalizeVendorContractStatus(value: unknown): VendorContractStatus {
+    const normalized = cleanString(value);
+    return isVendorContractStatus(normalized) ? normalized : 'active';
+}
+
+export function isTerminalVendorContractStatus(status: VendorContractStatus): boolean {
+    return status === 'terminated' || status === 'renewed' || status === 'archived';
+}
+
+export function canRenewVendorContractStatus(status: VendorContractStatus): boolean {
+    return status === 'active' || status === 'renewal_due' || status === 'expired';
+}
+
+export function canTerminateVendorContractStatus(status: VendorContractStatus): boolean {
+    return status === 'active' || status === 'renewal_due' || status === 'expired';
+}
+
 export function daysUntilDate(value: string | null | undefined, now: Date = new Date()): number | null {
     if (!value) return null;
     const parsed = new Date(value);
@@ -174,6 +193,7 @@ export function toVendorContractView(row: VendorContractRow, now: Date = new Dat
     return {
         id: row.id,
         companyId: row.company_id || '',
+        vendorId: row.vendor_id || '',
         ownerProfileId: row.owner_profile_id || '',
         createdBy: row.created_by || '',
         category,

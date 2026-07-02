@@ -47,7 +47,7 @@ test('Given sidebar sections When reading navigation Then dashboard is top-level
     assert.equal(dashboardSection?.direct, true);
     assert.deepEqual(dashboardSection?.items.map(item => item.title), ['대시보드']);
     assert.equal(franchiseSection?.key, 'franchise');
-    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영', '물건지 지도', '전자계약', '업체 계약함']);
+    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '가맹 운영', '물건지 지도', '전자계약', '업체 관리', '업체 계약함']);
     assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.depth, undefined);
     assert.equal(franchiseSection?.items.find(item => item.title === '물건지 지도')?.category, '가맹 운영');
 });
@@ -113,4 +113,16 @@ test('Given vendor contract route When resolving company menu feature Then vendo
     assert.equal(feature?.title, '업체 계약함');
     assert.equal(franchiseSection?.items.at(-1)?.featureKey, 'vendorContracts');
     assert.equal(franchiseSection?.items.at(-1)?.icon, 'fileSignature');
+});
+
+test('Given vendor management route When resolving company menu feature Then vendor management owns it separately', () => {
+    const feature = getCompanyMenuFeatureForPath('/dashboard/franchise-vendors');
+    const franchiseSection = SIDEBAR_SECTIONS.find(section => section.key === 'franchise');
+    const managementItem = franchiseSection?.items.find(item => item.title === '업체 관리');
+
+    assert.equal(feature?.key, 'vendorManagement');
+    assert.equal(feature?.category, '프랜차이즈');
+    assert.equal(feature?.title, '업체 관리');
+    assert.equal(managementItem?.featureKey, 'vendorManagement');
+    assert.equal(managementItem?.icon, 'users');
 });

@@ -2,7 +2,8 @@
 
 import { Search } from 'lucide-react';
 import { CATEGORY_OPTIONS, STATUS_OPTIONS } from './vendorContractsModel';
-import styles from './vendorContracts.module.css';
+import baseStyles from './vendorContracts.module.css';
+import styles from './vendorContractFilters.module.css';
 
 type Props = {
     readonly category: string;
@@ -22,7 +23,7 @@ export function VendorContractFilters({
     onStatusChange
 }: Props) {
     return (
-        <section className={styles.panel}>
+        <section className={baseStyles.panel}>
             <div className={styles.filterBar}>
                 <label className={styles.searchBox}>
                     <Search size={16} />
