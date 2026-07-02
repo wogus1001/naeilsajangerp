@@ -179,6 +179,17 @@ YYYY-MM-DD
 
 - 2026-07-02
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 알림톡 운영 관리 커밋 예정
+  - 주요 기능: `/admin/alimtalk` 알림톡 운영 관리 페이지를 추가했다. 어드민은 회사별 월간 발송량, 월 한도/주의 기준, 템플릿 검수 상태와 SOLAPI template/channel ID, 시나리오 ON/OFF, 최근 발송 로그를 관리한다. 시나리오 관리는 전체 발송 플로우 보드와 개별 시나리오 카드로 구성한다. 1차 대상은 사용자가 신청 중인 1,2,3,4,5,8번 템플릿만 포함한다.
+  - 후속 계획: 2차는 승인 템플릿을 회원가입, 정보공개서, 계약 가능일, 업체계약 만료 이벤트의 실제 발송 훅에 연결하고 `alimtalk_send_logs`에 성공/실패/fallback을 남긴다. 3차는 사용량 대시보드, 실패 분석, 수동 재발송, provider 상태 점검, 공용 달력/업체계약 만료 큐, 비용/과금 리포트를 검토한다.
+  - 신규 SQL: `supabase_franchise_alimtalk_operations_migration.sql` 추가. `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`와 6개 기본 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/alimtalk-operations.test.mts src/app/admin/alimtalk/alimtalkOperationsTableState.test.mts` 5건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3126/admin/alimtalk`에서 Playwright mock API로 desktop 1280px/mobile 390px 렌더링, 탭 전환, 전체 발송 플로우 보드, 개별 시나리오 카드, 로그 표시, horizontal overflow 0건을 확인했다.
+  - 남은 이슈: SQL 적용 전에는 `/admin/alimtalk`이 SQL 적용 안내를 보여준다. SQL 적용 후 실계정으로 템플릿/시나리오/회사 설정 저장과 발송 로그 조회를 live QA한다.
+- 2026-07-02
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `feat(franchise): split vendor contract registration flow`
   - 주요 기능: `/contracts/vendor` 업체 계약함의 좌측 상시 등록 폼을 제거하고, 헤더 `계약 등록` 버튼으로 `/contracts/vendor/register` 전용 등록 페이지에 진입하도록 변경했다. 계약 목록의 `수정`은 동일 페이지에 `contractId` query로 진입해 기존 계약 값을 불러온다.
   - 신규 SQL: 없음

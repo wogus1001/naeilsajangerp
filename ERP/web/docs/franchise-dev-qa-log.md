@@ -958,3 +958,11 @@
 - 범위: 운영 도메인이 연결된 Vercel `naeilsajang` 프로젝트의 Node.js Version이 20.x로 남아 있어, 앱 `package.json`의 `engines.node=24.x`와 맞도록 프로젝트 설정을 24.x로 변경했다.
 - 배포: 설정 변경은 다음 빌드부터 적용되므로 production 재배포를 진행했다. 배포 ID는 `dpl_CfPurRkjSkWModDNQ9KzAbSyYLVZ`이고, source URL은 `https://naeilsajang-nqdt3v6sc-jaehyuns-projects-b4d20c6f.vercel.app`이다.
 - 검증: `npx vercel project inspect naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `Node.js Version=24.x`를 확인했다. `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/contracts/vendor`, `curl -I -L https://www.fcerp.co.kr/contracts/vendor/register`는 200 응답이었다.
+
+## 2026-07-02 알림톡 운영 관리 QA
+
+- 범위: 어드민에 `/admin/alimtalk` 알림톡 운영 관리 페이지를 추가했다. 페이지는 회사별 발송량, 템플릿 관리, 시나리오 관리, 발송 로그 탭으로 구성한다. 1차 신청 대상은 회원가입 승인 요청/완료, 정보공개서 이메일 발송 안내, 정보공개서 수령 확인 완료, 가맹계약 가능일 도래, 업체계약 만료 D-30/D-7 총 6개다.
+- 신규 SQL: `supabase_franchise_alimtalk_operations_migration.sql`을 추가했다. `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`와 6개 기본 템플릿/시나리오 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다.
+- API/UI: `/api/admin/alimtalk-operations`는 admin 세션만 허용한다. SQL 미적용 상태에서는 `schemaReady:false`를 반환해 화면에 SQL 적용 안내를 표시한다. 템플릿은 검수 상태, template/channel ID, 사용 여부를 저장하고, 시나리오는 ON/OFF와 SMS fallback을 저장한다. 시나리오 관리는 전체 발송 플로우 보드와 개별 시나리오 카드로 구성한다. 회사별 설정은 발송 사용 여부, 월 한도, 주의 기준을 저장한다.
+- 후속 계획: 알림톡 2차는 승인 템플릿을 실제 업무 이벤트 발송 훅에 연결하고 `alimtalk_send_logs`에 요청/성공/실패/fallback을 남기는 범위로 둔다. 알림톡 3차는 사용량 대시보드, 실패 분석, 수동 재발송, provider 상태 점검, 공용 달력/업체계약 만료 큐, 비용 리포트로 분리한다.
+- 검증: `npx tsx --test src/lib/alimtalk-operations.test.mts src/app/admin/alimtalk/alimtalkOperationsTableState.test.mts` 5건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3126/admin/alimtalk`에서 Playwright mock API로 desktop 1280px/mobile 390px 렌더링, 회사별 발송량/템플릿/시나리오/발송 로그 탭 전환, 전체 발송 플로우 보드, 개별 시나리오 카드, 수신자 로그 표시, horizontal overflow 0건, console/page error 0건을 확인했다.

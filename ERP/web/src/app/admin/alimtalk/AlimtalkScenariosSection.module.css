@@ -1,0 +1,266 @@
+.boardWrap {
+    display: grid;
+    gap: 12px;
+}
+
+.overview {
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px;
+}
+
+.overviewHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.overviewHeader h3 {
+    margin: 0;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.overviewHeader p {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: keep-all;
+}
+
+.overviewHeader > span {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1c64d1;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.overviewFlow {
+    display: grid;
+    grid-template-columns: minmax(170px, 1.2fr) 24px minmax(180px, 1fr) 24px minmax(150px, 0.9fr) 24px minmax(150px, 0.9fr);
+    gap: 8px;
+    align-items: stretch;
+}
+
+.overviewColumn,
+.overviewHub {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.overviewColumn {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+}
+
+.overviewColumn strong,
+.overviewHub strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.overviewColumn span {
+    border-radius: 6px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 7px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.overviewHub {
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.overviewHub svg {
+    color: #3182f6;
+}
+
+.overviewHub span {
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: keep-all;
+}
+
+.overviewArrow {
+    align-self: center;
+    justify-self: center;
+    color: #8b95a1;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.card {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f9fafb 0, #ffffff 52px);
+    padding: 16px;
+}
+
+.card:nth-child(4n + 2) {
+    background: linear-gradient(180deg, #e8f3ff 0, #ffffff 52px);
+}
+
+.card:nth-child(4n + 3) {
+    background: linear-gradient(180deg, #e6fcf5 0, #ffffff 52px);
+}
+
+.card:nth-child(4n + 4) {
+    background: linear-gradient(180deg, #f2f4f6 0, #ffffff 52px);
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.header h3 {
+    margin: 4px 0 0;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.key {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.flow {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.node {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    min-width: 0;
+    flex: 1 1 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.node svg {
+    color: #3182f6;
+}
+
+.node span {
+    margin-top: 6px;
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.node strong {
+    margin-top: 4px;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+    overflow-wrap: break-word;
+    word-break: keep-all;
+}
+
+.arrow {
+    flex: 0 0 auto;
+    align-self: center;
+    color: #b0b8c1;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) minmax(150px, 180px) auto;
+    gap: 8px;
+    align-items: end;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e8eb;
+}
+
+.switchControl {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.switchControl svg {
+    color: #03b26c;
+}
+
+.selectLabel {
+    display: grid;
+    gap: 6px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .overviewHeader {
+        display: grid;
+    }
+
+    .overviewHeader > span {
+        justify-self: start;
+    }
+
+    .overviewFlow {
+        grid-template-columns: 1fr;
+    }
+
+    .overviewArrow {
+        transform: rotate(90deg);
+    }
+
+    .board {
+        grid-template-columns: 1fr;
+    }
+
+    .flow {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .arrow {
+        justify-self: center;
+        transform: rotate(90deg);
+    }
+
+    .controls {
+        grid-template-columns: 1fr;
+    }
+}

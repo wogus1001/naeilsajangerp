@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus, FileSignature, SlidersHorizontal } from 'lucide-react';
+import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus, FileSignature, SlidersHorizontal, MessageSquareText } from 'lucide-react';
 import Link from 'next/link';
 import { AlertModal } from '@/components/common/AlertModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -202,6 +202,19 @@ export default function AdminDashboardPage() {
                         <div style={styles.menuTexts}>
                             <span style={styles.menuTitle}>회사별 메뉴 관리</span>
                             <span style={styles.menuDesc}>회사별 대시보드 타입과 메뉴 접근 권한 설정</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
+                <Link href="/admin/alimtalk" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#3182f6' }}>
+                            <MessageSquareText size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>알림톡 운영 관리</span>
+                            <span style={styles.menuDesc}>템플릿, 발송 시나리오, 회사별 발송량 확인</span>
                         </div>
                     </div>
                     <ChevronRight size={20} color="#adb5bd" />

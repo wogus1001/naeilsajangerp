@@ -1408,3 +1408,80 @@ create index if not exists idx_external_property_listings_requester_collected
 
 create index if not exists idx_external_property_listings_property
   on public.external_property_listings (property_id);
+
+create table if not exists public.alimtalk_templates (
+  id uuid default uuid_generate_v4() primary key,
+  template_key text not null unique,
+  name text not null,
+  template_id text default '' not null,
+  channel_id text default '' not null,
+  status text default 'submitted' not null,
+  enabled boolean default false not null,
+  content text default '' not null,
+  variables jsonb default '[]'::jsonb not null,
+  review_note text default '' not null,
+  button_label text default '' not null,
+  button_url text default '' not null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_templates_status_check check (status in ('draft', 'submitted', 'approved', 'rejected', 'paused'))
+);
+
+create table if not exists public.alimtalk_scenarios (
+  id uuid default uuid_generate_v4() primary key,
+  scenario_key text not null unique,
+  template_key text references public.alimtalk_templates(template_key) on delete restrict not null,
+  name text not null,
+  trigger_label text default '' not null,
+  recipient_label text default '' not null,
+  enabled boolean default false not null,
+  fallback_channel text default 'none' not null,
+  memo text default '' not null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_scenarios_fallback_check check (fallback_channel in ('none', 'sms'))
+);
+
+create table if not exists public.alimtalk_company_settings (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null unique,
+  enabled boolean default true not null,
+  monthly_limit integer,
+  warning_threshold integer,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_company_monthly_limit_check check (monthly_limit is null or monthly_limit >= 0),
+  constraint alimtalk_company_warning_threshold_check check (warning_threshold is null or warning_threshold >= 0)
+);
+
+create table if not exists public.alimtalk_send_logs (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete set null,
+  scenario_key text not null,
+  template_key text not null,
+  source_type text default '' not null,
+  source_id text default '' not null,
+  recipient_profile_id uuid references public.profiles(id) on delete set null,
+  recipient_name text default '' not null,
+  recipient_phone text default '' not null,
+  status text not null,
+  provider_message_id text default '' not null,
+  error_message text default '' not null,
+  variables jsonb default '{}'::jsonb not null,
+  sent_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_send_logs_status_check check (status in ('success', 'failed', 'blocked', 'fallback_sms'))
+);
+
+create index if not exists idx_alimtalk_send_logs_company_sent
+  on public.alimtalk_send_logs (company_id, sent_at desc);
+
+create index if not exists idx_alimtalk_send_logs_scenario_sent
+  on public.alimtalk_send_logs (scenario_key, sent_at desc);
+
+create unique index if not exists idx_alimtalk_send_logs_source_once
+  on public.alimtalk_send_logs (company_id, scenario_key, source_type, source_id, recipient_phone)
+  where source_type <> '' and source_id <> '' and recipient_phone <> '';

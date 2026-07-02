@@ -75,11 +75,12 @@ supabase_franchise_location_meeting_tool_versions_migration.sql
 supabase_franchise_vendor_contracts_migration.sql
 supabase_franchise_vendor_contract_events_migration.sql
 supabase_franchise_vendors_migration.sql
+supabase_franchise_alimtalk_operations_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, 또는 `franchise_vendors` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, 또는 `alimtalk_templates` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Franchise Vendor Contract Vault Setup
 
@@ -301,6 +302,16 @@ Run `supabase_franchise_notifications_migration.sql` before enabling in-app fran
 The header bell uses `/api/franchise-notifications` to create and read 담당자 alerts. V1 alerts are in-app only and are derived from franchise lead data: disclosure not sent, Gmail send failure, disclosure D-3/D-1, contract eligibility, overdue contact, today's contact, and HOT lead follow-up scheduling. Stale automatic alerts are dismissed during sync when their source condition no longer applies. Read alerts keep their `read_at` audit record in the database but are hidden from the header popover so the list only shows items that still require 담당자 확인. Future Kakao 알림톡 delivery can reuse `franchise_notifications.delivery_channel`, `kakao_template_key`, and `data`.
 
 The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
+
+## Franchise AlimTalk Operations Setup
+
+Run `supabase_franchise_alimtalk_operations_migration.sql` before enabling `/admin/alimtalk`.
+
+The admin AlimTalk operations page manages the six first-stage Kakao AlimTalk cases selected for review: signup approval request, signup approval completion, disclosure email sent notice, disclosure receipt confirmation, franchise contract eligibility, and vendor contract expiration reminders. The page tracks template review status and provider IDs, global send scenarios, company-level monthly limits, and send logs. Scenario management shows one combined send-flow board plus individual scenario cards for ON/OFF and fallback settings. It does not submit templates to Kakao/SOLAPI; operators record the approved `templateId` and `channelId` after provider review.
+
+Templates must be `승인완료` and enabled before future send hooks can use them. Company settings can disable AlimTalk for a company or set monthly volume thresholds. If the migration is missing, the page shows a SQL-required notice instead of failing the admin shell.
+
+AlimTalk phase 2 connects approved templates to real business events. Send hooks must check scenario enabled state, template approval, company send settings, monthly limits, and fallback policy before sending; every attempt writes to `alimtalk_send_logs`. Missing provider env or template IDs should skip the external send without blocking the core ERP action. Phase 3 expands operations with usage dashboards, failure analytics, manual resend, provider status checks, calendar/vendor-expiry queues, and any billing or retry tables that later become necessary.
 
 ## Electronic Contract v2 Setup
 
