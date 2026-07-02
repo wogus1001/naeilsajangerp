@@ -38,6 +38,7 @@ function cleanString(value: unknown): string {
 
 function roleLabel(role: string): string {
     if (role === 'manager') return '팀장';
+    if (role === 'sub_manager') return '매니저';
     if (role === 'staff') return '직원';
     if (role === 'partner_vendor') return '협력업체';
     return role || '회원';
@@ -100,6 +101,34 @@ async function notifyProfileRecipients(input: {
     })));
 }
 
+export function buildSignupRequestAlimtalkVariables(input: {
+    readonly applicantName: string;
+    readonly companyName: string;
+    readonly requestedRole: string;
+    readonly requestedAt: Date;
+}): Record<string, string> {
+    return {
+        가입유형: roleLabel(input.requestedRole),
+        회사명: input.companyName,
+        신청자명: input.applicantName,
+        요청일: formatAlimtalkDate(input.requestedAt)
+    };
+}
+
+export function buildSignupApprovedAlimtalkVariables(input: {
+    readonly approvedAt: Date;
+    readonly companyName: string;
+    readonly name: string;
+}): Record<string, string> {
+    const name = input.name || '회원';
+    return {
+        승인일: formatAlimtalkDate(input.approvedAt),
+        회사명: input.companyName,
+        신청자명: name,
+        회원명: name
+    };
+}
+
 export async function notifyAlimtalkSignupRequest(input: {
     readonly supabaseAdmin: SupabaseClient;
     readonly companyId: string;
@@ -116,12 +145,12 @@ export async function notifyAlimtalkSignupRequest(input: {
         scenarioKey: 'signup_request',
         sourceId: input.sourceId,
         sourceType: 'signup-request',
-        variables: {
-            가입유형: roleLabel(input.requestedRole),
-            회사명: input.companyName,
-            신청자명: input.applicantName,
-            요청일: formatAlimtalkDate(new Date())
-        }
+        variables: buildSignupRequestAlimtalkVariables({
+            applicantName: input.applicantName,
+            companyName: input.companyName,
+            requestedAt: new Date(),
+            requestedRole: input.requestedRole
+        })
     })));
 }
 
@@ -139,11 +168,11 @@ export async function notifyAlimtalkSignupApproved(input: {
         scenarioKey: 'signup_approved',
         sourceId: input.profileId,
         sourceType: 'signup-approved',
-        variables: {
-            승인일: formatAlimtalkDate(new Date()),
-            회사명: input.companyName,
-            회원명: input.name || '회원'
-        }
+        variables: buildSignupApprovedAlimtalkVariables({
+            approvedAt: new Date(),
+            companyName: input.companyName,
+            name: input.name
+        })
     });
 }
 
