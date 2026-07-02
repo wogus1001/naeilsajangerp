@@ -26,8 +26,20 @@ test('buildPropertyRegistrationPayload maps franchise property form to propertie
         monthlyRent: '450',
         maintenanceFee: '40',
         premium: '12,000',
-        fileNames: ['도면.pdf'],
-        fileAttachments: [{ name: '도면.pdf', size: 1024, type: 'application/pdf' }],
+        currentStatus: '영업중',
+        operatingStoreName: '기존 커피 매장',
+        fileNames: ['도면.pdf', '현장사진.png'],
+        fileAttachments: [
+            { name: '도면.pdf', size: 1024, type: 'application/pdf' },
+            {
+                name: '현장사진.png',
+                size: 2048,
+                type: 'image/png',
+                storageBucket: 'property-images',
+                storagePath: 'property-1/photo.png',
+                publicUrl: 'https://storage.test/property-1/photo.png'
+            }
+        ],
         rentFreeAvailable: '가능',
         landlordSupportMemo: '간판 협의 가능',
         riskMemo: '권리금 재확인 필요'
@@ -39,7 +51,7 @@ test('buildPropertyRegistrationPayload maps franchise property form to propertie
     });
 
     assert.equal(payload.name, '강남역 코너 매장');
-    assert.equal(payload.status, '공실');
+    assert.equal(payload.status, '영업중');
     assert.equal(payload.operationType, '물건등록');
     assert.equal(payload.address, '서울 강남구 테헤란로 12');
     assert.equal(payload.region, '서울 강남구');
@@ -60,8 +72,19 @@ test('buildPropertyRegistrationPayload maps franchise property form to propertie
     assert.equal(payload.privateAreaPyeong, '20');
     assert.equal(payload.deposit, '5000');
     assert.equal(payload.premium, '12000');
-    assert.deepEqual(payload.fileNames, ['도면.pdf']);
-    assert.deepEqual(payload.fileAttachments, [{ name: '도면.pdf', size: 1024, type: 'application/pdf' }]);
+    assert.equal(payload.operatingStoreName, '기존 커피 매장');
+    assert.deepEqual(payload.fileNames, ['도면.pdf', '현장사진.png']);
+    assert.deepEqual(payload.fileAttachments, [
+        { name: '도면.pdf', size: 1024, type: 'application/pdf' },
+        {
+            name: '현장사진.png',
+            size: 2048,
+            type: 'image/png',
+            storageBucket: 'property-images',
+            storagePath: 'property-1/photo.png',
+            publicUrl: 'https://storage.test/property-1/photo.png'
+        }
+    ]);
     assert.equal(payload.rentFreeAvailable, '가능');
     assert.equal(payload.riskMemo, '권리금 재확인 필요');
 });

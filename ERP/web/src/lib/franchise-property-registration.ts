@@ -38,6 +38,7 @@ export type PropertyRegistrationForm = {
     readonly totalFloors: string;
     readonly parkingAvailable: string;
     readonly currentStatus: string;
+    readonly operatingStoreName: string;
     readonly fileNames: readonly string[];
     readonly fileAttachments: readonly PropertyRegistrationFileAttachment[];
     readonly deposit: string;
@@ -84,6 +85,7 @@ export const PROPERTY_REGISTRATION_INITIAL_FORM: PropertyRegistrationForm = {
     totalFloors: '',
     parkingAvailable: '가능',
     currentStatus: '공실',
+    operatingStoreName: '',
     fileNames: [],
     fileAttachments: [],
     deposit: '',
@@ -167,6 +169,7 @@ export function buildPropertyRegistrationPayload(
         totalFloors: form.totalFloors,
         parkingAvailable: form.parkingAvailable,
         currentStatus: form.currentStatus,
+        operatingStoreName: form.operatingStoreName,
         fileNames: form.fileNames,
         fileAttachments: form.fileAttachments,
         deposit: normalizeMoneyText(form.deposit),

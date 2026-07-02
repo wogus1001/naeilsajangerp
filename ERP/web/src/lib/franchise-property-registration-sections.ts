@@ -15,6 +15,10 @@ export type PropertyRegistrationField = {
     readonly unit?: string;
     readonly wide?: boolean;
     readonly full?: boolean;
+    readonly visibleWhen?: {
+        readonly key: PropertyRegistrationFieldKey;
+        readonly value: string;
+    };
 };
 
 export type PropertyRegistrationSection = {
@@ -46,7 +50,8 @@ export const PROPERTY_REGISTRATION_SECTIONS: readonly PropertyRegistrationSectio
             { key: 'floor', label: '층수', kind: 'number', unit: '층' },
             { key: 'totalFloors', label: '전체 층수', kind: 'number', unit: '층' },
             { key: 'parkingAvailable', label: '주차 가능 여부', kind: 'select', options: ['가능', '불가', '확인 필요'] },
-            { key: 'currentStatus', label: '현재 상태', kind: 'select', options: ['공실', '영업중', '공사중', '확인 필요'] }
+            { key: 'currentStatus', label: '현재 상태', kind: 'select', options: ['공실', '영업중', '공사중', '확인 필요'] },
+            { key: 'operatingStoreName', label: '현재 영업중 상호/매장명', kind: 'text', wide: true, visibleWhen: { key: 'currentStatus', value: '영업중' } }
         ]
     },
     {

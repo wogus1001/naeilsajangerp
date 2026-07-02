@@ -15,3 +15,10 @@ test('Given a work intake property has no author When rendering metadata Then th
         '미래 / 공실'
     );
 });
+
+test('Given a work intake property has partial metadata When rendering metadata Then missing values do not crash the list', () => {
+    assert.equal(
+        formatWorkIntakePropertyMeta({ companyName: undefined, authorName: null, status: ' 영업중 ' }),
+        '영업중'
+    );
+});

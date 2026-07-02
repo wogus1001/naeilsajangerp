@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-02
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 진행현황 확인/수정 첨부 열람 보강 커밋 예정
+  - 주요 기능: 입점요청 등록에서 `현재 상태=영업중`일 때 `현재 영업중 상호/매장명`을 저장한다. 진행현황의 입점요청/예비 창업자 등록 액션은 `확인/수정`으로 통일했고, 모달 상단에서 등록 요약과 첨부 자료를 확인한 뒤 기존 수정 폼을 사용할 수 있게 했다. 신규 첨부는 Storage 업로드 후 이미지 썸네일/다운로드, PDF/문서 다운로드를 제공하며, URL 없이 파일명/용량만 남은 과거 첨부는 `재첨부 필요`로 안내한다.
+  - 신규 SQL: 없음. 기존 `properties.data` JSON과 `/api/upload` Storage 경로를 사용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/lib/franchise-property-registration-uploads.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-file-attachments.test.mts 'src/app/(main)/dashboard/franchise-leads/work-intake/requests.test.mts'` 14건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright mock 세션에서 `/dashboard/franchise-leads/work-intake` 확인/수정 모달의 새 PDF 첨부 다운로드 버튼 visible, `blob:` 링크, 파일명 download 속성을 확인했다.
+  - 남은 이슈: 과거에 `publicUrl`/Storage 경로 없이 메타데이터만 저장된 첨부는 원본 파일이 없어 다운로드할 수 없으며, 화면에서 `재첨부 필요`로 안내한다. 운영 배포 후 실계정으로 영업중 매장명, 이미지 썸네일, PDF 다운로드, 예비 창업자 등록 확인/수정 모달을 live QA한다.
+- 2026-07-02
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 알림톡 운영 관리 커밋 예정
   - 주요 기능: `/admin/alimtalk` 알림톡 운영 관리 페이지를 추가했다. 어드민은 회사별 월간 발송량, 월 한도/주의 기준, 템플릿 검수 상태와 SOLAPI template/channel ID, 시나리오 ON/OFF, 최근 발송 로그를 관리한다. 시나리오 관리는 전체 발송 플로우 보드와 개별 시나리오 카드로 구성한다. 1차 대상은 사용자가 신청 중인 1,2,3,4,5,8번 템플릿만 포함한다.
   - 후속 계획: 2차는 승인 템플릿을 회원가입, 정보공개서, 계약 가능일, 업체계약 만료 이벤트의 실제 발송 훅에 연결하고 `alimtalk_send_logs`에 성공/실패/fallback을 남긴다. 3차는 사용량 대시보드, 실패 분석, 수동 재발송, provider 상태 점검, 공용 달력/업체계약 만료 큐, 비용/과금 리포트를 검토한다.

@@ -19,7 +19,8 @@ import {
     type PropertyAreaUnit
 } from '@/lib/franchise-property-registration-format';
 import { useFranchiseIndustryOptionGroups } from '@/components/franchise/useFranchiseIndustryOptions';
-import { readApiError } from '@/utils/apiResponse';
+import { uploadPropertyRegistrationAttachments } from '@/lib/franchise-property-registration-uploads';
+import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 import { PropertyRegistrationFileInput } from './PropertyRegistrationFileInput';
@@ -33,6 +34,7 @@ type SaveMessage = {
 
 export function PropertyRegistrationForm() {
     const [form, setForm] = React.useState<PropertyRegistrationFormState>(PROPERTY_REGISTRATION_INITIAL_FORM);
+    const [pendingFiles, setPendingFiles] = React.useState<readonly File[]>([]);
     const [message, setMessage] = React.useState<SaveMessage | null>(null);
     const [isSaving, setIsSaving] = React.useState(false);
     const industryOptionGroups = useFranchiseIndustryOptionGroups();
@@ -99,18 +101,40 @@ export function PropertyRegistrationForm() {
 
         setIsSaving(true);
         try {
+            const companyName = getStoredCompanyName(storedUser);
+            const payloadContext = { requesterId, companyName };
             const response = await fetch('/api/properties', {
                 method: 'POST',
                 headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify(buildPropertyRegistrationPayload(form, {
-                    requesterId,
-                    companyName: getStoredCompanyName(storedUser)
-                }))
+                body: JSON.stringify(buildPropertyRegistrationPayload(form, payloadContext))
             });
             const payload: unknown = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
+            const inserted = unwrapApiData<{ readonly id?: string }>(payload);
+
+            if (pendingFiles.length > 0) {
+                if (!inserted.id) throw new Error('입점 요청 저장 후 파일 업로드 대상을 확인하지 못했습니다.');
+                const uploadedAttachments = await uploadPropertyRegistrationAttachments({
+                    propertyId: inserted.id,
+                    files: pendingFiles,
+                    attachments: form.fileAttachments
+                });
+                if (uploadedAttachments !== form.fileAttachments) {
+                    const uploadResponse = await fetch(`/api/properties?id=${encodeURIComponent(inserted.id)}`, {
+                        method: 'PUT',
+                        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify(buildPropertyRegistrationPayload(
+                            updatePropertyRegistrationAttachments(form, uploadedAttachments),
+                            payloadContext
+                        ))
+                    });
+                    const uploadPayload: unknown = await uploadResponse.json();
+                    if (!uploadResponse.ok) throw new Error(readApiError(uploadPayload));
+                }
+            }
 
             setForm(PROPERTY_REGISTRATION_INITIAL_FORM);
+            setPendingFiles([]);
             setMessage({ kind: 'success', text: '입점 요청 DB에 저장했습니다.' });
         } catch (error) {
             setMessage({
@@ -152,7 +176,9 @@ export function PropertyRegistrationForm() {
                     <legend>사진 및 자료</legend>
                     <PropertyRegistrationFileInput
                         attachments={form.fileAttachments}
+                        pendingFiles={pendingFiles}
                         onChange={updateAttachments}
+                        onPendingFilesChange={setPendingFiles}
                         onError={showFileError}
                     />
                 </fieldset>

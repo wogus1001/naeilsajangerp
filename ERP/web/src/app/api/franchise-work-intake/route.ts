@@ -135,6 +135,7 @@ function toPropertyForm(row: PropertyRow): PropertyRegistrationForm {
         totalFloors: readText(data, 'totalFloors'),
         parkingAvailable: readText(data, 'parkingAvailable') || PROPERTY_REGISTRATION_INITIAL_FORM.parkingAvailable,
         currentStatus: row.status || readText(data, 'currentStatus') || PROPERTY_REGISTRATION_INITIAL_FORM.currentStatus,
+        operatingStoreName: readText(data, 'operatingStoreName'),
         fileNames,
         fileAttachments,
         deposit: readText(data, 'deposit'),
