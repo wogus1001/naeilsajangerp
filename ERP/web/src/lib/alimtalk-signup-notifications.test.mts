@@ -2,8 +2,9 @@ import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import {
     buildSignupApprovedAlimtalkVariables,
-    buildSignupRequestAlimtalkVariables
-} from './alimtalk-event-notifications';
+    buildSignupRequestAlimtalkVariables,
+    shouldRouteSignupRequestToCompanyManager
+} from './alimtalk-signup-notifications';
 
 test('Given sub manager signup request When building AlimTalk variables Then role is shown as Korean label', () => {
     assert.deepEqual(buildSignupRequestAlimtalkVariables({
@@ -30,4 +31,18 @@ test('Given approved signup When building AlimTalk variables Then template appli
         신청자명: '김재현',
         회원명: '김재현'
     });
+});
+
+test('Given first manager signup request When resolving approvers Then platform admin env is used', () => {
+    assert.equal(shouldRouteSignupRequestToCompanyManager({
+        requestedRole: 'manager',
+        companyManagerId: 'manager-profile-id'
+    }), false);
+});
+
+test('Given existing company signup request When resolving approvers Then company manager profile is used', () => {
+    assert.equal(shouldRouteSignupRequestToCompanyManager({
+        requestedRole: 'sub_manager',
+        companyManagerId: 'manager-profile-id'
+    }), true);
 });

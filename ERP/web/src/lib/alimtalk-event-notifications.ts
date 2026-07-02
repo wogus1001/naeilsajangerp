@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendAlimtalkNotification, formatAlimtalkDate, type AlimtalkScenarioKey } from './alimtalk-send';
-import { getSolapiNotificationConfig } from './solapi-notifications';
 import type { FranchiseNotificationCandidate } from './franchise-notifications';
 
 type ProfileRecipientRow = {
@@ -34,14 +33,6 @@ type LeadManagerRow = {
 
 function cleanString(value: unknown): string {
     return String(value ?? '').trim();
-}
-
-function roleLabel(role: string): string {
-    if (role === 'manager') return '팀장';
-    if (role === 'sub_manager') return '매니저';
-    if (role === 'staff') return '직원';
-    if (role === 'partner_vendor') return '협력업체';
-    return role || '회원';
 }
 
 function uniqueStrings(values: readonly (string | null | undefined)[]): string[] {
@@ -99,81 +90,6 @@ async function notifyProfileRecipients(input: {
         sourceType: input.sourceType,
         variables: input.variables
     })));
-}
-
-export function buildSignupRequestAlimtalkVariables(input: {
-    readonly applicantName: string;
-    readonly companyName: string;
-    readonly requestedRole: string;
-    readonly requestedAt: Date;
-}): Record<string, string> {
-    return {
-        가입유형: roleLabel(input.requestedRole),
-        회사명: input.companyName,
-        신청자명: input.applicantName,
-        요청일: formatAlimtalkDate(input.requestedAt)
-    };
-}
-
-export function buildSignupApprovedAlimtalkVariables(input: {
-    readonly approvedAt: Date;
-    readonly companyName: string;
-    readonly name: string;
-}): Record<string, string> {
-    const name = input.name || '회원';
-    return {
-        승인일: formatAlimtalkDate(input.approvedAt),
-        회사명: input.companyName,
-        신청자명: name,
-        회원명: name
-    };
-}
-
-export async function notifyAlimtalkSignupRequest(input: {
-    readonly supabaseAdmin: SupabaseClient;
-    readonly companyId: string;
-    readonly companyName: string;
-    readonly applicantName: string;
-    readonly requestedRole: string;
-    readonly sourceId: string;
-}): Promise<void> {
-    const config = getSolapiNotificationConfig();
-    if (!('adminAlertPhones' in config)) return;
-    await Promise.all(config.adminAlertPhones.map((phone: string) => sendAlimtalkNotification(input.supabaseAdmin, {
-        companyId: input.companyId,
-        recipient: { name: '관리자', phone },
-        scenarioKey: 'signup_request',
-        sourceId: input.sourceId,
-        sourceType: 'signup-request',
-        variables: buildSignupRequestAlimtalkVariables({
-            applicantName: input.applicantName,
-            companyName: input.companyName,
-            requestedAt: new Date(),
-            requestedRole: input.requestedRole
-        })
-    })));
-}
-
-export async function notifyAlimtalkSignupApproved(input: {
-    readonly supabaseAdmin: SupabaseClient;
-    readonly companyId: string | null;
-    readonly companyName: string;
-    readonly profileId: string;
-    readonly name: string;
-    readonly phone: string | null;
-}): Promise<void> {
-    await sendAlimtalkNotification(input.supabaseAdmin, {
-        companyId: input.companyId,
-        recipient: { name: input.name || '회원', phone: input.phone, profileId: input.profileId },
-        scenarioKey: 'signup_approved',
-        sourceId: input.profileId,
-        sourceType: 'signup-approved',
-        variables: buildSignupApprovedAlimtalkVariables({
-            approvedAt: new Date(),
-            companyName: input.companyName,
-            name: input.name
-        })
-    });
 }
 
 export async function notifyAlimtalkDisclosureConfirmed(

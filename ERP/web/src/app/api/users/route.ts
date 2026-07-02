@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-event-notifications';
+import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-signup-notifications';
 import { notifyUserOfSignupApproval } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeAdminAssignableUserRole } from '@/lib/user-role-policy';

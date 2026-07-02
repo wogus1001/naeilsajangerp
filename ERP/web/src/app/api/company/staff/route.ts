@@ -1,4 +1,6 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-signup-notifications';
+import { notifyUserOfSignupApproval } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isBrandStaffUserRole } from '@/lib/user-role-policy';
 import { NextResponse } from 'next/server';
@@ -11,6 +13,8 @@ type ProfileRow = {
     readonly company_id: string | null;
     readonly name: string | null;
     readonly email: string | null;
+    readonly phone: string | null;
+    readonly phone_normalized: string | null;
     readonly role: string | null;
     readonly status: string | null;
     readonly created_at: string | null;
@@ -75,7 +79,7 @@ export async function GET(request: Request) {
 
         const { data: profiles, error } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email, role, status, created_at')
+            .select('id, company_id, name, email, phone, phone_normalized, role, status, created_at')
             .eq('company_id', targetCompanyId)
             .returns<ProfileRow[]>();
 
@@ -116,7 +120,7 @@ export async function PUT(request: Request) {
 
         const { data: targetUser, error: targetError } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email, role, status, created_at')
+            .select('id, company_id, name, email, phone, phone_normalized, role, status, created_at')
             .eq('id', targetUserId)
             .single<ProfileRow>();
 
@@ -143,6 +147,43 @@ export async function PUT(request: Request) {
                 return NextResponse.json({ error: '승인 대기 상태의 가입 요청만 승인할 수 있습니다.' }, { status: 400 });
             }
             await supabaseAdmin.from('profiles').update({ status: 'active' }).eq('id', targetUserId);
+
+            let companyName = '';
+            if (targetUser.company_id) {
+                const { data: company } = await supabaseAdmin
+                    .from('companies')
+                    .select('name')
+                    .eq('id', targetUser.company_id)
+                    .maybeSingle<{ readonly name: string | null }>();
+                companyName = company?.name || '';
+            }
+
+            try {
+                await notifyUserOfSignupApproval({
+                    phone: targetUser.phone_normalized || targetUser.phone
+                });
+            } catch (error) {
+                console.error(
+                    'Staff approval SMS notification failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+
+            try {
+                await notifyAlimtalkSignupApproved({
+                    companyId: targetUser.company_id,
+                    companyName,
+                    name: targetUser.name || '회원',
+                    phone: targetUser.phone_normalized || targetUser.phone,
+                    profileId: targetUserId,
+                    supabaseAdmin
+                });
+            } catch (error) {
+                console.error(
+                    'Staff approval AlimTalk notification failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
         }
 
         if (action === 'promote') {
@@ -167,7 +208,7 @@ export async function PUT(request: Request) {
 
         const { data: updatedUser } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email, role, status, created_at')
+            .select('id, company_id, name, email, phone, phone_normalized, role, status, created_at')
             .eq('id', targetUserId)
             .single<ProfileRow>();
 

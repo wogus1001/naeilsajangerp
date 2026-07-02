@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
-    resolveSignupApprovalPolicy,
-    type SignupApprovalRole,
-    type SignupApprovalStatus
+    resolveSignupApprovalPolicy
 } from '@/lib/signup-approval-policy';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
-import { notifyAlimtalkSignupRequest } from '@/lib/alimtalk-event-notifications';
+import { notifyAlimtalkSignupRequest } from '@/lib/alimtalk-signup-notifications';
 import { notifyAdminsOfSignupRequest } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -67,9 +65,6 @@ export async function POST(request: Request) {
         // 2. Company Logic
         let companyId: string | null = null;
         let isNewCompany = false;
-        let finalRole: SignupApprovalRole = 'staff';
-        let finalStatus: SignupApprovalStatus = 'pending_approval';
-        let message = '가입 요청이 완료되었습니다.';
 
         let companyResults: { id: string; manager_id: string | null; name: string }[] | null = null;
         let findError: { message?: string } | null = null;
@@ -199,10 +194,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: approvalPolicy.error }, { status: 400 });
         }
 
-        finalRole = approvalPolicy.role;
-        finalStatus = approvalPolicy.status;
-        message = approvalPolicy.message;
-
         // 3. Create Auth User
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: email,
@@ -236,8 +227,8 @@ export async function POST(request: Request) {
             .from('profiles')
             .update({
                 company_id: companyId,
-                role: finalRole,
-                status: finalStatus,
+                role: approvalPolicy.role,
+                status: approvalPolicy.status,
                 name: name,
                 phone: String(phone).trim(),
                 phone_normalized: phoneNormalized,
@@ -274,7 +265,7 @@ export async function POST(request: Request) {
                 applicantName: name,
                 companyId,
                 companyName: trimmedCompanyName,
-                requestedRole: finalRole,
+                requestedRole: approvalPolicy.role,
                 sourceId: userId,
                 supabaseAdmin
             });
@@ -292,12 +283,12 @@ export async function POST(request: Request) {
                 loginId: normalizedLoginId,
                 name,
                 email, // useful for display
-                role: finalRole,
-                status: finalStatus,
+                role: approvalPolicy.role,
+                status: approvalPolicy.status,
                 companyName: companyName, // Ensure frontend has this!
                 companyId: companyId
             },
-            message
+            message: approvalPolicy.message
         });
 
     } catch (error) {
