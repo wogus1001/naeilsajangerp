@@ -1013,3 +1013,10 @@
 - 테스트 조건: 계약 상태가 `terminated`, `renewed`, `archived`가 아니고 만료일이 실행일 기준 정확히 D-30 또는 D-7인 계약만 대상이다. 수신자는 계약 담당자와 회사 팀장이고, 중복 발송 방지를 위해 `contractId:vendor-contract-due:남은일수` source 기준으로 로그가 남는다.
 - 신규 SQL: 없음. 운영에서는 `/admin/alimtalk`에서 `vendor_contract_due` 템플릿을 `approved/enabled`로 저장하고 template ID, channel ID, 시나리오 ON, 회사별 발송 사용 여부를 확인한다.
 - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 6건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-02 업체 계약 만료 알림톡 수신자 스코프 QA
+
+- 범위: admin 전역 알림 조회가 회사 스코프 없이 모든 회사 업체계약 후보를 실제 알림톡 발송까지 시도하지 않도록 차단했다. 회사가 특정된 요청 또는 일반 회사 계정 요청에서는 기존처럼 발송한다.
+- 보정: 업체계약 담당자(`owner_profile_id`)는 해당 계약 회사의 활성 수신자 목록에 있을 때만 후보에 추가한다. 과거 테스트 계약이나 잘못된 담당자 참조가 남아 있어도 다른 프로필로 알림톡이 재생성되지 않게 했다.
+- 신규 SQL: 없음. 운영 테스트 데이터 정리는 사용자가 Supabase SQL Editor에서 직접 실행한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-notification-alimtalk-scope.test.mts src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.

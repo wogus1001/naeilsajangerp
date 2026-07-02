@@ -68,7 +68,9 @@ test('buildVendorContractNotifications creates D-30 and D-7 alerts for owner and
             vendorName: '내일식자재'
         }
     ], [
-        { companyId: 'company-1', profileId: 'manager-1' }
+        { companyId: 'company-1', profileId: 'manager-1' },
+        { companyId: 'company-1', profileId: 'owner-1' },
+        { companyId: 'company-1', profileId: 'owner-2' }
     ], new Date('2026-07-01T09:00:00+09:00'));
 
     assert.equal(notifications.some(item => item.title === '업체 계약 D-30'), true);
@@ -102,6 +104,26 @@ test('buildVendorContractNotifications skips terminal contracts and non-reminder
     ], new Date('2026-07-01T09:00:00+09:00'));
 
     assert.equal(notifications.length, 0);
+});
+
+test('buildVendorContractNotifications skips stale owner recipients outside contract company', () => {
+    const notifications = buildVendorContractNotifications([
+        {
+            companyId: 'company-1',
+            contractEndDate: '2026-07-08',
+            contractTitle: '식자재 공급 계약',
+            id: 'vendor-contract-1',
+            ownerProfileId: 'stale-owner',
+            status: 'active',
+            vendorName: '내일식자재'
+        }
+    ], [
+        { companyId: 'company-1', profileId: 'manager-1' },
+        { companyId: 'company-2', profileId: 'stale-owner' }
+    ], new Date('2026-07-01T09:00:00+09:00'));
+
+    assert.equal(notifications.some(item => item.recipientProfileId === 'stale-owner'), false);
+    assert.equal(notifications.some(item => item.recipientProfileId === 'manager-1'), true);
 });
 
 test('buildAlimtalkVariablesForCandidate maps vendor contract due template variables', () => {

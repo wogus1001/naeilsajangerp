@@ -86,7 +86,9 @@ export function buildVendorContractNotifications(
         const companyId = cleanString(contract.companyId);
         const recipientsForContract = new Set(recipientsByCompany.get(companyId) || []);
         const ownerProfileId = cleanString(contract.ownerProfileId);
-        if (ownerProfileId) recipientsForContract.add(ownerProfileId);
+        if (ownerProfileId && recipientsByCompany.get(companyId)?.has(ownerProfileId)) {
+            recipientsForContract.add(ownerProfileId);
+        }
 
         return [...recipientsForContract]
             .map(profileId => createVendorContractCandidate(contract, profileId, remainingDays))
