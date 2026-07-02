@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-event-notifications';
 import { notifyUserOfSignupApproval } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeAdminAssignableUserRole } from '@/lib/user-role-policy';
@@ -17,6 +18,7 @@ export { DELETE } from './deleteUserRoute';
 
 type TargetProfileRow = RequesterProfileRow & {
     readonly status: string | null;
+    readonly name: string | null;
     readonly phone: string | null;
     readonly phone_normalized: string | null;
 };
@@ -150,7 +152,7 @@ export async function PUT(request: Request) {
         for (const candidateId of lookup.ids) {
             const { data } = await supabaseAdmin
                 .from('profiles')
-                .select('id, role, status, company_id, phone, phone_normalized')
+                .select('id, role, status, company_id, name, phone, phone_normalized')
                 .eq('id', candidateId)
                 .maybeSingle<TargetProfileRow>();
             if (data) {
@@ -163,7 +165,7 @@ export async function PUT(request: Request) {
             for (const candidateEmail of lookup.emails) {
                 const { data } = await supabaseAdmin
                     .from('profiles')
-                    .select('id, role, status, company_id, phone, phone_normalized')
+                    .select('id, role, status, company_id, name, phone, phone_normalized')
                     .eq('email', candidateEmail)
                     .limit(1)
                     .maybeSingle<TargetProfileRow>();
@@ -211,6 +213,16 @@ export async function PUT(request: Request) {
         const nextRole = role || targetProfile.role;
 
         if (status === 'active' && targetProfile.status !== 'active') {
+            let companyName = '';
+            if (targetProfile.company_id) {
+                const { data: company } = await supabaseAdmin
+                    .from('companies')
+                    .select('name')
+                    .eq('id', targetProfile.company_id)
+                    .maybeSingle<{ readonly name: string | null }>();
+                companyName = company?.name || '';
+            }
+
             try {
                 await notifyUserOfSignupApproval({
                     phone: targetProfile.phone_normalized || targetProfile.phone
@@ -218,6 +230,22 @@ export async function PUT(request: Request) {
             } catch (error) {
                 console.error(
                     'Signup approval SMS notification failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+
+            try {
+                await notifyAlimtalkSignupApproved({
+                    companyId: targetProfile.company_id,
+                    companyName,
+                    name: targetProfile.name || '회원',
+                    phone: targetProfile.phone_normalized || targetProfile.phone,
+                    profileId: targetUuid,
+                    supabaseAdmin
+                });
+            } catch (error) {
+                console.error(
+                    'Signup approval AlimTalk notification failed:',
                     error instanceof Error ? error.message : String(error)
                 );
             }

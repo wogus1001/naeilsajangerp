@@ -998,3 +998,10 @@
 - 범위: 입점요청과 예비 창업자 등록 저장 성공 후 작성 폼에 남지 않고 진행현황 화면으로 이동한다. 입점요청은 `?tab=properties`, 예비 창업자 등록은 `?tab=matchingRequests`를 붙여 방금 등록한 유형의 탭이 바로 열리게 했다.
 - 신규 SQL: 없음.
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 로컬 dev 서버 `http://127.0.0.1:3000`에서 Playwright mock 세션으로 입점요청 등록 후 `진행현황 > 입점 요청` 탭 이동, 예비 창업자 등록 후 `진행현황 > 예비 창업자 등록` 탭 이동을 확인했다.
+
+## 2026-07-02 알림톡 승인 템플릿 발송 훅 QA
+
+- 범위: 승인된 Kakao/SOLAPI 알림톡 템플릿을 실제 업무 이벤트에 연결했다. 연결 대상은 회원가입 승인 요청, 회원가입 승인 완료, 정보공개서 수령 확인 완료, 가맹계약 가능 상태, 업체 계약 만료 D-30/D-7이다. 검수중인 정보공개서 확인 안내 템플릿은 승인 전까지 실제 발송 훅에서 제외한다.
+- 동작: 각 훅은 `alimtalk_scenarios.enabled`, 템플릿 `approved/enabled`, template/channel ID, 회사별 발송 사용 여부와 월 한도, Solapi env를 확인한 뒤 발송한다. 발송 성공/실패/차단 결과는 `alimtalk_send_logs`에 남기고, 알림톡 실패는 본 업무 저장/승인/확인 흐름을 실패시키지 않는다.
+- 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
+- 검증: `npx tsx --test src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts src/lib/solapi-notifications.test.mts src/lib/franchise-notifications.test.mts` 19건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 남은 live QA는 운영 admin에서 승인 템플릿 ID, channel ID, 시나리오 ON, 회사 설정을 저장한 뒤 각 이벤트별 실발송/로그 확인이다.

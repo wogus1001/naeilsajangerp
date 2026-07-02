@@ -5,6 +5,7 @@ import {
     type SignupApprovalStatus
 } from '@/lib/signup-approval-policy';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
+import { notifyAlimtalkSignupRequest } from '@/lib/alimtalk-event-notifications';
 import { notifyAdminsOfSignupRequest } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -264,6 +265,22 @@ export async function POST(request: Request) {
         } catch (error) {
             console.error(
                 'Signup admin SMS notification failed:',
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+
+        try {
+            await notifyAlimtalkSignupRequest({
+                applicantName: name,
+                companyId,
+                companyName: trimmedCompanyName,
+                requestedRole: finalRole,
+                sourceId: userId,
+                supabaseAdmin
+            });
+        } catch (error) {
+            console.error(
+                'Signup admin AlimTalk notification failed:',
                 error instanceof Error ? error.message : String(error)
             );
         }

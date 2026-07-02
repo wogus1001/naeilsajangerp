@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-02
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 알림톡 승인 템플릿 발송 훅 커밋 예정
+  - 주요 기능: 승인된 알림톡 템플릿을 회원가입 승인 요청/완료, 정보공개서 수령 확인 완료, 가맹계약 가능 상태, 업체 계약 만료 D-30/D-7 업무 이벤트에 연결한다. 검수중인 정보공개서 확인 안내 템플릿은 승인 전까지 발송 훅에서 제외한다. 각 발송은 시나리오 ON, 템플릿 승인/사용, 회사 설정, 월 한도, Solapi env를 확인하고 성공/실패/차단 결과를 `alimtalk_send_logs`에 남긴다.
+  - 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts src/lib/solapi-notifications.test.mts src/lib/franchise-notifications.test.mts` 19건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 남은 이슈: 운영 admin에서 승인 템플릿 ID, channel ID, 시나리오 ON, 회사 설정을 저장한 뒤 각 이벤트별 실발송/로그를 live QA한다.
+- 2026-07-02
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 입점요청/예비 창업자 등록 진행현황 이동 커밋 예정
   - 주요 기능: 입점요청과 예비 창업자 등록 저장 성공 후 작성 페이지에 머물지 않고 진행현황으로 이동한다. 입점요청은 `?tab=properties`, 예비 창업자 등록은 `?tab=matchingRequests`로 이동해 해당 유형 탭을 바로 연다.
   - 신규 SQL: 없음

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notifyAlimtalkDisclosureConfirmed } from '@/lib/alimtalk-event-notifications';
 import { hashDisclosureConfirmationToken } from '@/lib/gmail-integration';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -29,6 +30,15 @@ function renderPage(title: string, message: string) {
 </html>`;
 }
 
+type DisclosureConfirmationDeliveryRow = {
+    readonly id: string;
+    readonly company_id: string;
+    readonly lead_id: string;
+    readonly recipient_name: string | null;
+    readonly document_title: string | null;
+    readonly confirmed_at: string | null;
+};
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -41,24 +51,37 @@ export async function GET(request: Request) {
         const tokenHash = hashDisclosureConfirmationToken(token);
         const { data: delivery, error } = await supabaseAdmin
             .from('franchise_lead_disclosure_deliveries')
-            .select('id, confirmed_at')
+            .select('id, company_id, lead_id, recipient_name, document_title, confirmed_at')
             .eq('confirmation_token_hash', tokenHash)
-            .maybeSingle();
+            .maybeSingle<DisclosureConfirmationDeliveryRow>();
         if (error) throw error;
         if (!delivery) {
             return html(renderPage('수령 확인 실패', '유효하지 않거나 만료된 확인 링크입니다.'), 404);
         }
 
-        const confirmedAt = (delivery as { readonly confirmed_at: string | null }).confirmed_at;
+        const confirmedAt = delivery.confirmed_at;
         if (!confirmedAt) {
+            const nextConfirmedAt = new Date().toISOString();
             await supabaseAdmin
                 .from('franchise_lead_disclosure_deliveries')
                 .update({
-                    confirmed_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    confirmed_at: nextConfirmedAt,
+                    updated_at: nextConfirmedAt
                 })
-                .eq('id', (delivery as { readonly id: string }).id)
+                .eq('id', delivery.id)
                 .is('confirmed_at', null);
+
+            try {
+                await notifyAlimtalkDisclosureConfirmed(supabaseAdmin, {
+                    ...delivery,
+                    confirmed_at: nextConfirmedAt
+                });
+            } catch (error) {
+                console.error(
+                    'Disclosure confirmation AlimTalk notification failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
         }
 
         return html(renderPage('수령 확인 완료', '정보공개서 수령 확인이 기록되었습니다. 감사합니다.'));

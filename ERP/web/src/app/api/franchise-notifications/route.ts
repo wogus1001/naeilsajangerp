@@ -1,4 +1,5 @@
 import { getAuthenticatedRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
+import { notifyAlimtalkFranchiseNotificationCandidates } from '@/lib/alimtalk-event-notifications';
 import { fail, ok } from '@/lib/api-response';
 import { isPartnerVendorRole } from '@/lib/franchise-location-access';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
@@ -269,14 +270,23 @@ export async function GET(request: Request) {
             fetchVendorContractsForNotifications(companyId, requesterIsAdmin),
             fetchVendorContractNotificationRecipients(companyId, requester.id, requesterIsAdmin)
         ]);
-        await syncAutomaticNotifications([
+        const notificationCandidates = [
             ...buildAutomaticFranchiseNotifications(leads),
             ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
-        ], {
+        ];
+        await syncAutomaticNotifications(notificationCandidates, {
             companyId,
             requesterId: requester.id,
             requesterIsAdmin
         });
+        try {
+            await notifyAlimtalkFranchiseNotificationCandidates(supabaseAdmin, notificationCandidates);
+        } catch (error) {
+            console.error(
+                'Franchise notification AlimTalk dispatch failed:',
+                error instanceof Error ? error.message : String(error)
+            );
+        }
 
         let query = supabaseAdmin
             .from('franchise_notifications')
