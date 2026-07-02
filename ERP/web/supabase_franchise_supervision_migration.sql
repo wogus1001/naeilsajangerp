@@ -32,7 +32,7 @@ create table if not exists public.franchise_store_visits (
   location_id uuid references public.franchise_locations(id) on delete cascade not null,
   supervisor_profile_id uuid references public.profiles(id) on delete cascade not null,
   assignment_id uuid references public.franchise_supervisor_assignments(id) on delete set null,
-  schedule_id uuid references public.schedules(id) on delete set null,
+  schedule_id text references public.schedules(id) on delete set null,
   visit_date date not null,
   purpose text default '정기점검' not null,
   status text default '예정' not null,
