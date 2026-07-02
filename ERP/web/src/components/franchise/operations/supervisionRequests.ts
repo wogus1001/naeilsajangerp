@@ -1,0 +1,222 @@
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import {
+    buildDefaultInspectionItems,
+    type SupervisionInspectionItem,
+    type SupervisionPhotoAttachment
+} from '@/lib/franchise-supervision';
+import type {
+    SupervisionPayload,
+    SupervisionScope
+} from './supervisionTypes';
+
+type SaveAssignmentInput = SupervisionScope & {
+    readonly companyId: string;
+    readonly locationId: string;
+    readonly supervisorProfileId: string;
+    readonly regionScope: string;
+    readonly memo: string;
+    readonly assignedAt: string;
+};
+
+type SaveVisitInput = SupervisionScope & {
+    readonly companyId: string;
+    readonly locationId: string;
+    readonly supervisorProfileId: string;
+    readonly visitDate: string;
+    readonly purpose: string;
+    readonly memo: string;
+};
+
+type SaveReportInput = SupervisionScope & {
+    readonly companyId: string;
+    readonly reportId?: string;
+    readonly visitId: string;
+    readonly event: 'saveDraft' | 'submit' | 'approve' | 'reject';
+    readonly inspectionItems: readonly SupervisionInspectionItem[];
+    readonly specialNote: string;
+    readonly rejectReason: string;
+    readonly photoFiles: readonly File[];
+    readonly existingAttachments: readonly SupervisionPhotoAttachment[];
+};
+
+type UpdateActionInput = SupervisionScope & {
+    readonly companyId: string;
+    readonly id: string;
+    readonly status: string;
+    readonly memo: string;
+};
+
+async function readJsonSafely(response: Response): Promise<unknown> {
+    try {
+        return await response.json();
+    } catch (error) {
+        if (error instanceof SyntaxError) return {};
+        throw error;
+    }
+}
+
+async function readPayload(response: Response): Promise<unknown> {
+    const payload = await readJsonSafely(response);
+    if (!response.ok) throw new Error(readApiError(payload));
+    return payload;
+}
+
+function buildEmptyPayload(): SupervisionPayload {
+    return {
+        schemaReady: false,
+        canManage: false,
+        companyId: '',
+        locations: [],
+        supervisors: [],
+        assignments: [],
+        visits: [],
+        reports: [],
+        correctiveActions: [],
+        summary: {
+            todayVisitCount: 0,
+            weekVisitCount: 0,
+            missingReportCount: 0,
+            pendingApprovalCount: 0,
+            activeCorrectiveActionCount: 0
+        }
+    };
+}
+
+function safeFileName(fileName: string): string {
+    return fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'photo';
+}
+
+export async function fetchSupervisionData(scope: SupervisionScope): Promise<SupervisionPayload> {
+    const params = new URLSearchParams({ requesterId: scope.userId });
+    if (scope.companyName) params.set('company', scope.companyName);
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/franchise-supervision?${params.toString()}`, { cache: 'no-store', headers });
+    const payload = await readPayload(response);
+    return { ...buildEmptyPayload(), ...unwrapApiData<Partial<SupervisionPayload>>(payload) };
+}
+
+export async function saveSupervisionAssignment(input: SaveAssignmentInput): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/assignments', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName,
+            locationId: input.locationId,
+            supervisorProfileId: input.supervisorProfileId,
+            regionScope: input.regionScope,
+            memo: input.memo,
+            assignedAt: input.assignedAt
+        })
+    });
+    await readPayload(response);
+}
+
+export async function saveSupervisionVisit(input: SaveVisitInput): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/visits', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName,
+            locationId: input.locationId,
+            supervisorProfileId: input.supervisorProfileId,
+            visitDate: input.visitDate,
+            purpose: input.purpose,
+            memo: input.memo
+        })
+    });
+    await readPayload(response);
+}
+
+async function uploadReportPhotos(input: {
+    readonly companyId: string;
+    readonly reportId: string;
+    readonly files: readonly File[];
+}): Promise<readonly SupervisionPhotoAttachment[]> {
+    const uploaded: SupervisionPhotoAttachment[] = [];
+    for (const file of input.files) {
+        const formData = new FormData();
+        const path = `franchise-supervision/${input.companyId}/${input.reportId}/${Date.now()}-${safeFileName(file.name)}`;
+        formData.set('bucket', 'property-documents');
+        formData.set('companyId', input.companyId);
+        formData.set('path', path);
+        formData.set('file', file);
+        const headers = await getApiAuthHeaders();
+        const response = await fetch('/api/upload', { method: 'POST', headers, body: formData });
+        const payload = await readPayload(response);
+        const data = unwrapApiData<{ readonly path?: string }>(payload);
+        uploaded.push({
+            name: file.name,
+            path: data.path || path,
+            size: file.size,
+            contentType: file.type
+        });
+    }
+    return uploaded;
+}
+
+export async function saveSupervisionReport(input: SaveReportInput): Promise<void> {
+    const method = input.reportId ? 'PATCH' : 'POST';
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/reports', {
+        method,
+        headers,
+        body: JSON.stringify({
+            id: input.reportId,
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName,
+            visitId: input.visitId,
+            event: input.event,
+            inspectionItems: input.inspectionItems.length > 0 ? input.inspectionItems : buildDefaultInspectionItems(),
+            specialNote: input.specialNote,
+            rejectReason: input.rejectReason,
+            photoAttachments: input.existingAttachments
+        })
+    });
+    const payload = await readPayload(response);
+    const saved = unwrapApiData<{ readonly id?: string }>(payload);
+    const reportId = input.reportId || saved.id || '';
+    if (!reportId || input.photoFiles.length === 0) return;
+
+    const attachments = [
+        ...input.existingAttachments,
+        ...await uploadReportPhotos({ companyId: input.companyId, reportId, files: input.photoFiles })
+    ];
+    const patchResponse = await fetch('/api/franchise-supervision/reports', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+            id: reportId,
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName,
+            event: input.event,
+            photoAttachments: attachments
+        })
+    });
+    await readPayload(patchResponse);
+}
+
+export async function updateCorrectiveAction(input: UpdateActionInput): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/actions', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName,
+            id: input.id,
+            status: input.status,
+            memo: input.memo
+        })
+    });
+    await readPayload(response);
+}

@@ -1,13 +1,14 @@
 "use client";
 
 import React from 'react';
-import { BarChart3, List, PencilLine, Plus } from 'lucide-react';
+import { BarChart3, ClipboardCheck, List, PencilLine, Plus } from 'lucide-react';
 import { ExportActions } from '@/components/franchise/ExportActions';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { FranchiseOperationDashboard } from '@/components/franchise/operations/FranchiseOperationDashboard';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
+import { SupervisionPanel } from '@/components/franchise/operations/SupervisionPanel';
 import type { FranchiseLocation } from '@/components/franchise/operations/types';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
 import {
@@ -22,7 +23,7 @@ import {
 } from '@/utils/tableExport';
 import styles from '../franchise-leads/page.module.css';
 
-type MasterView = 'dashboard' | 'list' | 'form';
+type MasterView = 'dashboard' | 'supervision' | 'list' | 'form';
 
 const MASTER_VIEWS: readonly {
     readonly key: MasterView;
@@ -30,6 +31,7 @@ const MASTER_VIEWS: readonly {
     readonly icon: React.ComponentType<{ readonly size?: number }>;
 }[] = [
     { key: 'dashboard', label: '대시보드', icon: BarChart3 },
+    { key: 'supervision', label: '슈퍼바이징', icon: ClipboardCheck },
     { key: 'list', label: '가맹점 목록', icon: List },
     { key: 'form', label: '가맹점 등록', icon: PencilLine }
 ];
@@ -139,6 +141,10 @@ export default function FranchiseOperationsPage() {
                             onDelete={(location) => void controller.deleteLocation(location)}
                             onStatusChange={(location, status) => void controller.updateLocationStatus(location, status)}
                         />
+                    ) : null}
+
+                    {masterView === 'supervision' ? (
+                        <SupervisionPanel userId={controller.userId} companyName={controller.companyName} />
                     ) : null}
 
                     {masterView === 'form' ? (

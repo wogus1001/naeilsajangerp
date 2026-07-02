@@ -76,11 +76,18 @@ supabase_franchise_vendor_contracts_migration.sql
 supabase_franchise_vendor_contract_events_migration.sql
 supabase_franchise_vendors_migration.sql
 supabase_franchise_alimtalk_operations_migration.sql
+supabase_franchise_supervision_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, 또는 `alimtalk_templates` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, 또는 `franchise_supervisor_assignments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+## Franchise Supervision Setup
+
+Run `supabase_franchise_supervision_migration.sql` before enabling the `가맹 운영 > 슈퍼바이징` tab in production. The migration creates supervisor assignments, store visits, inspection reports, and corrective actions. The tab uses existing `franchise_locations`, `profiles`, and company-scoped access rules; `admin` and `manager` can manage company-wide supervision, while ordinary staff/SV users work around assigned stores and their own reports.
+
+The MVP supports active SV assignment per operating store, visit scheduling with a lightweight `schedules` sync, inspection report draft/submission, manager approval/rejection, image metadata upload under `property-documents/franchise-supervision/<company_id>/<report_id>/...`, and corrective-action creation for `개선필요` inspection items. Full calendar integration, AlimTalk send hooks, PDF report output, and report template builder remain later phases.
 
 ## Franchise Vendor Contract Vault Setup
 

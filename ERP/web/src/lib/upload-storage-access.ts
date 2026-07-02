@@ -75,6 +75,7 @@ export async function canUploadToTarget(
             return canUploadToLeadTarget(supabaseAdmin, requester, target);
         case 'disclosure':
         case 'vendorContract':
+        case 'supervisionReport':
             return canAccessCompanyScope(requester, target.companyId);
     }
 }
