@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-02
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 입점요청/예비 창업자 등록 진행현황 이동 커밋 예정
+  - 주요 기능: 입점요청과 예비 창업자 등록 저장 성공 후 작성 페이지에 머물지 않고 진행현황으로 이동한다. 입점요청은 `?tab=properties`, 예비 창업자 등록은 `?tab=matchingRequests`로 이동해 해당 유형 탭을 바로 연다.
+  - 신규 SQL: 없음
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright mock 세션에서 입점요청/예비 창업자 등록 저장 후 진행현황 각 탭 이동을 확인했다.
+  - 남은 이슈: 운영 배포 후 실계정에서 두 등록 흐름의 저장 후 이동을 live QA한다.
+- 2026-07-02
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 입점요청/예비 창업자 등록 Solapi 문자 알림 커밋 예정
   - 주요 기능: 입점요청 등록 성공 시 `[ERP] 입점요청 등록`, 예비 창업자 등록 성공 시 `[ERP] 예비창업자 등록` 문자를 Solapi로 발송한다. 수신 번호는 `FRANCHISE_INTAKE_ALERT_PHONES`를 우선 사용하고, 값이 없으면 `SIGNUP_ADMIN_ALERT_PHONES`로 fallback 한다. 문자 발송 실패는 서버 로그만 남기고 등록 흐름은 성공 처리한다.
   - 신규 SQL: 없음

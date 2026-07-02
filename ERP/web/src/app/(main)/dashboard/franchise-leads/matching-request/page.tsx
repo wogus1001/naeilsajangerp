@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Send, Users } from 'lucide-react';
 import {
     MATCHING_REQUEST_INITIAL_FORM,
@@ -93,6 +94,7 @@ function renderField(
 }
 
 export default function FranchiseMatchingRequestPage() {
+    const router = useRouter();
     const [form, setForm] = React.useState<MatchingRequestForm>(MATCHING_REQUEST_INITIAL_FORM);
     const [message, setMessage] = React.useState<SaveMessage | null>(null);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -132,6 +134,7 @@ export default function FranchiseMatchingRequestPage() {
 
             setForm(MATCHING_REQUEST_INITIAL_FORM);
             setMessage({ kind: 'success', text: '예비 창업자 정보가 모객 DB에 등록됐습니다.' });
+            router.replace('/dashboard/franchise-leads/work-intake?tab=matchingRequests');
         } catch (error) {
             setMessage({
                 kind: 'error',

@@ -79,6 +79,10 @@ export default function FranchiseWorkIntakePage() {
     }, []);
 
     React.useEffect(() => {
+        const tab = new URLSearchParams(window.location.search).get('tab');
+        if (tab === 'matchingRequests' || tab === 'properties') {
+            setActiveTab(tab);
+        }
         void loadData();
     }, [loadData]);
 

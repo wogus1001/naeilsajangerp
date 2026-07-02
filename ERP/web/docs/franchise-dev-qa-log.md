@@ -992,3 +992,9 @@
 - 신규 SQL: 없음.
 - 검증: `npx tsx --test src/lib/solapi-notifications.test.mts` 9건 통과. Solapi 전화번호 정규화, 회원가입 문구, 입점요청/예비 창업자 등록 문구, `FRANCHISE_INTAKE_ALERT_PHONES` 파싱을 확인했다. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 남은 live QA: 운영 Vercel Production env에 `FRANCHISE_INTAKE_ALERT_PHONES`와 Solapi 필수 키 이름이 존재함을 확인했다. 배포 후 실서버에서 입점요청/예비 창업자 등록을 1건씩 생성해 실제 수신 번호 문자 도착을 확인한다.
+
+## 2026-07-02 입점요청/예비 창업자 등록 진행현황 이동 QA
+
+- 범위: 입점요청과 예비 창업자 등록 저장 성공 후 작성 폼에 남지 않고 진행현황 화면으로 이동한다. 입점요청은 `?tab=properties`, 예비 창업자 등록은 `?tab=matchingRequests`를 붙여 방금 등록한 유형의 탭이 바로 열리게 했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 로컬 dev 서버 `http://127.0.0.1:3000`에서 Playwright mock 세션으로 입점요청 등록 후 `진행현황 > 입점 요청` 탭 이동, 예비 창업자 등록 후 `진행현황 > 예비 창업자 등록` 탭 이동을 확인했다.

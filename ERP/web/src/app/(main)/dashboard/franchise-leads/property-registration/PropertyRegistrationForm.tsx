@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Building2, Save } from 'lucide-react';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import {
@@ -33,6 +34,7 @@ type SaveMessage = {
 };
 
 export function PropertyRegistrationForm() {
+    const router = useRouter();
     const [form, setForm] = React.useState<PropertyRegistrationFormState>(PROPERTY_REGISTRATION_INITIAL_FORM);
     const [pendingFiles, setPendingFiles] = React.useState<readonly File[]>([]);
     const [message, setMessage] = React.useState<SaveMessage | null>(null);
@@ -136,6 +138,7 @@ export function PropertyRegistrationForm() {
             setForm(PROPERTY_REGISTRATION_INITIAL_FORM);
             setPendingFiles([]);
             setMessage({ kind: 'success', text: '입점 요청 DB에 저장했습니다.' });
+            router.replace('/dashboard/franchise-leads/work-intake?tab=properties');
         } catch (error) {
             setMessage({
                 kind: 'error',
