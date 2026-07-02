@@ -179,6 +179,17 @@ YYYY-MM-DD
 
 - 2026-07-02
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 입점요청/예비 창업자 등록 Solapi 문자 알림 커밋 예정
+  - 주요 기능: 입점요청 등록 성공 시 `[ERP] 입점요청 등록`, 예비 창업자 등록 성공 시 `[ERP] 예비창업자 등록` 문자를 Solapi로 발송한다. 수신 번호는 `FRANCHISE_INTAKE_ALERT_PHONES`를 우선 사용하고, 값이 없으면 `SIGNUP_ADMIN_ALERT_PHONES`로 fallback 한다. 문자 발송 실패는 서버 로그만 남기고 등록 흐름은 성공 처리한다.
+  - 신규 SQL: 없음
+  - 운영 env: `SOLAPI_SMS_ENABLED=true`, `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_SENDER_PHONE`, `FRANCHISE_INTAKE_ALERT_PHONES` 필요. 인입 알림 전용 수신 번호를 분리하지 않을 경우 기존 `SIGNUP_ADMIN_ALERT_PHONES`를 사용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: 운영 Vercel Production env 이름 존재 확인. `npx tsx --test src/lib/solapi-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 남은 이슈: 운영 Vercel Production env 이름 존재를 확인했다. 배포 후 실서버에서 입점요청/예비 창업자 등록을 1건씩 생성해 실제 문자 수신을 확인한다.
+- 2026-07-02
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 진행현황 확인/수정 첨부 열람 보강 커밋 예정
   - 주요 기능: 입점요청 등록에서 `현재 상태=영업중`일 때 `현재 영업중 상호/매장명`을 저장한다. 진행현황의 입점요청/예비 창업자 등록 액션은 `확인/수정`으로 통일했고, 모달 상단에서 등록 요약과 첨부 자료를 확인한 뒤 기존 수정 폼을 사용할 수 있게 했다. 신규 첨부는 Storage 업로드 후 이미지 썸네일/다운로드, PDF/문서 다운로드를 제공하며, URL 없이 파일명/용량만 남은 과거 첨부는 `재첨부 필요`로 안내한다.
   - 신규 SQL: 없음. 기존 `properties.data` JSON과 `/api/upload` Storage 경로를 사용한다.

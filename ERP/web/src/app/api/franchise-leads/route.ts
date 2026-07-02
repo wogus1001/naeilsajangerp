@@ -28,6 +28,7 @@ import {
     getDisclosureEligibility,
     isContractLockedLeadStatus
 } from '@/lib/franchise-disclosure-deliveries';
+import { notifyFranchiseIntakeRegistration } from '@/lib/solapi-notifications';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
@@ -237,6 +238,28 @@ function isPendingLeadRegistrationRequest(lead: TransformedLead): boolean {
 
 function isMatchingRequestLead(lead: { readonly source?: string | null }): boolean {
     return lead.source === FRANCHISE_MATCHING_REQUEST_SOURCE;
+}
+
+function isFranchiseMatchingRequestBody(body: Record<string, unknown>): boolean {
+    return body.source === FRANCHISE_MATCHING_REQUEST_SOURCE || body.sourceType === 'franchise_matching_request';
+}
+
+async function notifyMatchingRequestRegistration(body: Record<string, unknown>): Promise<void> {
+    try {
+        await notifyFranchiseIntakeRegistration({
+            kind: 'matchingRequest',
+            companyName: cleanString(body.companyName),
+            title: cleanString(body.name) || cleanString(body.desiredBrand) || cleanString(body.desiredCategory),
+            contact: cleanString(body.mobile),
+            region: cleanString(body.desiredRegion)
+        });
+    } catch (notificationError) {
+        if (notificationError instanceof Error) {
+            console.error('Franchise matching request SMS notification failed:', notificationError.message);
+        } else {
+            console.error('Franchise matching request SMS notification failed:', String(notificationError));
+        }
+    }
 }
 
 function matchesLeadSearch(lead: TransformedLead, terms: string[]) {
@@ -680,6 +703,9 @@ export async function POST(request: Request) {
                     .single();
 
                 if (updateError) throw updateError;
+                if (isFranchiseMatchingRequestBody(body)) {
+                    await notifyMatchingRequestRegistration(body);
+                }
                 return ok({ lead: transformLead(updated), deduplicated: true });
             }
         }
@@ -691,6 +717,9 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+        if (isFranchiseMatchingRequestBody(body)) {
+            await notifyMatchingRequestRegistration(body);
+        }
         return ok({ lead: transformLead(inserted), deduplicated: false }, 201);
     } catch (error) {
         if (!(error instanceof Error)) {

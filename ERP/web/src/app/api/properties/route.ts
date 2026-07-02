@@ -11,6 +11,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { notifyFranchiseIntakeRegistration } from '@/lib/solapi-notifications';
 import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
@@ -70,6 +71,10 @@ function canAccessProperty(
 
 function isWorkIntakeProperty(property: { operation_type?: string | null }): boolean {
     return property.operation_type === '물건등록';
+}
+
+function isFranchisePropertyRegistration(operationType: unknown, data: Record<string, unknown>): boolean {
+    return operationType === '물건등록' && data.sourceType === 'franchise_property_registration';
 }
 
 function requesterFallbackFromBody(body: unknown): string | null {
@@ -409,6 +414,24 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+
+        if (isFranchisePropertyRegistration(operationType, rest)) {
+            try {
+                await notifyFranchiseIntakeRegistration({
+                    kind: 'property',
+                    companyName: typeof companyName === 'string' ? companyName : null,
+                    title: typeof name === 'string' ? name : null,
+                    contact: null,
+                    region: typeof rest.propertyRegion === 'string' ? rest.propertyRegion : typeof address === 'string' ? address : null
+                });
+            } catch (notificationError) {
+                if (notificationError instanceof Error) {
+                    console.error('Franchise property intake SMS notification failed:', notificationError.message);
+                } else {
+                    console.error('Franchise property intake SMS notification failed:', String(notificationError));
+                }
+            }
+        }
 
         return ok(transformProperty(inserted), 201);
 

@@ -983,3 +983,12 @@
 - 신규 SQL: 없음. 기존 `properties.data` JSON과 Storage 업로드 경로를 사용한다.
 - 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/lib/franchise-property-registration-uploads.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-file-attachments.test.mts 'src/app/(main)/dashboard/franchise-leads/work-intake/requests.test.mts'` 14건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. Playwright mock 세션에서 `/dashboard/franchise-leads/work-intake` 확인/수정 모달을 열고 새로 선택한 PDF의 `다운로드` 버튼이 visible 상태이며 `blob:` 링크와 파일명 download 속성을 갖는 것을 확인했다.
 - 남은 live QA: 운영 배포 후 실계정으로 입점요청 `영업중` 매장명 저장/재조회, 신규 이미지 썸네일, PDF 다운로드, URL 없는 과거 첨부의 `재첨부 필요` 안내, 예비 창업자 등록 `확인/수정` 제목과 기존 권한 정책 유지 여부를 확인한다.
+
+## 2026-07-02 입점요청/예비 창업자 등록 Solapi 문자 알림 QA
+
+- 범위: 입점요청 저장 성공 후 `[ERP] 입점요청 등록` 문자를, 예비 창업자 등록 저장 성공 후 `[ERP] 예비창업자 등록` 문자를 Solapi로 발송한다. 예비 창업자 등록은 동일 연락처 dedupe로 기존 모객 DB가 업데이트되는 경우에도 등록 시도 알림을 보낸다.
+- 운영 env: `SOLAPI_SMS_ENABLED=true`, `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_SENDER_PHONE`이 필요하다. 인입 알림 전용 수신 번호는 `FRANCHISE_INTAKE_ALERT_PHONES`에 쉼표 구분으로 등록한다. 이 값이 비어 있으면 기존 `SIGNUP_ADMIN_ALERT_PHONES`로 fallback 한다.
+- 안정성: 문자 발송은 DB 저장 성공 후 별도 `try/catch`에서 처리하며, Solapi 설정 누락/실패는 서버 로그만 남기고 입점요청/예비 창업자 등록 응답을 실패시키지 않는다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/solapi-notifications.test.mts` 9건 통과. Solapi 전화번호 정규화, 회원가입 문구, 입점요청/예비 창업자 등록 문구, `FRANCHISE_INTAKE_ALERT_PHONES` 파싱을 확인했다. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: 운영 Vercel Production env에 `FRANCHISE_INTAKE_ALERT_PHONES`와 Solapi 필수 키 이름이 존재함을 확인했다. 배포 후 실서버에서 입점요청/예비 창업자 등록을 1건씩 생성해 실제 수신 번호 문자 도착을 확인한다.
