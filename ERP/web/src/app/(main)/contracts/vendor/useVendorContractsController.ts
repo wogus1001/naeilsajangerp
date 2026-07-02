@@ -32,7 +32,12 @@ import {
     type VendorContractQueueKey,
 } from './vendorContractsModel';
 
-export function useVendorContractsController() {
+type UseVendorContractsControllerOptions = {
+    readonly loadOptions?: boolean;
+};
+
+export function useVendorContractsController(options: UseVendorContractsControllerOptions = {}) {
+    const shouldLoadOptions = options.loadOptions !== false;
     const [contracts, setContracts] = React.useState<readonly VendorContract[]>([]);
     const [electronicContracts, setElectronicContracts] = React.useState<readonly ElectronicContractOption[]>([]);
     const [users, setUsers] = React.useState<readonly UserOption[]>([]);
@@ -121,8 +126,9 @@ export function useVendorContractsController() {
     }, [loadContracts]);
 
     React.useEffect(() => {
+        if (!shouldLoadOptions) return;
         void loadOptions();
-    }, [loadOptions]);
+    }, [loadOptions, shouldLoadOptions]);
 
     React.useEffect(() => {
         if (contracts.length === 0 || selectedContractId) return;
@@ -133,10 +139,10 @@ export function useVendorContractsController() {
         }
     }, [contracts, loadEvents, selectedContractId]);
 
-    async function saveContract() {
+    async function saveContract(): Promise<boolean> {
         if (!companyId) {
             setError('회사 정보를 확인할 수 없습니다.');
-            return;
+            return false;
         }
         setSaving(true);
         setError('');
@@ -146,8 +152,10 @@ export function useVendorContractsController() {
             setMessage(result.message);
             resetForm();
             await loadContracts();
+            return true;
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : '업체 계약을 저장하지 못했습니다.');
+            return false;
         } finally {
             setSaving(false);
         }
@@ -224,6 +232,7 @@ export function useVendorContractsController() {
     return {
         activeQueue,
         category,
+        contracts,
         deleteContract,
         electronicContracts,
         error,

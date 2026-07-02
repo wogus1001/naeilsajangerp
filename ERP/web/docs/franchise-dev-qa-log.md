@@ -945,3 +945,10 @@
 - 코드리뷰 보정: 파일 input이 공통 `.formGrid input` 스타일을 받아 페이지 전체 가로 overflow를 만드는 문제를 `input:not([type="file"])`로 수정했다. 업체 관리 SQL 미적용 시 계약함 업체 선택이 조용히 빈 목록이 되지 않도록 별도 안내를 추가했다. 계약 저장 API는 `vendor_id`가 있을 때 해당 업체가 같은 회사인지 확인한다.
 - 신규 SQL: `supabase_franchise_vendor_contracts_migration.sql`에 `vendor_id` 컬럼, 인덱스, `franchise_vendors` FK를 추가했다. `supabase_seed_franchise_vendor_contract_samples.sql`은 샘플 업체 마스터를 먼저 생성하고 계약 샘플에 `vendor_id`를 연결하도록 보강했다. 사용자 확인 기준 Supabase SQL Editor 등록 완료.
 - 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false` 통과. 남은 검증은 lint/build/브라우저 QA다.
+
+## 2026-07-02 업체 계약 등록 페이지 분리 QA
+
+- 범위: `/contracts/vendor`의 좌측 상시 계약 등록 폼을 제거하고, 헤더 `계약 등록` 버튼을 통해 `/contracts/vendor/register` 전용 페이지에서 신규 계약을 등록하도록 변경했다. 계약 목록의 `수정`은 같은 등록 페이지에 `contractId` query로 진입해 기존 값을 불러온다.
+- UI: 업체 계약함 목록 화면은 검색, 구분/상태 필터, 만료 업무 큐, 계약 목록, 상세 패널 중심으로 정리했다. 등록/수정 폼은 별도 페이지에서 업체 마스터 선택, 직접 입력, 전자계약 연결, 파일 업로드, 담당자/상태/메모 입력을 그대로 제공한다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3120`에서 Playwright mock 세션으로 `/contracts/vendor` 목록 화면에 상시 등록 폼이 남지 않는 것, `계약 등록` 버튼의 `/contracts/vendor/register` 이동, `목록으로` 복귀, 목록 `수정`의 `contractId` 기반 수정 페이지 이동과 기존 계약명 로딩, desktop horizontal overflow 0건을 확인했다.

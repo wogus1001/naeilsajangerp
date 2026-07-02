@@ -1,16 +1,19 @@
 "use client";
-import { formFromContract } from './vendorContractsModel';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import { useVendorContractsController } from './useVendorContractsController';
 import { VendorContractDetailPanel } from './VendorContractDetailPanel';
 import { VendorContractFilters } from './VendorContractFilters';
-import { VendorContractFormPanel } from './VendorContractFormPanel';
 import { VendorContractQueue } from './VendorContractQueue';
 import { VendorContractsTable } from './VendorContractsTable';
 import alertStyles from './vendorContractAlerts.module.css';
 import styles from './vendorContracts.module.css';
 
 export default function VendorContractsPage() {
-    const controller = useVendorContractsController();
+    const router = useRouter();
+    const controller = useVendorContractsController({ loadOptions: false });
 
     return (
         <main className={styles.container}>
@@ -19,10 +22,15 @@ export default function VendorContractsPage() {
                     <h1 className={styles.title}>업체 계약함</h1>
                     <p className={styles.description}>본사와 외부 업체 간 계약 원본, 담당자, 만료일을 회사 단위로 관리합니다.</p>
                 </div>
+                <div className={styles.headerActions}>
+                    <Link className={styles.primaryButton} href="/contracts/vendor/register">
+                        <Plus size={16} />
+                        계약 등록
+                    </Link>
+                </div>
             </section>
 
             {!controller.schemaReady && <div className={alertStyles.notice}>업체 계약함 SQL 적용 후 사용할 수 있습니다.</div>}
-            {!controller.vendorSchemaReady && <div className={alertStyles.notice}>업체 관리 SQL 적용 후 계약 등록에서 업체 선택을 사용할 수 있습니다.</div>}
             {controller.error && <div className={alertStyles.error}>{controller.error}</div>}
             {controller.message && <div className={alertStyles.message}>{controller.message}</div>}
 
@@ -41,22 +49,7 @@ export default function VendorContractsPage() {
                 onSelect={controller.setActiveQueue}
             />
 
-            <section className={styles.grid}>
-                <div className={styles.formColumn}>
-                    <VendorContractFormPanel
-                        electronicContracts={controller.electronicContracts}
-                        form={controller.form}
-                        requesterId={controller.requesterId}
-                        saving={controller.saving}
-                        selectedFile={controller.selectedFile}
-                        users={controller.users}
-                        vendorMasters={controller.vendorMasters}
-                        onFileChange={controller.setSelectedFile}
-                        onFormChange={controller.setForm}
-                        onReset={controller.resetForm}
-                        onSubmit={() => void controller.saveContract()}
-                    />
-                </div>
+            <section className={styles.listLayout}>
                 <div className={styles.workspaceColumn}>
                     <VendorContractsTable
                         contracts={controller.visibleContracts}
@@ -64,10 +57,7 @@ export default function VendorContractsPage() {
                         saving={controller.saving}
                         onDelete={(contractId) => void controller.deleteContract(contractId)}
                         onDetail={controller.selectContract}
-                        onEdit={(contract) => {
-                            controller.setForm(formFromContract(contract));
-                            controller.setSelectedFile(null);
-                        }}
+                        onEdit={(contract) => router.push(`/contracts/vendor/register?contractId=${encodeURIComponent(contract.id)}`)}
                         onOpenUpload={(contractId) => void controller.openUploadedContract(contractId)}
                     />
                     {controller.selectedContract && (

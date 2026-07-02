@@ -19,6 +19,13 @@
     gap: 16px;
 }
 
+.headerActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .title {
     margin: 0;
     color: #191f28;
@@ -39,6 +46,18 @@
     grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
     gap: 16px;
     align-items: start;
+}
+
+.listLayout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.formPage {
+    width: 100%;
+    max-width: 760px;
 }
 
 .formColumn,
@@ -117,6 +136,7 @@
     padding: 0 14px;
     font-size: 14px;
     font-weight: 600;
+    text-decoration: none;
     cursor: pointer;
 }
 

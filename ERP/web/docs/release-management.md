@@ -177,6 +177,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-02
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `feat(franchise): split vendor contract registration flow`
+  - 주요 기능: `/contracts/vendor` 업체 계약함의 좌측 상시 등록 폼을 제거하고, 헤더 `계약 등록` 버튼으로 `/contracts/vendor/register` 전용 등록 페이지에 진입하도록 변경했다. 계약 목록의 `수정`은 동일 페이지에 `contractId` query로 진입해 기존 계약 값을 불러온다.
+  - 신규 SQL: 없음
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3120`에서 Playwright mock 세션으로 목록 화면 상시 등록 폼 제거, `계약 등록` 버튼 이동, `목록으로` 복귀, `수정` 버튼의 `contractId` 기반 수정 페이지 이동, 기존 계약명 로딩, horizontal overflow 0건을 확인했다.
+  - 남은 이슈: 운영 배포 후 실계정에서 신규 등록, 수정 진입, 목록 복귀 동선을 확인한다.
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 업체 마스터 등록/계약 상세 배치 보정 커밋 예정
