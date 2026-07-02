@@ -88,7 +88,10 @@ async function notifyProfileRecipients(input: {
         scenarioKey: input.scenarioKey,
         sourceId: input.sourceId,
         sourceType: input.sourceType,
-        variables: input.variables
+        variables: {
+            ...input.variables,
+            담당자명: input.variables.담당자명 || recipient.name || '담당자'
+        }
     })));
 }
 
@@ -126,11 +129,17 @@ function scenarioForCandidate(candidate: FranchiseNotificationCandidate): Alimta
     return null;
 }
 
-function variablesForCandidate(candidate: FranchiseNotificationCandidate, companyName: string): Record<string, string> {
+export function buildAlimtalkVariablesForCandidate(
+    candidate: FranchiseNotificationCandidate,
+    companyName: string
+): Record<string, string> {
     if (candidate.sourceType === 'vendor-contract-due') {
+        const remainingDays = cleanString(candidate.data.remainingDays) || '-';
         return {
             계약명: cleanString(candidate.data.contractTitle) || '업체 계약',
             만료일: formatAlimtalkDate(candidate.dueAt),
+            남은기간: remainingDays === '-' ? '-' : `D-${remainingDays}`,
+            남은일수: remainingDays,
             업체명: cleanString(candidate.data.vendorName) || '업체'
         };
     }
@@ -169,6 +178,6 @@ export async function notifyAlimtalkFranchiseNotificationCandidates(
         sourceId: item.candidate.sourceId,
         sourceType: item.candidate.sourceType,
         supabaseAdmin,
-        variables: variablesForCandidate(item.candidate, companyNames.get(item.candidate.companyId) || '')
+        variables: buildAlimtalkVariablesForCandidate(item.candidate, companyNames.get(item.candidate.companyId) || '')
     })));
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { buildAlimtalkVariablesForCandidate } from './alimtalk-event-notifications.js';
 import { buildLeadDisclosureSummary } from './franchise-lead-disclosure-summary.js';
 import { buildAutomaticFranchiseNotifications } from './franchise-notifications.js';
 import { buildVendorContractNotifications } from './franchise-vendor-contract-notifications.js';
@@ -101,4 +102,29 @@ test('buildVendorContractNotifications skips terminal contracts and non-reminder
     ], new Date('2026-07-01T09:00:00+09:00'));
 
     assert.equal(notifications.length, 0);
+});
+
+test('buildAlimtalkVariablesForCandidate maps vendor contract due template variables', () => {
+    const [notification] = buildVendorContractNotifications([
+        {
+            companyId: 'company-1',
+            contractEndDate: '2026-07-08',
+            contractTitle: '식자재 공급 계약',
+            id: 'vendor-contract-1',
+            ownerProfileId: 'owner-1',
+            status: 'active',
+            vendorName: '내일식자재'
+        }
+    ], [
+        { companyId: 'company-1', profileId: 'manager-1' }
+    ], new Date('2026-07-01T09:00:00+09:00'));
+
+    assert.ok(notification);
+    assert.deepEqual(buildAlimtalkVariablesForCandidate(notification, '내일사장'), {
+        계약명: '식자재 공급 계약',
+        만료일: '2026. 07. 08.',
+        남은기간: 'D-7',
+        남은일수: '7',
+        업체명: '내일식자재'
+    });
 });

@@ -1005,3 +1005,11 @@
 - 동작: 각 훅은 `alimtalk_scenarios.enabled`, 템플릿 `approved/enabled`, template/channel ID, 회사별 발송 사용 여부와 월 한도, Solapi env를 확인한 뒤 발송한다. 발송 성공/실패/차단 결과는 `alimtalk_send_logs`에 남기고, 알림톡 실패는 본 업무 저장/승인/확인 흐름을 실패시키지 않는다.
 - 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
 - 검증: `npx tsx --test src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts src/lib/solapi-notifications.test.mts src/lib/franchise-notifications.test.mts` 19건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 남은 live QA는 운영 admin에서 승인 템플릿 ID, channel ID, 시나리오 ON, 회사 설정을 저장한 뒤 각 이벤트별 실발송/로그 확인이다.
+
+## 2026-07-02 업체 계약 만료 알림톡 변수 정합성 QA
+
+- 범위: 정보공개서 알림톡은 Google OAuth 인증 완료 이후로 미루고, 우선 Gmail 의존성이 없는 `vendor_contract_due` 업체 계약 만료 안내를 테스트 대상으로 분리했다.
+- 보정: 승인 템플릿의 `D-#{남은일수}` 형식과 담당자 표시를 지원하도록 업체 계약 만료 후보 변수에 `남은일수`를 추가하고, 기존 seed 호환을 위해 `남은기간`도 `D-7`/`D-30` 형태로 함께 보낸다. 수신자별 프로필 이름은 `담당자명` 변수로 발송 직전에 주입한다.
+- 테스트 조건: 계약 상태가 `terminated`, `renewed`, `archived`가 아니고 만료일이 실행일 기준 정확히 D-30 또는 D-7인 계약만 대상이다. 수신자는 계약 담당자와 회사 팀장이고, 중복 발송 방지를 위해 `contractId:vendor-contract-due:남은일수` source 기준으로 로그가 남는다.
+- 신규 SQL: 없음. 운영에서는 `/admin/alimtalk`에서 `vendor_contract_due` 템플릿을 `approved/enabled`로 저장하고 template ID, channel ID, 시나리오 ON, 회사별 발송 사용 여부를 확인한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 6건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
