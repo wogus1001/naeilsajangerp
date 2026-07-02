@@ -2,30 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     buildFranchiseIntakeSmsText,
-    buildSignupApprovalSmsText,
-    buildSignupRequestSmsText,
     getSolapiNotificationConfig,
     normalizeSolapiPhone,
     parseAlertRecipients
 } from './solapi-notifications.js';
-
-test('Given signup request details When building admin SMS Then ERP prefix is used', () => {
-    assert.equal(
-        buildSignupRequestSmsText({
-            companyName: '내일',
-            name: '김관리',
-            phone: '010-1234-5678'
-        }),
-        '[ERP] 신규 회원가입 요청: 내일 / 김관리 / 01012345678. 관리자 화면에서 승인 여부를 확인해주세요.'
-    );
-});
-
-test('Given approval success When building user SMS Then ERP prefix is used', () => {
-    assert.equal(
-        buildSignupApprovalSmsText(),
-        '[ERP] 회원가입이 승인되었습니다. 로그인 후 서비스를 이용해주세요.'
-    );
-});
 
 test('Given property intake details When building SMS Then registration summary is included', () => {
     assert.equal(

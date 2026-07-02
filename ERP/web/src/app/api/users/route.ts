@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-signup-notifications';
-import { notifyUserOfSignupApproval } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeAdminAssignableUserRole } from '@/lib/user-role-policy';
 import {
@@ -221,17 +220,6 @@ export async function PUT(request: Request) {
                     .eq('id', targetProfile.company_id)
                     .maybeSingle<{ readonly name: string | null }>();
                 companyName = company?.name || '';
-            }
-
-            try {
-                await notifyUserOfSignupApproval({
-                    phone: targetProfile.phone_normalized || targetProfile.phone
-                });
-            } catch (error) {
-                console.error(
-                    'Signup approval SMS notification failed:',
-                    error instanceof Error ? error.message : String(error)
-                );
             }
 
             try {

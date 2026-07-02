@@ -1,6 +1,5 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-signup-notifications';
-import { notifyUserOfSignupApproval } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isBrandStaffUserRole } from '@/lib/user-role-policy';
 import { NextResponse } from 'next/server';
@@ -156,17 +155,6 @@ export async function PUT(request: Request) {
                     .eq('id', targetUser.company_id)
                     .maybeSingle<{ readonly name: string | null }>();
                 companyName = company?.name || '';
-            }
-
-            try {
-                await notifyUserOfSignupApproval({
-                    phone: targetUser.phone_normalized || targetUser.phone
-                });
-            } catch (error) {
-                console.error(
-                    'Staff approval SMS notification failed:',
-                    error instanceof Error ? error.message : String(error)
-                );
             }
 
             try {

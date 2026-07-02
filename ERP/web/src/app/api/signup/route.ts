@@ -4,7 +4,6 @@ import {
 } from '@/lib/signup-approval-policy';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 import { notifyAlimtalkSignupRequest } from '@/lib/alimtalk-signup-notifications';
-import { notifyAdminsOfSignupRequest } from '@/lib/solapi-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 function normalizePhone(value: unknown): string {
@@ -245,19 +244,6 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'SQL 등록 필요: supabase_login_id_migration.sql 적용 후 다시 가입해주세요.' }, { status: 500 });
             }
             return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
-        }
-
-        try {
-            await notifyAdminsOfSignupRequest({
-                companyName: trimmedCompanyName,
-                name,
-                phone: phoneNormalized
-            });
-        } catch (error) {
-            console.error(
-                'Signup admin SMS notification failed:',
-                error instanceof Error ? error.message : String(error)
-            );
         }
 
         try {
