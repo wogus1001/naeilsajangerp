@@ -183,9 +183,9 @@ YYYY-MM-DD
   - 주요 기능: `/contracts/vendor` 업체 계약함의 좌측 상시 등록 폼을 제거하고, 헤더 `계약 등록` 버튼으로 `/contracts/vendor/register` 전용 등록 페이지에 진입하도록 변경했다. 계약 목록의 `수정`은 동일 페이지에 `contractId` query로 진입해 기존 계약 값을 불러온다.
   - 신규 SQL: 없음
   - dev 반영: none
-  - main 반영: none
-  - 배포 URL: none
-  - 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3120`에서 Playwright mock 세션으로 목록 화면 상시 등록 폼 제거, `계약 등록` 버튼 이동, `목록으로` 복귀, `수정` 버튼의 `contractId` 기반 수정 페이지 이동, 기존 계약명 로딩, horizontal overflow 0건을 확인했다.
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: `https://www.fcerp.co.kr` / `https://fcerp.co.kr` (`dpl_CfPurRkjSkWModDNQ9KzAbSyYLVZ`, READY; source `https://naeilsajang-nqdt3v6sc-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3120`에서 Playwright mock 세션으로 목록 화면 상시 등록 폼 제거, `계약 등록` 버튼 이동, `목록으로` 복귀, `수정` 버튼의 `contractId` 기반 수정 페이지 이동, 기존 계약명 로딩, horizontal overflow 0건을 확인했다. Vercel `naeilsajang` 프로젝트의 Node.js Version을 20.x에서 24.x로 정렬했고, 재배포 전 dry-run에서 `framework=Next.js`, `.omo`, `ERP/web/.env.local`, `ERP/web/.next`, `ERP/web/node_modules`, `ERP/web/.vercel`, `ERP/web/handoff.md` 제외를 확인했다. 운영 배포 후 `npx vercel project inspect naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `Node.js Version=24.x`, `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/contracts/vendor`, `curl -I -L https://www.fcerp.co.kr/contracts/vendor/register`는 200 응답이었다.
   - 남은 이슈: 운영 배포 후 실계정에서 신규 등록, 수정 진입, 목록 복귀 동선을 확인한다.
 - 2026-07-01
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`

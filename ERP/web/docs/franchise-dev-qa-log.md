@@ -952,3 +952,9 @@
 - UI: 업체 계약함 목록 화면은 검색, 구분/상태 필터, 만료 업무 큐, 계약 목록, 상세 패널 중심으로 정리했다. 등록/수정 폼은 별도 페이지에서 업체 마스터 선택, 직접 입력, 전자계약 연결, 파일 업로드, 담당자/상태/메모 입력을 그대로 제공한다.
 - 신규 SQL: 없음.
 - 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3120`에서 Playwright mock 세션으로 `/contracts/vendor` 목록 화면에 상시 등록 폼이 남지 않는 것, `계약 등록` 버튼의 `/contracts/vendor/register` 이동, `목록으로` 복귀, 목록 `수정`의 `contractId` 기반 수정 페이지 이동과 기존 계약명 로딩, desktop horizontal overflow 0건을 확인했다.
+
+## 2026-07-02 Vercel Node 24 운영 설정 정렬 QA
+
+- 범위: 운영 도메인이 연결된 Vercel `naeilsajang` 프로젝트의 Node.js Version이 20.x로 남아 있어, 앱 `package.json`의 `engines.node=24.x`와 맞도록 프로젝트 설정을 24.x로 변경했다.
+- 배포: 설정 변경은 다음 빌드부터 적용되므로 production 재배포를 진행했다. 배포 ID는 `dpl_CfPurRkjSkWModDNQ9KzAbSyYLVZ`이고, source URL은 `https://naeilsajang-nqdt3v6sc-jaehyuns-projects-b4d20c6f.vercel.app`이다.
+- 검증: `npx vercel project inspect naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `Node.js Version=24.x`를 확인했다. `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/contracts/vendor`, `curl -I -L https://www.fcerp.co.kr/contracts/vendor/register`는 200 응답이었다.
