@@ -168,14 +168,27 @@ export default function AdminDashboardPage() {
                     <ChevronRight size={20} color="#adb5bd" />
                 </Link>
 
-                <Link href="/admin/settings" style={styles.menuItem}>
+                <Link href="/admin/company-access" style={styles.menuItem}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ ...styles.menuIconBox, backgroundColor: '#f3f0ff', color: '#7950f2' }}>
-                            <Settings size={20} />
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#eefaf7', color: '#00a36c' }}>
+                            <SlidersHorizontal size={20} />
                         </div>
                         <div style={styles.menuTexts}>
-                            <span style={styles.menuTitle}>시스템 설정</span>
-                            <span style={styles.menuDesc}>전체 공지사항, 기능 On/Off 제어</span>
+                            <span style={styles.menuTitle}>회사별 메뉴 관리</span>
+                            <span style={styles.menuDesc}>회사별 대시보드 타입과 메뉴 접근 권한 설정</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
+                <Link href="/admin/franchise-intake" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#3182f6' }}>
+                            <GitBranchPlus size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>프랜차이즈 인입 관리</span>
+                            <span style={styles.menuDesc}>입점 요청, 예비 창업자 등록, 출점 후보지 반영</span>
                         </div>
                     </div>
                     <ChevronRight size={20} color="#adb5bd" />
@@ -194,19 +207,6 @@ export default function AdminDashboardPage() {
                     <ChevronRight size={20} color="#adb5bd" />
                 </Link>
 
-                <Link href="/admin/company-access" style={styles.menuItem}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ ...styles.menuIconBox, backgroundColor: '#eefaf7', color: '#00a36c' }}>
-                            <SlidersHorizontal size={20} />
-                        </div>
-                        <div style={styles.menuTexts}>
-                            <span style={styles.menuTitle}>회사별 메뉴 관리</span>
-                            <span style={styles.menuDesc}>회사별 대시보드 타입과 메뉴 접근 권한 설정</span>
-                        </div>
-                    </div>
-                    <ChevronRight size={20} color="#adb5bd" />
-                </Link>
-
                 <Link href="/admin/alimtalk" style={styles.menuItem}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#3182f6' }}>
@@ -220,14 +220,14 @@ export default function AdminDashboardPage() {
                     <ChevronRight size={20} color="#adb5bd" />
                 </Link>
 
-                <Link href="/admin/franchise-intake" style={styles.menuItem}>
+                <Link href="/admin/settings" style={styles.menuItem}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#3182f6' }}>
-                            <GitBranchPlus size={20} />
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#f3f0ff', color: '#7950f2' }}>
+                            <Settings size={20} />
                         </div>
                         <div style={styles.menuTexts}>
-                            <span style={styles.menuTitle}>프랜차이즈 인입 관리</span>
-                            <span style={styles.menuDesc}>입점 요청, 예비 창업자 등록, 출점 후보지 반영</span>
+                            <span style={styles.menuTitle}>시스템 설정</span>
+                            <span style={styles.menuDesc}>전체 공지사항, 기능 On/Off 제어</span>
                         </div>
                     </div>
                     <ChevronRight size={20} color="#adb5bd" />
