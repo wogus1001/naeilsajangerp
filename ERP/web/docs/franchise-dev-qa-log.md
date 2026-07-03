@@ -1020,3 +1020,10 @@
 - 보정: 업체계약 담당자(`owner_profile_id`)는 해당 계약 회사의 활성 수신자 목록에 있을 때만 후보에 추가한다. 과거 테스트 계약이나 잘못된 담당자 참조가 남아 있어도 다른 프로필로 알림톡이 재생성되지 않게 했다.
 - 신규 SQL: 없음. 운영 테스트 데이터 정리는 사용자가 Supabase SQL Editor에서 직접 실행한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-notification-alimtalk-scope.test.mts src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-03 알림톡 운영 UI 단순화 QA
+
+- 범위: `/admin/alimtalk` 템플릿 관리에서 별도 `사용` 체크와 템플릿 본문 미리보기를 제거했다. 템플릿은 `상태=승인완료`로 저장하면 기존처럼 자동 사용 처리된다.
+- 시나리오 관리: 전체 발송 플로우 보드와 `시나리오 사용` 체크를 제거했다. 각 시나리오 카드의 `템플릿` 노드를 클릭하면 카카오 알림톡 미리보기 형태로 템플릿 본문과 변수 칩을 확인할 수 있게 했다. 대체 발송 저장은 기존 시나리오 enabled 상태를 보존하고 fallback 설정만 저장한다.
+- 신규 SQL: 없음.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://127.0.0.1:3010/admin/alimtalk`에서 Playwright mock API로 템플릿 관리 본문 미노출, 시나리오 관리 전체 플로우/사용 체크 미노출, 템플릿 노드 클릭 시 알림톡 미리보기와 변수 칩 노출을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.

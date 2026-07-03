@@ -158,7 +158,7 @@ export function AlimtalkOperationsPanel() {
                         </div>
                         {activeTab === 'companies' && <AlimtalkCompanyUsageSection usage={data?.companyUsage ?? []} onSave={saveAndReload} />}
                         {activeTab === 'templates' && <AlimtalkTemplatesSection templates={data?.templates ?? []} onSave={saveAndReload} />}
-                        {activeTab === 'scenarios' && <AlimtalkScenariosSection scenarios={data?.scenarios ?? []} onSave={saveAndReload} />}
+                        {activeTab === 'scenarios' && <AlimtalkScenariosSection scenarios={data?.scenarios ?? []} templates={data?.templates ?? []} onSave={saveAndReload} />}
                         {activeTab === 'logs' && <AlimtalkLogsSection logs={data?.sendLogs ?? []} />}
                     </>
                 )}

@@ -14,15 +14,13 @@ type TemplateDraft = {
     readonly templateId: string;
     readonly channelId: string;
     readonly status: string;
-    readonly enabled: boolean;
 };
 
 function initialDraft(template: AlimtalkTemplateRow): TemplateDraft {
     return {
         templateId: template.template_id,
         channelId: template.channel_id,
-        status: template.status,
-        enabled: template.enabled
+        status: template.status
     };
 }
 
@@ -52,7 +50,7 @@ export function AlimtalkTemplatesSection({ templates, onSave }: Props) {
     function updateDraft(key: string, patch: Partial<TemplateDraft>) {
         setDrafts(current => ({
             ...current,
-            [key]: { ...(current[key] || { templateId: '', channelId: '', status: 'submitted', enabled: false }), ...patch }
+            [key]: { ...(current[key] || { templateId: '', channelId: '', status: 'submitted' }), ...patch }
         }));
     }
 
@@ -66,7 +64,7 @@ export function AlimtalkTemplatesSection({ templates, onSave }: Props) {
                 templateId: draft.templateId,
                 channelId: draft.channelId,
                 status: draft.status,
-                enabled: draft.enabled
+                enabled: draft.status === 'approved'
             });
         } finally {
             setSavingKey('');
@@ -82,7 +80,6 @@ export function AlimtalkTemplatesSection({ templates, onSave }: Props) {
                         <th>상태</th>
                         <th>Template ID</th>
                         <th>Channel ID</th>
-                        <th>사용</th>
                         <th>변수</th>
                         <th>관리</th>
                     </tr>
@@ -108,12 +105,6 @@ export function AlimtalkTemplatesSection({ templates, onSave }: Props) {
                                 </td>
                                 <td><input className={styles.field} value={draft.templateId} onChange={event => updateDraft(template.template_key, { templateId: event.currentTarget.value })} placeholder="SOLAPI templateId" /></td>
                                 <td><input className={styles.field} value={draft.channelId} onChange={event => updateDraft(template.template_key, { channelId: event.currentTarget.value })} placeholder="Kakao channelId" /></td>
-                                <td>
-                                    <label className={styles.actions}>
-                                        <input type="checkbox" checked={draft.enabled} onChange={event => updateDraft(template.template_key, { enabled: event.currentTarget.checked })} />
-                                        <span>사용</span>
-                                    </label>
-                                </td>
                                 <td>{(template.variables || []).join(', ') || '-'}</td>
                                 <td>
                                     <button type="button" className={styles.primaryButton} disabled={savingKey === template.template_key} onClick={() => void saveTemplate(template)}>
@@ -123,7 +114,7 @@ export function AlimtalkTemplatesSection({ templates, onSave }: Props) {
                             </tr>
                         );
                     })}
-                    {templates.length === 0 && <tr><td className={styles.empty} colSpan={7}>템플릿이 없습니다.</td></tr>}
+                    {templates.length === 0 && <tr><td className={styles.empty} colSpan={6}>템플릿이 없습니다.</td></tr>}
                 </tbody>
             </table>
         </div>
