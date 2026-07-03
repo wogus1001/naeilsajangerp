@@ -177,6 +177,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-03
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `43d7ff2 fix(admin): reorder management menu cards`, `3c44d52 feat(franchise): connect disclosure email alimtalk`
+  - 주요 기능: 어드민 관리 홈의 관리 메뉴 순서를 `회원 및 권한 관리`, `회사별 메뉴 관리`, `프랜차이즈 인입 관리`, `전자계약 관리`, `알림톡 운영 관리`, `시스템 설정` 순서로 정리했다. 정보공개서 Gmail 발송 폼에는 필수 `후보자명` 입력과 발송 전 `정보공개서 확인 안내` 알림톡 목업을 추가했다. Gmail 발송 성공 시 `recipientName`, 브랜드명, 후보자 휴대폰을 기준으로 `disclosure_email_sent` 알림톡을 발송하고 `alimtalk_send_logs`에 결과를 남긴다. 수령 확인 버튼 클릭 시 기존 `disclosure_confirmed` 알림톡과 14일 숙고기간 감사 기록을 유지한다.
+  - 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 알림톡 운영 테이블과 기존 정보공개서 발송 테이블을 사용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 로컬 스모크로 정보공개서 발송 API의 후보자명 필수 검증, 알림톡 미리보기 변수, `disclosure_email_sent`/`disclosure_confirmed` 변수 매핑을 확인했다.
+  - 남은 이슈: 운영 Google OAuth 승인/연결 상태에서 실제 Gmail 발송 후 후보자 휴대폰으로 `정보공개서 확인 안내` 알림톡 도착과 발송 로그 성공 기록을 live QA한다.
 - 2026-07-02
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 알림톡 승인 템플릿 발송 훅 커밋 예정

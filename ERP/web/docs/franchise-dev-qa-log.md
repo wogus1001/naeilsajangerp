@@ -1027,3 +1027,11 @@
 - 시나리오 관리: 전체 발송 플로우 보드와 `시나리오 사용` 체크를 제거했다. 각 시나리오 카드의 `템플릿` 노드를 클릭하면 카카오 알림톡 미리보기 형태로 템플릿 본문과 변수 칩을 확인할 수 있게 했다. 대체 발송 저장은 기존 시나리오 enabled 상태를 보존하고 fallback 설정만 저장한다.
 - 신규 SQL: 없음.
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://127.0.0.1:3010/admin/alimtalk`에서 Playwright mock API로 템플릿 관리 본문 미노출, 시나리오 관리 전체 플로우/사용 체크 미노출, 템플릿 노드 클릭 시 알림톡 미리보기와 변수 칩 노출을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-03 어드민 메뉴 순서 및 정보공개서 확인 안내 알림톡 QA
+
+- 범위: 어드민 관리 홈의 관리 메뉴 카드 순서를 `회원 및 권한 관리`, `회사별 메뉴 관리`, `프랜차이즈 인입 관리`, `전자계약 관리`, `알림톡 운영 관리`, `시스템 설정`으로 조정했다. 정보공개서 Gmail 발송 폼에는 필수 `후보자명` 입력과 발송 전 `정보공개서 확인 안내` 알림톡 미리보기를 추가했다.
+- 알림톡 연동: Gmail 발송 성공 시 `recipientName`을 발송 이력의 `recipient_name`에 저장하고, 후보자 휴대폰이 있으면 `disclosure_email_sent` 시나리오로 `#{후보자명}`, `#{브랜드명}` 변수를 채워 알림톡을 발송한다. 수령 확인 클릭 시에는 기존 `disclosure_confirmed` 시나리오를 유지하며, 발송 당시 저장된 브랜드명을 우선 사용한다.
+- 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 스모크로 후보자명 미입력 시 발송 요청 차단, 알림톡 목업 변수 노출, `disclosure_email_sent`/`disclosure_confirmed` 변수 매핑을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: 운영 Google OAuth 승인/연결 계정으로 실제 Gmail 발송을 1건 실행해 `정보공개서 확인 안내` 알림톡 도착, 발송 로그 성공, 수령 확인 버튼 클릭 후 `정보공개서 수령 확인 완료` 알림톡과 계약 가능일 표시를 확인한다.
