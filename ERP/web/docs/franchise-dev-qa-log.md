@@ -1043,3 +1043,10 @@
 - 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
 - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts` 15건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 스모크로 `opened` 상태이지만 수령확인이 없는 발송 이력이 `disclosure-unconfirmed` 후보로 생성되고, `disclosure_confirmed` 변수가 `계약가능일: 2026. 07. 17.`, `확인일/수령확인일/수령일: 2026. 07. 03.` 형태로 채워지는 것을 확인했다.
 - 남은 live QA: 운영에서 실제 수령 확인 버튼 클릭 후 `alimtalk_send_logs`의 변수 payload와 카카오 알림톡 표시가 일치하는지 확인한다. Gmail 열람 추정은 환경별 차이가 크므로 `opened_at`은 참고값으로만 확인하고, 미확인 큐 생성 여부는 발송 후 1일 경과 데이터로 점검한다.
+
+## 2026-07-03 가맹계약 가능 상태 알림톡 변수 QA
+
+- 범위: 운영 테스트에서 `가맹계약 가능 상태 안내` 알림톡은 도착했지만 승인 템플릿의 `후보자명`, `수령확인일`, `계약가능일` 계열 변수가 비어 보이는 문제를 보정했다. 계약 가능 알림 후보 생성 시 `confirmedAt`, `latestSentAt`을 함께 전달하고, 알림톡 변수 빌더는 `후보자명`, `예비창업자명`, `확인일`, `수령확인일`, `수령일`, `계약가능일`, `계약가능예정일`, `가능일`을 모두 채운다.
+- 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 11건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 새 회귀 테스트로 `disclosure-eligible` 후보의 `franchise_contract_eligible` 변수 별칭이 모두 채워지는 것을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: 운영 배포 후 내일 회사 admin 계정 테스트 데이터로 `가맹계약 가능 상태 안내` 알림톡을 다시 발송해 카카오 메시지와 `alimtalk_send_logs.variables`에 후보자명, 수령확인일, 계약가능일이 표시되는지 확인한다.

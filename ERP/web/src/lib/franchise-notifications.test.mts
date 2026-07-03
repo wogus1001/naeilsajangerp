@@ -176,6 +176,47 @@ test('buildAlimtalkVariablesForCandidate maps vendor contract due template varia
     });
 });
 
+test('buildAlimtalkVariablesForCandidate maps disclosure eligible template aliases', () => {
+    const [notification] = buildAutomaticFranchiseNotifications([
+        {
+            companyId: 'company-1',
+            disclosureSummary: {
+                confirmedAt: '2026-07-03T01:20:00.000Z',
+                contractEligibleAt: '2026-07-17T01:20:00.000Z',
+                label: '계약 가능',
+                latestDeliveryId: 'delivery-1',
+                latestDocumentTitle: '정보공개서',
+                latestDocumentVersion: '2026',
+                latestSendStatus: 'sent',
+                latestSentAt: '2026-07-03T01:00:00.000Z',
+                openedAt: null,
+                recipientEmail: 'lead@example.com',
+                remainingDays: 0,
+                state: 'eligible',
+                waitDays: 14
+            },
+            id: 'lead-1',
+            managerId: 'manager-1',
+            name: '김후보',
+            status: '상담중',
+            grade: 'HOT'
+        }
+    ], new Date('2026-07-18T00:00:00.000Z'));
+
+    assert.ok(notification);
+    assert.deepEqual(buildAlimtalkVariablesForCandidate(notification, '테스트치킨'), {
+        가능일: '2026. 07. 17.',
+        계약가능예정일: '2026. 07. 17.',
+        계약가능일: '2026. 07. 17.',
+        브랜드명: '테스트치킨',
+        수령일: '2026. 07. 03.',
+        수령확인일: '2026. 07. 03.',
+        예비창업자명: '김후보',
+        확인일: '2026. 07. 03.',
+        후보자명: '김후보'
+    });
+});
+
 test('buildDisclosureEmailSentAlimtalkVariables maps disclosure email sent template variables', () => {
     assert.deepEqual(buildDisclosureEmailSentAlimtalkVariables({
         brandName: '테스트치킨',
@@ -193,10 +234,12 @@ test('buildDisclosureConfirmedAlimtalkVariables maps disclosure confirmed templa
         confirmedAt: '2026-07-03T00:00:00.000Z'
     }), {
         브랜드명: '테스트치킨',
+        계약가능예정일: '2026. 07. 17.',
         계약가능일: '2026. 07. 17.',
         수령확인일: '2026. 07. 03.',
         수령일: '2026. 07. 03.',
         확인일: '2026. 07. 03.',
-        예비창업자명: '김후보'
+        예비창업자명: '김후보',
+        후보자명: '김후보'
     });
 });

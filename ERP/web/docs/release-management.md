@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-03
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 가맹계약 가능 상태 알림톡 변수 보정 커밋 예정
+  - 주요 기능: `가맹계약 가능 상태 안내` 알림톡의 승인 템플릿 변수 차이를 흡수하도록 `후보자명`, `예비창업자명`, `확인일`, `수령확인일`, `수령일`, `계약가능일`, `계약가능예정일`, `가능일`을 모두 채운다. 계약 가능 알림 후보 생성 시 정보공개서 수령확인일과 발송일을 함께 전달해 운영 템플릿에서 날짜 변수가 비지 않게 한다.
+  - 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 11건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+  - 남은 이슈: 운영 배포 후 내일 회사 admin 계정 테스트 데이터로 `franchise_contract_eligible` 알림톡을 다시 발송해 카카오 메시지와 `alimtalk_send_logs.variables`에 후보자명, 수령확인일, 계약가능일이 표시되는지 live QA한다.
+- 2026-07-03
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 정보공개서 수령 확인 알림톡 변수/미확인 큐 보정 커밋 예정
   - 주요 기능: `정보공개서 수령 확인 완료` 알림톡의 승인 템플릿 변수 차이를 흡수하도록 `확인일`, `수령확인일`, `수령일`, `계약가능일`을 모두 채운다. 메일 열람 추정은 법적 수령 신호로 쓰지 않고 참고값으로 유지하며, 발송 또는 열람 추정 후 1일 이상 수령 확인이 없으면 내부 `정보공개서 수령 미확인` 업무 큐를 생성한다.
   - 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.

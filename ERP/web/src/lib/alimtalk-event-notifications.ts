@@ -72,13 +72,17 @@ export function buildDisclosureConfirmedAlimtalkVariables(input: {
 }): Record<string, string> {
     const confirmedAt = input.confirmedAt || new Date();
     const confirmedDate = formatAlimtalkDate(confirmedAt);
+    const contractEligibleDate = formatAlimtalkDate(addDisclosureWaitDays(confirmedAt));
+    const candidateName = cleanString(input.candidateName) || '예비 창업자';
     return {
         브랜드명: cleanString(input.brandName) || '-',
-        계약가능일: formatAlimtalkDate(addDisclosureWaitDays(confirmedAt)),
+        계약가능예정일: contractEligibleDate,
+        계약가능일: contractEligibleDate,
         수령확인일: confirmedDate,
         수령일: confirmedDate,
         확인일: confirmedDate,
-        예비창업자명: cleanString(input.candidateName) || '예비 창업자'
+        예비창업자명: candidateName,
+        후보자명: candidateName
     };
 }
 
@@ -209,10 +213,19 @@ export function buildAlimtalkVariablesForCandidate(
             업체명: cleanString(candidate.data.vendorName) || '업체'
         };
     }
+    const contractEligibleDate = formatAlimtalkDate(candidate.dueAt);
+    const receiptDate = formatAlimtalkDate(cleanString(candidate.data.confirmedAt) || cleanString(candidate.data.latestSentAt));
+    const candidateName = cleanString(candidate.data.leadName) || '예비 창업자';
     return {
-        가능일: formatAlimtalkDate(candidate.dueAt),
+        가능일: contractEligibleDate,
+        계약가능예정일: contractEligibleDate,
+        계약가능일: contractEligibleDate,
         브랜드명: companyName || '-',
-        예비창업자명: cleanString(candidate.data.leadName) || '예비 창업자'
+        수령확인일: receiptDate,
+        수령일: receiptDate,
+        예비창업자명: candidateName,
+        확인일: receiptDate,
+        후보자명: candidateName
     };
 }
 

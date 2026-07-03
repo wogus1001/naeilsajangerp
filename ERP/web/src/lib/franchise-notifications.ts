@@ -199,7 +199,11 @@ export function buildAutomaticFranchiseNotifications(
                 '계약 진행 가능',
                 `${lead.name}님은 정보공개서 14일 기준을 충족했습니다.`,
                 disclosure.contractEligibleAt,
-                { deliveryId: disclosure.latestDeliveryId }
+                {
+                    confirmedAt: disclosure.confirmedAt,
+                    deliveryId: disclosure.latestDeliveryId,
+                    latestSentAt: disclosure.latestSentAt
+                }
             );
             if (candidate) items.push(candidate);
         }
