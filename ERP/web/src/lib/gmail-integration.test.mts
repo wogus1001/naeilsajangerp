@@ -44,7 +44,9 @@ test('buildGmailMimeMessage creates a Gmail raw MIME payload', () => {
     assert.match(decoded, /수령 확인/);
     assert.match(decoded, /franchise-lead-disclosures\/open\?token=open/);
     assert.match(decoded, /<p style="margin:0 0 24px;"><a[^>]+>정보공개서 열기/);
-    assert.match(decoded, /<p style="margin:0 0 20px;"><a[^>]+>수령 확인하기/);
+    assert.match(decoded, /문서 확인 후에는 가맹사업법상 숙고기간 산정을 위해 반드시 수령 확인하기 버튼을 눌러주세요/);
+    assert.match(decoded, /가맹사업법에 따라 정보공개서 제공일로부터 14일이 지난 뒤 가맹계약을 진행할 수 있습니다\.[\s\S]*<p style="margin:0 0 20px;"><a[^>]+>수령 확인하기/);
+    assert.doesNotMatch(decoded, /확인 시각은 발송 이력에 안전하게 기록됩니다/);
     assert.doesNotMatch(decoded, /김테스트님/);
     assert.match(decoded, /가맹 상담 담당자입니다/);
 });

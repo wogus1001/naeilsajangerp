@@ -101,9 +101,10 @@ export function buildDisclosureEmailContent(input: {
         '문의주신 가맹 검토에 필요한 정보공개서를 보내드립니다.',
         `문서명: ${displayTitle}`,
         `정보공개서 확인: ${input.documentUrl}`,
-        `수령 확인: ${input.confirmationUrl}`,
         memo ? `전달 메모: ${memo}` : '',
+        '문서 확인 후에는 가맹사업법상 숙고기간 산정을 위해 반드시 수령 확인하기 버튼을 눌러주세요.',
         '가맹사업법에 따라 정보공개서 제공일로부터 14일이 지난 뒤 가맹계약을 진행할 수 있습니다.',
+        `수령 확인: ${input.confirmationUrl}`,
         '확인하시다가 궁금한 점이 있으면 편하게 회신해주세요. 감사합니다.'
     ].filter(Boolean).join('\n\n');
     const htmlBody = [
@@ -112,10 +113,10 @@ export function buildDisclosureEmailContent(input: {
         '<p style="margin:0 0 20px;">문의주신 가맹 검토에 필요한 정보공개서를 보내드립니다. 아래 버튼으로 문서를 확인해주세요.</p>',
         `<p style="margin:0 0 14px;"><strong>${escapeHtml(displayTitle)}</strong></p>`,
         `<p style="margin:0 0 24px;"><a href="${escapeHtml(input.documentUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:700;line-height:1.45;">정보공개서 열기</a></p>`,
-        '<p style="margin:0 0 10px;">문서를 확인하신 뒤에는 아래 버튼을 눌러 수령 확인을 남겨주세요. 확인 시각은 발송 이력에 안전하게 기록됩니다.</p>',
+        '<p style="margin:0 0 10px;">문서 확인 후에는 가맹사업법상 숙고기간 산정을 위해 반드시 수령 확인하기 버튼을 눌러주세요.</p>',
+        '<p style="margin:0 0 12px;color:#4b5563;">가맹사업법에 따라 정보공개서 제공일로부터 14일이 지난 뒤 가맹계약을 진행할 수 있습니다.</p>',
         `<p style="margin:0 0 20px;"><a href="${escapeHtml(input.confirmationUrl)}" style="display:inline-block;background:#f3f4f6;color:#111827;text-decoration:none;padding:9px 13px;border-radius:8px;font-weight:700;line-height:1.45;">수령 확인하기</a></p>`,
         memo ? `<p style="margin:0 0 18px;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;"><strong>전달 메모</strong><br />${escapeHtml(memo)}</p>` : '',
-        '<p style="margin:0 0 12px;color:#4b5563;">가맹사업법에 따라 정보공개서 제공일로부터 14일이 지난 뒤 가맹계약을 진행할 수 있습니다.</p>',
         '<p style="margin:0;">확인하시다가 궁금한 점이 있으면 편하게 회신해주세요.<br />감사합니다.</p>',
         input.openTrackingUrl ? `<img src="${escapeHtml(input.openTrackingUrl)}" width="1" height="1" alt="" style="width:1px;height:1px;opacity:0;border:0;outline:none;text-decoration:none;" />` : '',
         '</div>'
