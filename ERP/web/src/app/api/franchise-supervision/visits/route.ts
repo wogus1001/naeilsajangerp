@@ -71,6 +71,7 @@ async function resolveAssignmentId(input: {
 
 async function syncSchedule(input: {
     readonly existing: VisitAccessRow;
+    readonly nextLocationName?: string;
     readonly nextPurpose: string;
     readonly nextStatus: string;
     readonly nextSupervisorProfileId: string | null;
@@ -82,7 +83,7 @@ async function syncSchedule(input: {
         .from('schedules')
         .update({
             date: input.nextVisitDate || input.existing.visit_date,
-            title: `${readLocationName(input.existing.location)} ${input.nextPurpose}`,
+            title: `${input.nextLocationName || readLocationName(input.existing.location)} ${input.nextPurpose}`,
             status: input.nextStatus === '취소' ? 'cancelled' : 'scheduled',
             user_id: input.nextSupervisorProfileId || input.existing.supervisor_profile_id
         })
@@ -257,6 +258,11 @@ export async function PATCH(request: Request) {
         }
         const managerGuard = ensureCanManageSupervision(scope.auth.requester);
         const canChangeOwner = !managerGuard;
+        const requestedLocationId = cleanString(getFirst(scope.body, ['locationId', 'location_id']));
+        const nextLocation = requestedLocationId
+            ? await fetchLocationInCompany(scope.auth.supabaseAdmin, requestedLocationId, scope.companyId)
+            : null;
+        if (nextLocation && !nextLocation.ok) return nextLocation.response;
         const nextSupervisorRaw = getFirst(scope.body, ['supervisorProfileId', 'supervisor_profile_id']);
         const supervisorId = canChangeOwner && nextSupervisorRaw
             ? await resolveProfileInCompany({
@@ -271,7 +277,19 @@ export async function PATCH(request: Request) {
             updated_by: scope.auth.requester.id,
             updated_at: new Date().toISOString()
         };
+        if (nextLocation?.ok) updates.location_id = nextLocation.location.id;
         if (supervisorId?.ok) updates.supervisor_profile_id = supervisorId.profileId;
+        const nextLocationId = nextLocation?.ok ? nextLocation.location.id : existing.location_id || '';
+        const nextSupervisorProfileId = supervisorId?.ok ? supervisorId.profileId : existing.supervisor_profile_id || '';
+        if (Object.prototype.hasOwnProperty.call(scope.body, 'assignmentId') || Object.prototype.hasOwnProperty.call(scope.body, 'assignment_id')) {
+            updates.assignment_id = await resolveAssignmentId({
+                assignmentId: cleanString(getFirst(scope.body, ['assignmentId', 'assignment_id'])),
+                companyId: scope.companyId,
+                locationId: nextLocationId,
+                supervisorProfileId: nextSupervisorProfileId,
+                supabaseAdmin: scope.auth.supabaseAdmin
+            });
+        }
         const visitDate = cleanString(getFirst(scope.body, ['visitDate', 'visit_date']));
         if (visitDate) updates.visit_date = visitDate;
         const nextPurpose = Object.prototype.hasOwnProperty.call(scope.body, 'purpose')
@@ -291,6 +309,7 @@ export async function PATCH(request: Request) {
         if (error) throw error;
         await syncSchedule({
             existing,
+            nextLocationName: nextLocation?.ok ? nextLocation.location.name || '운영점' : undefined,
             nextPurpose,
             nextStatus,
             nextSupervisorProfileId: supervisorId?.ok ? supervisorId.profileId : null,
@@ -304,5 +323,52 @@ export async function PATCH(request: Request) {
         }
         console.error('Franchise supervision visit PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 수정하지 못했습니다.');
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const scope = await readMutationScope(request);
+        if (!scope.ok) return scope.response;
+
+        const id = cleanString(getFirst(scope.body, ['id']));
+        if (!id) return fail(400, 'VALIDATION_ERROR', '방문 ID가 필요합니다.');
+
+        const { data: existing, error: findError } = await scope.auth.supabaseAdmin
+            .from('franchise_store_visits')
+            .select('id, company_id, location_id, supervisor_profile_id, schedule_id, visit_date, purpose, status, created_by, location:franchise_locations(name)')
+            .eq('id', id)
+            .maybeSingle<VisitAccessRow>();
+        if (findError) throw findError;
+        if (!existing) return fail(404, 'NOT_FOUND', '방문 일정을 찾을 수 없습니다.');
+        if (!canAccessSupervisorResource(scope.auth.requester, existing)) {
+            return fail(403, 'FORBIDDEN', '방문 일정을 삭제할 권한이 없습니다.');
+        }
+
+        const { error } = await scope.auth.supabaseAdmin
+            .from('franchise_store_visits')
+            .update({
+                status: '취소',
+                updated_by: scope.auth.requester.id,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        if (error) throw error;
+
+        await syncSchedule({
+            existing,
+            nextPurpose: normalizeVisitPurpose(existing.purpose),
+            nextStatus: '취소',
+            nextSupervisorProfileId: null,
+            nextVisitDate: null,
+            supabaseAdmin: scope.auth.supabaseAdmin
+        });
+        return ok({ success: true });
+    } catch (error) {
+        if (isMissingSupervisionSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        console.error('Franchise supervision visit DELETE error:', error);
+        return fail(500, 'INTERNAL_ERROR', '방문 일정을 삭제하지 못했습니다.');
     }
 }

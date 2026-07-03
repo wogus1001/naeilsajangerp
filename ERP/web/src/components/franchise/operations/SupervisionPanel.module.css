@@ -19,43 +19,12 @@
     font-weight: 700;
 }
 
-.summaryGrid {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.summaryCard {
-    display: block;
-    min-width: 0;
-    padding: 12px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #ffffff;
-    text-align: left;
-    cursor: pointer;
-}
-
-.summaryCard:hover {
-    border-color: #3182f6;
-    background: #f7fbff;
-}
-
-.summaryCard span,
 .field label,
 .itemRow label {
     display: block;
     color: #6b7684;
     font-size: 11px;
     font-weight: 800;
-}
-
-.summaryCard strong {
-    display: block;
-    margin-top: 6px;
-    color: #191f28;
-    font-size: 22px;
-    font-weight: 900;
 }
 
 .layout {
@@ -103,6 +72,12 @@
     border: 1px solid #3182f6;
     background: #e8f3ff;
     color: #1b64da;
+}
+
+.subTabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .reportGrid {
@@ -352,6 +327,82 @@
     gap: 8px;
 }
 
+.formPanel,
+.listPanel {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.formPanelHeader,
+.listHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.formPanelHeader {
+    display: grid;
+    justify-content: stretch;
+    gap: 3px;
+}
+
+.formPanelHeader strong,
+.listHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.formPanelHeader span,
+.listHeader span {
+    display: block;
+    margin-top: 3px;
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.formFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.listFilters {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(140px, 0.25fr) minmax(140px, 0.25fr);
+    gap: 8px;
+    min-width: 0;
+}
+
+.listFilters input,
+.listFilters select {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    border: 1px solid #dfe3e8;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.listFilters input {
+    padding: 0 10px;
+}
+
+.listFilters select {
+    padding: 0 8px;
+}
+
 .field,
 .itemRow {
     display: grid;
@@ -577,6 +628,33 @@ button.listItem {
     min-width: 0;
 }
 
+.linkButton {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.linkButton strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.linkButton small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+}
+
 .reportTitleCell strong {
     overflow: hidden;
     color: #191f28;
@@ -639,6 +717,7 @@ button.listItem {
 .badgeRed,
 .badgeGreen {
     display: inline-flex;
+    width: fit-content;
     min-height: 22px;
     align-items: center;
     border-radius: 999px;
@@ -722,19 +801,24 @@ button.listItem {
 }
 
 @media (max-width: 720px) {
-    .summaryGrid,
     .reportGrid,
     .layout,
     .inlineControls,
     .assignmentToolbar,
     .assignmentFilters,
+    .listFilters,
     .formGrid,
     .itemGrid {
         grid-template-columns: 1fr;
     }
 
-    .buttonRow {
+    .buttonRow,
+    .formFooter {
         justify-content: stretch;
+    }
+
+    .listHeader {
+        display: grid;
     }
 
     .paginationBar {

@@ -38,8 +38,8 @@ export function SupervisionOperationQueue(props: {
         <section className={styles.section}>
             <div className={styles.sectionHeader}>
                 <div>
-                    <h3>오늘 처리 큐</h3>
-                    <p>방문, 미제출 보고서, 승인 대기, 지연 시정요청을 우선순위로 봅니다.</p>
+                    <h3>운영 우선순위</h3>
+                    <p>오늘 방문, 미제출 보고서, 승인 대기, 지연 시정요청을 처리 순서대로 봅니다.</p>
                 </div>
                 <span className={styles.queueCount}>{props.items.length.toLocaleString()}건</span>
             </div>

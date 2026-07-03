@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, ClipboardCheck, Printer, Save, Send, X } from 'lucide-react';
+import { Check, ClipboardCheck, Pencil, Plus, Printer, Save, Send, Trash2, X } from 'lucide-react';
 import {
     CORRECTIVE_ACTION_STATUSES,
     kstDateKey,
@@ -20,6 +20,7 @@ import type {
 import styles from './SupervisionPanel.module.css';
 
 export type VisitFormState = {
+    readonly assignmentId: string;
     readonly locationId: string;
     readonly supervisorProfileId: string;
     readonly visitDate: string;
@@ -29,6 +30,7 @@ export type VisitFormState = {
 
 export type SupervisionView = 'dashboard' | 'assignments' | 'visits' | 'reports' | 'review';
 export type SupervisionFilter = 'all' | 'todayVisits' | 'weekVisits' | 'missingReports' | 'pendingApprovals' | 'activeActions';
+export type SupervisionReportMode = 'list' | 'editor';
 
 const VIEW_TABS: readonly { readonly key: SupervisionView; readonly label: string }[] = [
     { key: 'dashboard', label: '운영 리포트' },
@@ -73,11 +75,13 @@ export function SectionHeader({ title, caption }: { readonly title: string; read
 
 export function ViewTabs(props: {
     readonly activeView: SupervisionView;
+    readonly canManage: boolean;
     readonly onSelect: (view: SupervisionView) => void;
 }) {
+    const tabs = props.canManage ? VIEW_TABS : VIEW_TABS.filter(tab => tab.key !== 'assignments');
     return (
         <div className={styles.viewTabs}>
-            {VIEW_TABS.map(tab => (
+            {tabs.map(tab => (
                 <button
                     key={tab.key}
                     type="button"
@@ -97,23 +101,27 @@ export function DashboardOverview({ data }: { readonly data: SupervisionPayload 
     const delayedActions = data.correctiveActions.filter(action => (
         action.dueDate && action.dueDate < todayText() && action.status !== '완료'
     )).length;
+    const title = data.canManage ? '팀장 운영 리포트' : 'SV 업무 리포트';
+    const caption = data.canManage
+        ? '회사 전체 SV 방문율, 승인 대기, 시정요청 지연을 확인합니다.'
+        : '내 담당 운영점의 방문, 보고서, 시정요청 상태를 확인합니다.';
     return (
         <div className={styles.layoutSingle}>
             <section className={styles.section}>
-                <SectionHeader title="운영 리포트" caption="SV 방문율, 승인 대기, 시정요청 지연을 한 화면에서 확인합니다." />
+                <SectionHeader title={title} caption={caption} />
                 <div className={styles.reportGrid}>
                     <div className={styles.reportCard}>
-                        <span>SV 배정</span>
+                        <span>{data.canManage ? 'SV 배정' : '내 담당 운영점'}</span>
                         <strong>{data.assignments.filter(item => item.active).length.toLocaleString()}</strong>
                         <small>활성 배정 기준</small>
                     </div>
                     <div className={styles.reportCard}>
-                        <span>방문 일정</span>
+                        <span>{data.canManage ? '방문 일정' : '내 방문 일정'}</span>
                         <strong>{data.visits.length.toLocaleString()}</strong>
                         <small>전체 방문 기록</small>
                     </div>
                     <div className={styles.reportCard}>
-                        <span>보고서 승인</span>
+                        <span>{data.canManage ? '보고서 승인' : '보고서 상태'}</span>
                         <strong>{approvedReports.toLocaleString()}</strong>
                         <small>승인 대기 {submittedReports.toLocaleString()}건</small>
                     </div>
@@ -128,53 +136,69 @@ export function DashboardOverview({ data }: { readonly data: SupervisionPayload 
     );
 }
 
-export function SummaryCards(props: {
-    readonly data: SupervisionPayload;
-    readonly isLoading: boolean;
-    readonly onSelect: (view: SupervisionView, filter: SupervisionFilter) => void;
-}) {
-    const cards = [
-        ['오늘 방문', props.data.summary.todayVisitCount, 'visits', 'todayVisits'],
-        ['이번주 예정', props.data.summary.weekVisitCount, 'visits', 'weekVisits'],
-        ['미제출 보고서', props.data.summary.missingReportCount, 'reports', 'missingReports'],
-        ['승인 대기', props.data.summary.pendingApprovalCount, 'review', 'pendingApprovals'],
-        ['시정요청 진행', props.data.summary.activeCorrectiveActionCount, 'review', 'activeActions']
-    ] as const;
-    return (
-        <div className={styles.summaryGrid}>
-            {cards.map(([label, value, view, filter]) => (
-                <button key={label} type="button" className={styles.summaryCard} onClick={() => props.onSelect(view, filter)}>
-                    <span>{label}</span>
-                    <strong>{props.isLoading ? '-' : value.toLocaleString()}</strong>
-                </button>
-            ))}
-        </div>
-    );
-}
-
 export function VisitForm(props: {
     readonly data: SupervisionPayload;
+    readonly editing: boolean;
     readonly form: VisitFormState;
     readonly disabled: boolean;
+    readonly onCancelEdit: () => void;
     readonly onChange: (form: VisitFormState) => void;
     readonly onSubmit: () => void;
 }) {
+    const activeAssignments = props.data.assignments.filter(assignment => assignment.active);
+    const assignedSupervisors = props.data.supervisors.filter(supervisor => (
+        activeAssignments.some(assignment => assignment.supervisorProfileId === supervisor.id)
+    ));
+    const supervisors = assignedSupervisors.length > 0 ? assignedSupervisors : props.data.supervisors;
+    const locationOptions = activeAssignments
+        .filter(assignment => assignment.supervisorProfileId === props.form.supervisorProfileId)
+        .map(assignment => ({
+            assignmentId: assignment.id,
+            locationId: assignment.locationId,
+            locationName: assignment.locationName
+        }));
+    const canSubmit = Boolean(props.form.supervisorProfileId && props.form.locationId && props.form.visitDate);
+    const changeSupervisor = (supervisorProfileId: string) => {
+        const firstAssignment = activeAssignments.find(assignment => assignment.supervisorProfileId === supervisorProfileId);
+        props.onChange({
+            ...props.form,
+            assignmentId: firstAssignment?.id || '',
+            locationId: firstAssignment?.locationId || '',
+            supervisorProfileId
+        });
+    };
+    const changeLocation = (locationId: string) => {
+        const assignment = locationOptions.find(option => option.locationId === locationId);
+        props.onChange({ ...props.form, assignmentId: assignment?.assignmentId || '', locationId });
+    };
     return (
-        <div className={styles.formGrid}>
-            <SelectField label="운영점" value={props.form.locationId} onChange={(value: string) => props.onChange({ ...props.form, locationId: value })}>
-                {props.data.locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}
-            </SelectField>
-            <SelectField label="SV" value={props.form.supervisorProfileId} onChange={(value: string) => props.onChange({ ...props.form, supervisorProfileId: value })}>
-                {props.data.supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
-            </SelectField>
-            <InputField label="방문일" type="date" value={props.form.visitDate} onChange={(value: string) => props.onChange({ ...props.form, visitDate: value })} />
-            <SelectField label="방문 목적" value={props.form.purpose} onChange={(value: string) => props.onChange({ ...props.form, purpose: value })}>
-                {SUPERVISION_VISIT_PURPOSES.map(purpose => <option key={purpose} value={purpose}>{purpose}</option>)}
-            </SelectField>
-            <TextField label="방문 메모" value={props.form.memo} placeholder="점검 목적, 사전 요청사항" onChange={(value: string) => props.onChange({ ...props.form, memo: value })} />
-            <div className={styles.buttonRow}>
-                <button type="button" className={styles.primaryButton} disabled={props.disabled} onClick={props.onSubmit}>
-                    <ClipboardCheck size={13} /> 방문 등록
+        <div className={styles.formPanel}>
+            <div className={styles.formPanelHeader}>
+                <strong>{props.editing ? '방문 일정 수정' : '방문 일정 등록'}</strong>
+                <span>SV를 먼저 선택하면 배정된 운영점만 표시됩니다.</span>
+            </div>
+            <div className={styles.formGrid}>
+                <SelectField label="SV" value={props.form.supervisorProfileId} onChange={changeSupervisor}>
+                    {supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
+                </SelectField>
+                <SelectField label="운영점" value={props.form.locationId} onChange={changeLocation}>
+                    {locationOptions.length === 0 ? <option value="">배정된 운영점 없음</option> : null}
+                    {locationOptions.map(option => <option key={option.assignmentId} value={option.locationId}>{option.locationName}</option>)}
+                </SelectField>
+                <InputField label="방문일" type="date" value={props.form.visitDate} onChange={(value: string) => props.onChange({ ...props.form, visitDate: value })} />
+                <SelectField label="방문 목적" value={props.form.purpose} onChange={(value: string) => props.onChange({ ...props.form, purpose: value })}>
+                    {SUPERVISION_VISIT_PURPOSES.map(purpose => <option key={purpose} value={purpose}>{purpose}</option>)}
+                </SelectField>
+                <TextField label="방문 메모" value={props.form.memo} placeholder="점검 목적, 사전 요청사항" onChange={(value: string) => props.onChange({ ...props.form, memo: value })} />
+            </div>
+            <div className={styles.formFooter}>
+                {props.editing ? (
+                    <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onCancelEdit}>
+                        취소
+                    </button>
+                ) : null}
+                <button type="button" className={styles.primaryButton} disabled={props.disabled || !canSubmit} onClick={props.onSubmit}>
+                    <ClipboardCheck size={13} /> {props.editing ? '방문 수정 저장' : '방문 등록'}
                 </button>
             </div>
         </div>
@@ -182,29 +206,113 @@ export function VisitForm(props: {
 }
 
 export function VisitList(props: {
+    readonly data: SupervisionPayload;
     readonly visits: readonly SupervisionVisit[];
     readonly selectedId: string;
+    readonly onDelete: (visit: SupervisionVisit) => void;
+    readonly onEdit: (visit: SupervisionVisit) => void;
+    readonly onNew: () => void;
     readonly onSelect: (id: string) => void;
 }) {
-    if (props.visits.length === 0) return <div className={styles.empty}>방문 일정이 없습니다.</div>;
+    const [query, setQuery] = React.useState('');
+    const [supervisorFilter, setSupervisorFilter] = React.useState('all');
+    const [statusFilter, setStatusFilter] = React.useState('active');
+    const [page, setPage] = React.useState(1);
+    const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR');
+    const filteredVisits = props.visits.filter(visit => {
+        if (supervisorFilter !== 'all' && visit.supervisorProfileId !== supervisorFilter) return false;
+        if (statusFilter === 'active' && visit.status === '취소') return false;
+        if (statusFilter !== 'all' && statusFilter !== 'active' && visit.status !== statusFilter) return false;
+        if (!normalizedQuery) return true;
+        return [visit.locationName, visit.supervisorName, visit.purpose, visit.memo].some(value => value.toLocaleLowerCase('ko-KR').includes(normalizedQuery));
+    });
+    const pageSize = 8;
+    const maxPage = Math.max(1, Math.ceil(filteredVisits.length / pageSize));
+    const safePage = Math.min(page, maxPage);
+    const pagedVisits = filteredVisits.slice((safePage - 1) * pageSize, safePage * pageSize);
+    React.useEffect(() => {
+        setPage(1);
+    }, [normalizedQuery, statusFilter, supervisorFilter]);
     return (
-        <div className={styles.list}>
-            {props.visits.slice(0, 6).map(visit => (
-                <button
-                    key={visit.id}
-                    type="button"
-                    className={styles.listItem}
-                    onClick={() => props.onSelect(visit.id)}
-                >
-                    <strong>{visit.visitDate || '-'} · {visit.locationName}</strong>
-                    <div className={styles.badgeRow}>
-                        <span className={props.selectedId === visit.id ? styles.badgeBlue : styles.badge}>{visit.status}</span>
-                        <span className={styles.badge}>{visit.purpose}</span>
-                        <span className={styles.badgeGreen}>{visit.supervisorName}</span>
-                    </div>
-                    {visit.memo ? <span>{visit.memo}</span> : null}
+        <div className={styles.listPanel}>
+            <div className={styles.listHeader}>
+                <div>
+                    <strong>방문 일정 목록</strong>
+                    <span>SV, 운영점, 상태별로 일정을 확인하고 수정합니다.</span>
+                </div>
+                <button type="button" className={styles.primaryButton} onClick={props.onNew}>
+                    <Plus size={13} /> 새 방문
                 </button>
-            ))}
+            </div>
+            <div className={styles.listFilters}>
+                <input type="search" value={query} placeholder="운영점, SV, 목적, 메모 검색" onChange={event => setQuery(event.currentTarget.value)} />
+                <select value={supervisorFilter} onChange={event => setSupervisorFilter(event.currentTarget.value)}>
+                    <option value="all">전체 SV</option>
+                    {props.data.supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
+                </select>
+                <select value={statusFilter} onChange={event => setStatusFilter(event.currentTarget.value)}>
+                    <option value="active">취소 제외</option>
+                    <option value="all">전체 상태</option>
+                    <option value="예정">예정</option>
+                    <option value="진행중">진행중</option>
+                    <option value="보고서대기">보고서대기</option>
+                    <option value="승인대기">승인대기</option>
+                    <option value="완료">완료</option>
+                    <option value="취소">취소</option>
+                </select>
+            </div>
+            {filteredVisits.length === 0 ? <div className={styles.empty}>조건에 맞는 방문 일정이 없습니다.</div> : (
+                <>
+                    <div className={styles.tableWrap}>
+                        <table className={styles.compactTable}>
+                            <thead>
+                                <tr>
+                                    <th>방문</th>
+                                    <th>SV</th>
+                                    <th>목적</th>
+                                    <th>상태</th>
+                                    <th>메모</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pagedVisits.map(visit => (
+                                    <tr key={visit.id} className={props.selectedId === visit.id ? styles.tableRowActive : undefined}>
+                                        <td>
+                                            <button type="button" className={styles.linkButton} onClick={() => props.onSelect(visit.id)}>
+                                                <strong>{visit.locationName}</strong>
+                                                <small>{visit.visitDate || '-'}</small>
+                                            </button>
+                                        </td>
+                                        <td>{visit.supervisorName}</td>
+                                        <td>{visit.purpose}</td>
+                                        <td><span className={visit.status === '취소' ? styles.badgeRed : styles.badgeBlue}>{visit.status}</span></td>
+                                        <td><span className={styles.mutedText}>{visit.memo || '-'}</span></td>
+                                        <td>
+                                            <div className={styles.actionCell}>
+                                                <button type="button" className={styles.secondaryButton} onClick={() => props.onEdit(visit)}>
+                                                    <Pencil size={13} /> 수정
+                                                </button>
+                                                <button type="button" className={styles.dangerButton} onClick={() => props.onDelete(visit)}>
+                                                    <Trash2 size={13} /> 삭제
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className={styles.paginationBar}>
+                        <span>총 {filteredVisits.length.toLocaleString()}건</span>
+                        <div className={styles.paginationControls}>
+                            <button type="button" className={styles.secondaryButton} disabled={safePage <= 1} onClick={() => setPage(current => Math.max(1, current - 1))}>이전</button>
+                            <strong>{safePage.toLocaleString()} / {maxPage.toLocaleString()}</strong>
+                            <button type="button" className={styles.secondaryButton} disabled={safePage >= maxPage} onClick={() => setPage(current => Math.min(maxPage, current + 1))}>다음</button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -226,6 +334,7 @@ export function ReportEditor(props: {
     readonly onSubmit: () => void;
     readonly onSpecialNote: (value: string) => void;
     readonly onTemplateName: (value: string) => void;
+    readonly onBackToList: () => void;
 }) {
     if (!props.selectedVisit) return <div className={styles.empty}>보고서를 작성할 방문 일정을 선택해주세요.</div>;
     const canSubmit = props.report?.status !== '승인';
@@ -274,6 +383,9 @@ export function ReportEditor(props: {
                 <small>선택 {props.photoCount.toLocaleString()}개 · 저장된 사진 {props.report?.photoAttachments.length.toLocaleString() || 0}개</small>
             </div>
             <div className={styles.buttonRow}>
+                <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onBackToList}>
+                    목록으로
+                </button>
                 <button type="button" className={styles.secondaryButton} disabled={props.disabled || !canSubmit} onClick={props.onSave}>
                     <Save size={13} /> 임시저장
                 </button>

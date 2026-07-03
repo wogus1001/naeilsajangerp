@@ -22,11 +22,18 @@ type SaveAssignmentInput = SupervisionScope & {
 
 type SaveVisitInput = SupervisionScope & {
     readonly companyId: string;
+    readonly id?: string;
+    readonly assignmentId?: string;
     readonly locationId: string;
     readonly supervisorProfileId: string;
     readonly visitDate: string;
     readonly purpose: string;
     readonly memo: string;
+};
+
+type DeleteVisitInput = SupervisionScope & {
+    readonly companyId: string;
+    readonly id: string;
 };
 
 type SaveReportInput = SupervisionScope & {
@@ -132,18 +139,36 @@ export async function saveSupervisionAssignment(input: SaveAssignmentInput): Pro
 
 export async function saveSupervisionVisit(input: SaveVisitInput): Promise<void> {
     const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const method = input.id ? 'PATCH' : 'POST';
     const response = await fetch('/api/franchise-supervision/visits', {
-        method: 'POST',
+        method,
         headers,
         body: JSON.stringify({
+            id: input.id,
             requesterId: input.userId,
             companyId: input.companyId,
             companyName: input.companyName,
+            assignmentId: input.assignmentId,
             locationId: input.locationId,
             supervisorProfileId: input.supervisorProfileId,
             visitDate: input.visitDate,
             purpose: input.purpose,
             memo: input.memo
+        })
+    });
+    await readPayload(response);
+}
+
+export async function deleteSupervisionVisit(input: DeleteVisitInput): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/visits', {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+            id: input.id,
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName
         })
     });
     await readPayload(response);

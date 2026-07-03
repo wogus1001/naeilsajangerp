@@ -1064,3 +1064,12 @@
 - 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
 - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 11건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 새 회귀 테스트로 `disclosure-eligible` 후보의 `franchise_contract_eligible` 변수 별칭이 모두 채워지는 것을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 남은 live QA: 운영 배포 후 내일 회사 admin 계정 테스트 데이터로 `가맹계약 가능 상태 안내` 알림톡을 다시 발송해 카카오 메시지와 `alimtalk_send_logs.variables`에 후보자명, 수령확인일, 계약가능일이 표시되는지 확인한다.
+
+## 2026-07-03 슈퍼바이징 역할별 운영 UX QA
+
+- 범위: 슈퍼바이징 탭을 팀장/관리자 관점과 SV 관점으로 분리했다. `admin`/`manager`에게만 `배정 관리` 내부 탭을 노출하고, 일반 SV는 운영 리포트/방문 일정/점검 보고서/승인·시정요청 중심으로 사용한다. 운영 리포트 문구는 팀장에게 회사 전체 현황, SV에게 내 담당 운영점 현황으로 보이게 정리했다.
+- 방문 점검: 방문 일정은 목록을 먼저 보여주고, `새 방문` 또는 `수정`을 눌렀을 때 하단 등록/수정 폼에서 처리한다. 폼은 SV 선택을 먼저 두고, 선택한 SV에게 활성 배정된 운영점만 표시한다. 방문 목록에는 검색, SV 필터, 상태 필터, 페이지네이션, 수정/삭제 액션을 추가했다. 삭제는 이력 보존을 위해 방문을 `취소` 상태로 바꾸고 연결된 공용 일정도 `cancelled`로 동기화한다.
+- 점검 보고서: `보고서 목록`과 `보고서 작성`을 분리해 목록에서 미작성/임시저장/제출/승인/반려 상태를 먼저 비교하고, 선택한 방문만 작성 화면으로 이동한다. `오늘 처리 큐` 문구는 `운영 우선순위`로 바꿔 방문/보고서/승인/시정요청을 처리 순서대로 보는 영역으로 정리했다.
+- 신규 SQL: 없음. 기존 `supabase_franchise_supervision_migration.sql` 및 `supabase_franchise_supervision_v2_migration.sql` 적용 환경을 그대로 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts src/lib/franchise-supervision-assignments.test.mts` 13건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet` 통과. 브라우저 QA는 로그인 가드가 있으면 사용자 제공 테스트 계정(`내일` 회사 `admin`, 비밀번호는 문서화하지 않음)으로 Playwright 로그인 후 확인한다.
+- 남은 live QA: 실계정에서 팀장에게만 `배정 관리`가 보이는지, SV 선택 후 배정 운영점만 표시되는지, 방문 수정/삭제 후 목록과 공용 일정 상태가 갱신되는지, 보고서 목록/작성 전환과 운영 우선순위 이동이 끊기지 않는지 확인한다.

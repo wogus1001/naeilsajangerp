@@ -13,6 +13,7 @@ import {
 } from '@/lib/franchise-supervision';
 import type { SupervisionOperationQueueItem } from '@/lib/franchise-supervision-operation-queue';
 import {
+    deleteSupervisionVisit,
     fetchSupervisionData,
     saveSupervisionAssignment,
     saveSupervisionReport,
@@ -37,12 +38,12 @@ import {
     ReportList,
     ReportReviewList,
     SectionHeader,
-    SummaryCards,
     ViewTabs,
     VisitForm,
     VisitList,
     type SupervisionFilter,
     type SupervisionView,
+    type SupervisionReportMode,
     type VisitFormState
 } from './SupervisionPanelSections';
 import {
@@ -91,6 +92,7 @@ function makeAssignmentForm(data: SupervisionPayload): AssignmentFormState {
 function makeVisitForm(data: SupervisionPayload): VisitFormState {
     const assignment = data.assignments.find(item => item.active);
     return {
+        assignmentId: assignment?.id || '',
         locationId: assignment?.locationId || data.locations[0]?.id || '',
         supervisorProfileId: assignment?.supervisorProfileId || data.supervisors[0]?.id || '',
         visitDate: todayText(),
@@ -113,6 +115,14 @@ function filterVisits(visits: readonly SupervisionVisit[], filter: SupervisionFi
     if (filter === 'weekVisits') return visits.filter(isVisitInCurrentWeek);
     if (filter === 'missingReports') return visits.filter(visit => visit.status === '보고서대기');
     return visits;
+}
+
+function findVisitAssignment(data: SupervisionPayload, form: VisitFormState): SupervisionAssignment | null {
+    return data.assignments.find(item => (
+        item.active
+        && item.locationId === form.locationId
+        && item.supervisorProfileId === form.supervisorProfileId
+    )) || null;
 }
 
 function filterReportItems(items: readonly SupervisionReportListItem[], filter: SupervisionFilter): readonly SupervisionReportListItem[] {
@@ -156,6 +166,8 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
     const [selectedAssignmentLocationId, setSelectedAssignmentLocationId] = React.useState('');
     const [visitForm, setVisitForm] = React.useState<VisitFormState>(makeVisitForm(EMPTY_PAYLOAD));
     const [selectedVisitId, setSelectedVisitId] = React.useState('');
+    const [editingVisitId, setEditingVisitId] = React.useState('');
+    const [reportMode, setReportMode] = React.useState<SupervisionReportMode>('list');
     const [inspectionItems, setInspectionItems] = React.useState<readonly SupervisionInspectionItem[]>(buildDefaultInspectionItems());
     const [templateName, setTemplateName] = React.useState('현장 점검 템플릿');
     const [specialNote, setSpecialNote] = React.useState('');
@@ -183,6 +195,12 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
     React.useEffect(() => {
         void load();
     }, [load]);
+
+    React.useEffect(() => {
+        if (!data.canManage && activeView === 'assignments') {
+            setActiveView('dashboard');
+        }
+    }, [activeView, data.canManage]);
 
     const visibleVisits = React.useMemo(() => filterVisits(data.visits, activeFilter), [activeFilter, data.visits]);
     const reportListItems = React.useMemo(
@@ -240,7 +258,48 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
 
     const submitVisit = async () => {
         if (!data.companyId || !visitForm.locationId || !visitForm.supervisorProfileId || !visitForm.visitDate) return;
-        await runSaving(() => saveSupervisionVisit({ ...scope, companyId: data.companyId, ...visitForm }));
+        const assignment = findVisitAssignment(data, visitForm);
+        const { assignmentId: visitAssignmentId, ...visitFields } = visitForm;
+        const saved = await runSaving(() => saveSupervisionVisit({
+            ...scope,
+            companyId: data.companyId,
+            id: editingVisitId || undefined,
+            ...visitFields,
+            assignmentId: assignment?.id || visitAssignmentId || undefined
+        }));
+        if (saved) {
+            setEditingVisitId('');
+            setVisitForm(makeVisitForm(data));
+        }
+    };
+
+    const editVisit = (visit: SupervisionVisit) => {
+        setSelectedVisitId(visit.id);
+        setEditingVisitId(visit.id);
+        setVisitForm({
+            assignmentId: visit.assignmentId || '',
+            locationId: visit.locationId,
+            supervisorProfileId: visit.supervisorProfileId,
+            visitDate: visit.visitDate || todayText(),
+            purpose: visit.purpose,
+            memo: visit.memo
+        });
+    };
+
+    const resetVisitForm = () => {
+        setEditingVisitId('');
+        setVisitForm(makeVisitForm(data));
+    };
+
+    const deleteVisit = async (visit: SupervisionVisit) => {
+        if (!data.companyId) return;
+        const confirmed = window.confirm(`${visit.locationName} 방문 일정을 삭제할까요? 삭제한 일정은 취소 상태로 보관됩니다.`);
+        if (!confirmed) return;
+        await runSaving(() => deleteSupervisionVisit({
+            ...scope,
+            companyId: data.companyId,
+            id: visit.id
+        }));
     };
 
     const submitReport = async (event: 'saveDraft' | 'submit' | 'approve' | 'reject', report?: SupervisionReport, rejectReasonOverride?: string) => {
@@ -277,13 +336,6 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
     const changeActionStatus = async (action: SupervisionCorrectiveAction, status: string) => {
         if (!data.companyId) return;
         await runSaving(() => updateCorrectiveAction({ ...scope, companyId: data.companyId, id: action.id, status, memo: action.memo }));
-    };
-
-    const selectSummaryFilter = (view: SupervisionView, filter: SupervisionFilter) => {
-        setActiveView(view);
-        setActiveFilter(filter);
-        const firstVisit = filterVisits(data.visits, filter)[0];
-        if (firstVisit) setSelectedVisitId(firstVisit.id);
     };
 
     const openQueueItem = (item: SupervisionOperationQueueItem) => {
@@ -348,9 +400,9 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
 
     return (
         <div className={styles.panel}>
-            <SummaryCards data={data} isLoading={isLoading} onSelect={selectSummaryFilter} />
             <ViewTabs
                 activeView={activeView}
+                canManage={data.canManage}
                 onSelect={view => {
                     setActiveView(view);
                     setActiveFilter('all');
@@ -362,7 +414,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                     <SupervisionOperationQueue items={data.operationQueue} onOpen={openQueueItem} />
                 </>
             ) : null}
-            {activeView === 'assignments' ? (
+            {activeView === 'assignments' && data.canManage ? (
                 <div className={styles.layoutSingle}>
                     <section className={styles.section}>
                         <SectionHeader title="SV 배정" caption="운영점별 활성 SV 1명을 기준으로 관리합니다." />
@@ -388,8 +440,24 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                     <section className={styles.section}>
                         <SectionHeader title="방문 점검" caption="방문 일정을 만들고 점검 보고서를 이어서 작성합니다." />
                         <div className={styles.body}>
-                            <VisitForm data={data} form={visitForm} disabled={isSaving} onChange={setVisitForm} onSubmit={submitVisit} />
-                            <VisitList visits={visibleVisits} selectedId={selectedVisit?.id || ''} onSelect={setSelectedVisitId} />
+                            <VisitList
+                                data={data}
+                                visits={visibleVisits}
+                                selectedId={selectedVisit?.id || ''}
+                                onDelete={deleteVisit}
+                                onEdit={editVisit}
+                                onNew={resetVisitForm}
+                                onSelect={setSelectedVisitId}
+                            />
+                            <VisitForm
+                                data={data}
+                                editing={Boolean(editingVisitId)}
+                                form={visitForm}
+                                disabled={isSaving}
+                                onCancelEdit={resetVisitForm}
+                                onChange={setVisitForm}
+                                onSubmit={submitVisit}
+                            />
                         </div>
                     </section>
                 </div>
@@ -399,25 +467,44 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                     <section className={styles.section}>
                         <SectionHeader title="점검 보고서" caption="모바일 현장 입력 흐름으로 체크리스트와 사진을 제출합니다." />
                         <div className={styles.body}>
-                            <ReportList items={visibleReportItems} selectedVisitId={selectedVisit?.id || ''} onSelect={setSelectedVisitId} />
-                            <ReportEditor
-                                canManage={data.canManage}
-                                disabled={isSaving}
-                                inspectionItems={inspectionItems}
-                                photoCount={photoFiles.length}
-                                report={selectedReport}
-                                selectedVisit={selectedVisit}
-                                specialNote={specialNote}
-                                templateName={templateName}
-                                onFiles={setPhotoFiles}
-                                onItemChange={setInspectionItems}
-                                onPrint={() => printSupervisionReport({ report: selectedReport, visit: selectedVisit, items: inspectionItems, specialNote })}
-                                onSave={() => void submitReport('saveDraft')}
-                                onSaveTemplate={() => void submitTemplate()}
-                                onSubmit={() => void submitReport('submit')}
-                                onSpecialNote={setSpecialNote}
-                                onTemplateName={setTemplateName}
-                            />
+                            <div className={styles.subTabs}>
+                                <button type="button" className={reportMode === 'list' ? styles.viewTabActive : styles.viewTab} onClick={() => setReportMode('list')}>
+                                    보고서 목록
+                                </button>
+                                <button type="button" className={reportMode === 'editor' ? styles.viewTabActive : styles.viewTab} onClick={() => setReportMode('editor')}>
+                                    보고서 작성
+                                </button>
+                            </div>
+                            {reportMode === 'list' ? (
+                                <ReportList
+                                    items={visibleReportItems}
+                                    selectedVisitId={selectedVisit?.id || ''}
+                                    onSelect={visitId => {
+                                        setSelectedVisitId(visitId);
+                                        setReportMode('editor');
+                                    }}
+                                />
+                            ) : (
+                                <ReportEditor
+                                    canManage={data.canManage}
+                                    disabled={isSaving}
+                                    inspectionItems={inspectionItems}
+                                    photoCount={photoFiles.length}
+                                    report={selectedReport}
+                                    selectedVisit={selectedVisit}
+                                    specialNote={specialNote}
+                                    templateName={templateName}
+                                    onBackToList={() => setReportMode('list')}
+                                    onFiles={setPhotoFiles}
+                                    onItemChange={setInspectionItems}
+                                    onPrint={() => printSupervisionReport({ report: selectedReport, visit: selectedVisit, items: inspectionItems, specialNote })}
+                                    onSave={() => void submitReport('saveDraft')}
+                                    onSaveTemplate={() => void submitTemplate()}
+                                    onSubmit={() => void submitReport('submit')}
+                                    onSpecialNote={setSpecialNote}
+                                    onTemplateName={setTemplateName}
+                                />
+                            )}
                         </div>
                     </section>
                 </div>
