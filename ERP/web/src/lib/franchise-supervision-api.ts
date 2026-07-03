@@ -65,7 +65,7 @@ export function isMissingSupervisionSchemaError(error: unknown): boolean {
     const code = cleanString(error.code);
     const message = cleanString(error.message);
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code)
-        && /franchise_supervisor_assignments|franchise_store_visits|franchise_inspection_reports|franchise_corrective_actions/i.test(message);
+        && /franchise_supervisor_assignments|franchise_store_visits|franchise_inspection_reports|franchise_corrective_actions|franchise_supervision_report_templates|franchise_supervision_report_events|franchise_corrective_action_events/i.test(message);
 }
 
 export async function resolveSupervisionAuth(request: Request): Promise<

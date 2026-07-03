@@ -1,5 +1,6 @@
 import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -20,9 +21,69 @@ export const dynamic = 'force-dynamic';
 type VisitAccessRow = {
     readonly id: string;
     readonly company_id: string | null;
+    readonly location?: { readonly name: string | null } | null;
+    readonly location_id: string | null;
+    readonly purpose: string | null;
+    readonly schedule_id: string | null;
+    readonly status: string | null;
     readonly supervisor_profile_id: string | null;
+    readonly visit_date: string | null;
     readonly created_by: string | null;
 };
+
+type AssignmentScopeRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly location_id: string | null;
+    readonly supervisor_profile_id: string | null;
+    readonly active: boolean | null;
+};
+
+function readLocationName(location: VisitAccessRow['location']): string {
+    return location?.name || '운영점';
+}
+
+async function resolveAssignmentId(input: {
+    readonly assignmentId: string;
+    readonly companyId: string;
+    readonly locationId: string;
+    readonly supervisorProfileId: string;
+    readonly supabaseAdmin: SupabaseClient;
+}): Promise<string | null> {
+    if (!input.assignmentId) return null;
+    const { data, error } = await input.supabaseAdmin
+        .from('franchise_supervisor_assignments')
+        .select('id, company_id, location_id, supervisor_profile_id, active')
+        .eq('id', input.assignmentId)
+        .maybeSingle<AssignmentScopeRow>();
+    if (error) throw error;
+    if (!data || data.company_id !== input.companyId || data.location_id !== input.locationId || data.supervisor_profile_id !== input.supervisorProfileId || data.active === false) {
+        throw new Error('SUPERVISION_ASSIGNMENT_SCOPE_MISMATCH');
+    }
+    return data.id;
+}
+
+async function syncSchedule(input: {
+    readonly existing: VisitAccessRow;
+    readonly nextPurpose: string;
+    readonly nextStatus: string;
+    readonly nextSupervisorProfileId: string | null;
+    readonly nextVisitDate: string | null;
+    readonly supabaseAdmin: SupabaseClient;
+}) {
+    if (!input.existing.schedule_id) return;
+    const { error } = await input.supabaseAdmin
+        .from('schedules')
+        .update({
+            date: input.nextVisitDate || input.existing.visit_date,
+            title: `${readLocationName(input.existing.location)} ${input.nextPurpose}`,
+            status: input.nextStatus === '취소' ? 'cancelled' : 'scheduled',
+            user_id: input.nextSupervisorProfileId || input.existing.supervisor_profile_id,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', input.existing.schedule_id);
+    if (error) throw error;
+}
 
 async function createSchedule(input: {
     readonly companyId: string;
@@ -50,6 +111,34 @@ async function createSchedule(input: {
         .maybeSingle<{ readonly id: string }>();
     if (error) throw error;
     return data?.id || null;
+}
+
+async function notifyVisitDue(input: {
+    readonly companyId: string;
+    readonly locationName: string;
+    readonly purpose: string;
+    readonly supervisorProfileId: string;
+    readonly supabaseAdmin: SupabaseClient;
+    readonly visitDate: string;
+    readonly visitId: string;
+}) {
+    try {
+        await notifyProfileRecipients({
+            companyId: input.companyId,
+            profileIds: [input.supervisorProfileId],
+            scenarioKey: 'supervision_visit_due',
+            sourceId: input.visitId,
+            sourceType: 'supervision-visit-due',
+            supabaseAdmin: input.supabaseAdmin,
+            variables: {
+                운영점명: input.locationName,
+                방문일: input.visitDate,
+                방문목적: input.purpose
+            }
+        });
+    } catch (error) {
+        console.warn('Supervision visit AlimTalk notification skipped:', error);
+    }
 }
 
 async function readMutationScope(request: Request) {
@@ -90,6 +179,13 @@ export async function POST(request: Request) {
         }
 
         const purpose = normalizeVisitPurpose(getFirst(scope.body, ['purpose']));
+        const assignmentId = await resolveAssignmentId({
+            assignmentId: cleanString(getFirst(scope.body, ['assignmentId', 'assignment_id'])),
+            companyId: scope.companyId,
+            locationId: location.location.id,
+            supervisorProfileId: supervisor.profileId,
+            supabaseAdmin: scope.auth.supabaseAdmin
+        });
         const scheduleId = await createSchedule({
             companyId: scope.companyId,
             locationName: location.location.name || '운영점',
@@ -105,7 +201,7 @@ export async function POST(request: Request) {
                 company_id: scope.companyId,
                 location_id: location.location.id,
                 supervisor_profile_id: supervisor.profileId,
-                assignment_id: cleanString(getFirst(scope.body, ['assignmentId', 'assignment_id'])) || null,
+                assignment_id: assignmentId,
                 schedule_id: scheduleId,
                 visit_date: visitDate,
                 purpose,
@@ -117,8 +213,20 @@ export async function POST(request: Request) {
             .select('id')
             .single<{ readonly id: string }>();
         if (error) throw error;
+        await notifyVisitDue({
+            companyId: scope.companyId,
+            locationName: location.location.name || '운영점',
+            purpose,
+            supervisorProfileId: supervisor.profileId,
+            supabaseAdmin: scope.auth.supabaseAdmin,
+            visitDate,
+            visitId: data.id
+        });
         return ok({ id: data.id }, 201);
     } catch (error) {
+        if (error instanceof Error && error.message === 'SUPERVISION_ASSIGNMENT_SCOPE_MISMATCH') {
+            return fail(403, 'FORBIDDEN', 'SV 배정의 회사 또는 운영점 범위가 일치하지 않습니다.');
+        }
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
         }
@@ -137,7 +245,7 @@ export async function PATCH(request: Request) {
 
         const { data: existing, error: findError } = await scope.auth.supabaseAdmin
             .from('franchise_store_visits')
-            .select('id, company_id, supervisor_profile_id, created_by')
+            .select('id, company_id, location_id, supervisor_profile_id, schedule_id, visit_date, purpose, status, created_by, location:franchise_locations(name)')
             .eq('id', id)
             .maybeSingle<VisitAccessRow>();
         if (findError) throw findError;
@@ -164,8 +272,14 @@ export async function PATCH(request: Request) {
         if (supervisorId?.ok) updates.supervisor_profile_id = supervisorId.profileId;
         const visitDate = cleanString(getFirst(scope.body, ['visitDate', 'visit_date']));
         if (visitDate) updates.visit_date = visitDate;
-        if (Object.prototype.hasOwnProperty.call(scope.body, 'purpose')) updates.purpose = normalizeVisitPurpose(getFirst(scope.body, ['purpose']));
-        if (Object.prototype.hasOwnProperty.call(scope.body, 'status')) updates.status = normalizeVisitStatus(getFirst(scope.body, ['status']));
+        const nextPurpose = Object.prototype.hasOwnProperty.call(scope.body, 'purpose')
+            ? normalizeVisitPurpose(getFirst(scope.body, ['purpose']))
+            : normalizeVisitPurpose(existing.purpose);
+        const nextStatus = Object.prototype.hasOwnProperty.call(scope.body, 'status')
+            ? normalizeVisitStatus(getFirst(scope.body, ['status']))
+            : normalizeVisitStatus(existing.status);
+        updates.purpose = nextPurpose;
+        updates.status = nextStatus;
         if (Object.prototype.hasOwnProperty.call(scope.body, 'memo')) updates.memo = cleanString(getFirst(scope.body, ['memo'])) || null;
 
         const { error } = await scope.auth.supabaseAdmin
@@ -173,6 +287,14 @@ export async function PATCH(request: Request) {
             .update(updates)
             .eq('id', id);
         if (error) throw error;
+        await syncSchedule({
+            existing,
+            nextPurpose,
+            nextStatus,
+            nextSupervisorProfileId: supervisorId?.ok ? supervisorId.profileId : null,
+            nextVisitDate: visitDate || null,
+            supabaseAdmin: scope.auth.supabaseAdmin
+        });
         return ok({ success: true });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {

@@ -970,6 +970,17 @@
 ## 2026-07-02 가맹 운영 슈퍼바이징 MVP QA
 
 - 범위: `/dashboard/franchise-operations`의 가맹 운영 탭을 `대시보드 / 슈퍼바이징 / 가맹점 목록 / 가맹점 등록`으로 확장했다. 슈퍼바이징 탭은 요약 KPI, SV 배정, 방문 일정, 점검 보고서 저장/제출, 관리자 승인/반려, 시정요청 상태 변경을 한 화면에서 처리한다.
+## 2026-07-03 슈퍼바이징 2차 고도화 QA
+
+- 범위: `/dashboard/franchise-operations`의 `슈퍼바이징` 탭을 `운영 리포트 / 배정 관리 / 방문 일정 / 점검 보고서 / 승인·시정요청` 내부 탭으로 재구성했다. 상단 KPI 카드는 클릭 시 오늘 방문, 이번주 예정, 미제출 보고서, 승인 대기, 진행 중 시정요청 큐로 이동하고 목록을 필터링한다.
+- 보고서: 기본 점검 항목을 `매출/객수`, `청결`, `서비스`, `품질`, `재고/물류`, `본사 지원`, `교육/공지 이행`, `기타`로 확장했다. 팀장/admin은 현재 점검 항목을 회사 공용 템플릿으로 저장할 수 있고, 보고서 작성 화면에서 사진 첨부 메타와 특이사항을 함께 저장한다. 보고서 PDF/인쇄 출력은 운영점, SV, 방문일, 상태, 점검 항목, 특이사항, 첨부 이미지 URL이 있는 사진을 포함한다.
+- 이력/동기화: 보고서 임시저장/제출/승인/반려는 `franchise_supervision_report_events`에, 시정요청 생성/상태변경/메모변경은 `franchise_corrective_action_events`에 남긴다. 보고서 제출/승인/반려에 따라 방문 일정 상태를 `승인대기 / 완료 / 보고서대기`로 동기화하고, 임시저장은 방문 상태를 바꾸지 않는다. 방문 수정/취소 시 연결된 `schedules` 일정의 날짜/상태/담당자를 갱신한다.
+- 알림톡: 내부 운영 알림용 `supervision_visit_due`, `supervision_report_missing`, `supervision_report_reviewed`, `supervision_corrective_action_due` 템플릿/시나리오 seed를 추가했다. 2차-2 범위에서는 방문 생성, 보고서 승인/반려, 시정요청 생성 시 내부 담당자/SV에게 발송 훅을 연결했다. `supervision_report_missing` 자동 발송은 방문 D-1/D-day와 함께 스케줄러/운영 큐 연결 범위로 남긴다. 시나리오나 템플릿이 미승인/비활성 상태이면 본 업무 저장은 성공하고 알림톡 로그에 blocked/skipped 상태가 남는다.
+- 신규 SQL: `supabase_franchise_supervision_v2_migration.sql`을 추가했다. 회사별 점검 템플릿, 보고서 이벤트, 시정요청 이벤트, 보고서 `template_id`, 내부 알림톡 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
+- 코드리뷰 보정: 보고서 저장/조회 시 `template_id` 기준으로 회사 점검 템플릿 항목을 실제 병합하도록 수정했다. 승인/반려는 실제 `제출` 상태에서만 처리하고, 임시저장은 방문 상태·미제출 알림을 만들지 않게 했다. 방문 생성의 `assignment_id`, 시정요청 생성의 `report_id`, 내부 알림톡 수신자 조회는 회사 범위를 다시 검증한다. 보고서 첨부는 저장 경로만 신뢰하고 조회 시 `property-documents/franchise-supervision/...` 경로에서 public URL을 재생성한다. v2 이벤트 테이블 RLS는 참조 보고서/시정요청 회사와 `actor_profile_id = auth.uid()`를 확인하는 insert-only 정책으로 보강했다. 보고서 라우트와 슈퍼바이징 패널은 지원 파일/섹션 파일로 분리해 유지보수 리스크를 낮췄다.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright mock 세션에서 `/dashboard/franchise-operations` 슈퍼바이징 탭을 1280px/390px로 확인했고, 운영 리포트/점검 보고서 화면 모두 page-level horizontal overflow 0건이었다. mock 인증에서 헤더 알림 API 401 로그가 있었으나 슈퍼바이징 화면 렌더링과 탭/KPI 동작에는 영향이 없었다.
+- 남은 live QA: v2 SQL 적용 후 실계정으로 템플릿 저장/재조회, 방문 생성/수정/취소와 공용 일정 동기화, 보고서 제출/승인/반려 이력, 시정요청 상태 변경 이력, 보고서 인쇄 미리보기, 알림톡 발송 로그를 확인한다. 방문 D-1/D-day 및 보고서 미제출 자동 발송은 스케줄러/운영 큐 연결 범위로 남긴다.
+
 - 신규 SQL: `supabase_franchise_supervision_migration.sql`을 추가했다. `franchise_supervisor_assignments`, `franchise_store_visits`, `franchise_inspection_reports`, `franchise_corrective_actions`, 상태 제약, 인덱스, RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - API/UI: `/api/franchise-supervision` 초기 조회와 `/assignments`, `/visits`, `/reports`, `/actions` mutation 라우트를 추가했다. `admin`/`manager`는 회사 전체를 관리하고, 일반 직원/SV는 본인 배정·방문·보고서 중심으로 제한한다. 방문 생성 시 기존 `schedules`에 회사 일정 1건을 같이 만들며, 보고서 사진은 기존 `property-documents` 버킷의 `franchise-supervision/<company_id>/<report_id>/...` 경로 메타데이터로 저장한다.
 - 후속 계획: 2차는 알림톡/문자/이메일 자동 발송 훅, 공용 달력 양방향 동기화, 점검 보고서 PDF 출력, 보고서 템플릿 빌더, 대표 대시보드 KPI 연결로 둔다. 1차에서는 발송 이벤트와 PDF 자동 출력은 직접 실행하지 않는다.

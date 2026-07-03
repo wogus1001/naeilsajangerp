@@ -5,6 +5,7 @@ import type { FranchiseNotificationCandidate } from './franchise-notifications';
 
 type ProfileRecipientRow = {
     readonly id: string;
+    readonly company_id: string | null;
     readonly name: string | null;
     readonly phone: string | null;
     readonly phone_normalized: string | null;
@@ -102,15 +103,17 @@ async function fetchCompanyMeta(
 
 async function fetchProfilesByIds(
     supabaseAdmin: SupabaseClient,
-    profileIds: readonly (string | null | undefined)[]
+    profileIds: readonly (string | null | undefined)[],
+    companyId: string | null
 ): Promise<readonly ProfileRecipientRow[]> {
     const ids = uniqueStrings(profileIds);
     if (ids.length === 0) return [];
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
         .from('profiles')
-        .select('id, name, phone, phone_normalized')
-        .in('id', ids)
-        .returns<ProfileRecipientRow[]>();
+        .select('id, company_id, name, phone, phone_normalized')
+        .in('id', ids);
+    if (companyId) query = query.eq('company_id', companyId);
+    const { data, error } = await query.returns<ProfileRecipientRow[]>();
     if (error) throw error;
     return data || [];
 }
@@ -137,7 +140,7 @@ export async function notifyAlimtalkDisclosureEmailSent(
     });
 }
 
-async function notifyProfileRecipients(input: {
+export async function notifyProfileRecipients(input: {
     readonly supabaseAdmin: SupabaseClient;
     readonly scenarioKey: AlimtalkScenarioKey;
     readonly companyId: string | null;
@@ -146,7 +149,7 @@ async function notifyProfileRecipients(input: {
     readonly sourceType: string;
     readonly sourceId: string;
 }): Promise<void> {
-    const recipients = await fetchProfilesByIds(input.supabaseAdmin, input.profileIds);
+    const recipients = await fetchProfilesByIds(input.supabaseAdmin, input.profileIds, input.companyId);
     await Promise.all(recipients.map(recipient => sendAlimtalkNotification(input.supabaseAdmin, {
         companyId: input.companyId,
         recipient: {

@@ -77,6 +77,7 @@ supabase_franchise_vendor_contract_events_migration.sql
 supabase_franchise_vendors_migration.sql
 supabase_franchise_alimtalk_operations_migration.sql
 supabase_franchise_supervision_migration.sql
+supabase_franchise_supervision_v2_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
@@ -87,7 +88,9 @@ supabase_realty_import_migration.sql
 
 Run `supabase_franchise_supervision_migration.sql` before enabling the `가맹 운영 > 슈퍼바이징` tab in production. The migration creates supervisor assignments, store visits, inspection reports, and corrective actions. The tab uses existing `franchise_locations`, `profiles`, and company-scoped access rules; `admin` and `manager` can manage company-wide supervision, while ordinary staff/SV users work around assigned stores and their own reports.
 
-The MVP supports active SV assignment per operating store, visit scheduling with a lightweight `schedules` sync, inspection report draft/submission, manager approval/rejection, image metadata upload under `property-documents/franchise-supervision/<company_id>/<report_id>/...`, and corrective-action creation for `개선필요` inspection items. Full calendar integration, AlimTalk send hooks, PDF report output, and report template builder remain later phases.
+After the MVP migration is applied, run `supabase_franchise_supervision_v2_migration.sql` for the second-phase features. **SQL 등록 필요**. The v2 migration adds company report templates, report submit/approve/reject events, corrective-action events, a report `template_id`, and draft AlimTalk templates/scenarios for internal SV operations.
+
+The MVP supports active SV assignment per operating store, visit scheduling with a lightweight `schedules` sync, inspection report draft/submission, manager approval/rejection, image metadata upload under `property-documents/franchise-supervision/<company_id>/<report_id>/...`, and corrective-action creation for `개선필요` inspection items. The v2 UI reorganizes the tab into `운영 리포트 / 배정 관리 / 방문 일정 / 점검 보고서 / 승인·시정요청`, makes KPI cards clickable filters, lets managers save the company inspection template, prints inspection reports, syncs visit changes back to `schedules`, and leaves report/action history for audit. Internal AlimTalk hooks are wired for visit creation, report approval/rejection, and corrective-action assignment when the v2 scenarios are approved and enabled. Report save/approval transitions, assignment/report company scope, event-table RLS, and supervision photo URL handling are hardened in the v2 route review pass.
 
 ## Franchise Vendor Contract Vault Setup
 

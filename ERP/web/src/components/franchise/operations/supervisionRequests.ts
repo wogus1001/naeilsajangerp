@@ -3,7 +3,8 @@ import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import {
     buildDefaultInspectionItems,
     type SupervisionInspectionItem,
-    type SupervisionPhotoAttachment
+    type SupervisionPhotoAttachment,
+    type SupervisionReportTemplateItem
 } from '@/lib/franchise-supervision';
 import type {
     SupervisionPayload,
@@ -34,6 +35,7 @@ type SaveReportInput = SupervisionScope & {
     readonly visitId: string;
     readonly event: 'saveDraft' | 'submit' | 'approve' | 'reject';
     readonly inspectionItems: readonly SupervisionInspectionItem[];
+    readonly templateId?: string;
     readonly specialNote: string;
     readonly rejectReason: string;
     readonly photoFiles: readonly File[];
@@ -45,6 +47,13 @@ type UpdateActionInput = SupervisionScope & {
     readonly id: string;
     readonly status: string;
     readonly memo: string;
+};
+
+type SaveTemplateInput = SupervisionScope & {
+    readonly companyId: string;
+    readonly name: string;
+    readonly description: string;
+    readonly inspectionItems: readonly SupervisionReportTemplateItem[];
 };
 
 async function readJsonSafely(response: Response): Promise<unknown> {
@@ -72,7 +81,10 @@ function buildEmptyPayload(): SupervisionPayload {
         assignments: [],
         visits: [],
         reports: [],
+        reportTemplates: [],
+        reportEvents: [],
         correctiveActions: [],
+        correctiveActionEvents: [],
         summary: {
             todayVisitCount: 0,
             weekVisitCount: 0,
@@ -150,10 +162,11 @@ async function uploadReportPhotos(input: {
         const headers = await getApiAuthHeaders();
         const response = await fetch('/api/upload', { method: 'POST', headers, body: formData });
         const payload = await readPayload(response);
-        const data = unwrapApiData<{ readonly path?: string }>(payload);
+        const data = unwrapApiData<{ readonly path?: string; readonly publicUrl?: string }>(payload);
         uploaded.push({
             name: file.name,
             path: data.path || path,
+            publicUrl: data.publicUrl || '',
             size: file.size,
             contentType: file.type
         });
@@ -175,6 +188,7 @@ export async function saveSupervisionReport(input: SaveReportInput): Promise<voi
             visitId: input.visitId,
             event: input.event,
             inspectionItems: input.inspectionItems.length > 0 ? input.inspectionItems : buildDefaultInspectionItems(),
+            templateId: input.templateId,
             specialNote: input.specialNote,
             rejectReason: input.rejectReason,
             photoAttachments: input.existingAttachments
@@ -198,10 +212,28 @@ export async function saveSupervisionReport(input: SaveReportInput): Promise<voi
             companyId: input.companyId,
             companyName: input.companyName,
             event: input.event,
+            attachmentsOnly: true,
             photoAttachments: attachments
         })
     });
     await readPayload(patchResponse);
+}
+
+export async function saveSupervisionTemplate(input: SaveTemplateInput): Promise<void> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/templates', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            requesterId: input.userId,
+            companyId: input.companyId,
+            companyName: input.companyName,
+            name: input.name,
+            description: input.description,
+            inspectionItems: input.inspectionItems
+        })
+    });
+    await readPayload(response);
 }
 
 export async function updateCorrectiveAction(input: UpdateActionInput): Promise<void> {

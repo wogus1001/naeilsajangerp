@@ -1,4 +1,6 @@
 import { fail, ok } from '@/lib/api-response';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -11,7 +13,7 @@ import {
     resolveSupervisionAuth,
     resolveSupervisionCompanyId
 } from '@/lib/franchise-supervision-api';
-import { normalizeCorrectiveActionStatus } from '@/lib/franchise-supervision';
+import { normalizeCorrectiveActionStatus, type CorrectiveActionEventType } from '@/lib/franchise-supervision';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +24,83 @@ type CorrectiveActionRow = {
     readonly created_by: string | null;
     readonly status: string | null;
 };
+
+type ReportScopeRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly location_id: string | null;
+};
+
+async function resolveReportId(input: {
+    readonly companyId: string;
+    readonly locationId: string;
+    readonly reportId: string;
+    readonly supabaseAdmin: SupabaseClient;
+}): Promise<string | null> {
+    if (!input.reportId) return null;
+    const { data, error } = await input.supabaseAdmin
+        .from('franchise_inspection_reports')
+        .select('id, company_id, location_id')
+        .eq('id', input.reportId)
+        .maybeSingle<ReportScopeRow>();
+    if (error) throw error;
+    if (!data || data.company_id !== input.companyId || data.location_id !== input.locationId) {
+        throw new Error('SUPERVISION_REPORT_SCOPE_MISMATCH');
+    }
+    return data.id;
+}
+
+async function insertActionEvent(input: {
+    readonly actionId: string;
+    readonly actorProfileId: string;
+    readonly companyId: string;
+    readonly eventType: CorrectiveActionEventType;
+    readonly fromStatus: string | null;
+    readonly memo: string;
+    readonly supabaseAdmin: SupabaseClient;
+    readonly toStatus: string | null;
+}) {
+    const { error } = await input.supabaseAdmin
+        .from('franchise_corrective_action_events')
+        .insert({
+            company_id: input.companyId,
+            corrective_action_id: input.actionId,
+            event_type: input.eventType,
+            from_status: input.fromStatus,
+            to_status: input.toStatus,
+            memo: input.memo || null,
+            actor_profile_id: input.actorProfileId
+        });
+    if (error) throw error;
+}
+
+async function notifyCorrectiveActionDue(input: {
+    readonly actionId: string;
+    readonly assigneeProfileId: string;
+    readonly companyId: string;
+    readonly dueDate: string;
+    readonly locationName: string;
+    readonly supabaseAdmin: SupabaseClient;
+    readonly title: string;
+}) {
+    try {
+        await notifyProfileRecipients({
+            companyId: input.companyId,
+            profileIds: [input.assigneeProfileId],
+            scenarioKey: 'supervision_corrective_action_due',
+            sourceId: input.actionId,
+            sourceType: 'supervision-corrective-action-due',
+            supabaseAdmin: input.supabaseAdmin,
+            variables: {
+                운영점명: input.locationName,
+                시정항목: input.title,
+                기한: input.dueDate || '-'
+            }
+        });
+    } catch (error) {
+        console.warn('Supervision corrective action AlimTalk notification skipped:', error);
+    }
+}
 
 async function readMutationScope(request: Request) {
     const body = await readJsonBody(request);
@@ -56,12 +135,18 @@ export async function POST(request: Request) {
             message: '담당자를 선택해주세요.'
         });
         if (!assignee.ok) return assignee.response;
+        const reportId = await resolveReportId({
+            companyId: scope.companyId,
+            locationId: location.location.id,
+            reportId: cleanString(getFirst(scope.body, ['reportId', 'report_id'])),
+            supabaseAdmin: scope.auth.supabaseAdmin
+        });
 
         const { data, error } = await scope.auth.supabaseAdmin
             .from('franchise_corrective_actions')
             .insert({
                 company_id: scope.companyId,
-                report_id: cleanString(getFirst(scope.body, ['reportId', 'report_id'])) || null,
+                report_id: reportId,
                 location_id: location.location.id,
                 assignee_profile_id: assignee.profileId,
                 title: cleanString(getFirst(scope.body, ['title'])) || '시정요청',
@@ -74,8 +159,30 @@ export async function POST(request: Request) {
             .select('id')
             .single<{ readonly id: string }>();
         if (error) throw error;
+        await insertActionEvent({
+            actionId: data.id,
+            actorProfileId: scope.auth.requester.id,
+            companyId: scope.companyId,
+            eventType: '생성',
+            fromStatus: null,
+            memo: cleanString(getFirst(scope.body, ['memo'])) || '',
+            supabaseAdmin: scope.auth.supabaseAdmin,
+            toStatus: normalizeCorrectiveActionStatus(getFirst(scope.body, ['status']))
+        });
+        await notifyCorrectiveActionDue({
+            actionId: data.id,
+            assigneeProfileId: assignee.profileId,
+            companyId: scope.companyId,
+            dueDate: cleanString(getFirst(scope.body, ['dueDate', 'due_date'])),
+            locationName: location.location.name || '운영점',
+            supabaseAdmin: scope.auth.supabaseAdmin,
+            title: cleanString(getFirst(scope.body, ['title'])) || '시정요청'
+        });
         return ok({ id: data.id }, 201);
     } catch (error) {
+        if (error instanceof Error && error.message === 'SUPERVISION_REPORT_SCOPE_MISMATCH') {
+            return fail(403, 'FORBIDDEN', '보고서의 회사 또는 운영점 범위가 일치하지 않습니다.');
+        }
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
         }
@@ -107,7 +214,8 @@ export async function PATCH(request: Request) {
             updated_by: scope.auth.requester.id,
             updated_at: new Date().toISOString()
         };
-        if (Object.prototype.hasOwnProperty.call(scope.body, 'status')) {
+        const hadStatusUpdate = Object.prototype.hasOwnProperty.call(scope.body, 'status');
+        if (hadStatusUpdate) {
             const status = normalizeCorrectiveActionStatus(getFirst(scope.body, ['status']));
             updates.status = status;
             updates.completed_at = status === '완료' ? new Date().toISOString() : null;
@@ -136,6 +244,16 @@ export async function PATCH(request: Request) {
             .update(updates)
             .eq('id', id);
         if (error) throw error;
+        await insertActionEvent({
+            actionId: id,
+            actorProfileId: scope.auth.requester.id,
+            companyId: scope.companyId,
+            eventType: hadStatusUpdate ? '상태변경' : '메모변경',
+            fromStatus: existing.status,
+            memo: cleanString(getFirst(scope.body, ['memo'])) || '',
+            supabaseAdmin: scope.auth.supabaseAdmin,
+            toStatus: hadStatusUpdate ? String(updates.status || '') : existing.status
+        });
         return ok({ success: true });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {

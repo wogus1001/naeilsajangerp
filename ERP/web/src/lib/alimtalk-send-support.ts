@@ -4,7 +4,11 @@ export const ALIMTALK_SCENARIO_KEYS = [
     'disclosure_email_sent',
     'disclosure_confirmed',
     'franchise_contract_eligible',
-    'vendor_contract_due'
+    'vendor_contract_due',
+    'supervision_visit_due',
+    'supervision_report_missing',
+    'supervision_report_reviewed',
+    'supervision_corrective_action_due'
 ] as const;
 
 export type AlimtalkScenarioKey = typeof ALIMTALK_SCENARIO_KEYS[number];

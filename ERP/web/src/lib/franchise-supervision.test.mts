@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    buildDefaultReportTemplate,
     buildCorrectiveActionSeeds,
     mergeInspectionItems,
     nextReportStatus,
@@ -14,7 +15,7 @@ void test('Given saved inspection item values When merging with defaults Then mi
         { id: 'unknown', label: '임시항목', result: '주의', memo: '기타' }
     ]);
 
-    assert.equal(items.length, 6);
+    assert.equal(items.length, 8);
     assert.equal(items[0]?.label, '매출/객수 확인');
     assert.equal(items[1]?.id, 'cleanliness');
     assert.equal(items[1]?.result, '개선필요');
@@ -22,11 +23,42 @@ void test('Given saved inspection item values When merging with defaults Then mi
     assert.equal(items.some(item => item.id === 'unknown'), false);
 });
 
+void test('Given a company report template When merging inspection items Then custom template order is preserved', () => {
+    const template = [
+        { id: 'cleanliness', label: '청결' },
+        { id: 'training-notice', label: '교육/공지 이행' }
+    ];
+    const items = mergeInspectionItems([
+        { id: 'training-notice', label: '교육/공지 이행', result: '주의', memo: '신메뉴 공지 확인 필요' }
+    ], template);
+
+    assert.deepEqual(items.map(item => item.id), ['cleanliness', 'training-notice']);
+    assert.equal(items[0]?.result, '양호');
+    assert.equal(items[1]?.result, '주의');
+});
+
+void test('Given the default report template When building Then supervision v2 items include education and other checks', () => {
+    const template = buildDefaultReportTemplate();
+
+    assert.deepEqual(template.inspectionItems.map(item => item.label), [
+        '매출/객수 확인',
+        '청결',
+        '서비스',
+        '품질',
+        '재고/물류',
+        '본사 지원',
+        '교육/공지 이행',
+        '기타'
+    ]);
+});
+
 void test('Given a submitted report When approving or rejecting Then only submitted reports change status', () => {
     assert.equal(nextReportStatus('임시저장', { kind: 'approve' }), '임시저장');
     assert.equal(nextReportStatus('제출', { kind: 'approve' }), '승인');
     assert.equal(nextReportStatus('제출', { kind: 'reject' }), '반려');
-    assert.equal(nextReportStatus('승인', { kind: 'submit' }), '제출');
+    assert.equal(nextReportStatus('승인', { kind: 'submit' }), '승인');
+    assert.equal(nextReportStatus('제출', { kind: 'saveDraft' }), '제출');
+    assert.equal(nextReportStatus('반려', { kind: 'submit' }), '제출');
 });
 
 void test('Given inspection items When only improvement-needed items exist Then corrective action seeds are created for those items', () => {

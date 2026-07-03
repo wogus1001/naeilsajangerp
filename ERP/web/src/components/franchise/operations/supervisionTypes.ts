@@ -2,6 +2,8 @@ import type {
     CorrectiveActionStatus,
     SupervisionInspectionItem,
     SupervisionPhotoAttachment,
+    SupervisionReportEventType,
+    SupervisionReportTemplate,
     SupervisionReportStatus,
     SupervisionVisitPurpose,
     SupervisionVisitStatus
@@ -58,6 +60,7 @@ export type SupervisionReport = {
     readonly supervisorProfileId: string;
     readonly supervisorName: string;
     readonly visitId: string | null;
+    readonly templateId: string | null;
     readonly status: SupervisionReportStatus;
     readonly inspectionItems: readonly SupervisionInspectionItem[];
     readonly photoAttachments: readonly SupervisionPhotoAttachment[];
@@ -66,6 +69,15 @@ export type SupervisionReport = {
     readonly submittedAt: string | null;
     readonly reviewedAt: string | null;
     readonly updatedAt: string | null;
+};
+
+export type SupervisionReportEvent = {
+    readonly id: string;
+    readonly reportId: string;
+    readonly eventType: SupervisionReportEventType;
+    readonly actorName: string;
+    readonly memo: string;
+    readonly createdAt: string | null;
 };
 
 export type SupervisionCorrectiveAction = {
@@ -81,6 +93,17 @@ export type SupervisionCorrectiveAction = {
     readonly memo: string;
     readonly dueDate: string | null;
     readonly completedAt: string | null;
+};
+
+export type SupervisionCorrectiveActionEvent = {
+    readonly id: string;
+    readonly correctiveActionId: string;
+    readonly eventType: string;
+    readonly actorName: string;
+    readonly fromStatus: string;
+    readonly toStatus: string;
+    readonly memo: string;
+    readonly createdAt: string | null;
 };
 
 export type SupervisionSummaryView = {
@@ -100,7 +123,10 @@ export type SupervisionPayload = {
     readonly assignments: readonly SupervisionAssignment[];
     readonly visits: readonly SupervisionVisit[];
     readonly reports: readonly SupervisionReport[];
+    readonly reportTemplates: readonly SupervisionReportTemplate[];
+    readonly reportEvents: readonly SupervisionReportEvent[];
     readonly correctiveActions: readonly SupervisionCorrectiveAction[];
+    readonly correctiveActionEvents: readonly SupervisionCorrectiveActionEvent[];
     readonly summary: SupervisionSummaryView;
 };
 

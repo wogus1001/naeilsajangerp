@@ -12,9 +12,11 @@ import {
     type SupervisionProfileRow
 } from '@/lib/franchise-supervision-api';
 import {
+    buildDefaultReportTemplate,
     mergeInspectionItems,
     normalizeCorrectiveActionStatus,
     normalizeReportStatus,
+    normalizeTemplateItems,
     normalizeVisitPurpose,
     normalizeVisitStatus,
     summarizeSupervision,
@@ -61,9 +63,27 @@ type ReportRow = {
     readonly special_note: string | null;
     readonly reject_reason: string | null;
     readonly submitted_at: string | null;
+    readonly template_id: string | null;
     readonly reviewed_at: string | null;
     readonly created_by: string | null;
     readonly updated_at: string | null;
+};
+
+type ReportTemplateRow = {
+    readonly id: string;
+    readonly name: string | null;
+    readonly description: string | null;
+    readonly inspection_items: unknown;
+    readonly active: boolean | null;
+};
+
+type ReportEventRow = {
+    readonly id: string;
+    readonly report_id: string;
+    readonly event_type: string | null;
+    readonly actor_profile_id: string | null;
+    readonly memo: string | null;
+    readonly created_at: string | null;
 };
 
 type ActionRow = {
@@ -80,19 +100,37 @@ type ActionRow = {
     readonly created_by: string | null;
 };
 
+type ActionEventRow = {
+    readonly id: string;
+    readonly corrective_action_id: string;
+    readonly event_type: string | null;
+    readonly actor_profile_id: string | null;
+    readonly from_status: string | null;
+    readonly to_status: string | null;
+    readonly memo: string | null;
+    readonly created_at: string | null;
+};
+
 type NamedMaps = {
     readonly locations: ReadonlyMap<string, SupervisionLocationRow>;
     readonly profiles: ReadonlyMap<string, SupervisionProfileRow>;
 };
 
-function readAttachments(value: unknown): readonly SupervisionPhotoAttachment[] {
+function readAttachments(
+    value: unknown,
+    getPublicUrl: (path: string) => string
+): readonly SupervisionPhotoAttachment[] {
     if (!Array.isArray(value)) return [];
-    return value.filter(isRecord).map(item => ({
-        name: cleanString(item.name),
-        path: cleanString(item.path),
-        size: Number(item.size) || 0,
-        contentType: cleanString(item.contentType)
-    })).filter(item => item.name && item.path);
+    return value.filter(isRecord).map(item => {
+        const path = cleanString(item.path);
+        return {
+            name: cleanString(item.name),
+            path,
+            publicUrl: path.startsWith('franchise-supervision/') ? getPublicUrl(path) : '',
+            size: Number(item.size) || 0,
+            contentType: cleanString(item.contentType)
+        };
+    }).filter(item => item.name && item.path);
 }
 
 function locationName(maps: NamedMaps, locationId: string): string {
@@ -137,7 +175,12 @@ function transformVisit(row: VisitRow, maps: NamedMaps) {
     };
 }
 
-function transformReport(row: ReportRow, maps: NamedMaps) {
+function transformReport(
+    row: ReportRow,
+    maps: NamedMaps,
+    templateItems: ReturnType<typeof normalizeTemplateItems>,
+    getAttachmentPublicUrl: (path: string) => string
+) {
     return {
         id: row.id,
         companyId: row.company_id,
@@ -146,14 +189,36 @@ function transformReport(row: ReportRow, maps: NamedMaps) {
         supervisorProfileId: row.supervisor_profile_id,
         supervisorName: profileName(maps, row.supervisor_profile_id),
         visitId: row.visit_id,
+        templateId: row.template_id,
         status: normalizeReportStatus(row.status),
-        inspectionItems: mergeInspectionItems(row.inspection_items),
-        photoAttachments: readAttachments(row.photo_attachments),
+        inspectionItems: mergeInspectionItems(row.inspection_items, templateItems),
+        photoAttachments: readAttachments(row.photo_attachments, getAttachmentPublicUrl),
         specialNote: row.special_note || '',
         rejectReason: row.reject_reason || '',
         submittedAt: row.submitted_at,
         reviewedAt: row.reviewed_at,
         updatedAt: row.updated_at
+    };
+}
+
+function transformTemplate(row: ReportTemplateRow) {
+    return {
+        id: row.id,
+        name: row.name || '점검 템플릿',
+        description: row.description || '',
+        inspectionItems: normalizeTemplateItems(row.inspection_items),
+        active: row.active !== false
+    };
+}
+
+function transformReportEvent(row: ReportEventRow, maps: NamedMaps) {
+    return {
+        id: row.id,
+        reportId: row.report_id,
+        eventType: normalizeReportStatus(row.event_type),
+        actorName: profileName(maps, row.actor_profile_id),
+        memo: row.memo || '',
+        createdAt: row.created_at
     };
 }
 
@@ -171,6 +236,19 @@ function transformAction(row: ActionRow, maps: NamedMaps) {
         memo: row.memo || '',
         dueDate: row.due_date,
         completedAt: row.completed_at
+    };
+}
+
+function transformActionEvent(row: ActionEventRow, maps: NamedMaps) {
+    return {
+        id: row.id,
+        correctiveActionId: row.corrective_action_id,
+        eventType: row.event_type || '상태변경',
+        actorName: profileName(maps, row.actor_profile_id),
+        fromStatus: row.from_status || '',
+        toStatus: row.to_status || '',
+        memo: row.memo || '',
+        createdAt: row.created_at
     };
 }
 
@@ -195,14 +273,20 @@ export async function GET(request: Request) {
             assignmentResult,
             visitResult,
             reportResult,
-            actionResult
+            actionResult,
+            templateResult,
+            reportEventResult,
+            actionEventResult
         ] = await Promise.all([
             supabaseAdmin.from('franchise_locations').select('id, company_id, name, brand, region, address').eq('company_id', companyId).returns<SupervisionLocationRow[]>(),
             fetchCompanyProfiles(supabaseAdmin, companyId),
             supabaseAdmin.from('franchise_supervisor_assignments').select('*').eq('company_id', companyId).order('active', { ascending: false }).order('assigned_at', { ascending: false }).limit(300).returns<AssignmentRow[]>(),
             supabaseAdmin.from('franchise_store_visits').select('*').eq('company_id', companyId).order('visit_date', { ascending: true, nullsFirst: false }).limit(500).returns<VisitRow[]>(),
             supabaseAdmin.from('franchise_inspection_reports').select('*').eq('company_id', companyId).order('updated_at', { ascending: false }).limit(500).returns<ReportRow[]>(),
-            supabaseAdmin.from('franchise_corrective_actions').select('*').eq('company_id', companyId).order('due_date', { ascending: true, nullsFirst: false }).limit(500).returns<ActionRow[]>()
+            supabaseAdmin.from('franchise_corrective_actions').select('*').eq('company_id', companyId).order('due_date', { ascending: true, nullsFirst: false }).limit(500).returns<ActionRow[]>(),
+            supabaseAdmin.from('franchise_supervision_report_templates').select('id, name, description, inspection_items, active').eq('company_id', companyId).order('active', { ascending: false }).order('created_at', { ascending: false }).limit(50).returns<ReportTemplateRow[]>(),
+            supabaseAdmin.from('franchise_supervision_report_events').select('id, report_id, event_type, actor_profile_id, memo, created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(300).returns<ReportEventRow[]>(),
+            supabaseAdmin.from('franchise_corrective_action_events').select('id, corrective_action_id, event_type, actor_profile_id, from_status, to_status, memo, created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(300).returns<ActionEventRow[]>()
         ]);
 
         if (locationResult.error) throw locationResult.error;
@@ -210,6 +294,9 @@ export async function GET(request: Request) {
         if (visitResult.error) throw visitResult.error;
         if (reportResult.error) throw reportResult.error;
         if (actionResult.error) throw actionResult.error;
+        if (templateResult.error) throw templateResult.error;
+        if (reportEventResult.error) throw reportEventResult.error;
+        if (actionEventResult.error) throw actionEventResult.error;
 
         const requester = authResult.auth.requester;
         const canSeeAll = isSupervisionManager(requester);
@@ -217,10 +304,19 @@ export async function GET(request: Request) {
         const visits = (visitResult.data || []).filter(row => canSeeAll || canAccessSupervisorResource(requester, row));
         const reports = (reportResult.data || []).filter(row => canSeeAll || canAccessSupervisorResource(requester, row));
         const correctiveActions = (actionResult.data || []).filter(row => canSeeAll || canAccessSupervisorResource(requester, row));
+        const visibleReportIds = new Set(reports.map(row => row.id));
+        const visibleActionIds = new Set(correctiveActions.map(row => row.id));
         const maps: NamedMaps = {
             locations: new Map((locationResult.data || []).map(location => [location.id, location])),
             profiles: new Map(profileRows.map(profile => [profile.id, profile]))
         };
+        const templates = (templateResult.data || []).map(transformTemplate);
+        const activeTemplate = templates.find(template => template.active) || templates[0] || buildDefaultReportTemplate();
+        const templateItemsById = new Map(templates.map(template => [template.id, template.inspectionItems]));
+        const getAttachmentPublicUrl = (path: string) => supabaseAdmin.storage
+            .from('property-documents')
+            .getPublicUrl(path)
+            .data.publicUrl;
 
         return ok({
             schemaReady: true,
@@ -240,8 +336,16 @@ export async function GET(request: Request) {
             })),
             assignments: assignments.map(row => transformAssignment(row, maps)),
             visits: visits.map(row => transformVisit(row, maps)),
-            reports: reports.map(row => transformReport(row, maps)),
+            reports: reports.map(row => transformReport(
+                row,
+                maps,
+                row.template_id ? templateItemsById.get(row.template_id) || activeTemplate.inspectionItems : activeTemplate.inspectionItems,
+                getAttachmentPublicUrl
+            )),
+            reportTemplates: templates.length > 0 ? templates : [buildDefaultReportTemplate()],
+            reportEvents: (reportEventResult.data || []).filter(row => visibleReportIds.has(row.report_id)).map(row => transformReportEvent(row, maps)),
             correctiveActions: correctiveActions.map(row => transformAction(row, maps)),
+            correctiveActionEvents: (actionEventResult.data || []).filter(row => visibleActionIds.has(row.corrective_action_id)).map(row => transformActionEvent(row, maps)),
             summary: summarizeSupervision({
                 today: new Date(),
                 visits: visits.map(row => ({ visitDate: row.visit_date, status: normalizeVisitStatus(row.status) })),
@@ -251,7 +355,7 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
-            return ok({ schemaReady: false, canManage: false, locations: [], supervisors: [], assignments: [], visits: [], reports: [], correctiveActions: [] });
+            return ok({ schemaReady: false, canManage: false, locations: [], supervisors: [], assignments: [], visits: [], reports: [], reportTemplates: [], reportEvents: [], correctiveActions: [], correctiveActionEvents: [] });
         }
         console.error('Franchise supervision GET error:', error);
         return fail(500, 'INTERNAL_ERROR', '슈퍼바이징 정보를 불러오지 못했습니다.');
