@@ -8,6 +8,7 @@ import type {
     SupervisionVisitPurpose,
     SupervisionVisitStatus
 } from '@/lib/franchise-supervision';
+import type { SupervisionOperationQueueItem } from '@/lib/franchise-supervision-operation-queue';
 
 export type SupervisionLocationOption = {
     readonly id: string;
@@ -128,6 +129,7 @@ export type SupervisionPayload = {
     readonly correctiveActions: readonly SupervisionCorrectiveAction[];
     readonly correctiveActionEvents: readonly SupervisionCorrectiveActionEvent[];
     readonly summary: SupervisionSummaryView;
+    readonly operationQueue: readonly SupervisionOperationQueueItem[];
 };
 
 export type SupervisionScope = {

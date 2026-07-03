@@ -8,7 +8,8 @@ import {
     normalizeItemResult,
     SUPERVISION_ITEM_RESULTS,
     SUPERVISION_VISIT_PURPOSES,
-    type SupervisionInspectionItem
+    type SupervisionInspectionItem,
+    type SupervisionReportListItem
 } from '@/lib/franchise-supervision';
 import type {
     SupervisionCorrectiveAction,
@@ -17,14 +18,6 @@ import type {
     SupervisionVisit
 } from './supervisionTypes';
 import styles from './SupervisionPanel.module.css';
-
-export type FormState = {
-    readonly locationId: string;
-    readonly supervisorProfileId: string;
-    readonly assignedAt: string;
-    readonly regionScope: string;
-    readonly memo: string;
-};
 
 export type VisitFormState = {
     readonly locationId: string;
@@ -47,6 +40,24 @@ const VIEW_TABS: readonly { readonly key: SupervisionView; readonly label: strin
 
 function todayText(): string {
     return kstDateKey();
+}
+
+function reportStatusClass(status: SupervisionReportListItem['reportStatus'] | SupervisionReport['status']): string {
+    if (status === '승인') return styles.badgeGreen;
+    if (status === '반려') return styles.badgeRed;
+    if (status === '제출') return styles.badgeBlue;
+    if (status === '미작성') return styles.badge;
+    return styles.badgeBlue;
+}
+
+function actionStatusClass(status: SupervisionCorrectiveAction['status']): string {
+    if (status === '완료') return styles.badgeGreen;
+    if (status === '보류') return styles.badge;
+    return styles.badgeRed;
+}
+
+function displayDate(value: string | null): string {
+    return value?.slice(0, 10) || '-';
 }
 
 export function SectionHeader({ title, caption }: { readonly title: string; readonly caption: string }) {
@@ -136,52 +147,6 @@ export function SummaryCards(props: {
                     <span>{label}</span>
                     <strong>{props.isLoading ? '-' : value.toLocaleString()}</strong>
                 </button>
-            ))}
-        </div>
-    );
-}
-
-export function AssignmentForm(props: {
-    readonly data: SupervisionPayload;
-    readonly form: FormState;
-    readonly disabled: boolean;
-    readonly onChange: (form: FormState) => void;
-    readonly onSubmit: () => void;
-}) {
-    return (
-        <div className={styles.formGrid}>
-            <SelectField label="운영점" value={props.form.locationId} onChange={(value: string) => props.onChange({ ...props.form, locationId: value })}>
-                {props.data.locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}
-            </SelectField>
-            <SelectField label="SV" value={props.form.supervisorProfileId} onChange={(value: string) => props.onChange({ ...props.form, supervisorProfileId: value })}>
-                {props.data.supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
-            </SelectField>
-            <InputField label="담당 시작일" type="date" value={props.form.assignedAt} onChange={(value: string) => props.onChange({ ...props.form, assignedAt: value })} />
-            <InputField label="담당 지역" value={props.form.regionScope} placeholder="예: 경기 남부" onChange={(value: string) => props.onChange({ ...props.form, regionScope: value })} />
-            <TextField label="담당 메모" value={props.form.memo} placeholder="권한, 인수인계 메모" onChange={(value: string) => props.onChange({ ...props.form, memo: value })} />
-            <div className={styles.buttonRow}>
-                <button type="button" className={styles.primaryButton} disabled={props.disabled} onClick={props.onSubmit}>
-                    <Save size={13} /> 배정 저장
-                </button>
-            </div>
-        </div>
-    );
-}
-
-export function AssignmentList({ data }: { readonly data: SupervisionPayload }) {
-    if (data.assignments.length === 0) return <div className={styles.empty}>등록된 SV 배정이 없습니다.</div>;
-    return (
-        <div className={styles.list}>
-            {data.assignments.slice(0, 8).map(assignment => (
-                <div key={assignment.id} className={styles.listItem}>
-                    <strong>{assignment.locationName}</strong>
-                    <div className={styles.badgeRow}>
-                        <span className={assignment.active ? styles.badgeGreen : styles.badge}>{assignment.active ? '활성' : '해제'}</span>
-                        <span className={styles.badgeBlue}>{assignment.supervisorName}</span>
-                    </div>
-                    <small>{assignment.regionScope || '담당 지역 미지정'} · {assignment.assignedAt || '-'}</small>
-                    {assignment.memo ? <span>{assignment.memo}</span> : null}
-                </div>
             ))}
         </div>
     );
@@ -324,6 +289,62 @@ export function ReportEditor(props: {
     );
 }
 
+export function ReportList(props: {
+    readonly items: readonly SupervisionReportListItem[];
+    readonly selectedVisitId: string;
+    readonly onSelect: (visitId: string) => void;
+}) {
+    if (props.items.length === 0) return <div className={styles.empty}>점검 보고서 대상 방문 일정이 없습니다.</div>;
+    return (
+        <div className={styles.tableWrap}>
+            <table className={styles.compactTable}>
+                <thead>
+                    <tr>
+                        <th>운영점</th>
+                        <th>방문</th>
+                        <th>SV</th>
+                        <th>보고서</th>
+                        <th>점검 결과</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {props.items.map(item => (
+                        <tr key={item.visitId} className={props.selectedVisitId === item.visitId ? styles.tableRowActive : undefined}>
+                            <td>
+                                <div className={styles.reportTitleCell}>
+                                    <strong>{item.locationName}</strong>
+                                    <small>{item.purpose} · 방문 {item.visitStatus}</small>
+                                </div>
+                            </td>
+                            <td>{item.visitDate || '-'}</td>
+                            <td>{item.supervisorName}</td>
+                            <td>
+                                <div className={styles.statusMeta}>
+                                    <span className={reportStatusClass(item.reportStatus)}>{item.reportStatus}</span>
+                                    <small>{displayDate(item.updatedAt || item.submittedAt || item.reviewedAt)}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div className={styles.resultPills}>
+                                    <span className={item.improvementCount > 0 ? styles.badgeRed : styles.badgeGreen}>개선 {item.improvementCount.toLocaleString()}</span>
+                                    <span className={styles.badge}>사진 {item.photoCount.toLocaleString()}</span>
+                                    {item.hasSpecialNote ? <span className={styles.badgeBlue}>특이사항</span> : null}
+                                </div>
+                            </td>
+                            <td>
+                                <button type="button" className={styles.secondaryButton} onClick={() => props.onSelect(item.visitId)}>
+                                    확인/작성
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 export function ReportReviewList(props: {
     readonly canManage: boolean;
     readonly disabled: boolean;
@@ -331,35 +352,79 @@ export function ReportReviewList(props: {
     readonly rejectReason: string;
     readonly onRejectReason: (value: string) => void;
     readonly onApprove: (report: SupervisionReport) => void;
-    readonly onReject: (report: SupervisionReport) => void;
+    readonly onReject: (report: SupervisionReport, rejectReason: string) => void;
 }) {
-    const reports = props.reports.slice(0, 6);
+    const reports = props.reports;
+    const [rejectReasons, setRejectReasons] = React.useState<Record<string, string>>({});
     if (reports.length === 0) return <div className={styles.empty}>최근 점검 보고서가 없습니다.</div>;
     return (
-        <div className={styles.list}>
-            {reports.map(report => (
-                <div key={report.id} className={styles.listItem}>
-                    <strong>{report.locationName}</strong>
-                    <div className={styles.badgeRow}>
-                        <span className={report.status === '반려' ? styles.badgeRed : report.status === '승인' ? styles.badgeGreen : styles.badgeBlue}>{report.status}</span>
-                        <span className={styles.badge}>{report.supervisorName}</span>
-                    </div>
-                    <small>{report.updatedAt?.slice(0, 10) || '-'}</small>
-                    {props.canManage && report.status === '제출' ? (
-                        <>
-                            <TextField label="반려 사유" value={props.rejectReason} placeholder="반려 시 입력" onChange={props.onRejectReason} />
-                            <div className={styles.buttonRow}>
-                                <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={() => props.onApprove(report)}>
-                                    <Check size={13} /> 승인
-                                </button>
-                                <button type="button" className={styles.dangerButton} disabled={props.disabled} onClick={() => props.onReject(report)}>
-                                    <X size={13} /> 반려
-                                </button>
-                            </div>
-                        </>
-                    ) : null}
-                </div>
-            ))}
+        <div className={styles.tableWrap}>
+            <table className={styles.compactTable}>
+                <thead>
+                    <tr>
+                        <th>보고서</th>
+                        <th>SV</th>
+                        <th>상태</th>
+                        <th>제출/검토</th>
+                        <th>반려 사유</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {reports.map(report => {
+                        const rowRejectReason = rejectReasons[report.id] ?? (props.rejectReason && reports.length === 1 ? props.rejectReason : '');
+                        return (
+                            <tr key={report.id}>
+                                <td>
+                                    <div className={styles.reportTitleCell}>
+                                        <strong>{report.locationName}</strong>
+                                        <small>개선필요 {report.inspectionItems.filter(item => item.result === '개선필요').length.toLocaleString()}건 · 사진 {report.photoAttachments.length.toLocaleString()}개</small>
+                                    </div>
+                                </td>
+                                <td>{report.supervisorName}</td>
+                                <td><span className={reportStatusClass(report.status)}>{report.status}</span></td>
+                                <td>
+                                    <div className={styles.statusMeta}>
+                                        <small>제출 {displayDate(report.submittedAt)}</small>
+                                        <small>검토 {displayDate(report.reviewedAt)}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {props.canManage && report.status === '제출' ? (
+                                        <input
+                                            className={styles.inlineInput}
+                                            type="text"
+                                            value={rowRejectReason}
+                                            placeholder="반려 시 입력"
+                                            onChange={event => {
+                                                const nextReason = event.currentTarget.value;
+                                                setRejectReasons(current => ({ ...current, [report.id]: nextReason }));
+                                                if (reports.length === 1) props.onRejectReason(nextReason);
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className={styles.mutedText}>{report.rejectReason || '-'}</span>
+                                    )}
+                                </td>
+                                <td>
+                                    {props.canManage && report.status === '제출' ? (
+                                        <div className={styles.actionCell}>
+                                            <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={() => props.onApprove(report)}>
+                                                <Check size={13} /> 승인
+                                            </button>
+                                            <button type="button" className={styles.dangerButton} disabled={props.disabled} onClick={() => props.onReject(report, rowRejectReason)}>
+                                                <X size={13} /> 반려
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className={styles.mutedText}>-</span>
+                                    )}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
     );
 }
@@ -371,21 +436,49 @@ export function CorrectiveActionList(props: {
 }) {
     if (props.actions.length === 0) return <div className={styles.empty}>진행 중인 시정요청이 없습니다.</div>;
     return (
-        <div className={styles.list}>
-            {props.actions.slice(0, 8).map(action => (
-                <div key={action.id} className={styles.listItem}>
-                    <strong>{action.title}</strong>
-                    <small>{action.locationName} · 담당 {action.assigneeName} · 기한 {action.dueDate || '-'}</small>
-                    <select
-                        value={action.status}
-                        disabled={props.disabled}
-                        onChange={event => props.onStatusChange(action, event.currentTarget.value)}
-                    >
-                        {CORRECTIVE_ACTION_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
-                    </select>
-                    {action.memo ? <span>{action.memo}</span> : null}
-                </div>
-            ))}
+        <div className={styles.tableWrap}>
+            <table className={styles.compactTable}>
+                <thead>
+                    <tr>
+                        <th>시정요청</th>
+                        <th>운영점</th>
+                        <th>담당</th>
+                        <th>기한</th>
+                        <th>상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {props.actions.map(action => (
+                        <tr key={action.id}>
+                            <td>
+                                <div className={styles.reportTitleCell}>
+                                    <strong>{action.title}</strong>
+                                    <small>{action.memo || '처리 메모 없음'}</small>
+                                </div>
+                            </td>
+                            <td>{action.locationName}</td>
+                            <td>{action.assigneeName}</td>
+                            <td>
+                                <span className={action.dueDate && action.dueDate < todayText() && action.status !== '완료' ? styles.badgeRed : styles.badge}>
+                                    {action.dueDate || '-'}
+                                </span>
+                            </td>
+                            <td>
+                                <div className={styles.statusMeta}>
+                                    <span className={actionStatusClass(action.status)}>{action.status}</span>
+                                    <select
+                                        value={action.status}
+                                        disabled={props.disabled}
+                                        onChange={event => props.onStatusChange(action, event.currentTarget.value)}
+                                    >
+                                        {CORRECTIVE_ACTION_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
+                                    </select>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 }

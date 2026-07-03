@@ -136,6 +136,118 @@
     font-weight: 900;
 }
 
+.queueCount {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0 10px;
+    background: #e8f3ff;
+    color: #1b64da;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.queueList {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+}
+
+.queueItem {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #ffffff;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.queueItem:hover {
+    border-color: #3182f6;
+    background: #f7fbff;
+}
+
+.queueIcon {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #3182f6;
+}
+
+.queueText {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.queueText strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queueText small {
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queueMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.queueBadgeUrgent,
+.queueBadgeWarning,
+.queueBadgeCheck {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.queueBadgeUrgent {
+    background: #fff5f5;
+    color: #e03131;
+}
+
+.queueBadgeWarning {
+    background: #fff7e6;
+    color: #d46b08;
+}
+
+.queueBadgeCheck {
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
 .sectionHeader {
     display: flex;
     align-items: flex-start;
@@ -163,6 +275,74 @@
     display: grid;
     gap: 10px;
     padding: 12px;
+}
+
+.assignmentLayout {
+    display: grid;
+    gap: 10px;
+}
+
+.assignmentEditor,
+.assignmentBoard {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.assignmentEditorHeader {
+    display: grid;
+    gap: 3px;
+}
+
+.assignmentEditorHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.assignmentEditorHeader span {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.assignmentToolbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+}
+
+.assignmentFilters {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(140px, 0.35fr) minmax(120px, 0.25fr);
+    gap: 8px;
+    min-width: 0;
+}
+
+.assignmentFilters input,
+.assignmentFilters select {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    border: 1px solid #dfe3e8;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.assignmentFilters input {
+    padding: 0 10px;
+}
+
+.assignmentFilters select {
+    padding: 0 8px;
 }
 
 .formGrid,
@@ -315,6 +495,139 @@ button.listItem {
     font-weight: 700;
 }
 
+.tableWrap {
+    overflow-x: auto;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.compactTable {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+}
+
+.compactTable th,
+.compactTable td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef2f7;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.compactTable th {
+    background: #f9fafb;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.compactTable tr:last-child td {
+    border-bottom: 0;
+}
+
+.tableRowActive td {
+    background: #f7fbff;
+}
+
+.expandedEditorRow td {
+    padding: 12px;
+    background: #f7fbff;
+}
+
+.expandedEditorRow .assignmentEditor {
+    border-color: #d7e8ff;
+    box-shadow: inset 3px 0 0 #3182f6;
+}
+
+.paginationBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 10px 2px 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.paginationControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.paginationControls strong {
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.reportTitleCell,
+.statusMeta {
+    display: grid;
+    gap: 4px;
+    justify-items: start;
+    min-width: 0;
+}
+
+.reportTitleCell strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reportTitleCell small,
+.statusMeta small,
+.mutedText {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.resultPills,
+.actionCell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.inlineInput {
+    width: 100%;
+    min-width: 160px;
+    height: 34px;
+    border: 1px solid #dfe3e8;
+    border-radius: 7px;
+    padding: 0 10px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.statusMeta select {
+    width: 100%;
+    min-width: 120px;
+    height: 34px;
+    border: 1px solid #dfe3e8;
+    border-radius: 7px;
+    padding: 0 10px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .badgeRow {
     display: flex;
     flex-wrap: wrap;
@@ -413,6 +726,8 @@ button.listItem {
     .reportGrid,
     .layout,
     .inlineControls,
+    .assignmentToolbar,
+    .assignmentFilters,
     .formGrid,
     .itemGrid {
         grid-template-columns: 1fr;
@@ -422,9 +737,30 @@ button.listItem {
         justify-content: stretch;
     }
 
+    .paginationBar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .paginationControls {
+        justify-content: space-between;
+    }
+
     .primaryButton,
     .secondaryButton,
     .dangerButton {
         flex: 1 1 120px;
+    }
+
+    .queueItem {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .queueItem > svg {
+        display: none;
+    }
+
+    .tableWrap {
+        margin-right: -4px;
     }
 }

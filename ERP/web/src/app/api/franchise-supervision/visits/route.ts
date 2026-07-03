@@ -1,5 +1,6 @@
 import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import {
     canAccessSupervisorResource,
@@ -14,7 +15,12 @@ import {
     resolveSupervisionAuth,
     resolveSupervisionCompanyId
 } from '@/lib/franchise-supervision-api';
-import { normalizeVisitPurpose, normalizeVisitStatus } from '@/lib/franchise-supervision';
+import {
+    buildSupervisionScheduleInsert,
+    normalizeVisitPurpose,
+    normalizeVisitStatus,
+    type SupervisionVisitPurpose
+} from '@/lib/franchise-supervision';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,8 +84,7 @@ async function syncSchedule(input: {
             date: input.nextVisitDate || input.existing.visit_date,
             title: `${readLocationName(input.existing.location)} ${input.nextPurpose}`,
             status: input.nextStatus === '취소' ? 'cancelled' : 'scheduled',
-            user_id: input.nextSupervisorProfileId || input.existing.supervisor_profile_id,
-            updated_at: new Date().toISOString()
+            user_id: input.nextSupervisorProfileId || input.existing.supervisor_profile_id
         })
         .eq('id', input.existing.schedule_id);
     if (error) throw error;
@@ -91,22 +96,19 @@ async function createSchedule(input: {
     readonly supervisorProfileId: string;
     readonly supabaseAdmin: SupabaseClient;
     readonly visitDate: string;
-    readonly purpose: string;
+    readonly purpose: SupervisionVisitPurpose;
 }) {
+    const scheduleId = randomUUID();
     const { data, error } = await input.supabaseAdmin
         .from('schedules')
-        .insert({
-            company_id: input.companyId,
-            user_id: input.supervisorProfileId,
-            title: `${input.locationName} ${input.purpose}`,
-            date: input.visitDate,
-            scope: 'company',
-            status: 'scheduled',
-            type: '슈퍼바이징',
-            color: '#3182f6',
-            details: '슈퍼바이징 방문 일정',
-            created_at: new Date().toISOString()
-        })
+        .insert(buildSupervisionScheduleInsert({
+            companyId: input.companyId,
+            locationName: input.locationName,
+            purpose: input.purpose,
+            scheduleId,
+            supervisorProfileId: input.supervisorProfileId,
+            visitDate: input.visitDate
+        }))
         .select('id')
         .maybeSingle<{ readonly id: string }>();
     if (error) throw error;

@@ -4,10 +4,14 @@ import React from 'react';
 import {
     buildDefaultInspectionItems,
     buildDefaultReportTemplate,
+    buildSupervisionReportListItems,
+    isMissingSupervisionReportItem,
     kstDateKey,
     SUPERVISION_VISIT_PURPOSES,
+    type SupervisionReportListItem,
     type SupervisionInspectionItem
 } from '@/lib/franchise-supervision';
+import type { SupervisionOperationQueueItem } from '@/lib/franchise-supervision-operation-queue';
 import {
     fetchSupervisionData,
     saveSupervisionAssignment,
@@ -17,6 +21,7 @@ import {
     updateCorrectiveAction
 } from './supervisionRequests';
 import type {
+    SupervisionAssignment,
     SupervisionCorrectiveAction,
     SupervisionPayload,
     SupervisionReport,
@@ -25,23 +30,26 @@ import type {
 } from './supervisionTypes';
 import { printSupervisionReport } from './SupervisionPanelPrint';
 import {
-    AssignmentForm,
-    AssignmentList,
     CorrectiveActionList,
     DashboardOverview,
     EventTimeline,
     ReportEditor,
+    ReportList,
     ReportReviewList,
     SectionHeader,
     SummaryCards,
     ViewTabs,
     VisitForm,
     VisitList,
-    type FormState,
     type SupervisionFilter,
     type SupervisionView,
     type VisitFormState
 } from './SupervisionPanelSections';
+import {
+    SupervisionAssignmentSection
+} from './SupervisionAssignmentSection';
+import type { AssignmentFormState } from './SupervisionAssignmentTypes';
+import { SupervisionOperationQueue } from './SupervisionOperationQueue';
 import styles from './SupervisionPanel.module.css';
 
 const EMPTY_PAYLOAD: SupervisionPayload = {
@@ -57,6 +65,7 @@ const EMPTY_PAYLOAD: SupervisionPayload = {
     reportEvents: [],
     correctiveActions: [],
     correctiveActionEvents: [],
+    operationQueue: [],
     summary: {
         todayVisitCount: 0,
         weekVisitCount: 0,
@@ -70,12 +79,11 @@ function todayText(): string {
     return kstDateKey();
 }
 
-function makeAssignmentForm(data: SupervisionPayload): FormState {
+function makeAssignmentForm(data: SupervisionPayload): AssignmentFormState {
     return {
         locationId: data.locations[0]?.id || '',
         supervisorProfileId: data.supervisors[0]?.id || '',
         assignedAt: todayText(),
-        regionScope: '',
         memo: ''
     };
 }
@@ -107,11 +115,45 @@ function filterVisits(visits: readonly SupervisionVisit[], filter: SupervisionFi
     return visits;
 }
 
+function filterReportItems(items: readonly SupervisionReportListItem[], filter: SupervisionFilter): readonly SupervisionReportListItem[] {
+    if (filter === 'missingReports') return items.filter(isMissingSupervisionReportItem);
+    if (filter === 'pendingApprovals') return items.filter(item => item.reportStatus === '제출');
+    if (filter === 'todayVisits') return items.filter(item => item.visitDate === todayText());
+    if (filter === 'weekVisits') {
+        const visitIds = new Set(filterVisits(items.map(item => ({
+            id: item.visitId,
+            companyId: '',
+            locationId: '',
+            locationName: item.locationName,
+            supervisorProfileId: '',
+            supervisorName: item.supervisorName,
+            assignmentId: null,
+            scheduleId: null,
+            visitDate: item.visitDate,
+            purpose: item.purpose,
+            status: item.visitStatus,
+            memo: ''
+        })), 'weekVisits').map(visit => visit.id));
+        return items.filter(item => visitIds.has(item.visitId));
+    }
+    return items;
+}
+
+const QUEUE_FILTER_BY_TYPE: Record<SupervisionOperationQueueItem['type'], SupervisionFilter> = {
+    visitToday: 'todayVisits',
+    visitTomorrow: 'weekVisits',
+    reportMissing: 'missingReports',
+    approvalPending: 'pendingApprovals',
+    actionOverdue: 'activeActions'
+} as const;
+
 export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
     const [data, setData] = React.useState<SupervisionPayload>(EMPTY_PAYLOAD);
     const [activeView, setActiveView] = React.useState<SupervisionView>('dashboard');
     const [activeFilter, setActiveFilter] = React.useState<SupervisionFilter>('all');
-    const [assignmentForm, setAssignmentForm] = React.useState<FormState>(makeAssignmentForm(EMPTY_PAYLOAD));
+    const [assignmentForm, setAssignmentForm] = React.useState<AssignmentFormState>(makeAssignmentForm(EMPTY_PAYLOAD));
+    const [selectedAssignmentId, setSelectedAssignmentId] = React.useState('');
+    const [selectedAssignmentLocationId, setSelectedAssignmentLocationId] = React.useState('');
     const [visitForm, setVisitForm] = React.useState<VisitFormState>(makeVisitForm(EMPTY_PAYLOAD));
     const [selectedVisitId, setSelectedVisitId] = React.useState('');
     const [inspectionItems, setInspectionItems] = React.useState<readonly SupervisionInspectionItem[]>(buildDefaultInspectionItems());
@@ -142,9 +184,18 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         void load();
     }, [load]);
 
-    const selectedVisit = data.visits.find(visit => visit.id === selectedVisitId) || data.visits[0] || null;
-    const selectedReport = selectedVisit ? data.reports.find(report => report.visitId === selectedVisit.id) || null : null;
     const visibleVisits = React.useMemo(() => filterVisits(data.visits, activeFilter), [activeFilter, data.visits]);
+    const reportListItems = React.useMemo(
+        () => buildSupervisionReportListItems({ visits: data.visits, reports: data.reports }),
+        [data.reports, data.visits]
+    );
+    const selectedVisit = data.visits.find(visit => visit.id === selectedVisitId) || data.visits[0] || null;
+    const selectedReportId = selectedVisit ? reportListItems.find(item => item.visitId === selectedVisit.id)?.reportId || '' : '';
+    const selectedReport = selectedReportId ? data.reports.find(report => report.id === selectedReportId) || null : null;
+    const visibleReportItems = React.useMemo(
+        () => filterReportItems(reportListItems, activeFilter),
+        [activeFilter, reportListItems]
+    );
     const visibleReports = React.useMemo(
         () => activeFilter === 'pendingApprovals' ? data.reports.filter(report => report.status === '제출') : data.reports,
         [activeFilter, data.reports]
@@ -175,7 +226,16 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
 
     const submitAssignment = async () => {
         if (!data.companyId || !assignmentForm.locationId || !assignmentForm.supervisorProfileId) return;
-        await runSaving(() => saveSupervisionAssignment({ ...scope, companyId: data.companyId, ...assignmentForm }));
+        const saved = await runSaving(() => saveSupervisionAssignment({
+            ...scope,
+            companyId: data.companyId,
+            id: selectedAssignmentId || undefined,
+            ...assignmentForm
+        }));
+        if (saved) {
+            setSelectedAssignmentId('');
+            setSelectedAssignmentLocationId('');
+        }
     };
 
     const submitVisit = async () => {
@@ -183,7 +243,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         await runSaving(() => saveSupervisionVisit({ ...scope, companyId: data.companyId, ...visitForm }));
     };
 
-    const submitReport = async (event: 'saveDraft' | 'submit' | 'approve' | 'reject', report?: SupervisionReport) => {
+    const submitReport = async (event: 'saveDraft' | 'submit' | 'approve' | 'reject', report?: SupervisionReport, rejectReasonOverride?: string) => {
         const targetReport = report || selectedReport;
         const targetVisit = report ? data.visits.find(visit => visit.id === report.visitId) || selectedVisit : selectedVisit;
         if (!data.companyId || !targetVisit) return;
@@ -196,7 +256,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
             inspectionItems: targetReport && report ? targetReport.inspectionItems : inspectionItems,
             templateId: targetReport?.templateId || (activeTemplate.id === 'default' ? undefined : activeTemplate.id),
             specialNote: targetReport && report ? targetReport.specialNote : specialNote,
-            rejectReason,
+            rejectReason: rejectReasonOverride ?? rejectReason,
             photoFiles: report ? [] : photoFiles,
             existingAttachments: targetReport?.photoAttachments || []
         }));
@@ -226,13 +286,53 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         if (firstVisit) setSelectedVisitId(firstVisit.id);
     };
 
-    const runSaving = async (task: () => Promise<void>) => {
+    const openQueueItem = (item: SupervisionOperationQueueItem) => {
+        setActiveView(item.target);
+        setActiveFilter(QUEUE_FILTER_BY_TYPE[item.type]);
+        if (item.type === 'approvalPending') {
+            const report = data.reports.find(candidate => candidate.id === item.sourceId);
+            if (report?.visitId) setSelectedVisitId(report.visitId);
+            return;
+        }
+        if (item.type === 'actionOverdue') return;
+        setSelectedVisitId(item.sourceId);
+    };
+
+    const editAssignment = (assignment: SupervisionAssignment) => {
+        setSelectedAssignmentId(assignment.id);
+        setSelectedAssignmentLocationId(assignment.locationId);
+        setAssignmentForm({
+            locationId: assignment.locationId,
+            supervisorProfileId: assignment.supervisorProfileId,
+            assignedAt: assignment.assignedAt || todayText(),
+            memo: assignment.memo
+        });
+    };
+
+    const prepareLocationAssignment = (locationId: string) => {
+        setSelectedAssignmentId('');
+        setSelectedAssignmentLocationId(locationId);
+        setAssignmentForm({
+            ...makeAssignmentForm(data),
+            locationId
+        });
+    };
+
+    const resetAssignmentForm = () => {
+        setSelectedAssignmentId('');
+        setSelectedAssignmentLocationId('');
+        setAssignmentForm(makeAssignmentForm(data));
+    };
+
+    const runSaving = async (task: () => Promise<void>): Promise<boolean> => {
         setIsSaving(true);
         try {
             await task();
             await load();
+            return true;
         } catch (error) {
             window.alert(error instanceof Error ? error.message : '슈퍼바이징 정보를 저장하지 못했습니다.');
+            return false;
         } finally {
             setIsSaving(false);
         }
@@ -257,23 +357,28 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                 }}
             />
             {activeView === 'dashboard' ? (
-                <DashboardOverview data={data} />
+                <>
+                    <DashboardOverview data={data} />
+                    <SupervisionOperationQueue items={data.operationQueue} onOpen={openQueueItem} />
+                </>
             ) : null}
             {activeView === 'assignments' ? (
                 <div className={styles.layoutSingle}>
                     <section className={styles.section}>
                         <SectionHeader title="SV 배정" caption="운영점별 활성 SV 1명을 기준으로 관리합니다." />
                         <div className={styles.body}>
-                            {data.canManage ? (
-                                <AssignmentForm
-                                    data={data}
-                                    form={assignmentForm}
-                                    disabled={isSaving}
-                                    onChange={setAssignmentForm}
-                                    onSubmit={submitAssignment}
-                                />
-                            ) : null}
-                            <AssignmentList data={data} />
+                            <SupervisionAssignmentSection
+                                data={data}
+                                form={assignmentForm}
+                                selectedAssignmentId={selectedAssignmentId}
+                                selectedLocationId={selectedAssignmentLocationId}
+                                disabled={isSaving}
+                                onChange={setAssignmentForm}
+                                onEdit={editAssignment}
+                                onPrepareLocation={prepareLocationAssignment}
+                                onReset={resetAssignmentForm}
+                                onSubmit={submitAssignment}
+                            />
                         </div>
                     </section>
                 </div>
@@ -294,7 +399,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                     <section className={styles.section}>
                         <SectionHeader title="점검 보고서" caption="모바일 현장 입력 흐름으로 체크리스트와 사진을 제출합니다." />
                         <div className={styles.body}>
-                            <VisitList visits={visibleVisits} selectedId={selectedVisit?.id || ''} onSelect={setSelectedVisitId} />
+                            <ReportList items={visibleReportItems} selectedVisitId={selectedVisit?.id || ''} onSelect={setSelectedVisitId} />
                             <ReportEditor
                                 canManage={data.canManage}
                                 disabled={isSaving}
@@ -329,7 +434,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                 rejectReason={rejectReason}
                                 onRejectReason={setRejectReason}
                                 onApprove={report => void submitReport('approve', report)}
-                                onReject={report => void submitReport('reject', report)}
+                                onReject={(report, reason) => void submitReport('reject', report, reason)}
                             />
                             <CorrectiveActionList actions={visibleActions} disabled={isSaving} onStatusChange={changeActionStatus} />
                             <EventTimeline data={data} />

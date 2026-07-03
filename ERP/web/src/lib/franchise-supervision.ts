@@ -63,6 +63,69 @@ export type SupervisionSummary = {
     readonly activeCorrectiveActionCount: number;
 };
 
+export type SupervisionReportListInput = {
+    readonly visits: readonly {
+        readonly id: string;
+        readonly locationName: string;
+        readonly supervisorName: string;
+        readonly visitDate: string | null;
+        readonly purpose: SupervisionVisitPurpose;
+        readonly status: SupervisionVisitStatus;
+    }[];
+    readonly reports: readonly {
+        readonly id: string;
+        readonly visitId: string | null;
+        readonly status: SupervisionReportStatus;
+        readonly inspectionItems: readonly SupervisionInspectionItem[];
+        readonly photoAttachments: readonly unknown[];
+        readonly specialNote: string;
+        readonly submittedAt: string | null;
+        readonly reviewedAt: string | null;
+        readonly updatedAt: string | null;
+    }[];
+};
+
+export type SupervisionReportListItem = {
+    readonly visitId: string;
+    readonly reportId: string | null;
+    readonly locationName: string;
+    readonly supervisorName: string;
+    readonly visitDate: string | null;
+    readonly purpose: SupervisionVisitPurpose;
+    readonly visitStatus: SupervisionVisitStatus;
+    readonly reportStatus: SupervisionReportStatus | '미작성';
+    readonly improvementCount: number;
+    readonly photoCount: number;
+    readonly hasSpecialNote: boolean;
+    readonly submittedAt: string | null;
+    readonly reviewedAt: string | null;
+    readonly updatedAt: string | null;
+};
+
+export type SupervisionScheduleInsertInput = {
+    readonly scheduleId: string;
+    readonly companyId: string;
+    readonly locationName: string;
+    readonly supervisorProfileId: string;
+    readonly visitDate: string;
+    readonly purpose: SupervisionVisitPurpose;
+    readonly createdAt?: string;
+};
+
+export type SupervisionScheduleInsertRow = {
+    readonly id: string;
+    readonly company_id: string;
+    readonly user_id: string;
+    readonly title: string;
+    readonly date: string;
+    readonly scope: 'company';
+    readonly status: 'scheduled';
+    readonly type: '슈퍼바이징';
+    readonly color: '#3182f6';
+    readonly details: '슈퍼바이징 방문 일정';
+    readonly created_at: string;
+};
+
 const DEFAULT_INSPECTION_ITEM_DEFINITIONS: readonly SupervisionReportTemplateItem[] = [
     { id: 'sales-traffic', label: '매출/객수 확인' },
     { id: 'cleanliness', label: '청결' },
@@ -141,6 +204,72 @@ export function buildDefaultReportTemplate(): SupervisionReportTemplate {
         inspectionItems: DEFAULT_INSPECTION_ITEM_DEFINITIONS,
         active: true
     };
+}
+
+export function buildSupervisionScheduleInsert(input: SupervisionScheduleInsertInput): SupervisionScheduleInsertRow {
+    return {
+        id: input.scheduleId,
+        company_id: input.companyId,
+        user_id: input.supervisorProfileId,
+        title: `${input.locationName || '운영점'} ${input.purpose}`,
+        date: input.visitDate,
+        scope: 'company',
+        status: 'scheduled',
+        type: '슈퍼바이징',
+        color: '#3182f6',
+        details: '슈퍼바이징 방문 일정',
+        created_at: input.createdAt || new Date().toISOString()
+    };
+}
+
+export function buildSupervisionReportListItems(input: SupervisionReportListInput): readonly SupervisionReportListItem[] {
+    const reportsByVisit = new Map<string, SupervisionReportListInput['reports'][number]>();
+    input.reports
+        .filter(report => report.visitId)
+        .forEach(report => {
+            const visitId = report.visitId || '';
+            const current = reportsByVisit.get(visitId);
+            if (!current || getReportComparableTime(report) >= getReportComparableTime(current)) {
+                reportsByVisit.set(visitId, report);
+            }
+        });
+    return input.visits.map(visit => {
+        const report = reportsByVisit.get(visit.id);
+        return {
+            visitId: visit.id,
+            reportId: report?.id || null,
+            locationName: visit.locationName,
+            supervisorName: visit.supervisorName,
+            visitDate: visit.visitDate,
+            purpose: visit.purpose,
+            visitStatus: visit.status,
+            reportStatus: report?.status || '미작성',
+            improvementCount: report?.inspectionItems.filter(item => item.result === '개선필요').length || 0,
+            photoCount: report?.photoAttachments.length || 0,
+            hasSpecialNote: Boolean(report?.specialNote),
+            submittedAt: report?.submittedAt || null,
+            reviewedAt: report?.reviewedAt || null,
+            updatedAt: report?.updatedAt || null
+        };
+    });
+}
+
+export function isMissingSupervisionReportItem(item: Pick<SupervisionReportListItem, 'visitStatus'>): boolean {
+    return item.visitStatus === '보고서대기';
+}
+
+function getReportComparableTime(report: SupervisionReportListInput['reports'][number]): number {
+    return Math.max(
+        parseReportTime(report.updatedAt),
+        parseReportTime(report.submittedAt),
+        parseReportTime(report.reviewedAt)
+    );
+}
+
+function parseReportTime(value: string | null): number {
+    if (!value) return 0;
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? time : 0;
 }
 
 export function normalizeTemplateItems(input: unknown): readonly SupervisionReportTemplateItem[] {

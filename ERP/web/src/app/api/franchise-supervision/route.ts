@@ -22,6 +22,7 @@ import {
     summarizeSupervision,
     type SupervisionPhotoAttachment
 } from '@/lib/franchise-supervision';
+import { buildSupervisionOperationQueue } from '@/lib/franchise-supervision-operation-queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -317,6 +318,15 @@ export async function GET(request: Request) {
             .from('property-documents')
             .getPublicUrl(path)
             .data.publicUrl;
+        const transformedAssignments = assignments.map(row => transformAssignment(row, maps));
+        const transformedVisits = visits.map(row => transformVisit(row, maps));
+        const transformedReports = reports.map(row => transformReport(
+            row,
+            maps,
+            row.template_id ? templateItemsById.get(row.template_id) || activeTemplate.inspectionItems : activeTemplate.inspectionItems,
+            getAttachmentPublicUrl
+        ));
+        const transformedCorrectiveActions = correctiveActions.map(row => transformAction(row, maps));
 
         return ok({
             schemaReady: true,
@@ -334,28 +344,50 @@ export async function GET(request: Request) {
                 name: profile.name || '이름 미등록',
                 role: profile.role || ''
             })),
-            assignments: assignments.map(row => transformAssignment(row, maps)),
-            visits: visits.map(row => transformVisit(row, maps)),
-            reports: reports.map(row => transformReport(
-                row,
-                maps,
-                row.template_id ? templateItemsById.get(row.template_id) || activeTemplate.inspectionItems : activeTemplate.inspectionItems,
-                getAttachmentPublicUrl
-            )),
+            assignments: transformedAssignments,
+            visits: transformedVisits,
+            reports: transformedReports,
             reportTemplates: templates.length > 0 ? templates : [buildDefaultReportTemplate()],
             reportEvents: (reportEventResult.data || []).filter(row => visibleReportIds.has(row.report_id)).map(row => transformReportEvent(row, maps)),
-            correctiveActions: correctiveActions.map(row => transformAction(row, maps)),
+            correctiveActions: transformedCorrectiveActions,
             correctiveActionEvents: (actionEventResult.data || []).filter(row => visibleActionIds.has(row.corrective_action_id)).map(row => transformActionEvent(row, maps)),
             summary: summarizeSupervision({
                 today: new Date(),
-                visits: visits.map(row => ({ visitDate: row.visit_date, status: normalizeVisitStatus(row.status) })),
-                reports: reports.map(row => ({ status: normalizeReportStatus(row.status) })),
-                correctiveActions: correctiveActions.map(row => ({ status: normalizeCorrectiveActionStatus(row.status) }))
+                visits: transformedVisits.map(visit => ({ visitDate: visit.visitDate, status: visit.status })),
+                reports: transformedReports.map(report => ({ status: report.status })),
+                correctiveActions: transformedCorrectiveActions.map(action => ({ status: action.status }))
+            }),
+            operationQueue: buildSupervisionOperationQueue({
+                today: new Date(),
+                visits: transformedVisits.map(visit => ({
+                    id: visit.id,
+                    locationId: visit.locationId,
+                    locationName: visit.locationName,
+                    supervisorName: visit.supervisorName,
+                    visitDate: visit.visitDate,
+                    status: visit.status
+                })),
+                reports: transformedReports.map(report => ({
+                    id: report.id,
+                    visitId: report.visitId,
+                    locationId: report.locationId,
+                    locationName: report.locationName,
+                    supervisorName: report.supervisorName,
+                    status: report.status
+                })),
+                correctiveActions: transformedCorrectiveActions.map(action => ({
+                    id: action.id,
+                    locationId: action.locationId,
+                    locationName: action.locationName,
+                    assigneeName: action.assigneeName,
+                    status: action.status,
+                    dueDate: action.dueDate
+                }))
             })
         });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
-            return ok({ schemaReady: false, canManage: false, locations: [], supervisors: [], assignments: [], visits: [], reports: [], reportTemplates: [], reportEvents: [], correctiveActions: [], correctiveActionEvents: [] });
+            return ok({ schemaReady: false, canManage: false, locations: [], supervisors: [], assignments: [], visits: [], reports: [], reportTemplates: [], reportEvents: [], correctiveActions: [], correctiveActionEvents: [], operationQueue: [] });
         }
         console.error('Franchise supervision GET error:', error);
         return fail(500, 'INTERNAL_ERROR', '슈퍼바이징 정보를 불러오지 못했습니다.');

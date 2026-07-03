@@ -124,6 +124,7 @@ export async function PATCH(request: Request) {
                 supervisor_profile_id: supervisor.profileId,
                 region_scope: cleanString(getFirst(scope.body, ['regionScope', 'region_scope'])) || null,
                 memo: cleanString(getFirst(scope.body, ['memo'])) || null,
+                assigned_at: cleanString(getFirst(scope.body, ['assignedAt', 'assigned_at'])) || new Date().toISOString().slice(0, 10),
                 active,
                 ended_at: active ? null : new Date().toISOString().slice(0, 10),
                 updated_by: scope.auth.requester.id,

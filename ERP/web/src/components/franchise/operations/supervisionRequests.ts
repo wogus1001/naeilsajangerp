@@ -13,9 +13,9 @@ import type {
 
 type SaveAssignmentInput = SupervisionScope & {
     readonly companyId: string;
+    readonly id?: string;
     readonly locationId: string;
     readonly supervisorProfileId: string;
-    readonly regionScope: string;
     readonly memo: string;
     readonly assignedAt: string;
 };
@@ -85,6 +85,7 @@ function buildEmptyPayload(): SupervisionPayload {
         reportEvents: [],
         correctiveActions: [],
         correctiveActionEvents: [],
+        operationQueue: [],
         summary: {
             todayVisitCount: 0,
             weekVisitCount: 0,
@@ -110,16 +111,18 @@ export async function fetchSupervisionData(scope: SupervisionScope): Promise<Sup
 
 export async function saveSupervisionAssignment(input: SaveAssignmentInput): Promise<void> {
     const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const method = input.id ? 'PATCH' : 'POST';
     const response = await fetch('/api/franchise-supervision/assignments', {
-        method: 'POST',
+        method,
         headers,
         body: JSON.stringify({
+            id: input.id,
             requesterId: input.userId,
             companyId: input.companyId,
             companyName: input.companyName,
             locationId: input.locationId,
             supervisorProfileId: input.supervisorProfileId,
-            regionScope: input.regionScope,
+            regionScope: '',
             memo: input.memo,
             assignedAt: input.assignedAt
         })
