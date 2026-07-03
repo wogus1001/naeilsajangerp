@@ -115,7 +115,7 @@ export function buildDisclosureEmailContent(input: {
         `<p style="margin:0 0 24px;"><a href="${escapeHtml(input.documentUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:700;line-height:1.45;">정보공개서 열기</a></p>`,
         '<p style="margin:0 0 10px;">문서 확인 후에는 가맹사업법상 숙고기간 산정을 위해 반드시 수령 확인하기 버튼을 눌러주세요.</p>',
         '<p style="margin:0 0 12px;color:#4b5563;">가맹사업법에 따라 정보공개서 제공일로부터 14일이 지난 뒤 가맹계약을 진행할 수 있습니다.</p>',
-        `<p style="margin:0 0 20px;"><a href="${escapeHtml(input.confirmationUrl)}" style="display:inline-block;background:#f3f4f6;color:#111827;text-decoration:none;padding:9px 13px;border-radius:8px;font-weight:700;line-height:1.45;">수령 확인하기</a></p>`,
+        `<p style="margin:0 0 20px;"><a href="${escapeHtml(input.confirmationUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:700;line-height:1.45;">수령 확인하기</a></p>`,
         memo ? `<p style="margin:0 0 18px;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;"><strong>전달 메모</strong><br />${escapeHtml(memo)}</p>` : '',
         '<p style="margin:0;">확인하시다가 궁금한 점이 있으면 편하게 회신해주세요.<br />감사합니다.</p>',
         input.openTrackingUrl ? `<img src="${escapeHtml(input.openTrackingUrl)}" width="1" height="1" alt="" style="width:1px;height:1px;opacity:0;border:0;outline:none;text-decoration:none;" />` : '',
