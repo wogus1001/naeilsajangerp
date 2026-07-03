@@ -66,6 +66,7 @@ type SendDisclosureEmailInput = {
     readonly documentId: string;
     readonly recipientName: string;
     readonly recipientEmail: string;
+    readonly recipientPhone: string;
     readonly memo: string;
 };
 
@@ -199,6 +200,7 @@ export async function sendDisclosureEmailRequest(input: SendDisclosureEmailInput
             documentId: input.documentId,
             recipientName: input.recipientName,
             recipientEmail: input.recipientEmail,
+            recipientPhone: input.recipientPhone,
             memo: input.memo
         })
     });

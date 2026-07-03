@@ -202,6 +202,7 @@ export function useLeadDisclosureWorkflow({
         message,
         candidateName: gmail.candidateName,
         recipientEmail: gmail.recipientEmail,
+        recipientPhone: gmail.recipientPhone,
         connectGmail: gmail.connectGmail,
         disconnectGmail: gmail.disconnectGmail,
         saveDocument,
@@ -212,6 +213,7 @@ export function useLeadDisclosureWorkflow({
         setCandidateName: gmail.setCandidateName,
         setDeliveryMemo,
         setRecipientEmail: gmail.setRecipientEmail,
+        setRecipientPhone: gmail.setRecipientPhone,
         setSelectedDocumentId,
         updateDraft,
         uploadDisclosureFile

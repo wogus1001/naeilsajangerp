@@ -12,6 +12,7 @@ type Props = {
     readonly candidateName: string;
     readonly brandFallbackName: string;
     readonly recipientEmail: string;
+    readonly recipientPhone: string;
     readonly deliveryMemo: string;
     readonly gmailStatus: GmailConnectionStatus | null;
     readonly isLoading: boolean;
@@ -19,6 +20,7 @@ type Props = {
     readonly onSelectedDocumentChange: (documentId: string) => void;
     readonly onCandidateNameChange: (name: string) => void;
     readonly onRecipientEmailChange: (email: string) => void;
+    readonly onRecipientPhoneChange: (phone: string) => void;
     readonly onDeliveryMemoChange: (memo: string) => void;
     readonly onConnectGmail: () => void;
     readonly onDisconnectGmail: () => void;
@@ -32,6 +34,7 @@ export function LeadDisclosureDeliveryForm({
     candidateName,
     brandFallbackName,
     recipientEmail,
+    recipientPhone,
     deliveryMemo,
     gmailStatus,
     isLoading,
@@ -39,6 +42,7 @@ export function LeadDisclosureDeliveryForm({
     onSelectedDocumentChange,
     onCandidateNameChange,
     onRecipientEmailChange,
+    onRecipientPhoneChange,
     onDeliveryMemoChange,
     onConnectGmail,
     onDisconnectGmail,
@@ -48,6 +52,7 @@ export function LeadDisclosureDeliveryForm({
     const selectedDocument = documents.find(document => document.id === selectedDocumentId);
     const previewCandidateName = candidateName.trim() || '후보자명';
     const previewBrandName = selectedDocument?.brandName || brandFallbackName || '브랜드명';
+    const previewRecipientPhone = recipientPhone.trim() || '고객번호 미입력';
     const canSendEmail = Boolean(gmailStatus?.connected && selectedDocumentId && candidateName.trim() && recipientEmail.trim() && !isSendingEmail);
 
     return (
@@ -86,6 +91,15 @@ export function LeadDisclosureDeliveryForm({
                     수신 이메일
                     <input type="email" value={recipientEmail} onChange={(event) => onRecipientEmailChange(event.currentTarget.value)} />
                 </label>
+                <label>
+                    고객번호
+                    <input
+                        type="tel"
+                        value={recipientPhone}
+                        onChange={(event) => onRecipientPhoneChange(event.currentTarget.value)}
+                        placeholder="예: 010-1234-5678"
+                    />
+                </label>
             </div>
             <div className={styles.disclosureAlimtalkPreview}>
                 <div className={styles.disclosureAlimtalkPreviewHeader}>
@@ -113,6 +127,7 @@ export function LeadDisclosureDeliveryForm({
                 <div className={styles.disclosureAlimtalkVariables}>
                     <span>#{'{'}후보자명{'}'} = {previewCandidateName}</span>
                     <span>#{'{'}브랜드명{'}'} = {previewBrandName}</span>
+                    <span>수신 번호 = {previewRecipientPhone}</span>
                 </div>
             </div>
             {documents.length === 0 ? (

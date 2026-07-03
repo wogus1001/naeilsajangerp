@@ -36,6 +36,7 @@ export function useLeadDisclosureGmail({
 }: UseLeadDisclosureGmailInput) {
     const [candidateName, setCandidateName] = React.useState(leadName);
     const [recipientEmail, setRecipientEmail] = React.useState('');
+    const [recipientPhone, setRecipientPhone] = React.useState(leadContact.includes('@') ? '' : leadContact);
     const [gmailStatus, setGmailStatus] = React.useState<GmailConnectionStatus | null>(null);
     const [isSendingEmail, setIsSendingEmail] = React.useState(false);
 
@@ -51,6 +52,7 @@ export function useLeadDisclosureGmail({
     React.useEffect(() => {
         setCandidateName(leadName);
         setRecipientEmail(leadContact.includes('@') ? leadContact : '');
+        setRecipientPhone(leadContact.includes('@') ? '' : leadContact);
     }, [leadContact, leadId, leadName]);
 
     React.useEffect(() => {
@@ -115,6 +117,7 @@ export function useLeadDisclosureGmail({
                 documentId: selectedDocumentId,
                 recipientName: candidateName,
                 recipientEmail,
+                recipientPhone,
                 memo: deliveryMemo
             });
             await reloadDisclosureState();
@@ -134,8 +137,10 @@ export function useLeadDisclosureGmail({
         isSendingEmail,
         candidateName,
         recipientEmail,
+        recipientPhone,
         sendDisclosureEmail,
         setCandidateName,
-        setRecipientEmail
+        setRecipientEmail,
+        setRecipientPhone
     };
 }

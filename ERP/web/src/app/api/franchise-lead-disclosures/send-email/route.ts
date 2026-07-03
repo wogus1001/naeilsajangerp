@@ -56,6 +56,10 @@ function cleanString(value: unknown): string | null {
     return normalized.length > 0 ? normalized : null;
 }
 
+function hasOwnField(record: JsonRecord, field: string): boolean {
+    return Object.prototype.hasOwnProperty.call(record, field);
+}
+
 async function readBody(request: Request): Promise<JsonRecord> {
     try {
         const parsed: unknown = await request.json();
@@ -102,6 +106,8 @@ export async function POST(request: Request) {
         const documentId = cleanString(body.documentId || body.document_id);
         const recipientName = cleanString(body.recipientName || body.recipient_name || body.candidateName || body.candidate_name);
         const recipientEmail = cleanString(body.recipientEmail || body.recipient_email);
+        const hasRecipientPhoneInput = hasOwnField(body, 'recipientPhone') || hasOwnField(body, 'recipient_phone');
+        const recipientPhoneInput = cleanString(body.recipientPhone || body.recipient_phone);
         if (!leadId) return fail(400, 'VALIDATION_ERROR', 'leadId is required');
         if (!documentId) return fail(400, 'VALIDATION_ERROR', 'documentId is required');
         if (!recipientName) return fail(400, 'VALIDATION_ERROR', 'recipientName is required');
@@ -128,6 +134,7 @@ export async function POST(request: Request) {
         if (documentRow.status === 'archived') return fail(400, 'VALIDATION_ERROR', 'Archived disclosure document cannot be sent');
         if (!documentRow.file_url) return fail(400, 'VALIDATION_ERROR', 'Disclosure document file URL is required');
         const alimtalkBrandName = documentRow.brand_name || leadRow.interested_brand || documentRow.title || '브랜드';
+        const alimtalkRecipientPhone = hasRecipientPhoneInput ? recipientPhoneInput : leadRow.mobile;
 
         const connection = await fetchActiveGmailConnection(supabaseAdmin, requester.id, leadRow.company_id);
         if (!connection) return fail(400, 'VALIDATION_ERROR', 'Gmail account is not connected');
@@ -183,11 +190,13 @@ export async function POST(request: Request) {
                     alimtalk: {
                         disclosure_email_sent: {
                             brandName: alimtalkBrandName,
-                            candidateName: recipientName
+                            candidateName: recipientName,
+                            recipientPhone: alimtalkRecipientPhone
                         }
                     },
                     brandName: alimtalkBrandName,
-                    candidateName: recipientName
+                    candidateName: recipientName,
+                    recipientPhone: alimtalkRecipientPhone
                 }
             })
             .select('id')
@@ -217,7 +226,7 @@ export async function POST(request: Request) {
                     id: deliveryId,
                     lead_id: leadRow.id,
                     recipient_name: recipientName,
-                    recipient_phone: leadRow.mobile
+                    recipient_phone: alimtalkRecipientPhone
                 });
             } catch (error) {
                 console.error(
