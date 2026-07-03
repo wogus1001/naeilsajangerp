@@ -21,6 +21,16 @@ type LeadDisclosureRow = {
     readonly recipient_name: string | null;
     readonly document_title: string | null;
     readonly confirmed_at: string | null;
+    readonly data?: unknown;
+};
+
+type LeadDisclosureEmailSentRow = {
+    readonly id: string;
+    readonly company_id: string;
+    readonly lead_id: string;
+    readonly recipient_name: string | null;
+    readonly recipient_phone: string | null;
+    readonly brand_name: string | null;
 };
 
 type LeadManagerRow = {
@@ -37,6 +47,33 @@ function cleanString(value: unknown): string {
 
 function uniqueStrings(values: readonly (string | null | undefined)[]): string[] {
     return [...new Set(values.map(cleanString).filter(Boolean))];
+}
+
+function readRecordValue(value: unknown, key: string): string {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+    return cleanString((value as Record<string, unknown>)[key]);
+}
+
+export function buildDisclosureEmailSentAlimtalkVariables(input: {
+    readonly candidateName: string | null | undefined;
+    readonly brandName: string | null | undefined;
+}): Record<string, string> {
+    return {
+        브랜드명: cleanString(input.brandName) || '-',
+        후보자명: cleanString(input.candidateName) || '예비 창업자'
+    };
+}
+
+export function buildDisclosureConfirmedAlimtalkVariables(input: {
+    readonly candidateName: string | null | undefined;
+    readonly brandName: string | null | undefined;
+    readonly confirmedAt: string | Date | null | undefined;
+}): Record<string, string> {
+    return {
+        브랜드명: cleanString(input.brandName) || '-',
+        수령일: formatAlimtalkDate(input.confirmedAt || new Date()),
+        예비창업자명: cleanString(input.candidateName) || '예비 창업자'
+    };
 }
 
 async function fetchCompanyMeta(
@@ -66,6 +103,28 @@ async function fetchProfilesByIds(
         .returns<ProfileRecipientRow[]>();
     if (error) throw error;
     return data || [];
+}
+
+export async function notifyAlimtalkDisclosureEmailSent(
+    supabaseAdmin: SupabaseClient,
+    delivery: LeadDisclosureEmailSentRow
+): Promise<void> {
+    const company = await fetchCompanyMeta(supabaseAdmin, delivery.company_id);
+    await sendAlimtalkNotification(supabaseAdmin, {
+        companyId: delivery.company_id,
+        recipient: {
+            name: delivery.recipient_name || '예비 창업자',
+            phone: delivery.recipient_phone,
+            profileId: null
+        },
+        scenarioKey: 'disclosure_email_sent',
+        sourceId: delivery.id,
+        sourceType: 'disclosure-email-sent',
+        variables: buildDisclosureEmailSentAlimtalkVariables({
+            brandName: delivery.brand_name || company.name,
+            candidateName: delivery.recipient_name
+        })
+    });
 }
 
 async function notifyProfileRecipients(input: {
@@ -108,6 +167,7 @@ export async function notifyAlimtalkDisclosureConfirmed(
     if (!lead) return;
 
     const company = await fetchCompanyMeta(supabaseAdmin, delivery.company_id);
+    const storedBrandName = readRecordValue(delivery.data, 'brandName');
     await notifyProfileRecipients({
         companyId: delivery.company_id,
         profileIds: [lead.manager_id, company.managerId],
@@ -115,11 +175,11 @@ export async function notifyAlimtalkDisclosureConfirmed(
         sourceId: delivery.id,
         sourceType: 'disclosure-confirmed',
         supabaseAdmin,
-        variables: {
-            브랜드명: lead.interested_brand || company.name || '-',
-            수령일: formatAlimtalkDate(delivery.confirmed_at || new Date()),
-            예비창업자명: delivery.recipient_name || lead.name || '예비 창업자'
-        }
+        variables: buildDisclosureConfirmedAlimtalkVariables({
+            brandName: storedBrandName || lead.interested_brand || company.name,
+            candidateName: delivery.recipient_name || lead.name,
+            confirmedAt: delivery.confirmed_at || new Date()
+        })
     });
 }
 

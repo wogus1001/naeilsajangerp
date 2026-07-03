@@ -6446,6 +6446,21 @@
     font-weight: 600;
 }
 
+.requiredMark {
+    display: inline-flex;
+    width: fit-content;
+    color: #f04452;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.disclosureLabelText {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
 .disclosureFormGrid input,
 .disclosureFormGrid select,
 .disclosureMemoLabel textarea {
@@ -6475,6 +6490,94 @@
 .disclosureMemoLabel textarea:focus {
     border-color: #3182f6;
     box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
+}
+
+.disclosureAlimtalkPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.disclosureAlimtalkPreviewHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.disclosureAlimtalkPreviewHeader strong {
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.disclosureAlimtalkPreviewHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: right;
+}
+
+.disclosureAlimtalkMock {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: min(100%, 360px);
+    border-radius: 8px;
+    background: #d9e7f2;
+    padding: 14px;
+}
+
+.disclosureAlimtalkNotice {
+    align-self: flex-start;
+    border-radius: 8px 8px 0 0;
+    background: #ffe812;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 9px;
+}
+
+.disclosureAlimtalkBubble {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: min(100%, 240px);
+    border-radius: 0 0 8px 8px;
+    background: #ffffff;
+    color: #191f28;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.disclosureAlimtalkBubble strong,
+.disclosureAlimtalkBubble p {
+    margin: 0;
+}
+
+.disclosureAlimtalkBubble strong {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.disclosureAlimtalkVariables {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.disclosureAlimtalkVariables span {
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1c64d1;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 8px;
 }
 
 .disclosureUploadLabel {

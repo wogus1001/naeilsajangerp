@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildAlimtalkVariablesForCandidate } from './alimtalk-event-notifications.js';
+import {
+    buildAlimtalkVariablesForCandidate,
+    buildDisclosureConfirmedAlimtalkVariables,
+    buildDisclosureEmailSentAlimtalkVariables
+} from './alimtalk-event-notifications.js';
 import { buildLeadDisclosureSummary } from './franchise-lead-disclosure-summary.js';
 import { buildAutomaticFranchiseNotifications } from './franchise-notifications.js';
 import { buildVendorContractNotifications } from './franchise-vendor-contract-notifications.js';
@@ -148,5 +152,27 @@ test('buildAlimtalkVariablesForCandidate maps vendor contract due template varia
         남은기간: 'D-7',
         남은일수: '7',
         업체명: '내일식자재'
+    });
+});
+
+test('buildDisclosureEmailSentAlimtalkVariables maps disclosure email sent template variables', () => {
+    assert.deepEqual(buildDisclosureEmailSentAlimtalkVariables({
+        brandName: '테스트치킨',
+        candidateName: '김후보'
+    }), {
+        브랜드명: '테스트치킨',
+        후보자명: '김후보'
+    });
+});
+
+test('buildDisclosureConfirmedAlimtalkVariables maps disclosure confirmed template variables', () => {
+    assert.deepEqual(buildDisclosureConfirmedAlimtalkVariables({
+        brandName: '테스트치킨',
+        candidateName: '김후보',
+        confirmedAt: '2026-07-03T00:00:00.000Z'
+    }), {
+        브랜드명: '테스트치킨',
+        수령일: '2026. 07. 03.',
+        예비창업자명: '김후보'
     });
 });

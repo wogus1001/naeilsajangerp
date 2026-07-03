@@ -11,6 +11,7 @@ type UseLeadDisclosureGmailInput = {
     readonly userId: string;
     readonly companyName: string;
     readonly leadId: string;
+    readonly leadName: string;
     readonly leadContact: string;
     readonly selectedDocumentId: string;
     readonly deliveryMemo: string;
@@ -24,6 +25,7 @@ export function useLeadDisclosureGmail({
     userId,
     companyName,
     leadId,
+    leadName,
     leadContact,
     selectedDocumentId,
     deliveryMemo,
@@ -32,6 +34,7 @@ export function useLeadDisclosureGmail({
     setMessage,
     setErrorMessage
 }: UseLeadDisclosureGmailInput) {
+    const [candidateName, setCandidateName] = React.useState(leadName);
     const [recipientEmail, setRecipientEmail] = React.useState('');
     const [gmailStatus, setGmailStatus] = React.useState<GmailConnectionStatus | null>(null);
     const [isSendingEmail, setIsSendingEmail] = React.useState(false);
@@ -46,8 +49,9 @@ export function useLeadDisclosureGmail({
     }, [companyName, userId]);
 
     React.useEffect(() => {
+        setCandidateName(leadName);
         setRecipientEmail(leadContact.includes('@') ? leadContact : '');
-    }, [leadContact, leadId]);
+    }, [leadContact, leadId, leadName]);
 
     React.useEffect(() => {
         void refreshGmailStatus();
@@ -97,6 +101,10 @@ export function useLeadDisclosureGmail({
             setErrorMessage('수신 이메일을 입력해주세요.');
             return;
         }
+        if (!candidateName.trim()) {
+            setErrorMessage('알림톡 변수와 발송 이력에 사용할 후보자명을 입력해주세요.');
+            return;
+        }
         setIsSendingEmail(true);
         setMessage('');
         setErrorMessage('');
@@ -105,6 +113,7 @@ export function useLeadDisclosureGmail({
                 requesterId: userId,
                 leadId,
                 documentId: selectedDocumentId,
+                recipientName: candidateName,
                 recipientEmail,
                 memo: deliveryMemo
             });
@@ -123,8 +132,10 @@ export function useLeadDisclosureGmail({
         disconnectGmail,
         gmailStatus,
         isSendingEmail,
+        candidateName,
         recipientEmail,
         sendDisclosureEmail,
+        setCandidateName,
         setRecipientEmail
     };
 }

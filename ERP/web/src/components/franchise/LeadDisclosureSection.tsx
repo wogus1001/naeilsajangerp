@@ -56,6 +56,7 @@ export function LeadDisclosureSection({
         isSendingEmail,
         isUploadingDocument,
         message,
+        candidateName,
         recipientEmail,
         connectGmail,
         disconnectGmail,
@@ -63,6 +64,7 @@ export function LeadDisclosureSection({
         sendDisclosureEmail,
         selectedDocumentId,
         selectDocument,
+        setCandidateName,
         setDeliveryMemo,
         setRecipientEmail,
         updateDraft,
@@ -91,12 +93,15 @@ export function LeadDisclosureSection({
             <LeadDisclosureDeliveryForm
                 documents={documents}
                 selectedDocumentId={selectedDocumentId}
+                candidateName={candidateName}
+                brandFallbackName={interestedBrand || companyName}
                 recipientEmail={recipientEmail}
                 deliveryMemo={deliveryMemo}
                 gmailStatus={gmailStatus}
                 isLoading={isLoading}
                 isSendingEmail={isSendingEmail}
                 onSelectedDocumentChange={selectDocument}
+                onCandidateNameChange={setCandidateName}
                 onRecipientEmailChange={setRecipientEmail}
                 onDeliveryMemoChange={setDeliveryMemo}
                 onConnectGmail={connectGmail}

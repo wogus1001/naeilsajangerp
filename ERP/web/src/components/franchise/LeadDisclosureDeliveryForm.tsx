@@ -9,12 +9,15 @@ import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 type Props = {
     readonly documents: readonly FranchiseDisclosureDocument[];
     readonly selectedDocumentId: string;
+    readonly candidateName: string;
+    readonly brandFallbackName: string;
     readonly recipientEmail: string;
     readonly deliveryMemo: string;
     readonly gmailStatus: GmailConnectionStatus | null;
     readonly isLoading: boolean;
     readonly isSendingEmail: boolean;
     readonly onSelectedDocumentChange: (documentId: string) => void;
+    readonly onCandidateNameChange: (name: string) => void;
     readonly onRecipientEmailChange: (email: string) => void;
     readonly onDeliveryMemoChange: (memo: string) => void;
     readonly onConnectGmail: () => void;
@@ -26,12 +29,15 @@ type Props = {
 export function LeadDisclosureDeliveryForm({
     documents,
     selectedDocumentId,
+    candidateName,
+    brandFallbackName,
     recipientEmail,
     deliveryMemo,
     gmailStatus,
     isLoading,
     isSendingEmail,
     onSelectedDocumentChange,
+    onCandidateNameChange,
     onRecipientEmailChange,
     onDeliveryMemoChange,
     onConnectGmail,
@@ -39,7 +45,10 @@ export function LeadDisclosureDeliveryForm({
     onOpenDocumentManager,
     onSendEmail
 }: Props) {
-    const canSendEmail = Boolean(gmailStatus?.connected && selectedDocumentId && recipientEmail.trim() && !isSendingEmail);
+    const selectedDocument = documents.find(document => document.id === selectedDocumentId);
+    const previewCandidateName = candidateName.trim() || '후보자명';
+    const previewBrandName = selectedDocument?.brandName || brandFallbackName || '브랜드명';
+    const canSendEmail = Boolean(gmailStatus?.connected && selectedDocumentId && candidateName.trim() && recipientEmail.trim() && !isSendingEmail);
 
     return (
         <div className={styles.disclosureFormBlock}>
@@ -63,9 +72,48 @@ export function LeadDisclosureDeliveryForm({
                     </select>
                 </label>
                 <label>
+                    <span className={styles.disclosureLabelText}>
+                        후보자명 <span className={styles.requiredMark}>필수</span>
+                    </span>
+                    <input
+                        type="text"
+                        value={candidateName}
+                        onChange={(event) => onCandidateNameChange(event.currentTarget.value)}
+                        placeholder="예: 김민수"
+                    />
+                </label>
+                <label>
                     수신 이메일
                     <input type="email" value={recipientEmail} onChange={(event) => onRecipientEmailChange(event.currentTarget.value)} />
                 </label>
+            </div>
+            <div className={styles.disclosureAlimtalkPreview}>
+                <div className={styles.disclosureAlimtalkPreviewHeader}>
+                    <strong>정보공개서 확인 안내 알림톡 미리보기</strong>
+                    <span>발송 성공 후 후보자 휴대폰으로 전송</span>
+                </div>
+                <div className={styles.disclosureAlimtalkMock}>
+                    <span className={styles.disclosureAlimtalkNotice}>알림톡 도착</span>
+                    <div className={styles.disclosureAlimtalkBubble}>
+                        <strong>[FC ERP] 정보공개서 확인 안내</strong>
+                        <p>
+                            {previewCandidateName}님, {previewBrandName} 정보공개서가 이메일로 발송되었습니다.
+                        </p>
+                        <p>
+                            가맹계약 전 필수 확인 문서이므로 이메일을 확인해 주세요.
+                        </p>
+                        <p>
+                            정보공개서 확인 후에는 숙고기간 산정을 위해 반드시 수령확인 버튼을 눌러 주세요.
+                        </p>
+                        <p>
+                            정보공개서 수령 확인일을 기준으로 법정 숙고기간이 계산됩니다.
+                        </p>
+                    </div>
+                </div>
+                <div className={styles.disclosureAlimtalkVariables}>
+                    <span>#{'{'}후보자명{'}'} = {previewCandidateName}</span>
+                    <span>#{'{'}브랜드명{'}'} = {previewBrandName}</span>
+                </div>
             </div>
             {documents.length === 0 ? (
                 <div className={`${styles.messageBox} ${styles.messageBoxWarn}`}>
