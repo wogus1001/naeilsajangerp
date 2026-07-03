@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-03
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 정보공개서 수령 확인 알림톡 변수/미확인 큐 보정 커밋 예정
+  - 주요 기능: `정보공개서 수령 확인 완료` 알림톡의 승인 템플릿 변수 차이를 흡수하도록 `확인일`, `수령확인일`, `수령일`, `계약가능일`을 모두 채운다. 메일 열람 추정은 법적 수령 신호로 쓰지 않고 참고값으로 유지하며, 발송 또는 열람 추정 후 1일 이상 수령 확인이 없으면 내부 `정보공개서 수령 미확인` 업무 큐를 생성한다.
+  - 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts` 15건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 로컬 스모크로 `disclosure-unconfirmed` 내부 큐 생성과 `disclosure_confirmed` 변수 매핑을 확인했다.
+  - 남은 이슈: 운영에서 실제 수령 확인 버튼 클릭 후 카카오 알림톡 변수 표시와 `alimtalk_send_logs` payload를 live QA한다. 미확인 큐는 발송 후 1일 이상 지난 미확인 데이터로 점검한다.
+- 2026-07-03
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `43d7ff2 fix(admin): reorder management menu cards`, `3c44d52 feat(franchise): connect disclosure email alimtalk`
   - 주요 기능: 어드민 관리 홈의 관리 메뉴 순서를 `회원 및 권한 관리`, `회사별 메뉴 관리`, `프랜차이즈 인입 관리`, `전자계약 관리`, `알림톡 운영 관리`, `시스템 설정` 순서로 정리했다. 정보공개서 Gmail 발송 폼에는 필수 `후보자명` 입력과 발송 전 `정보공개서 확인 안내` 알림톡 목업을 추가했다. Gmail 발송 성공 시 `recipientName`, 브랜드명, 후보자 휴대폰을 기준으로 `disclosure_email_sent` 알림톡을 발송하고 `alimtalk_send_logs`에 결과를 남긴다. 수령 확인 버튼 클릭 시 기존 `disclosure_confirmed` 알림톡과 14일 숙고기간 감사 기록을 유지한다.
   - 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 알림톡 운영 테이블과 기존 정보공개서 발송 테이블을 사용한다.

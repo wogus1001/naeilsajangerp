@@ -51,6 +51,27 @@ test('buildAutomaticFranchiseNotifications creates contact and missing disclosur
     );
 });
 
+test('buildAutomaticFranchiseNotifications creates unconfirmed disclosure queue for sent or opened receipts', () => {
+    const sentSummary = buildLeadDisclosureSummary([
+        { id: 'delivery-sent', sentAt: '2026-07-01T00:00:00.000Z', sendStatus: 'sent' }
+    ], new Date('2026-07-03T00:00:00.000Z'));
+    const openedSummary = buildLeadDisclosureSummary([
+        { id: 'delivery-opened', openedAt: '2026-07-02T00:00:00.000Z', sentAt: '2026-07-01T00:00:00.000Z', sendStatus: 'sent' }
+    ], new Date('2026-07-03T00:00:00.000Z'));
+
+    const notifications = buildAutomaticFranchiseNotifications([
+        { ...baseLead, disclosureSummary: sentSummary },
+        { ...baseLead, id: 'lead-2', name: '이열람', disclosureSummary: openedSummary }
+    ], new Date('2026-07-03T00:00:00.000Z'));
+
+    const queueItems = notifications.filter(item => item.sourceType === 'disclosure-unconfirmed');
+
+    assert.equal(queueItems.length, 2);
+    assert.equal(queueItems[0]?.title, '정보공개서 수령 미확인');
+    assert.equal(queueItems[0]?.data.deliveryId, 'delivery-sent');
+    assert.equal(queueItems[1]?.data.openedAt, '2026-07-02T00:00:00.000Z');
+});
+
 test('buildVendorContractNotifications creates D-30 and D-7 alerts for owner and team lead recipients', () => {
     const notifications = buildVendorContractNotifications([
         {
@@ -172,7 +193,10 @@ test('buildDisclosureConfirmedAlimtalkVariables maps disclosure confirmed templa
         confirmedAt: '2026-07-03T00:00:00.000Z'
     }), {
         브랜드명: '테스트치킨',
+        계약가능일: '2026. 07. 17.',
+        수령확인일: '2026. 07. 03.',
         수령일: '2026. 07. 03.',
+        확인일: '2026. 07. 03.',
         예비창업자명: '김후보'
     });
 });

@@ -1035,3 +1035,11 @@
 - 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
 - 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 스모크로 후보자명 미입력 시 발송 요청 차단, 알림톡 목업 변수 노출, `disclosure_email_sent`/`disclosure_confirmed` 변수 매핑을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 남은 live QA: 운영 Google OAuth 승인/연결 계정으로 실제 Gmail 발송을 1건 실행해 `정보공개서 확인 안내` 알림톡 도착, 발송 로그 성공, 수령 확인 버튼 클릭 후 `정보공개서 수령 확인 완료` 알림톡과 계약 가능일 표시를 확인한다.
+
+## 2026-07-03 정보공개서 수령 확인 알림톡 변수 및 미확인 큐 QA
+
+- 범위: 운영 테스트에서 `정보공개서 수령 확인 완료` 알림톡은 도착했지만 승인 템플릿의 `확인일`/`계약가능일` 계열 변수가 비어 보이는 문제를 보정했다. `disclosure_confirmed` 변수 생성은 `확인일`, `수령확인일`, `수령일`, `계약가능일`을 모두 채우며, 계약 가능일은 기존 14일 숙고기간 계산 유틸을 사용한다.
+- 미확인 큐: 메일 열람 추정은 Gmail/메일 클라이언트 프록시 때문에 법적 수령 신호로 쓰지 않는다. 대신 정보공개서가 `sent` 또는 `opened` 상태이고 `confirmed_at`이 없으며 발송 후 1일 이상 지난 경우 내부 `정보공개서 수령 미확인` 업무 큐를 생성한다. 이 큐는 외부 알림톡 자동 발송이 아니라 담당자 follow-up용 내부 알림이다.
+- 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts` 15건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 스모크로 `opened` 상태이지만 수령확인이 없는 발송 이력이 `disclosure-unconfirmed` 후보로 생성되고, `disclosure_confirmed` 변수가 `계약가능일: 2026. 07. 17.`, `확인일/수령확인일/수령일: 2026. 07. 03.` 형태로 채워지는 것을 확인했다.
+- 남은 live QA: 운영에서 실제 수령 확인 버튼 클릭 후 `alimtalk_send_logs`의 변수 payload와 카카오 알림톡 표시가 일치하는지 확인한다. Gmail 열람 추정은 환경별 차이가 크므로 `opened_at`은 참고값으로만 확인하고, 미확인 큐 생성 여부는 발송 후 1일 경과 데이터로 점검한다.

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendAlimtalkNotification, formatAlimtalkDate, type AlimtalkScenarioKey } from './alimtalk-send';
+import { addDisclosureWaitDays } from './franchise-disclosure-deliveries';
 import type { FranchiseNotificationCandidate } from './franchise-notifications';
 
 type ProfileRecipientRow = {
@@ -69,9 +70,14 @@ export function buildDisclosureConfirmedAlimtalkVariables(input: {
     readonly brandName: string | null | undefined;
     readonly confirmedAt: string | Date | null | undefined;
 }): Record<string, string> {
+    const confirmedAt = input.confirmedAt || new Date();
+    const confirmedDate = formatAlimtalkDate(confirmedAt);
     return {
         브랜드명: cleanString(input.brandName) || '-',
-        수령일: formatAlimtalkDate(input.confirmedAt || new Date()),
+        계약가능일: formatAlimtalkDate(addDisclosureWaitDays(confirmedAt)),
+        수령확인일: confirmedDate,
+        수령일: confirmedDate,
+        확인일: confirmedDate,
         예비창업자명: cleanString(input.candidateName) || '예비 창업자'
     };
 }

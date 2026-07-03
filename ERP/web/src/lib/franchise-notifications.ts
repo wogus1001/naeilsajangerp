@@ -2,7 +2,7 @@ import type { LeadDisclosureSummary } from './franchise-lead-disclosure-summary'
 
 export const FRANCHISE_NOTIFICATION_SEVERITIES = ['info', 'warning', 'danger', 'success'] as const;
 export const FRANCHISE_NOTIFICATION_SOURCE_TYPES = [
-    'disclosure-missing', 'disclosure-failed', 'disclosure-due', 'disclosure-eligible',
+    'disclosure-missing', 'disclosure-failed', 'disclosure-unconfirmed', 'disclosure-due', 'disclosure-eligible',
     'contact-overdue', 'contact-today', 'hot-lead-followup',
     'vendor-contract-due'
 ] as const;
@@ -44,6 +44,8 @@ export type NotificationLead = {
     readonly nextContactAt?: string | null;
     readonly disclosureSummary?: LeadDisclosureSummary | null;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type FranchiseNotificationRow = {
     readonly id: string;
@@ -91,6 +93,12 @@ function isPast(value: string | null | undefined, now: Date): boolean {
     const date = toIsoOrNull(value);
     if (!date) return false;
     return new Date(date).getTime() < now.getTime() && !isToday(date, now);
+}
+
+function isDisclosureUnconfirmedQueueTarget(disclosure: LeadDisclosureSummary, now: Date): boolean {
+    if (disclosure.confirmedAt || !['sent', 'opened'].includes(disclosure.state)) return false;
+    const sentAt = toIsoOrNull(disclosure.latestSentAt);
+    return sentAt ? now.getTime() - new Date(sentAt).getTime() >= DAY_MS : false;
 }
 
 function buildLeadActionUrl(leadId: string): string {
@@ -157,7 +165,22 @@ export function buildAutomaticFranchiseNotifications(
                 { deliveryId: disclosure.latestDeliveryId }
             );
             if (candidate) items.push(candidate);
-        } else if (disclosure.remainingDays === 3 || disclosure.remainingDays === 1) {
+        } else {
+            if (isDisclosureUnconfirmedQueueTarget(disclosure, now)) {
+                const candidate = createCandidate(
+                    lead,
+                    'disclosure-unconfirmed',
+                    'warning',
+                    '정보공개서 수령 미확인',
+                    `${lead.name}님의 정보공개서 수령 확인이 아직 없습니다.`,
+                    disclosure.latestSentAt,
+                    { deliveryId: disclosure.latestDeliveryId, latestSentAt: disclosure.latestSentAt, openedAt: disclosure.openedAt, state: disclosure.state }
+                );
+                if (candidate) items.push(candidate);
+            }
+        }
+
+        if (disclosure?.remainingDays === 3 || disclosure?.remainingDays === 1) {
             const candidate = createCandidate(
                 lead,
                 'disclosure-due',
@@ -168,7 +191,7 @@ export function buildAutomaticFranchiseNotifications(
                 { remainingDays: disclosure.remainingDays, deliveryId: disclosure.latestDeliveryId }
             );
             if (candidate) items.push(candidate);
-        } else if (disclosure.remainingDays === 0) {
+        } else if (disclosure?.remainingDays === 0) {
             const candidate = createCandidate(
                 lead,
                 'disclosure-eligible',
