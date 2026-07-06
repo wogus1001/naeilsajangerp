@@ -98,6 +98,23 @@ void test('Given AI report JSON When extracting Then supervision summary fields 
     assert.equal(summary?.inspectionItems[1]?.memo, '응대 양호');
 });
 
+void test('Given AI report JSON with leading model text When extracting Then the JSON object is still parsed', () => {
+    const summary = extractSupervisionReportAiSummaryFromText(`</think>
+정리 결과입니다.
+{
+  "overallNote": "주방 청결 재확인 필요",
+  "specialNote": "3일 뒤 청소 사진 확인",
+  "inspectionItems": [
+    { "id": "cleanliness", "label": "청결", "result": "주의", "memo": "튀김기 옆 기름때 확인" }
+  ]
+}
+필요 시 저장 전 검토하세요.`);
+
+    assert.equal(summary?.overallNote, '주방 청결 재확인 필요');
+    assert.equal(summary?.inspectionItems[0]?.id, 'cleanliness');
+    assert.equal(summary?.inspectionItems[0]?.result, '주의');
+});
+
 void test('Given AI report summary When applying Then matching checklist items and special note are updated', () => {
     const applied = applySupervisionReportAiSummary({
         specialNote: '',

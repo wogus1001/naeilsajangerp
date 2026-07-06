@@ -75,6 +75,50 @@ function stripJsonFence(text: string): string {
     return (fenced?.[1] || trimmed).trim();
 }
 
+function extractJsonObjectText(text: string): string {
+    const cleaned = stripJsonFence(text)
+        .replace(/^<\/think>\s*/i, '')
+        .trim();
+    if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
+
+    let start = -1;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = 0; index < cleaned.length; index += 1) {
+        const char = cleaned[index];
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (char === '\\') {
+                escaped = true;
+                continue;
+            }
+            if (char === '"') inString = false;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = true;
+            continue;
+        }
+        if (char === '{') {
+            if (depth === 0) start = index;
+            depth += 1;
+            continue;
+        }
+        if (char === '}') {
+            depth -= 1;
+            if (depth === 0 && start >= 0) return cleaned.slice(start, index + 1);
+        }
+    }
+
+    return cleaned;
+}
+
 function normalizeAiItem(value: unknown): SupervisionReportAiItemSummary | null {
     if (!isRecord(value)) return null;
     const id = cleanSummaryText(value.id, 120);
@@ -105,7 +149,7 @@ export function normalizeSupervisionReportAiSummary(value: unknown): Supervision
 }
 
 export function extractSupervisionReportAiSummaryFromText(text: string): SupervisionReportAiSummary | null {
-    const jsonText = stripJsonFence(text);
+    const jsonText = extractJsonObjectText(text);
     if (!jsonText) return null;
 
     try {
