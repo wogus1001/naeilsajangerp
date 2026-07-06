@@ -31,10 +31,18 @@ type SupervisionReportAiResult = {
 
 const DEFAULT_NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b';
-const DEFAULT_NVIDIA_FALLBACK_MODEL = 'mistral-medium-3.5-128b';
+const DEFAULT_NVIDIA_FALLBACK_MODEL = 'meta/llama-3.1-8b-instruct';
 const DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS = 18_000;
 const NVIDIA_MIN_REQUEST_TIMEOUT_MS = 5_000;
 const NVIDIA_MAX_REQUEST_TIMEOUT_MS = 45_000;
+const NVIDIA_LEGACY_FALLBACK_MODEL_ALIASES: Record<string, string> = {
+    'mistral-medium-3.5-128b': DEFAULT_NVIDIA_FALLBACK_MODEL
+};
+
+function normalizeNvidiaFallbackModel(value: unknown): string {
+    const model = normalizeAiProviderEnvValue(value);
+    return NVIDIA_LEGACY_FALLBACK_MODEL_ALIASES[model] || model || DEFAULT_NVIDIA_FALLBACK_MODEL;
+}
 
 function getNvidiaConfig(env: NodeJS.ProcessEnv) {
     const timeoutMs = Number.parseInt(normalizeAiProviderEnvValue(env.NVIDIA_REQUEST_TIMEOUT_MS), 10);
@@ -42,7 +50,7 @@ function getNvidiaConfig(env: NodeJS.ProcessEnv) {
         apiKey: normalizeAiProviderEnvValue(env.NVIDIA_API_KEY),
         baseUrl: normalizeAiProviderEnvValue(env.NVIDIA_BASE_URL) || DEFAULT_NVIDIA_BASE_URL,
         model: normalizeAiProviderEnvValue(env.NVIDIA_MODEL) || DEFAULT_NVIDIA_MODEL,
-        fallbackModel: normalizeAiProviderEnvValue(env.NVIDIA_FALLBACK_MODEL) || DEFAULT_NVIDIA_FALLBACK_MODEL,
+        fallbackModel: normalizeNvidiaFallbackModel(env.NVIDIA_FALLBACK_MODEL),
         requestTimeoutMs: Number.isFinite(timeoutMs)
             ? Math.min(Math.max(timeoutMs, NVIDIA_MIN_REQUEST_TIMEOUT_MS), NVIDIA_MAX_REQUEST_TIMEOUT_MS)
             : DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS
