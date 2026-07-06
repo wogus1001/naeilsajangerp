@@ -120,6 +120,15 @@ function cleanSummaryText(value: unknown, maxLength = SUPERVISION_AI_SUMMARY_MAX
         .slice(0, maxLength);
 }
 
+export function normalizeAiProviderEnvValue(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    return value
+        .trim()
+        .replace(/^["']+/, '')
+        .replace(/["']+$/, '')
+        .trim();
+}
+
 function toReportTone(text: string): string {
     return text
         .replace(/점주님/g, '점주')
@@ -127,12 +136,32 @@ function toReportTone(text: string): string {
         .replace(/손님/g, '고객')
         .replace(/점주이/g, '점주가')
         .replace(/고객한테/g, '고객에게')
+        .replace(/오늘\s+(.+?)\s+다녀왔고\.?/g, '$1 점검 진행.')
+        .replace(/오늘\s+(.+?)\s+방문했고\.?/g, '$1 방문 점검 진행.')
+        .replace(/점주(?:와|랑)\s*(.+?)\s*정도\s*얘기함\.?/g, '점주 면담 $1 진행.')
+        .replace(/(.+?)\s*정도\s*얘기함\.?/g, '$1 면담 진행.')
+        .replace(/(.+?)와\s*얘기함\.?/g, '$1와 면담 진행.')
+        .replace(/(.+?)랑\s*얘기함\.?/g, '$1와 면담 진행.')
+        .replace(/얘기함\.?/g, '면담 진행.')
+        .replace(/체크리스트 다시 주고/g, '체크리스트 재전달')
+        .replace(/자료 다시 보내드리기로 함\.?/g, '자료 재전달 예정.')
+        .replace(/보내드리기로 함\.?/g, '전달 예정.')
+        .replace(/받아보면/g, '수령 후')
+        .replace(/확인하면 될 것/g, '확인 예정')
         .replace(/(.+?)라고 하셨습니다\.?/g, '$1라고 언급함.')
         .replace(/(.+?)다고 하셨습니다\.?/g, '$1다고 언급함.')
         .replace(/(.+?)라고 했습니다\.?/g, '$1라고 언급함.')
         .replace(/(.+?)다고 했습니다\.?/g, '$1다고 언급함.')
         .replace(/(.+?)라고 합니다\.?/g, '$1라고 확인됨.')
         .replace(/(.+?)다고 합니다\.?/g, '$1다고 확인됨.')
+        .replace(/(.+?)라고 하셨어서/g, '$1라고 언급하여')
+        .replace(/(.+?)다고 하셨어서/g, '$1다고 언급하여')
+        .replace(/(.+?)라고 하셔서/g, '$1라고 언급하여')
+        .replace(/(.+?)다고 하셔서/g, '$1다고 언급하여')
+        .replace(/하셨어서/g, '하여')
+        .replace(/하셔서/g, '하여')
+        .replace(/하셨어요\.?/g, '함.')
+        .replace(/하셨어/g, '함')
         .replace(/되었습니다\.?/g, '됨.')
         .replace(/됩니다\.?/g, '됨.')
         .replace(/했습니다\.?/g, '함.')
@@ -148,6 +177,9 @@ function toReportTone(text: string): string {
         .replace(/해요\.?/g, '함.')
         .replace(/주세요\.?/g, '필요.')
         .replace(/요\./g, '.')
+        .replace(/수령 후 될 것 것으로 판단됨\.?/g, '수령 후 확인 예정.')
+        .replace(/자료 다시 보내드리기로 함\.?/g, '자료 재전달 예정.')
+        .replace(/보내드리기로 함\.?/g, '전달 예정.')
         .replace(/\s+\./g, '.')
         .replace(/\.{2,}/g, '.')
         .trim();
@@ -426,6 +458,8 @@ export function buildSupervisionReportAiPrompt({
                 '"합니다", "했습니다", "해요", "요", "같습니다", "하셨습니다", "라고 합니다" 같은 대화체·존댓말 종결은 사용하지 않는다.',
                 '발화자는 "점주 의견", "직원 진술", "현장 확인", "본사 요청"처럼 출처만 남기고 감정적 표현은 제거한다.',
                 '각 memo는 항목별 판정 근거와 후속 조치가 드러나도록 1~2문장으로 정리한다.',
+                '"오늘 다녀왔고", "얘기했다", "하셨어서", "드리기로 했다" 같은 현장 대화 기록체도 사용하지 않는다.',
+                'overallNote는 "방문 점검 진행 + 핵심 이슈 + 후속 확인" 형식의 보고서 요약으로 작성한다.',
                 '법률 판단, 매출 보장, 계약 확정처럼 오해될 문구는 쓰지 않는다.'
             ].join('\n')
         },
@@ -449,6 +483,7 @@ export function buildSupervisionReportAiPrompt({
                 '- 점주 요청, 직원 교육, 본사 지원, 사진 확인, 기한이 있으면 specialNote에 모은다.',
                 '- 동일한 내용을 여러 항목에 반복하지 않는다. 가장 관련 높은 항목에만 배치한다.',
                 '- 구어체 종결어미를 금지하고 보고서체로 쓴다.',
+                '- overallNote에는 "오늘 방문함", "점주와 얘기함"처럼 일기식 표현을 쓰지 않는다.',
                 '',
                 '[보고서체 예시]',
                 '- 원문: "점주님이 배달 주문이 줄었다고 합니다."',
@@ -457,6 +492,8 @@ export function buildSupervisionReportAiPrompt({
                 '  결과: "직원 POS 숙련도 미흡. 피크 시간 주문 입력 지연 가능성 확인."',
                 '- 원문: "금요일까지 사진 받아보면 될 것 같습니다."',
                 '  결과: "금요일까지 청소 완료 사진 확인 예정."',
+                '- 원문: "오늘 312점 다녀왔고 점주랑 40분 정도 얘기함."',
+                '  결과: "312점 방문 점검 진행. 점주 면담을 통해 운영 이슈 확인."',
                 '',
                 '출력 JSON schema:',
                 '{',

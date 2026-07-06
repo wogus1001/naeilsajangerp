@@ -21,6 +21,7 @@ import {
     buildFallbackSupervisionReportAiSummary,
     buildSupervisionReportAiPrompt,
     extractSupervisionReportAiSummaryFromText,
+    normalizeAiProviderEnvValue,
     validateSupervisionAiTranscript
 } from './franchise-supervision-ai-summary.js';
 
@@ -137,14 +138,14 @@ void test('Given AI report JSON with alternate keys When extracting Then summary
 
 void test('Given conversational AI report JSON When extracting Then memos are converted to report tone', () => {
     const summary = extractSupervisionReportAiSummaryFromText(JSON.stringify({
-        overallNote: '점주님이 배달 주문이 줄었다고 합니다.',
+        overallNote: '오늘 312점 다녀왔고 점주랑 40분 정도 얘기함.',
         specialNote: '금요일까지 청소 사진을 받아보면 될 것 같습니다.',
         inspectionItems: [
             {
                 id: 'service',
                 label: '서비스',
                 result: '주의',
-                memo: '손님한테 인사는 잘 하고 있었다고 합니다.'
+                memo: '손님한테 인사는 잘 하고 있었다고 합니다. 점주님이 자료 다시 보내드리기로 했습니다.'
             }
         ]
     }));
@@ -155,9 +156,15 @@ void test('Given conversational AI report JSON When extracting Then memos are co
         summary?.inspectionItems[0]?.memo
     ].join('\n');
 
-    assert.doesNotMatch(combinedText, /점주님|손님|합니다|했습니다|해요|하셨습니다|같습니다/);
+    assert.doesNotMatch(combinedText, /점주님|손님|합니다|했습니다|해요|하셨습니다|하셨어서|같습니다|얘기함|보내드리기로/);
     assert.match(summary?.overallNote || '', /점주/);
     assert.match(summary?.inspectionItems[0]?.memo || '', /고객/);
+});
+
+void test('Given quoted AI provider env value When normalizing Then accidental shell quotes are removed', () => {
+    assert.equal(normalizeAiProviderEnvValue('"nvapi-test"'), 'nvapi-test');
+    assert.equal(normalizeAiProviderEnvValue('nvapi-test"'), 'nvapi-test');
+    assert.equal(normalizeAiProviderEnvValue("'nvidia/model'"), 'nvidia/model');
 });
 
 void test('Given supervision AI prompt When building Then report style rules are included', () => {

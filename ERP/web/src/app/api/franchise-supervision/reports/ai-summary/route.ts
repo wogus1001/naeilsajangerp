@@ -5,6 +5,7 @@ import {
     buildFallbackSupervisionReportAiSummary,
     buildSupervisionReportAiPrompt,
     extractSupervisionReportAiSummaryFromText,
+    normalizeAiProviderEnvValue,
     validateSupervisionAiTranscript,
     type SupervisionReportAiPromptMessage,
     type SupervisionReportAiSummary
@@ -24,6 +25,7 @@ type SupervisionReportAiResult = {
     readonly summary: SupervisionReportAiSummary;
     readonly model: string;
     readonly fallbackUsed: boolean;
+    readonly providerIssue?: string;
 };
 
 const DEFAULT_NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
@@ -32,10 +34,10 @@ const DEFAULT_NVIDIA_FALLBACK_MODEL = 'mistral-medium-3.5-128b';
 
 function getNvidiaConfig(env: NodeJS.ProcessEnv) {
     return {
-        apiKey: cleanString(env.NVIDIA_API_KEY),
-        baseUrl: cleanString(env.NVIDIA_BASE_URL) || DEFAULT_NVIDIA_BASE_URL,
-        model: cleanString(env.NVIDIA_MODEL) || DEFAULT_NVIDIA_MODEL,
-        fallbackModel: cleanString(env.NVIDIA_FALLBACK_MODEL) || DEFAULT_NVIDIA_FALLBACK_MODEL
+        apiKey: normalizeAiProviderEnvValue(env.NVIDIA_API_KEY),
+        baseUrl: normalizeAiProviderEnvValue(env.NVIDIA_BASE_URL) || DEFAULT_NVIDIA_BASE_URL,
+        model: normalizeAiProviderEnvValue(env.NVIDIA_MODEL) || DEFAULT_NVIDIA_MODEL,
+        fallbackModel: normalizeAiProviderEnvValue(env.NVIDIA_FALLBACK_MODEL) || DEFAULT_NVIDIA_FALLBACK_MODEL
     };
 }
 
@@ -53,6 +55,11 @@ function readNvidiaContent(payload: unknown): string {
     return '';
 }
 
+type NvidiaSummaryRequestResult = {
+    readonly summary: SupervisionReportAiSummary | null;
+    readonly issue?: string;
+};
+
 async function requestNvidiaSummary(input: {
     readonly apiKey: string;
     readonly baseUrl: string;
@@ -60,7 +67,7 @@ async function requestNvidiaSummary(input: {
     readonly messages: readonly SupervisionReportAiPromptMessage[];
     readonly fetcher: typeof fetch;
     readonly forceJson: boolean;
-}): Promise<SupervisionReportAiSummary | null> {
+}): Promise<NvidiaSummaryRequestResult> {
     const requestBody: Record<string, unknown> = {
         model: input.model,
         messages: input.messages,
@@ -81,22 +88,29 @@ async function requestNvidiaSummary(input: {
 
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
+        const issue = response.status === 401 || response.status === 403
+            ? 'NVIDIA 인증에 실패했습니다. NVIDIA_API_KEY 값을 확인해 주세요.'
+            : `NVIDIA 요청이 실패했습니다. 상태 코드: ${response.status}`;
         console.warn('Franchise supervision AI summary NVIDIA request failed:', {
             model: input.model,
             status: response.status,
-            forceJson: input.forceJson
+            forceJson: input.forceJson,
+            issue
         });
-        return null;
+        return { summary: null, issue };
     }
 
     const summary = extractSupervisionReportAiSummaryFromText(readNvidiaContent(payload));
     if (!summary) {
+        const issue = 'NVIDIA 응답을 JSON 보고서 형식으로 읽지 못했습니다.';
         console.warn('Franchise supervision AI summary parse failed:', {
             model: input.model,
-            forceJson: input.forceJson
+            forceJson: input.forceJson,
+            issue
         });
+        return { summary: null, issue };
     }
-    return summary;
+    return { summary };
 }
 
 async function summarizeWithNvidia(input: {
@@ -108,6 +122,7 @@ async function summarizeWithNvidia(input: {
 }): Promise<SupervisionReportAiResult> {
     const { apiKey, baseUrl, model, fallbackModel } = getNvidiaConfig(input.env);
     if (!apiKey) throw new Error('NVIDIA_API_KEY 환경변수 설정이 필요합니다.');
+    const issues: string[] = [];
 
     const primaryJsonSummary = await requestNvidiaSummary({
         apiKey,
@@ -117,7 +132,8 @@ async function summarizeWithNvidia(input: {
         fetcher: input.fetcher,
         forceJson: true
     });
-    if (primaryJsonSummary) return { summary: primaryJsonSummary, model, fallbackUsed: false };
+    if (primaryJsonSummary.summary) return { summary: primaryJsonSummary.summary, model, fallbackUsed: false };
+    if (primaryJsonSummary.issue) issues.push(primaryJsonSummary.issue);
 
     const primaryLooseSummary = await requestNvidiaSummary({
         apiKey,
@@ -127,7 +143,8 @@ async function summarizeWithNvidia(input: {
         fetcher: input.fetcher,
         forceJson: false
     });
-    if (primaryLooseSummary) return { summary: primaryLooseSummary, model, fallbackUsed: true };
+    if (primaryLooseSummary.summary) return { summary: primaryLooseSummary.summary, model, fallbackUsed: true };
+    if (primaryLooseSummary.issue) issues.push(primaryLooseSummary.issue);
 
     if (fallbackModel && fallbackModel !== model) {
         const fallbackSummary = await requestNvidiaSummary({
@@ -138,7 +155,8 @@ async function summarizeWithNvidia(input: {
             fetcher: input.fetcher,
             forceJson: true
         });
-        if (fallbackSummary) return { summary: fallbackSummary, model: fallbackModel, fallbackUsed: true };
+        if (fallbackSummary.summary) return { summary: fallbackSummary.summary, model: fallbackModel, fallbackUsed: true };
+        if (fallbackSummary.issue) issues.push(fallbackSummary.issue);
 
         const fallbackLooseSummary = await requestNvidiaSummary({
             apiKey,
@@ -148,7 +166,8 @@ async function summarizeWithNvidia(input: {
             fetcher: input.fetcher,
             forceJson: false
         });
-        if (fallbackLooseSummary) return { summary: fallbackLooseSummary, model: fallbackModel, fallbackUsed: true };
+        if (fallbackLooseSummary.summary) return { summary: fallbackLooseSummary.summary, model: fallbackModel, fallbackUsed: true };
+        if (fallbackLooseSummary.issue) issues.push(fallbackLooseSummary.issue);
     }
 
     return {
@@ -157,7 +176,8 @@ async function summarizeWithNvidia(input: {
             inspectionItems: input.inspectionItems
         }),
         model: 'local-fallback',
-        fallbackUsed: true
+        fallbackUsed: true,
+        providerIssue: issues[0]
     };
 }
 

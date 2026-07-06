@@ -52,7 +52,9 @@ export function SupervisionReportAiSummaryPanel({
             });
             setSummary(result.summary);
             if (result.model === 'local-fallback') {
-                setMessage('AI 응답을 읽지 못해 입력 메모 기준 초안을 만들었습니다. 저장 전 내용을 확인해 주세요.');
+                setMessage(result.providerIssue
+                    ? `${result.providerIssue} 입력 메모 기준으로 임시 초안을 만들었습니다.`
+                    : 'NVIDIA 응답을 보고서 형식으로 읽지 못해 입력 메모 기준으로 임시 초안을 만들었습니다.');
             } else {
                 setMessage(result.fallbackUsed
                     ? `AI 정리 결과를 불러왔습니다. 대체 요청으로 ${result.model}을 사용했습니다.`

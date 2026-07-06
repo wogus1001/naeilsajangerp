@@ -74,6 +74,7 @@ type SummarizeReportResult = {
     readonly summary: SupervisionReportAiSummary;
     readonly model: string;
     readonly fallbackUsed: boolean;
+    readonly providerIssue?: string;
 };
 
 async function readJsonSafely(response: Response): Promise<unknown> {
