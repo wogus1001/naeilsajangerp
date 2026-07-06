@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 type NvidiaChatMessage = {
     readonly message?: {
         readonly content?: unknown;
+        readonly reasoning_content?: unknown;
     };
 };
 
@@ -31,28 +32,40 @@ type SupervisionReportAiResult = {
 const DEFAULT_NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b';
 const DEFAULT_NVIDIA_FALLBACK_MODEL = 'mistral-medium-3.5-128b';
+const DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS = 18_000;
+const NVIDIA_MIN_REQUEST_TIMEOUT_MS = 5_000;
+const NVIDIA_MAX_REQUEST_TIMEOUT_MS = 45_000;
 
 function getNvidiaConfig(env: NodeJS.ProcessEnv) {
+    const timeoutMs = Number.parseInt(normalizeAiProviderEnvValue(env.NVIDIA_REQUEST_TIMEOUT_MS), 10);
     return {
         apiKey: normalizeAiProviderEnvValue(env.NVIDIA_API_KEY),
         baseUrl: normalizeAiProviderEnvValue(env.NVIDIA_BASE_URL) || DEFAULT_NVIDIA_BASE_URL,
         model: normalizeAiProviderEnvValue(env.NVIDIA_MODEL) || DEFAULT_NVIDIA_MODEL,
-        fallbackModel: normalizeAiProviderEnvValue(env.NVIDIA_FALLBACK_MODEL) || DEFAULT_NVIDIA_FALLBACK_MODEL
+        fallbackModel: normalizeAiProviderEnvValue(env.NVIDIA_FALLBACK_MODEL) || DEFAULT_NVIDIA_FALLBACK_MODEL,
+        requestTimeoutMs: Number.isFinite(timeoutMs)
+            ? Math.min(Math.max(timeoutMs, NVIDIA_MIN_REQUEST_TIMEOUT_MS), NVIDIA_MAX_REQUEST_TIMEOUT_MS)
+            : DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS
     };
 }
 
-function readNvidiaContent(payload: unknown): string {
-    if (!isRecord(payload) || !Array.isArray(payload.choices)) return '';
-    const firstChoice = payload.choices[0] as NvidiaChatMessage | undefined;
-    const content = firstChoice?.message?.content;
-    if (typeof content === 'string') return content;
-    if (Array.isArray(content)) {
-        return content
+function readContentPartText(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) {
+        return value
             .map(part => isRecord(part) && typeof part.text === 'string' ? part.text : '')
             .filter(Boolean)
             .join('\n');
     }
     return '';
+}
+
+function readNvidiaContent(payload: unknown): string {
+    if (!isRecord(payload) || !Array.isArray(payload.choices)) return '';
+    const firstChoice = payload.choices[0] as NvidiaChatMessage | undefined;
+    const content = readContentPartText(firstChoice?.message?.content);
+    if (content) return content;
+    return readContentPartText(firstChoice?.message?.reasoning_content);
 }
 
 type NvidiaSummaryRequestResult = {
@@ -67,6 +80,7 @@ async function requestNvidiaSummary(input: {
     readonly messages: readonly SupervisionReportAiPromptMessage[];
     readonly fetcher: typeof fetch;
     readonly forceJson: boolean;
+    readonly timeoutMs: number;
 }): Promise<NvidiaSummaryRequestResult> {
     const requestBody: Record<string, unknown> = {
         model: input.model,
@@ -77,14 +91,33 @@ async function requestNvidiaSummary(input: {
     };
     if (input.forceJson) requestBody.response_format = { type: 'json_object' };
 
-    const response = await input.fetcher(`${input.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${input.apiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), input.timeoutMs);
+    let response: Response;
+    try {
+        response = await input.fetcher(`${input.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${input.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+        });
+    } catch (error) {
+        const aborted = error instanceof Error && error.name === 'AbortError';
+        const issue = aborted
+            ? `NVIDIA 응답이 ${Math.round(input.timeoutMs / 1000)}초 안에 끝나지 않아 중단했습니다.`
+            : 'NVIDIA 요청 중 네트워크 오류가 발생했습니다.';
+        console.warn('Franchise supervision AI summary NVIDIA request error:', {
+            model: input.model,
+            forceJson: input.forceJson,
+            issue
+        });
+        return { summary: null, issue };
+    } finally {
+        clearTimeout(timeout);
+    }
 
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -120,7 +153,7 @@ async function summarizeWithNvidia(input: {
     readonly transcript: string;
     readonly inspectionItems: readonly SupervisionInspectionItem[];
 }): Promise<SupervisionReportAiResult> {
-    const { apiKey, baseUrl, model, fallbackModel } = getNvidiaConfig(input.env);
+    const { apiKey, baseUrl, model, fallbackModel, requestTimeoutMs } = getNvidiaConfig(input.env);
     if (!apiKey) throw new Error('NVIDIA_API_KEY 환경변수 설정이 필요합니다.');
     const issues: string[] = [];
 
@@ -130,21 +163,11 @@ async function summarizeWithNvidia(input: {
         model,
         messages: input.messages,
         fetcher: input.fetcher,
-        forceJson: true
+        forceJson: true,
+        timeoutMs: requestTimeoutMs
     });
     if (primaryJsonSummary.summary) return { summary: primaryJsonSummary.summary, model, fallbackUsed: false };
     if (primaryJsonSummary.issue) issues.push(primaryJsonSummary.issue);
-
-    const primaryLooseSummary = await requestNvidiaSummary({
-        apiKey,
-        baseUrl,
-        model,
-        messages: input.messages,
-        fetcher: input.fetcher,
-        forceJson: false
-    });
-    if (primaryLooseSummary.summary) return { summary: primaryLooseSummary.summary, model, fallbackUsed: true };
-    if (primaryLooseSummary.issue) issues.push(primaryLooseSummary.issue);
 
     if (fallbackModel && fallbackModel !== model) {
         const fallbackSummary = await requestNvidiaSummary({
@@ -153,21 +176,11 @@ async function summarizeWithNvidia(input: {
             model: fallbackModel,
             messages: input.messages,
             fetcher: input.fetcher,
-            forceJson: true
+            forceJson: true,
+            timeoutMs: requestTimeoutMs
         });
         if (fallbackSummary.summary) return { summary: fallbackSummary.summary, model: fallbackModel, fallbackUsed: true };
         if (fallbackSummary.issue) issues.push(fallbackSummary.issue);
-
-        const fallbackLooseSummary = await requestNvidiaSummary({
-            apiKey,
-            baseUrl,
-            model: fallbackModel,
-            messages: input.messages,
-            fetcher: input.fetcher,
-            forceJson: false
-        });
-        if (fallbackLooseSummary.summary) return { summary: fallbackLooseSummary.summary, model: fallbackModel, fallbackUsed: true };
-        if (fallbackLooseSummary.issue) issues.push(fallbackLooseSummary.issue);
     }
 
     return {

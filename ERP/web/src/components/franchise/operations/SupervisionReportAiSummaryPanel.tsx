@@ -41,7 +41,7 @@ export function SupervisionReportAiSummaryPanel({
         }
 
         setLoading(true);
-        setMessage('');
+        setMessage('AI 정리 요청 중입니다. 보통 10~30초 안에 완료됩니다.');
         try {
             const result = await summarizeSupervisionReportRequest({
                 userId,

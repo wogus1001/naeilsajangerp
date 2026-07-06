@@ -77,6 +77,8 @@ type SummarizeReportResult = {
     readonly providerIssue?: string;
 };
 
+const SUPERVISION_AI_CLIENT_TIMEOUT_MS = 45_000;
+
 async function readJsonSafely(response: Response): Promise<unknown> {
     try {
         return await response.json();
@@ -297,17 +299,29 @@ export async function updateCorrectiveAction(input: UpdateActionInput): Promise<
 
 export async function summarizeSupervisionReportRequest(input: SummarizeReportInput): Promise<SummarizeReportResult> {
     const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
-    const response = await fetch('/api/franchise-supervision/reports/ai-summary', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-            requesterId: input.userId,
-            companyName: input.companyName,
-            visitId: input.visitId,
-            transcript: input.transcript,
-            inspectionItems: input.inspectionItems
-        })
-    });
-    const payload = await readPayload(response);
-    return unwrapApiData<SummarizeReportResult>(payload);
+    const controller = new AbortController();
+    const timeout = globalThis.setTimeout(() => controller.abort(), SUPERVISION_AI_CLIENT_TIMEOUT_MS);
+    try {
+        const response = await fetch('/api/franchise-supervision/reports/ai-summary', {
+            method: 'POST',
+            headers,
+            signal: controller.signal,
+            body: JSON.stringify({
+                requesterId: input.userId,
+                companyName: input.companyName,
+                visitId: input.visitId,
+                transcript: input.transcript,
+                inspectionItems: input.inspectionItems
+            })
+        });
+        const payload = await readPayload(response);
+        return unwrapApiData<SummarizeReportResult>(payload);
+    } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('AI 정리 요청이 45초 안에 끝나지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        }
+        throw error;
+    } finally {
+        globalThis.clearTimeout(timeout);
+    }
 }
