@@ -12,6 +12,15 @@ import {
     summarizeSupervision
 } from './franchise-supervision.js';
 import { buildSupervisionOperationQueue } from './franchise-supervision-operation-queue.js';
+import {
+    getActionRequiredInspectionItems,
+    summarizeInspectionItems
+} from '../components/franchise/operations/SupervisionReportSummary.js';
+import {
+    applySupervisionReportAiSummary,
+    extractSupervisionReportAiSummaryFromText,
+    validateSupervisionAiTranscript
+} from './franchise-supervision-ai-summary.js';
 
 void test('Given saved inspection item values When merging with defaults Then missing template items are restored', () => {
     const items = mergeInspectionItems([
@@ -54,6 +63,69 @@ void test('Given the default report template When building Then supervision v2 i
         '교육/공지 이행',
         '기타'
     ]);
+});
+
+void test('Given inspection items with good memos When summarizing report Then only warning and improvement items require action', () => {
+    const items = [
+        { id: 'sales-traffic', label: '매출/객수 확인', result: '양호' as const, memo: '전월 대비 3% 상승' },
+        { id: 'cleanliness', label: '청결', result: '주의' as const, memo: '주방 하부 재확인' },
+        { id: 'quality', label: '품질', result: '개선필요' as const, memo: '소스 계량 재교육' }
+    ];
+
+    const summary = summarizeInspectionItems(items);
+    const actionRequiredItems = getActionRequiredInspectionItems(items);
+
+    assert.equal(summary.completionRate, 33);
+    assert.equal(summary.warningCount, 1);
+    assert.equal(summary.improvementCount, 1);
+    assert.deepEqual(actionRequiredItems.map(item => item.id), ['cleanliness', 'quality']);
+});
+
+void test('Given AI report JSON When extracting Then supervision summary fields are normalized', () => {
+    const summary = extractSupervisionReportAiSummaryFromText(`\`\`\`json
+{
+  "overallNote": "청결 개선 확인 필요",
+  "specialNote": "냉장고 하부 청소 후 사진 공유",
+  "inspectionItems": [
+    { "id": "cleanliness", "label": "청결", "result": "개선필요", "memo": "냉장고 하부 오염 확인" },
+    { "id": "service", "label": "서비스", "result": "양호", "memo": "응대 양호" }
+  ]
+}
+\`\`\``);
+
+    assert.equal(summary?.overallNote, '청결 개선 확인 필요');
+    assert.equal(summary?.inspectionItems[0]?.result, '개선필요');
+    assert.equal(summary?.inspectionItems[1]?.memo, '응대 양호');
+});
+
+void test('Given AI report summary When applying Then matching checklist items and special note are updated', () => {
+    const applied = applySupervisionReportAiSummary({
+        specialNote: '',
+        inspectionItems: [
+            { id: 'cleanliness', label: '청결', result: '양호', memo: '' },
+            { id: 'quality', label: '품질', result: '양호', memo: '기존 메모' }
+        ],
+        summary: {
+            overallNote: '전체 요약',
+            specialNote: '본사 지원 요청',
+            inspectionItems: [
+                { id: 'cleanliness', label: '청결', result: '주의', memo: '마감 청소 확인 필요' }
+            ]
+        }
+    });
+
+    assert.equal(applied.specialNote, '본사 지원 요청');
+    assert.deepEqual(applied.inspectionItems, [
+        { id: 'cleanliness', label: '청결', result: '주의', memo: '마감 청소 확인 필요' },
+        { id: 'quality', label: '품질', result: '양호', memo: '기존 메모' }
+    ]);
+});
+
+void test('Given oversized AI transcript When validating Then a readable validation error is raised', () => {
+    assert.throws(
+        () => validateSupervisionAiTranscript('가'.repeat(12_001)),
+        /12,000자 이하/
+    );
 });
 
 void test('Given visits and inspection reports When building report list items Then missing and submitted states are visible by visit', () => {

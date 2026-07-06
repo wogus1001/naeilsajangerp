@@ -392,6 +392,34 @@
     gap: 8px;
 }
 
+.reportSummaryPanel {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.reportSectionHeading {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.reportSectionHeading h4 {
+    margin: 0;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.reportSectionHeading p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
 .reportMetricCard {
     min-width: 0;
     border: 1px solid #eef2f7;
@@ -407,6 +435,7 @@
     font-size: 22px;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
 }
 
 .reportAttention,
@@ -456,6 +485,7 @@
     color: #333d4b;
     font-size: 12px;
     font-weight: 900;
+    overflow-wrap: anywhere;
 }
 
 .reportAttentionList small {
@@ -589,9 +619,13 @@
     min-height: 72px;
     padding: 9px 10px;
     resize: vertical;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .itemRow {
+    min-width: 0;
     padding: 10px;
     border: 1px solid #eef2f7;
     border-radius: 8px;
@@ -613,6 +647,7 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 8px;
     align-items: center;
+    min-width: 0;
 }
 
 .itemRowHeader span {
@@ -643,6 +678,151 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     align-items: center;
+}
+
+.aiSummaryPanel {
+    overflow: hidden;
+    border: 1px solid #d7e8ff;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.aiSummaryHeader {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 0;
+    padding: 0 14px;
+    background: #f7fbff;
+    color: #191f28;
+    cursor: pointer;
+}
+
+.aiSummaryTitle,
+.aiSummaryMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.aiSummaryTitle svg {
+    color: #3182f6;
+}
+
+.aiSummaryMeta {
+    color: #6b7684;
+}
+
+.aiSummaryChevronOpen {
+    transform: rotate(180deg);
+}
+
+.aiSummaryContent {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+}
+
+.aiSummaryInput {
+    display: grid;
+    gap: 8px;
+}
+
+.aiSummaryInput span {
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.aiSummaryInput textarea {
+    min-height: 132px;
+    resize: vertical;
+}
+
+.aiSummaryActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.aiSummaryActions p,
+.aiSummaryMessage {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.55;
+}
+
+.aiSummaryPreview {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #f9fafb;
+}
+
+.aiSummaryPreviewGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.aiSummaryPreviewGrid div {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 10px;
+    background: #ffffff;
+}
+
+.aiSummaryPreviewGrid span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.aiSummaryPreviewGrid p {
+    margin: 0;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.aiSummaryItemList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.aiSummaryItemList span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    border: 1px solid #e5e8eb;
+    border-radius: 999px;
+    padding: 0 10px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.aiSummaryItemList b {
+    color: #3182f6;
 }
 
 .primaryButton,
@@ -987,6 +1167,8 @@ button.listItem {
     .reportFooterGrid,
     .layout,
     .inlineControls,
+    .aiSummaryActions,
+    .aiSummaryPreviewGrid,
     .assignmentToolbar,
     .assignmentFilters,
     .listFilters,
@@ -1006,6 +1188,12 @@ button.listItem {
 
     .reportHero {
         display: grid;
+    }
+
+    .aiSummaryHeader {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 10px 12px;
     }
 
     .reportVerdict {

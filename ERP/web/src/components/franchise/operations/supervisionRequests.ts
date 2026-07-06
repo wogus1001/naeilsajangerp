@@ -6,6 +6,7 @@ import {
     type SupervisionPhotoAttachment,
     type SupervisionReportTemplateItem
 } from '@/lib/franchise-supervision';
+import type { SupervisionReportAiSummary } from '@/lib/franchise-supervision-ai-summary';
 import type {
     SupervisionPayload,
     SupervisionScope
@@ -61,6 +62,18 @@ type SaveTemplateInput = SupervisionScope & {
     readonly name: string;
     readonly description: string;
     readonly inspectionItems: readonly SupervisionReportTemplateItem[];
+};
+
+type SummarizeReportInput = SupervisionScope & {
+    readonly visitId: string;
+    readonly transcript: string;
+    readonly inspectionItems: readonly SupervisionInspectionItem[];
+};
+
+type SummarizeReportResult = {
+    readonly summary: SupervisionReportAiSummary;
+    readonly model: string;
+    readonly fallbackUsed: boolean;
 };
 
 async function readJsonSafely(response: Response): Promise<unknown> {
@@ -279,4 +292,21 @@ export async function updateCorrectiveAction(input: UpdateActionInput): Promise<
         })
     });
     await readPayload(response);
+}
+
+export async function summarizeSupervisionReportRequest(input: SummarizeReportInput): Promise<SummarizeReportResult> {
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch('/api/franchise-supervision/reports/ai-summary', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            requesterId: input.userId,
+            companyName: input.companyName,
+            visitId: input.visitId,
+            transcript: input.transcript,
+            inspectionItems: input.inspectionItems
+        })
+    });
+    const payload = await readPayload(response);
+    return unwrapApiData<SummarizeReportResult>(payload);
 }

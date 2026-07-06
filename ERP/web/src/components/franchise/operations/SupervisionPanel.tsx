@@ -11,6 +11,7 @@ import {
     type SupervisionReportListItem,
     type SupervisionInspectionItem
 } from '@/lib/franchise-supervision';
+import { applySupervisionReportAiSummary, type SupervisionReportAiSummary } from '@/lib/franchise-supervision-ai-summary';
 import type { SupervisionOperationQueueItem } from '@/lib/franchise-supervision-operation-queue';
 import {
     deleteSupervisionVisit,
@@ -343,6 +344,12 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         }));
     };
 
+    const applyReportAiSummary = (summary: SupervisionReportAiSummary) => {
+        const applied = applySupervisionReportAiSummary({ inspectionItems, specialNote, summary });
+        setInspectionItems(applied.inspectionItems);
+        setSpecialNote(applied.specialNote);
+    };
+
     const changeActionStatus = async (action: SupervisionCorrectiveAction, status: string) => {
         if (!data.companyId) return;
         await runSaving(() => updateCorrectiveAction({ ...scope, companyId: data.companyId, id: action.id, status, memo: action.memo }));
@@ -506,6 +513,9 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                     selectedVisit={selectedVisit}
                                     specialNote={specialNote}
                                     templateName={templateName}
+                                    userId={userId}
+                                    companyName={companyName}
+                                    onApplyAiSummary={applyReportAiSummary}
                                     onBackToList={() => setReportMode('list')}
                                     onFiles={setPhotoFiles}
                                     onItemChange={setInspectionItems}

@@ -1,5 +1,5 @@
 import type { SupervisionInspectionItem } from '@/lib/franchise-supervision';
-import { getAttentionInspectionItems, summarizeInspectionItems } from './SupervisionReportSummary';
+import { getActionRequiredInspectionItems, summarizeInspectionItems } from './SupervisionReportSummary';
 import type { SupervisionReport, SupervisionVisit } from './supervisionTypes';
 
 function escapeHtml(value: string): string {
@@ -20,15 +20,15 @@ export function printSupervisionReport(input: {
     if (!input.visit) return;
     const report = input.report;
     const summary = summarizeInspectionItems(input.items);
-    const attentionItems = getAttentionInspectionItems(input.items);
+    const actionRequiredItems = getActionRequiredInspectionItems(input.items);
     const generatedAt = new Intl.DateTimeFormat('ko-KR', {
         timeZone: 'Asia/Seoul',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
     }).format(new Date());
-    const attentionCards = attentionItems.map(item => `
-        <div class="attention-card">
+    const actionCards = actionRequiredItems.map(item => `
+        <div class="action-card">
             <span class="${resultClass(item.result)}">${escapeHtml(item.result)}</span>
             <strong>${escapeHtml(item.label)}</strong>
             <p>${escapeHtml(item.memo || '추가 메모 없음')}</p>
@@ -57,14 +57,15 @@ export function printSupervisionReport(input: {
             <title>SV 점검 보고서</title>
             <style>
                 * { box-sizing: border-box; }
+                @page { size: A4; margin: 14mm; }
                 body {
-                    margin: 32px;
+                    margin: 0;
                     color: #191f28;
                     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
                     font-size: 13px;
                     line-height: 1.55;
                 }
-                .report-shell { max-width: 900px; margin: 0 auto; }
+                .report-shell { width: 100%; max-width: 180mm; margin: 0 auto; }
                 .topline {
                     display: flex;
                     justify-content: space-between;
@@ -76,12 +77,14 @@ export function printSupervisionReport(input: {
                 h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.35; }
                 h2 { margin: 22px 0 10px; font-size: 17px; }
                 p { margin: 0; }
+                strong, p, td, th, li, figcaption { overflow-wrap: anywhere; word-break: break-word; }
                 .muted { color: #6b7684; font-weight: 700; }
                 .stamp { min-width: 150px; border: 1px solid #dfe3e8; border-radius: 8px; padding: 10px; text-align: right; }
                 .stamp span { display: block; color: #6b7684; font-size: 11px; font-weight: 800; }
                 .stamp strong { display: block; margin-top: 4px; font-size: 18px; }
                 .meta, .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
-                .box, .metric, .note-box, .attention-card {
+                .box, .metric, .note-box, .action-card {
+                    min-width: 0;
                     border: 1px solid #dfe3e8;
                     border-radius: 8px;
                     padding: 11px;
@@ -90,9 +93,9 @@ export function printSupervisionReport(input: {
                 .box span, .metric span { display: block; color: #6b7684; font-size: 11px; font-weight: 800; }
                 .box strong, .metric strong { display: block; margin-top: 5px; font-size: 15px; }
                 .metric strong { font-size: 22px; font-variant-numeric: tabular-nums; }
-                .attention { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-                .attention-card strong { display: block; margin: 6px 0 3px; font-size: 13px; }
-                .attention-card p { color: #4e5968; font-size: 12px; }
+                .action-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+                .action-card strong { display: block; margin: 6px 0 3px; font-size: 13px; }
+                .action-card p { color: #4e5968; font-size: 12px; }
                 .badge-good, .badge-warning, .badge-critical, .badge-neutral {
                     display: inline-flex;
                     min-height: 22px;
@@ -107,11 +110,11 @@ export function printSupervisionReport(input: {
                 .badge-warning { background: #fff4e6; color: #d9480f; }
                 .badge-critical { background: #fff5f5; color: #e03131; }
                 .badge-neutral { background: #f2f4f6; color: #4e5968; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 10px; }
                 th, td { border: 1px solid #dfe3e8; padding: 10px; text-align: left; vertical-align: top; }
                 th { background: #f8fafc; color: #4e5968; font-size: 12px; font-weight: 900; }
-                td:first-child { width: 28%; font-weight: 800; }
-                td:nth-child(2) { width: 110px; }
+                th:first-child, td:first-child { width: 28%; font-weight: 800; }
+                th:nth-child(2), td:nth-child(2) { width: 25mm; }
                 .note-box { min-height: 72px; background: #fbfcfe; color: #333d4b; }
                 .photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
                 figure { margin: 0; }
@@ -119,9 +122,8 @@ export function printSupervisionReport(input: {
                 figcaption, li { color: #6b7684; font-size: 12px; font-weight: 700; }
                 .footer { margin-top: 28px; border-top: 1px solid #dfe3e8; padding-top: 12px; color: #8b95a1; font-size: 11px; font-weight: 700; }
                 @media print {
-                    body { margin: 16mm; }
                     .report-shell { max-width: none; }
-                    .attention-card, .note-box, figure { break-inside: avoid; }
+                    .action-card, .note-box, figure, tr { break-inside: avoid; }
                 }
             </style>
         </head>
@@ -150,9 +152,9 @@ export function printSupervisionReport(input: {
                     <div class="metric"><span>개선필요</span><strong>${summary.improvementCount.toLocaleString()}</strong><span>시정요청 후보</span></div>
                     <div class="metric"><span>기록</span><strong>${summary.memoCount.toLocaleString()}</strong><span>메모 · 사진 ${(report?.photoAttachments.length || 0).toLocaleString()}개</span></div>
                 </section>
-                <h2>주요 기록 항목</h2>
-                ${attentionCards ? `<section class="attention">${attentionCards}</section>` : '<p class="note-box">주의, 개선필요 또는 메모가 있는 항목이 없습니다.</p>'}
-                <h2>점검 체크리스트</h2>
+                <h2>조치 필요 항목</h2>
+                ${actionCards ? `<section class="action-items">${actionCards}</section>` : '<p class="note-box">현재 후속 조치가 필요한 항목이 없습니다.</p>'}
+                <h2>전체 점검 내역</h2>
                 <table>
                     <thead><tr><th>항목</th><th>결과</th><th>메모</th></tr></thead>
                     <tbody>${rows}</tbody>

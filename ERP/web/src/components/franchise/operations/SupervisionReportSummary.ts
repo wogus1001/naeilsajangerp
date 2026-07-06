@@ -21,6 +21,6 @@ export function summarizeInspectionItems(items: readonly SupervisionInspectionIt
     return { total, goodCount, warningCount, improvementCount, memoCount, completionRate, overallResult };
 }
 
-export function getAttentionInspectionItems(items: readonly SupervisionInspectionItem[]): readonly SupervisionInspectionItem[] {
-    return items.filter(item => item.result !== '양호' || item.memo.trim().length > 0);
+export function getActionRequiredInspectionItems(items: readonly SupervisionInspectionItem[]): readonly SupervisionInspectionItem[] {
+    return items.filter(item => item.result === '주의' || item.result === '개선필요');
 }

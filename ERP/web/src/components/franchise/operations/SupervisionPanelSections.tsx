@@ -17,8 +17,10 @@ import type {
     SupervisionReport,
     SupervisionVisit
 } from './supervisionTypes';
+import type { SupervisionReportAiSummary } from '@/lib/franchise-supervision-ai-summary';
 import { formatSupervisorOptionLabel, getDuplicateSupervisorNames } from './supervisorDisplay';
-import { getAttentionInspectionItems, summarizeInspectionItems } from './SupervisionReportSummary';
+import { getActionRequiredInspectionItems, summarizeInspectionItems } from './SupervisionReportSummary';
+import { SupervisionReportAiSummaryPanel } from './SupervisionReportAiSummaryPanel';
 import styles from './SupervisionPanel.module.css';
 
 export type VisitFormState = {
@@ -348,6 +350,9 @@ export function ReportEditor(props: {
     readonly selectedVisit: SupervisionVisit | null;
     readonly specialNote: string;
     readonly templateName: string;
+    readonly userId: string;
+    readonly companyName: string;
+    readonly onApplyAiSummary: (summary: SupervisionReportAiSummary) => void;
     readonly onFiles: (files: readonly File[]) => void;
     readonly onItemChange: (items: readonly SupervisionInspectionItem[]) => void;
     readonly onPrint: () => void;
@@ -361,7 +366,7 @@ export function ReportEditor(props: {
     if (!props.selectedVisit) return <div className={styles.empty}>보고서를 작성할 방문 일정을 선택해주세요.</div>;
     const canSubmit = props.report?.status !== '승인';
     const summary = summarizeInspectionItems(props.inspectionItems);
-    const attentionItems = getAttentionInspectionItems(props.inspectionItems);
+    const actionRequiredItems = getActionRequiredInspectionItems(props.inspectionItems);
     const savedPhotoCount = props.report?.photoAttachments.length ?? 0;
     const totalPhotoCount = savedPhotoCount + props.photoCount;
     return (
@@ -378,40 +383,45 @@ export function ReportEditor(props: {
                     <small>{props.report?.status || '작성중'}</small>
                 </div>
             </div>
-            <div className={styles.reportSummaryGrid}>
-                <div className={styles.reportMetricCard}>
-                    <span>양호율</span>
-                    <strong>{summary.completionRate.toLocaleString()}%</strong>
-                    <small>{summary.goodCount.toLocaleString()} / {summary.total.toLocaleString()} 항목</small>
+            <section className={styles.reportSummaryPanel}>
+                <div className={styles.reportSectionHeading}>
+                    <h4>이번 점검 요약</h4>
+                    <p>종합 결과와 후속 조치가 필요한 항목을 먼저 확인합니다.</p>
                 </div>
-                <div className={styles.reportMetricCard}>
-                    <span>주의</span>
-                    <strong>{summary.warningCount.toLocaleString()}</strong>
-                    <small>현장 추적 필요</small>
+                <div className={styles.reportSummaryGrid}>
+                    <div className={styles.reportMetricCard}>
+                        <span>종합 결과</span>
+                        <strong>{summary.overallResult}</strong>
+                        <small>{props.report?.status || '작성중'}</small>
+                    </div>
+                    <div className={styles.reportMetricCard}>
+                        <span>양호율</span>
+                        <strong>{summary.completionRate.toLocaleString()}%</strong>
+                        <small>{summary.goodCount.toLocaleString()} / {summary.total.toLocaleString()} 항목</small>
+                    </div>
+                    <div className={styles.reportMetricCard}>
+                        <span>주의/개선</span>
+                        <strong>{(summary.warningCount + summary.improvementCount).toLocaleString()}</strong>
+                        <small>주의 {summary.warningCount.toLocaleString()} · 개선필요 {summary.improvementCount.toLocaleString()}</small>
+                    </div>
+                    <div className={styles.reportMetricCard}>
+                        <span>자료</span>
+                        <strong>{totalPhotoCount.toLocaleString()}</strong>
+                        <small>사진 · 특이사항 {props.specialNote.trim() ? '있음' : '없음'}</small>
+                    </div>
                 </div>
-                <div className={styles.reportMetricCard}>
-                    <span>개선필요</span>
-                    <strong>{summary.improvementCount.toLocaleString()}</strong>
-                    <small>시정요청 후보</small>
-                </div>
-                <div className={styles.reportMetricCard}>
-                    <span>기록</span>
-                    <strong>{summary.memoCount.toLocaleString()}</strong>
-                    <small>메모 · 사진 {totalPhotoCount.toLocaleString()}개</small>
-                </div>
-            </div>
-            <div className={attentionItems.length > 0 ? styles.reportAttention : styles.reportAttentionClear}>
+            </section>
+            <div className={actionRequiredItems.length > 0 ? styles.reportAttention : styles.reportAttentionClear}>
                 <div>
-                    <strong>{attentionItems.length > 0 ? '주요 기록 항목' : '주요 기록 항목 없음'}</strong>
-                    <span>{attentionItems.length > 0 ? '주의, 개선필요 또는 메모가 있는 항목입니다.' : '현재 모든 항목이 양호로 기록되어 있습니다.'}</span>
+                    <strong>{actionRequiredItems.length > 0 ? '조치 필요 항목' : '조치 필요 항목 없음'}</strong>
+                    <span>{actionRequiredItems.length > 0 ? '주의 또는 개선필요 항목만 모아 봅니다.' : '현재 후속 조치가 필요한 항목이 없습니다.'}</span>
                 </div>
-                {attentionItems.length > 0 ? (
+                {actionRequiredItems.length > 0 ? (
                     <div className={styles.reportAttentionList}>
-                        {attentionItems.map(item => (
+                        {actionRequiredItems.map(item => (
                             <span key={item.id}>
                                 <b className={itemResultClass(item.result)}>{item.result}</b>
                                 {item.label}
-                                {item.memo.trim() ? <small>{item.memo.trim()}</small> : null}
                             </span>
                         ))}
                     </div>
@@ -433,6 +443,14 @@ export function ReportEditor(props: {
                     </div>
                 </div>
             ) : null}
+            <SupervisionReportAiSummaryPanel
+                userId={props.userId}
+                companyName={props.companyName}
+                disabled={props.disabled}
+                selectedVisitId={props.selectedVisit.id}
+                inspectionItems={props.inspectionItems}
+                onApplySummary={props.onApplyAiSummary}
+            />
             <div className={styles.reportChecklistGrid}>
                 {props.inspectionItems.map((item, index) => (
                     <div key={item.id} className={itemRowClass(item.result)}>

@@ -18,6 +18,7 @@ export type VisitRow = {
     readonly location_id: string;
     readonly supervisor_profile_id: string;
     readonly visit_date: string | null;
+    readonly purpose?: string | null;
     readonly created_by: string | null;
 };
 
@@ -100,7 +101,7 @@ export async function fetchVisit(input: {
 }) {
     const { data, error } = await input.supabaseAdmin
         .from('franchise_store_visits')
-        .select('id, company_id, location_id, supervisor_profile_id, visit_date, created_by, location:franchise_locations(name)')
+        .select('id, company_id, location_id, supervisor_profile_id, visit_date, purpose, created_by, location:franchise_locations(name)')
         .eq('id', input.id)
         .maybeSingle<VisitRow>();
     if (error) throw error;
