@@ -18,6 +18,7 @@ import {
 } from '../components/franchise/operations/SupervisionReportSummary.js';
 import {
     applySupervisionReportAiSummary,
+    buildFallbackSupervisionReportAiSummary,
     extractSupervisionReportAiSummaryFromText,
     validateSupervisionAiTranscript
 } from './franchise-supervision-ai-summary.js';
@@ -154,6 +155,29 @@ void test('Given AI report summary When applying Then matching checklist items a
         { id: 'cleanliness', label: '청결', result: '주의', memo: '마감 청소 확인 필요' },
         { id: 'quality', label: '품질', result: '양호', memo: '기존 메모' }
     ]);
+});
+
+void test('Given AI response cannot be parsed When building fallback summary Then field memo is mapped to checklist items', () => {
+    const summary = buildFallbackSupervisionReportAiSummary({
+        transcript: [
+            '주방 쪽 튀김기 옆이랑 냉장고 일부에 기름때가 보여서 마감 청소 체크리스트를 다시 주기로 했습니다.',
+            '신규 직원이 POS를 아직 잘 못 다뤄서 점심 피크 때 주문 입력이 조금 밀렸습니다.',
+            '본사에 POS 교육 자료와 배달 리뷰 이벤트 문구 예시를 요청했습니다.',
+            '금요일까지 교육 완료 여부와 청소 사진을 확인하기로 했습니다.'
+        ].join('\n'),
+        inspectionItems: mergeInspectionItems([])
+    });
+
+    const cleanliness = summary.inspectionItems.find(item => item.id === 'cleanliness');
+    const training = summary.inspectionItems.find(item => item.id === 'training-notice');
+    const support = summary.inspectionItems.find(item => item.id === 'hq-support');
+
+    assert.equal(cleanliness?.result, '개선필요');
+    assert.match(cleanliness?.memo || '', /기름때/);
+    assert.equal(training?.result, '개선필요');
+    assert.match(training?.memo || '', /POS|교육/);
+    assert.equal(support?.result, '주의');
+    assert.match(summary.specialNote, /금요일|교육 완료|청소 사진/);
 });
 
 void test('Given oversized AI transcript When validating Then a readable validation error is raised', () => {

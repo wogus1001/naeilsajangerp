@@ -2,12 +2,14 @@ import { fail, ok } from '@/lib/api-response';
 import { cleanString, canAccessSupervisorResource, isRecord, resolveSupervisionAuth } from '@/lib/franchise-supervision-api';
 import { mergeInspectionItems } from '@/lib/franchise-supervision';
 import {
+    buildFallbackSupervisionReportAiSummary,
     buildSupervisionReportAiPrompt,
     extractSupervisionReportAiSummaryFromText,
     validateSupervisionAiTranscript,
     type SupervisionReportAiPromptMessage,
     type SupervisionReportAiSummary
 } from '@/lib/franchise-supervision-ai-summary';
+import type { SupervisionInspectionItem } from '@/lib/franchise-supervision';
 import { fetchVisit, readVisitLocationName } from '../reportRouteSupport';
 
 export const dynamic = 'force-dynamic';
@@ -57,38 +59,75 @@ async function requestNvidiaSummary(input: {
     readonly model: string;
     readonly messages: readonly SupervisionReportAiPromptMessage[];
     readonly fetcher: typeof fetch;
+    readonly forceJson: boolean;
 }): Promise<SupervisionReportAiSummary | null> {
+    const requestBody: Record<string, unknown> = {
+        model: input.model,
+        messages: input.messages,
+        temperature: 0.2,
+        top_p: 0.95,
+        max_tokens: 1600
+    };
+    if (input.forceJson) requestBody.response_format = { type: 'json_object' };
+
     const response = await input.fetcher(`${input.baseUrl.replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${input.apiKey}`,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            model: input.model,
-            messages: input.messages,
-            temperature: 0.2,
-            top_p: 0.95,
-            max_tokens: 1600,
-            response_format: { type: 'json_object' }
-        })
+        body: JSON.stringify(requestBody)
     });
 
     const payload: unknown = await response.json().catch(() => ({}));
-    if (!response.ok) return null;
-    return extractSupervisionReportAiSummaryFromText(readNvidiaContent(payload));
+    if (!response.ok) {
+        console.warn('Franchise supervision AI summary NVIDIA request failed:', {
+            model: input.model,
+            status: response.status,
+            forceJson: input.forceJson
+        });
+        return null;
+    }
+
+    const summary = extractSupervisionReportAiSummaryFromText(readNvidiaContent(payload));
+    if (!summary) {
+        console.warn('Franchise supervision AI summary parse failed:', {
+            model: input.model,
+            forceJson: input.forceJson
+        });
+    }
+    return summary;
 }
 
 async function summarizeWithNvidia(input: {
     readonly env: NodeJS.ProcessEnv;
     readonly fetcher: typeof fetch;
     readonly messages: readonly SupervisionReportAiPromptMessage[];
+    readonly transcript: string;
+    readonly inspectionItems: readonly SupervisionInspectionItem[];
 }): Promise<SupervisionReportAiResult> {
     const { apiKey, baseUrl, model, fallbackModel } = getNvidiaConfig(input.env);
     if (!apiKey) throw new Error('NVIDIA_API_KEY 환경변수 설정이 필요합니다.');
 
-    const primarySummary = await requestNvidiaSummary({ apiKey, baseUrl, model, messages: input.messages, fetcher: input.fetcher });
-    if (primarySummary) return { summary: primarySummary, model, fallbackUsed: false };
+    const primaryJsonSummary = await requestNvidiaSummary({
+        apiKey,
+        baseUrl,
+        model,
+        messages: input.messages,
+        fetcher: input.fetcher,
+        forceJson: true
+    });
+    if (primaryJsonSummary) return { summary: primaryJsonSummary, model, fallbackUsed: false };
+
+    const primaryLooseSummary = await requestNvidiaSummary({
+        apiKey,
+        baseUrl,
+        model,
+        messages: input.messages,
+        fetcher: input.fetcher,
+        forceJson: false
+    });
+    if (primaryLooseSummary) return { summary: primaryLooseSummary, model, fallbackUsed: true };
 
     if (fallbackModel && fallbackModel !== model) {
         const fallbackSummary = await requestNvidiaSummary({
@@ -96,12 +135,30 @@ async function summarizeWithNvidia(input: {
             baseUrl,
             model: fallbackModel,
             messages: input.messages,
-            fetcher: input.fetcher
+            fetcher: input.fetcher,
+            forceJson: true
         });
         if (fallbackSummary) return { summary: fallbackSummary, model: fallbackModel, fallbackUsed: true };
+
+        const fallbackLooseSummary = await requestNvidiaSummary({
+            apiKey,
+            baseUrl,
+            model: fallbackModel,
+            messages: input.messages,
+            fetcher: input.fetcher,
+            forceJson: false
+        });
+        if (fallbackLooseSummary) return { summary: fallbackLooseSummary, model: fallbackModel, fallbackUsed: true };
     }
 
-    throw new Error('AI 점검 보고서 정리 결과를 읽지 못했습니다.');
+    return {
+        summary: buildFallbackSupervisionReportAiSummary({
+            transcript: input.transcript,
+            inspectionItems: input.inspectionItems
+        }),
+        model: 'local-fallback',
+        fallbackUsed: true
+    };
 }
 
 export async function POST(request: Request) {
@@ -132,6 +189,8 @@ export async function POST(request: Request) {
         const result = await summarizeWithNvidia({
             env: process.env,
             fetcher: fetch,
+            transcript,
+            inspectionItems,
             messages: buildSupervisionReportAiPrompt({
                 transcript,
                 locationName: readVisitLocationName(visit),
