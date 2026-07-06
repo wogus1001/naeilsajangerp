@@ -120,9 +120,46 @@ function cleanSummaryText(value: unknown, maxLength = SUPERVISION_AI_SUMMARY_MAX
         .slice(0, maxLength);
 }
 
+function toReportTone(text: string): string {
+    return text
+        .replace(/점주님/g, '점주')
+        .replace(/사장님/g, '점주')
+        .replace(/손님/g, '고객')
+        .replace(/점주이/g, '점주가')
+        .replace(/고객한테/g, '고객에게')
+        .replace(/(.+?)라고 하셨습니다\.?/g, '$1라고 언급함.')
+        .replace(/(.+?)다고 하셨습니다\.?/g, '$1다고 언급함.')
+        .replace(/(.+?)라고 했습니다\.?/g, '$1라고 언급함.')
+        .replace(/(.+?)다고 했습니다\.?/g, '$1다고 언급함.')
+        .replace(/(.+?)라고 합니다\.?/g, '$1라고 확인됨.')
+        .replace(/(.+?)다고 합니다\.?/g, '$1다고 확인됨.')
+        .replace(/되었습니다\.?/g, '됨.')
+        .replace(/됩니다\.?/g, '됨.')
+        .replace(/했습니다\.?/g, '함.')
+        .replace(/하였습니다\.?/g, '함.')
+        .replace(/합니다\.?/g, '함.')
+        .replace(/았습니다\.?/g, '았음.')
+        .replace(/었습니다\.?/g, '었음.')
+        .replace(/입니다\.?/g, '임.')
+        .replace(/였습니다\.?/g, '였음.')
+        .replace(/이었습니다\.?/g, '이었음.')
+        .replace(/같습니다\.?/g, '것으로 판단됨.')
+        .replace(/했어요\.?/g, '함.')
+        .replace(/해요\.?/g, '함.')
+        .replace(/주세요\.?/g, '필요.')
+        .replace(/요\./g, '.')
+        .replace(/\s+\./g, '.')
+        .replace(/\.{2,}/g, '.')
+        .trim();
+}
+
+function cleanReportToneText(value: unknown, maxLength = SUPERVISION_AI_SUMMARY_MAX_FIELD_LENGTH): string {
+    return toReportTone(cleanSummaryText(value, maxLength));
+}
+
 function readTextByKeys(value: Record<string, unknown>, keys: readonly string[], maxLength = SUPERVISION_AI_SUMMARY_MAX_FIELD_LENGTH): string {
     for (const key of keys) {
-        const text = cleanSummaryText(value[key], maxLength);
+        const text = cleanReportToneText(value[key], maxLength);
         if (text) return text;
     }
     return '';
@@ -237,7 +274,7 @@ function classifyFallbackResult(text: string): SupervisionItemResult {
 
 function buildFallbackOverallNote(sentences: readonly string[]): string {
     const firstSentences = sentences.slice(0, 2).join('\n');
-    return cleanSummaryText(
+    return cleanReportToneText(
         firstSentences || 'AI 응답을 읽지 못해 입력한 현장 메모 기준으로 점검 초안을 만들었습니다.',
         SUPERVISION_AI_SUMMARY_MAX_FIELD_LENGTH
     );
@@ -256,7 +293,7 @@ function buildFallbackSpecialNote(sentences: readonly string[]): string {
         '금요일',
         '3일'
     ]));
-    return cleanSummaryText(followUpSentences.slice(0, 3).join('\n'), SUPERVISION_AI_SUMMARY_MAX_FIELD_LENGTH);
+    return cleanReportToneText(followUpSentences.slice(0, 3).join('\n'), SUPERVISION_AI_SUMMARY_MAX_FIELD_LENGTH);
 }
 
 export function buildFallbackSupervisionReportAiSummary({
@@ -270,7 +307,7 @@ export function buildFallbackSupervisionReportAiSummary({
             const matchedSentences = sentences
                 .filter(sentence => includesAnyKeyword(sentence, keywords))
                 .slice(0, FALLBACK_SENTENCE_LIMIT);
-            const memo = cleanSummaryText(matchedSentences.join('\n'), SUPERVISION_AI_ITEM_MEMO_MAX_LENGTH);
+            const memo = cleanReportToneText(matchedSentences.join('\n'), SUPERVISION_AI_ITEM_MEMO_MAX_LENGTH);
             if (!memo) return null;
             return {
                 id: item.id,
@@ -288,7 +325,7 @@ export function buildFallbackSupervisionReportAiSummary({
                 id: etcItem.id,
                 label: etcItem.label,
                 result: classifyFallbackResult(transcript),
-                memo: cleanSummaryText(sentences.slice(0, FALLBACK_SENTENCE_LIMIT).join('\n'), SUPERVISION_AI_ITEM_MEMO_MAX_LENGTH)
+                memo: cleanReportToneText(sentences.slice(0, FALLBACK_SENTENCE_LIMIT).join('\n'), SUPERVISION_AI_ITEM_MEMO_MAX_LENGTH)
             });
         }
     }
@@ -384,6 +421,11 @@ export function buildSupervisionReportAiPrompt({
                 '반드시 JSON 객체만 출력한다. 마크다운, 설명문, 코드블록은 출력하지 않는다.',
                 '회의록에 나온 사실만 사용하고 모르는 내용은 빈 문자열로 둔다.',
                 '각 점검 항목 result는 "양호", "주의", "개선필요" 중 하나만 사용한다.',
+                '점주, 직원, 고객이 말한 구어체를 그대로 복사하지 말고 SV 보고서 문체로 재작성한다.',
+                '보고서 문체는 명사형 또는 간결한 서술형을 사용한다. 예: "확인됨", "필요", "예정", "요청", "진행 중", "특이사항 없음".',
+                '"합니다", "했습니다", "해요", "요", "같습니다", "하셨습니다", "라고 합니다" 같은 대화체·존댓말 종결은 사용하지 않는다.',
+                '발화자는 "점주 의견", "직원 진술", "현장 확인", "본사 요청"처럼 출처만 남기고 감정적 표현은 제거한다.',
+                '각 memo는 항목별 판정 근거와 후속 조치가 드러나도록 1~2문장으로 정리한다.',
                 '법률 판단, 매출 보장, 계약 확정처럼 오해될 문구는 쓰지 않는다.'
             ].join('\n')
         },
@@ -400,6 +442,21 @@ export function buildSupervisionReportAiPrompt({
                 '',
                 '[점검 항목 ID]',
                 itemSchema,
+                '',
+                '[작성 규칙]',
+                '- 현장 대화 원문을 보고서 입력값으로 재작성한다.',
+                '- 각 항목 memo는 "현상/근거 + 필요한 조치" 순서로 작성한다.',
+                '- 점주 요청, 직원 교육, 본사 지원, 사진 확인, 기한이 있으면 specialNote에 모은다.',
+                '- 동일한 내용을 여러 항목에 반복하지 않는다. 가장 관련 높은 항목에만 배치한다.',
+                '- 구어체 종결어미를 금지하고 보고서체로 쓴다.',
+                '',
+                '[보고서체 예시]',
+                '- 원문: "점주님이 배달 주문이 줄었다고 합니다."',
+                '  결과: "점주 의견 기준 배달 주문 감소 확인."',
+                '- 원문: "직원이 POS를 아직 잘 못 다뤄요."',
+                '  결과: "직원 POS 숙련도 미흡. 피크 시간 주문 입력 지연 가능성 확인."',
+                '- 원문: "금요일까지 사진 받아보면 될 것 같습니다."',
+                '  결과: "금요일까지 청소 완료 사진 확인 예정."',
                 '',
                 '출력 JSON schema:',
                 '{',

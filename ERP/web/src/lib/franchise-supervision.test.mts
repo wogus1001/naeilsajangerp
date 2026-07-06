@@ -19,6 +19,7 @@ import {
 import {
     applySupervisionReportAiSummary,
     buildFallbackSupervisionReportAiSummary,
+    buildSupervisionReportAiPrompt,
     extractSupervisionReportAiSummaryFromText,
     validateSupervisionAiTranscript
 } from './franchise-supervision-ai-summary.js';
@@ -126,12 +127,53 @@ void test('Given AI report JSON with alternate keys When extracting Then summary
         ]
     }));
 
-    assert.equal(summary?.overallNote, 'POS 교육과 주방 청결 재확인이 필요합니다.');
+    assert.equal(summary?.overallNote, 'POS 교육과 주방 청결 재확인이 필요함.');
     assert.equal(summary?.specialNote, '금요일 직원 교육 완료 여부와 청소 사진 확인');
     assert.deepEqual(summary?.inspectionItems.map(item => [item.id, item.label, item.result, item.memo]), [
         ['cleanliness', '청결', '주의', '냉장고 하부 기름때 확인'],
         ['hq-support', '본사 지원', '개선필요', 'POS 교육 자료와 배달 리뷰 이벤트 문구 필요']
     ]);
+});
+
+void test('Given conversational AI report JSON When extracting Then memos are converted to report tone', () => {
+    const summary = extractSupervisionReportAiSummaryFromText(JSON.stringify({
+        overallNote: '점주님이 배달 주문이 줄었다고 합니다.',
+        specialNote: '금요일까지 청소 사진을 받아보면 될 것 같습니다.',
+        inspectionItems: [
+            {
+                id: 'service',
+                label: '서비스',
+                result: '주의',
+                memo: '손님한테 인사는 잘 하고 있었다고 합니다.'
+            }
+        ]
+    }));
+
+    const combinedText = [
+        summary?.overallNote,
+        summary?.specialNote,
+        summary?.inspectionItems[0]?.memo
+    ].join('\n');
+
+    assert.doesNotMatch(combinedText, /점주님|손님|합니다|했습니다|해요|하셨습니다|같습니다/);
+    assert.match(summary?.overallNote || '', /점주/);
+    assert.match(summary?.inspectionItems[0]?.memo || '', /고객/);
+});
+
+void test('Given supervision AI prompt When building Then report style rules are included', () => {
+    const messages = buildSupervisionReportAiPrompt({
+        transcript: '점주님이 배달 주문이 줄었다고 합니다.',
+        locationName: '테스트점',
+        supervisorName: '김SV',
+        visitDate: '2026-07-03',
+        purpose: '정기점검',
+        inspectionItems: mergeInspectionItems([])
+    });
+    const promptText = messages.map(message => message.content).join('\n');
+
+    assert.match(promptText, /보고서 문체/);
+    assert.match(promptText, /구어체 종결어미를 금지/);
+    assert.match(promptText, /점주 의견 기준 배달 주문 감소 확인/);
 });
 
 void test('Given AI report summary When applying Then matching checklist items and special note are updated', () => {
