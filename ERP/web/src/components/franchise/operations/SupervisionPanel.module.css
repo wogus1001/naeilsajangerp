@@ -327,6 +327,154 @@
     gap: 8px;
 }
 
+.reportEditorStack {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.reportHero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    border: 1px solid #d7e8ff;
+    border-radius: 8px;
+    padding: 16px;
+    background: #f7fbff;
+}
+
+.reportHero span,
+.reportVerdict span,
+.reportVerdict small,
+.reportMetricCard span,
+.reportMetricCard small,
+.reportAttention span,
+.reportAttentionClear span {
+    display: block;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.reportHero h4 {
+    margin: 4px 0 6px;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.reportHero p {
+    margin: 0;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.reportVerdict {
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+    min-width: 120px;
+}
+
+.reportVerdict strong {
+    height: 28px;
+    align-items: center;
+    padding: 0 12px;
+}
+
+.reportSummaryGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.reportMetricCard {
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.reportMetricCard strong {
+    display: block;
+    margin: 6px 0;
+    color: #191f28;
+    font-size: 22px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.reportAttention,
+.reportAttentionClear {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.reportAttention {
+    border-color: #ffe8cc;
+    background: #fff9f0;
+}
+
+.reportAttentionClear {
+    border-color: #d8f5e8;
+    background: #f4fbf8;
+}
+
+.reportAttention strong,
+.reportAttentionClear strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.reportAttentionList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reportAttentionList > span {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #eef2f7;
+    border-radius: 999px;
+    padding: 5px 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.reportAttentionList small {
+    overflow: hidden;
+    max-width: 240px;
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reportChecklistGrid,
+.reportFooterGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
 .formPanel,
 .listPanel {
     display: grid;
@@ -450,10 +598,37 @@
     background: #fbfcfe;
 }
 
+.itemRowWarning {
+    border-color: #ffe8cc;
+    background: #fffaf3;
+}
+
+.itemRowCritical {
+    border-color: #ffc9c9;
+    background: #fff8f8;
+}
+
+.itemRowHeader {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.itemRowHeader span {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
 .itemRow strong {
+    overflow: hidden;
     color: #191f28;
     font-size: 12px;
     font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .buttonRow {
@@ -746,6 +921,11 @@ button.listItem {
     color: #087f5b;
 }
 
+.badgeWarning {
+    background: #fff4e6;
+    color: #d9480f;
+}
+
 .empty {
     padding: 18px;
     border: 1px dashed #dfe3e8;
@@ -802,6 +982,9 @@ button.listItem {
 
 @media (max-width: 720px) {
     .reportGrid,
+    .reportSummaryGrid,
+    .reportChecklistGrid,
+    .reportFooterGrid,
     .layout,
     .inlineControls,
     .assignmentToolbar,
@@ -819,6 +1002,14 @@ button.listItem {
 
     .listHeader {
         display: grid;
+    }
+
+    .reportHero {
+        display: grid;
+    }
+
+    .reportVerdict {
+        justify-items: start;
     }
 
     .paginationBar {

@@ -9,6 +9,7 @@ import type {
 import { AssignmentEditor } from './SupervisionAssignmentEditor';
 import type { AssignmentFormState, AssignmentPaginationState } from './SupervisionAssignmentTypes';
 import type { SupervisionAssignment, SupervisionPayload } from './supervisionTypes';
+import { getSupervisorIdentityLabel, getSupervisorRoleLabel } from './supervisorDisplay';
 import styles from './SupervisionPanel.module.css';
 
 export function StoreAssignmentTable(props: {
@@ -98,6 +99,7 @@ export function StoreAssignmentTable(props: {
 }
 
 export function SupervisorAssignmentTable(props: {
+    readonly duplicateSupervisorNames: ReadonlySet<string>;
     readonly rows: readonly SupervisorAssignmentRow[];
     readonly pagination: AssignmentPaginationState;
 }) {
@@ -121,7 +123,10 @@ export function SupervisorAssignmentTable(props: {
                                 <td>
                                     <div className={styles.reportTitleCell}>
                                         <strong>{row.supervisorName}</strong>
-                                        <small>{row.role || '-'}</small>
+                                        <small>{getSupervisorRoleLabel(row)}</small>
+                                        {props.duplicateSupervisorNames.has(row.supervisorName) && getSupervisorIdentityLabel(row) ? (
+                                            <small>{getSupervisorIdentityLabel(row)}</small>
+                                        ) : null}
                                     </div>
                                 </td>
                                 <td>

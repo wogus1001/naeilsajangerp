@@ -4,6 +4,7 @@ import React from 'react';
 import { RotateCcw, Save } from 'lucide-react';
 import type { SupervisionPayload } from './supervisionTypes';
 import type { AssignmentFormState } from './SupervisionAssignmentTypes';
+import { formatSupervisorOptionLabel, getDuplicateSupervisorNames } from './supervisorDisplay';
 import styles from './SupervisionPanel.module.css';
 
 export function AssignmentEditor(props: {
@@ -15,6 +16,7 @@ export function AssignmentEditor(props: {
     readonly onReset: () => void;
     readonly onSubmit: () => void;
 }) {
+    const duplicateSupervisorNames = React.useMemo(() => getDuplicateSupervisorNames(props.data.supervisors), [props.data.supervisors]);
     return (
         <div className={styles.assignmentEditor}>
             <div className={styles.assignmentEditorHeader}>
@@ -26,7 +28,11 @@ export function AssignmentEditor(props: {
                     {props.data.locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}
                 </SelectField>
                 <SelectField label="SV" value={props.form.supervisorProfileId} onChange={value => props.onChange({ ...props.form, supervisorProfileId: value })}>
-                    {props.data.supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
+                    {props.data.supervisors.map(supervisor => (
+                        <option key={supervisor.id} value={supervisor.id}>
+                            {formatSupervisorOptionLabel(supervisor, duplicateSupervisorNames)}
+                        </option>
+                    ))}
                 </SelectField>
                 <InputField label="담당 시작일" type="date" value={props.form.assignedAt} onChange={value => props.onChange({ ...props.form, assignedAt: value })} />
                 <TextField label="담당 메모" value={props.form.memo} placeholder="권한, 인수인계 메모" onChange={value => props.onChange({ ...props.form, memo: value })} />

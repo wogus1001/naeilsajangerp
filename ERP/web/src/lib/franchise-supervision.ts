@@ -254,8 +254,13 @@ export function buildSupervisionReportListItems(input: SupervisionReportListInpu
     });
 }
 
-export function isMissingSupervisionReportItem(item: Pick<SupervisionReportListItem, 'visitStatus'>): boolean {
-    return item.visitStatus === '보고서대기';
+export function isMissingSupervisionReportItem(
+    item: Pick<SupervisionReportListItem, 'reportStatus' | 'visitDate' | 'visitStatus'>,
+    todayKey = kstDateKey()
+): boolean {
+    if (item.reportStatus === '제출' || item.reportStatus === '승인') return false;
+    if (item.visitStatus === '취소' || item.visitStatus === '완료') return false;
+    return item.visitStatus === '보고서대기' || Boolean(item.visitDate && item.visitDate < todayKey);
 }
 
 function getReportComparableTime(report: SupervisionReportListInput['reports'][number]): number {

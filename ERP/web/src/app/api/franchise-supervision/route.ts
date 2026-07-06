@@ -342,6 +342,8 @@ export async function GET(request: Request) {
             supervisors: profileRows.map(profile => ({
                 id: profile.id,
                 name: profile.name || '이름 미등록',
+                loginId: profile.login_id || '',
+                email: profile.email || '',
                 role: profile.role || ''
             })),
             assignments: transformedAssignments,

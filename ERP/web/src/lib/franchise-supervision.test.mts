@@ -103,7 +103,7 @@ void test('Given visits and inspection reports When building report list items T
     assert.equal(items[1]?.hasSpecialNote, true);
 });
 
-void test('Given future visits without reports When checking missing report filter Then only report-waiting visits are included', () => {
+void test('Given visits without submitted reports When checking missing report filter Then waiting and overdue visits are included', () => {
     const items = buildSupervisionReportListItems({
         visits: [
             {
@@ -121,12 +121,23 @@ void test('Given future visits without reports When checking missing report filt
                 visitDate: '2026-07-01',
                 purpose: '정기점검',
                 status: '보고서대기'
+            },
+            {
+                id: 'visit-overdue',
+                locationName: '기한초과점',
+                supervisorName: '이SV',
+                visitDate: '2026-07-03',
+                purpose: '정기점검',
+                status: '예정'
             }
         ],
         reports: []
     });
 
-    assert.deepEqual(items.filter(isMissingSupervisionReportItem).map(item => item.visitId), ['visit-waiting']);
+    assert.deepEqual(
+        items.filter(item => isMissingSupervisionReportItem(item, '2026-07-06')).map(item => item.visitId),
+        ['visit-waiting', 'visit-overdue']
+    );
 });
 
 void test('Given duplicate reports for one visit When building report list items Then the latest report is selected', () => {

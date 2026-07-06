@@ -7,12 +7,14 @@ import {
     type StoreAssignmentRow,
     type SupervisorAssignmentRow
 } from '@/lib/franchise-supervision-assignments';
+import { getUserRoleLabel } from '@/lib/user-role-policy';
 import type { SupervisionAssignment, SupervisionPayload } from './supervisionTypes';
 import type { AssignmentFormState, AssignmentPaginationState } from './SupervisionAssignmentTypes';
 import {
     StoreAssignmentTable,
     SupervisorAssignmentTable
 } from './SupervisionAssignmentTables';
+import { formatSupervisorOptionLabel, getDuplicateSupervisorNames } from './supervisorDisplay';
 import styles from './SupervisionPanel.module.css';
 
 type AssignmentViewMode = 'store' | 'supervisor';
@@ -38,6 +40,7 @@ export function SupervisionAssignmentSection(props: {
     const [page, setPage] = React.useState(1);
     const storeRows = React.useMemo(() => buildStoreAssignmentRows(props.data), [props.data]);
     const supervisorRows = React.useMemo(() => buildSupervisorAssignmentRows(props.data), [props.data]);
+    const duplicateSupervisorNames = React.useMemo(() => getDuplicateSupervisorNames(props.data.supervisors), [props.data.supervisors]);
     const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR');
     const visibleStoreRows = filterStoreRows({ rows: storeRows, supervisorFilter, statusFilter, query: normalizedQuery });
     const visibleSupervisorRows = filterSupervisorRows({ rows: supervisorRows, supervisorFilter, query: normalizedQuery });
@@ -81,7 +84,9 @@ export function SupervisionAssignmentSection(props: {
                         <select value={supervisorFilter} onChange={event => setSupervisorFilter(event.currentTarget.value)}>
                             <option value="all">전체 SV</option>
                             {props.data.supervisors.map(supervisor => (
-                                <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>
+                                <option key={supervisor.id} value={supervisor.id}>
+                                    {formatSupervisorOptionLabel(supervisor, duplicateSupervisorNames)}
+                                </option>
                             ))}
                         </select>
                         {viewMode === 'store' ? (
@@ -112,7 +117,11 @@ export function SupervisionAssignmentSection(props: {
                         pagedRows={pagedStoreRows}
                     />
                 ) : (
-                    <SupervisorAssignmentTable rows={pagedSupervisorRows} pagination={pagination} />
+                    <SupervisorAssignmentTable
+                        duplicateSupervisorNames={duplicateSupervisorNames}
+                        rows={pagedSupervisorRows}
+                        pagination={pagination}
+                    />
                 )}
             </div>
         </div>
@@ -142,7 +151,14 @@ function filterSupervisorRows(input: {
     return input.rows.filter(row => {
         if (input.supervisorFilter !== 'all' && row.supervisorProfileId !== input.supervisorFilter) return false;
         if (!input.query) return true;
-        return [row.supervisorName, row.role, ...row.storeNames].some(value => value.toLocaleLowerCase('ko-KR').includes(input.query));
+        return [
+            row.supervisorName,
+            row.role,
+            getUserRoleLabel(row.role),
+            row.loginId,
+            row.email,
+            ...row.storeNames
+        ].some(value => value.toLocaleLowerCase('ko-KR').includes(input.query));
     });
 }
 

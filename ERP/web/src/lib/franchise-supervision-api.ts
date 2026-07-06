@@ -29,6 +29,8 @@ export type SupervisionLocationRow = {
 export type SupervisionProfileRow = {
     readonly id: string;
     readonly name: string | null;
+    readonly login_id: string | null;
+    readonly email: string | null;
     readonly role: string | null;
     readonly company_id: string | null;
     readonly status: string | null;
@@ -149,7 +151,7 @@ export async function fetchCompanyProfiles(
 ): Promise<readonly SupervisionProfileRow[]> {
     const { data, error } = await supabaseAdmin
         .from('profiles')
-        .select('id, name, role, company_id, status')
+        .select('id, name, login_id, email, role, company_id, status')
         .eq('company_id', companyId)
         .eq('status', 'active')
         .order('name', { ascending: true })

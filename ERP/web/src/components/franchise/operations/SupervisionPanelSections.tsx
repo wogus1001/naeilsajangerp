@@ -17,6 +17,8 @@ import type {
     SupervisionReport,
     SupervisionVisit
 } from './supervisionTypes';
+import { formatSupervisorOptionLabel, getDuplicateSupervisorNames } from './supervisorDisplay';
+import { getAttentionInspectionItems, summarizeInspectionItems } from './SupervisionReportSummary';
 import styles from './SupervisionPanel.module.css';
 
 export type VisitFormState = {
@@ -50,6 +52,18 @@ function reportStatusClass(status: SupervisionReportListItem['reportStatus'] | S
     if (status === '제출') return styles.badgeBlue;
     if (status === '미작성') return styles.badge;
     return styles.badgeBlue;
+}
+
+function itemResultClass(result: SupervisionInspectionItem['result']): string {
+    if (result === '개선필요') return styles.badgeRed;
+    if (result === '주의') return styles.badgeWarning;
+    return styles.badgeGreen;
+}
+
+function itemRowClass(result: SupervisionInspectionItem['result']): string {
+    if (result === '개선필요') return `${styles.itemRow} ${styles.itemRowCritical}`;
+    if (result === '주의') return `${styles.itemRow} ${styles.itemRowWarning}`;
+    return styles.itemRow;
 }
 
 function actionStatusClass(status: SupervisionCorrectiveAction['status']): string {
@@ -150,6 +164,7 @@ export function VisitForm(props: {
         activeAssignments.some(assignment => assignment.supervisorProfileId === supervisor.id)
     ));
     const supervisors = assignedSupervisors.length > 0 ? assignedSupervisors : props.data.supervisors;
+    const duplicateSupervisorNames = getDuplicateSupervisorNames(supervisors);
     const locationOptions = activeAssignments
         .filter(assignment => assignment.supervisorProfileId === props.form.supervisorProfileId)
         .map(assignment => ({
@@ -179,7 +194,11 @@ export function VisitForm(props: {
             </div>
             <div className={styles.formGrid}>
                 <SelectField label="SV" value={props.form.supervisorProfileId} onChange={changeSupervisor}>
-                    {supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
+                    {supervisors.map(supervisor => (
+                        <option key={supervisor.id} value={supervisor.id}>
+                            {formatSupervisorOptionLabel(supervisor, duplicateSupervisorNames)}
+                        </option>
+                    ))}
                 </SelectField>
                 <SelectField label="운영점" value={props.form.locationId} onChange={changeLocation}>
                     {locationOptions.length === 0 ? <option value="">배정된 운영점 없음</option> : null}
@@ -192,11 +211,9 @@ export function VisitForm(props: {
                 <TextField label="방문 메모" value={props.form.memo} placeholder="점검 목적, 사전 요청사항" onChange={(value: string) => props.onChange({ ...props.form, memo: value })} />
             </div>
             <div className={styles.formFooter}>
-                {props.editing ? (
-                    <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onCancelEdit}>
-                        취소
-                    </button>
-                ) : null}
+                <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onCancelEdit}>
+                    {props.editing ? '수정 취소' : '닫기'}
+                </button>
                 <button type="button" className={styles.primaryButton} disabled={props.disabled || !canSubmit} onClick={props.onSubmit}>
                     <ClipboardCheck size={13} /> {props.editing ? '방문 수정 저장' : '방문 등록'}
                 </button>
@@ -230,6 +247,7 @@ export function VisitList(props: {
     const maxPage = Math.max(1, Math.ceil(filteredVisits.length / pageSize));
     const safePage = Math.min(page, maxPage);
     const pagedVisits = filteredVisits.slice((safePage - 1) * pageSize, safePage * pageSize);
+    const duplicateSupervisorNames = React.useMemo(() => getDuplicateSupervisorNames(props.data.supervisors), [props.data.supervisors]);
     React.useEffect(() => {
         setPage(1);
     }, [normalizedQuery, statusFilter, supervisorFilter]);
@@ -248,7 +266,11 @@ export function VisitList(props: {
                 <input type="search" value={query} placeholder="운영점, SV, 목적, 메모 검색" onChange={event => setQuery(event.currentTarget.value)} />
                 <select value={supervisorFilter} onChange={event => setSupervisorFilter(event.currentTarget.value)}>
                     <option value="all">전체 SV</option>
-                    {props.data.supervisors.map(supervisor => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
+                    {props.data.supervisors.map(supervisor => (
+                        <option key={supervisor.id} value={supervisor.id}>
+                            {formatSupervisorOptionLabel(supervisor, duplicateSupervisorNames)}
+                        </option>
+                    ))}
                 </select>
                 <select value={statusFilter} onChange={event => setStatusFilter(event.currentTarget.value)}>
                     <option value="active">취소 제외</option>
@@ -338,8 +360,63 @@ export function ReportEditor(props: {
 }) {
     if (!props.selectedVisit) return <div className={styles.empty}>보고서를 작성할 방문 일정을 선택해주세요.</div>;
     const canSubmit = props.report?.status !== '승인';
+    const summary = summarizeInspectionItems(props.inspectionItems);
+    const attentionItems = getAttentionInspectionItems(props.inspectionItems);
+    const savedPhotoCount = props.report?.photoAttachments.length ?? 0;
+    const totalPhotoCount = savedPhotoCount + props.photoCount;
     return (
-        <div className={styles.itemGrid}>
+        <div className={styles.reportEditorStack}>
+            <div className={styles.reportHero}>
+                <div>
+                    <span>SV 점검 보고서</span>
+                    <h4>{props.selectedVisit.locationName}</h4>
+                    <p>{props.selectedVisit.purpose} · 방문 {displayDate(props.selectedVisit.visitDate)} · 담당 {props.selectedVisit.supervisorName}</p>
+                </div>
+                <div className={styles.reportVerdict}>
+                    <span>종합 결과</span>
+                    <strong className={itemResultClass(summary.overallResult)}>{summary.overallResult}</strong>
+                    <small>{props.report?.status || '작성중'}</small>
+                </div>
+            </div>
+            <div className={styles.reportSummaryGrid}>
+                <div className={styles.reportMetricCard}>
+                    <span>양호율</span>
+                    <strong>{summary.completionRate.toLocaleString()}%</strong>
+                    <small>{summary.goodCount.toLocaleString()} / {summary.total.toLocaleString()} 항목</small>
+                </div>
+                <div className={styles.reportMetricCard}>
+                    <span>주의</span>
+                    <strong>{summary.warningCount.toLocaleString()}</strong>
+                    <small>현장 추적 필요</small>
+                </div>
+                <div className={styles.reportMetricCard}>
+                    <span>개선필요</span>
+                    <strong>{summary.improvementCount.toLocaleString()}</strong>
+                    <small>시정요청 후보</small>
+                </div>
+                <div className={styles.reportMetricCard}>
+                    <span>기록</span>
+                    <strong>{summary.memoCount.toLocaleString()}</strong>
+                    <small>메모 · 사진 {totalPhotoCount.toLocaleString()}개</small>
+                </div>
+            </div>
+            <div className={attentionItems.length > 0 ? styles.reportAttention : styles.reportAttentionClear}>
+                <div>
+                    <strong>{attentionItems.length > 0 ? '주요 기록 항목' : '주요 기록 항목 없음'}</strong>
+                    <span>{attentionItems.length > 0 ? '주의, 개선필요 또는 메모가 있는 항목입니다.' : '현재 모든 항목이 양호로 기록되어 있습니다.'}</span>
+                </div>
+                {attentionItems.length > 0 ? (
+                    <div className={styles.reportAttentionList}>
+                        {attentionItems.map(item => (
+                            <span key={item.id}>
+                                <b className={itemResultClass(item.result)}>{item.result}</b>
+                                {item.label}
+                                {item.memo.trim() ? <small>{item.memo.trim()}</small> : null}
+                            </span>
+                        ))}
+                    </div>
+                ) : null}
+            </div>
             {props.canManage ? (
                 <div className={`${styles.field} ${styles.fieldFull}`}>
                     <label>회사 점검 템플릿</label>
@@ -356,31 +433,39 @@ export function ReportEditor(props: {
                     </div>
                 </div>
             ) : null}
-            {props.inspectionItems.map(item => (
-                <div key={item.id} className={styles.itemRow}>
-                    <strong>{item.label}</strong>
-                    <select
-                        value={item.result}
-                        onChange={event => props.onItemChange(props.inspectionItems.map(next => (
-                            next.id === item.id ? { ...next, result: normalizeItemResult(event.currentTarget.value) } : next
-                        )))}
-                    >
-                        {SUPERVISION_ITEM_RESULTS.map(result => <option key={result} value={result}>{result}</option>)}
-                    </select>
-                    <textarea
-                        value={item.memo}
-                        placeholder="점검 메모"
-                        onChange={event => props.onItemChange(props.inspectionItems.map(next => (
-                            next.id === item.id ? { ...next, memo: event.currentTarget.value } : next
-                        )))}
-                    />
+            <div className={styles.reportChecklistGrid}>
+                {props.inspectionItems.map((item, index) => (
+                    <div key={item.id} className={itemRowClass(item.result)}>
+                        <div className={styles.itemRowHeader}>
+                            <span>{String(index + 1).padStart(2, '0')}</span>
+                            <strong>{item.label}</strong>
+                            <b className={itemResultClass(item.result)}>{item.result}</b>
+                        </div>
+                        <select
+                            value={item.result}
+                            onChange={event => props.onItemChange(props.inspectionItems.map(next => (
+                                next.id === item.id ? { ...next, result: normalizeItemResult(event.currentTarget.value) } : next
+                            )))}
+                        >
+                            {SUPERVISION_ITEM_RESULTS.map(result => <option key={result} value={result}>{result}</option>)}
+                        </select>
+                        <textarea
+                            value={item.memo}
+                            placeholder="현장 확인 내용, 수치, 후속 조치 메모"
+                            onChange={event => props.onItemChange(props.inspectionItems.map(next => (
+                                next.id === item.id ? { ...next, memo: event.currentTarget.value } : next
+                            )))}
+                        />
+                    </div>
+                ))}
+            </div>
+            <div className={styles.reportFooterGrid}>
+                <TextField label="특이사항" value={props.specialNote} placeholder="본사 지원 필요사항, 현장 이슈" onChange={props.onSpecialNote} />
+                <div className={styles.field}>
+                    <label>사진 첨부</label>
+                    <input type="file" multiple accept="image/*" onChange={event => props.onFiles(Array.from(event.currentTarget.files || []))} />
+                    <small>선택 {props.photoCount.toLocaleString()}개 · 저장된 사진 {savedPhotoCount.toLocaleString()}개</small>
                 </div>
-            ))}
-            <TextField label="특이사항" value={props.specialNote} placeholder="본사 지원 필요사항, 현장 이슈" onChange={props.onSpecialNote} />
-            <div className={styles.field}>
-                <label>사진 첨부</label>
-                <input type="file" multiple accept="image/*" onChange={event => props.onFiles(Array.from(event.currentTarget.files || []))} />
-                <small>선택 {props.photoCount.toLocaleString()}개 · 저장된 사진 {props.report?.photoAttachments.length.toLocaleString() || 0}개</small>
             </div>
             <div className={styles.buttonRow}>
                 <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onBackToList}>

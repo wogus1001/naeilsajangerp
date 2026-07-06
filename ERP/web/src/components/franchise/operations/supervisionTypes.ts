@@ -21,6 +21,8 @@ export type SupervisionLocationOption = {
 export type SupervisionSupervisorOption = {
     readonly id: string;
     readonly name: string;
+    readonly loginId: string;
+    readonly email: string;
     readonly role: string;
 };
 

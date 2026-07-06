@@ -126,7 +126,7 @@ function findVisitAssignment(data: SupervisionPayload, form: VisitFormState): Su
 }
 
 function filterReportItems(items: readonly SupervisionReportListItem[], filter: SupervisionFilter): readonly SupervisionReportListItem[] {
-    if (filter === 'missingReports') return items.filter(isMissingSupervisionReportItem);
+    if (filter === 'missingReports') return items.filter(item => isMissingSupervisionReportItem(item));
     if (filter === 'pendingApprovals') return items.filter(item => item.reportStatus === '제출');
     if (filter === 'todayVisits') return items.filter(item => item.visitDate === todayText());
     if (filter === 'weekVisits') {
@@ -167,6 +167,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
     const [visitForm, setVisitForm] = React.useState<VisitFormState>(makeVisitForm(EMPTY_PAYLOAD));
     const [selectedVisitId, setSelectedVisitId] = React.useState('');
     const [editingVisitId, setEditingVisitId] = React.useState('');
+    const [visitEditorOpen, setVisitEditorOpen] = React.useState(false);
     const [reportMode, setReportMode] = React.useState<SupervisionReportMode>('list');
     const [inspectionItems, setInspectionItems] = React.useState<readonly SupervisionInspectionItem[]>(buildDefaultInspectionItems());
     const [templateName, setTemplateName] = React.useState('현장 점검 템플릿');
@@ -270,12 +271,14 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         if (saved) {
             setEditingVisitId('');
             setVisitForm(makeVisitForm(data));
+            setVisitEditorOpen(false);
         }
     };
 
     const editVisit = (visit: SupervisionVisit) => {
         setSelectedVisitId(visit.id);
         setEditingVisitId(visit.id);
+        setVisitEditorOpen(true);
         setVisitForm({
             assignmentId: visit.assignmentId || '',
             locationId: visit.locationId,
@@ -286,9 +289,16 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         });
     };
 
+    const openNewVisitForm = () => {
+        setEditingVisitId('');
+        setVisitForm(makeVisitForm(data));
+        setVisitEditorOpen(true);
+    };
+
     const resetVisitForm = () => {
         setEditingVisitId('');
         setVisitForm(makeVisitForm(data));
+        setVisitEditorOpen(false);
     };
 
     const deleteVisit = async (visit: SupervisionVisit) => {
@@ -446,18 +456,20 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                 selectedId={selectedVisit?.id || ''}
                                 onDelete={deleteVisit}
                                 onEdit={editVisit}
-                                onNew={resetVisitForm}
+                                onNew={openNewVisitForm}
                                 onSelect={setSelectedVisitId}
                             />
-                            <VisitForm
-                                data={data}
-                                editing={Boolean(editingVisitId)}
-                                form={visitForm}
-                                disabled={isSaving}
-                                onCancelEdit={resetVisitForm}
-                                onChange={setVisitForm}
-                                onSubmit={submitVisit}
-                            />
+                            {visitEditorOpen ? (
+                                <VisitForm
+                                    data={data}
+                                    editing={Boolean(editingVisitId)}
+                                    form={visitForm}
+                                    disabled={isSaving}
+                                    onCancelEdit={resetVisitForm}
+                                    onChange={setVisitForm}
+                                    onSubmit={submitVisit}
+                                />
+                            ) : null}
                         </div>
                     </section>
                 </div>

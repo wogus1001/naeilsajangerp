@@ -2951,6 +2951,23 @@
     white-space: nowrap;
 }
 
+.locationListSearch {
+    flex: 1 1 360px;
+    min-width: 220px;
+    height: 34px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 750;
+    padding: 0 11px;
+}
+
+.locationListSearch::placeholder {
+    color: #8b95a1;
+}
+
 .locationListControlBar .exportActions {
     margin-left: auto;
 }
@@ -9478,6 +9495,23 @@
     .locationListControlBar .exportActions {
         width: 100%;
         margin-left: 0;
+    }
+
+    .locationListSearch,
+    .locationListControlBar .locationSortControl {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .locationListControlBar .locationSortControl {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        white-space: nowrap;
+    }
+
+    .locationListControlBar .locationSortControl select {
+        width: 100%;
+        min-width: 0;
     }
 
     .locationModeTabs {

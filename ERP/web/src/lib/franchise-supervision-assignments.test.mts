@@ -12,8 +12,9 @@ void test('Given locations supervisors and assignments When building assignment 
             { id: 'location-2', name: '송파점', brand: '테스트', address: '서울 송파구' }
         ],
         supervisors: [
-            { id: 'sv-1', name: '김SV', role: 'manager' },
-            { id: 'sv-2', name: '박SV', role: 'staff' }
+            { id: 'sv-1', name: '김SV', loginId: 'kim-manager', email: 'kim-manager@example.com', role: 'manager' },
+            { id: 'sv-2', name: '박SV', loginId: 'park-staff', email: 'park-staff@example.com', role: 'staff' },
+            { id: 'sv-3', name: '김SV', loginId: 'kim-sub', email: 'kim-sub@example.com', role: 'sub_manager' }
         ],
         assignments: [
             {
@@ -50,6 +51,8 @@ void test('Given locations supervisors and assignments When building assignment 
     assert.equal(storeRows[0]?.historyCount, 2);
     assert.equal(storeRows[1]?.assigned, false);
     assert.equal(storeRows[1]?.supervisorName, 'SV 미배정');
-    assert.deepEqual(supervisorRows.map(row => [row.supervisorName, row.activeStoreCount]), [['김SV', 1], ['박SV', 0]]);
+    assert.deepEqual(supervisorRows.map(row => [row.supervisorName, row.activeStoreCount]), [['김SV', 1], ['박SV', 0], ['김SV', 0]]);
     assert.deepEqual(supervisorRows[0]?.storeNames, ['강남점']);
+    assert.equal(supervisorRows[0]?.loginId, 'kim-manager');
+    assert.equal(supervisorRows[2]?.email, 'kim-sub@example.com');
 });

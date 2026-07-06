@@ -8,6 +8,8 @@ export type SupervisionAssignmentViewInput = {
     readonly supervisors: readonly {
         readonly id: string;
         readonly name: string;
+        readonly loginId?: string;
+        readonly email?: string;
         readonly role: string;
     }[];
     readonly assignments: readonly {
@@ -40,6 +42,8 @@ export type StoreAssignmentRow = {
 export type SupervisorAssignmentRow = {
     readonly supervisorProfileId: string;
     readonly supervisorName: string;
+    readonly loginId: string;
+    readonly email: string;
     readonly role: string;
     readonly activeStoreCount: number;
     readonly storeNames: readonly string[];
@@ -80,6 +84,8 @@ export function buildSupervisorAssignmentRows(input: SupervisionAssignmentViewIn
         return {
             supervisorProfileId: supervisor.id,
             supervisorName: supervisor.name,
+            loginId: supervisor.loginId || '',
+            email: supervisor.email || '',
             role: supervisor.role,
             activeStoreCount: assignments.length,
             storeNames: assignments.map(assignment => assignment.locationName),
