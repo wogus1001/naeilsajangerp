@@ -115,6 +115,24 @@ void test('Given AI report JSON with leading model text When extracting Then the
     assert.equal(summary?.inspectionItems[0]?.result, '주의');
 });
 
+void test('Given AI report JSON with alternate keys When extracting Then summary is normalized', () => {
+    const summary = extractSupervisionReportAiSummaryFromText(JSON.stringify({
+        summary: 'POS 교육과 주방 청결 재확인이 필요합니다.',
+        followUp: '금요일 직원 교육 완료 여부와 청소 사진 확인',
+        items: [
+            { item_id: 'cleanliness', item: '청결', status: '주의', note: '냉장고 하부 기름때 확인' },
+            { item_id: 'hq-support', item: '본사 지원', status: '개선필요', note: 'POS 교육 자료와 배달 리뷰 이벤트 문구 필요' }
+        ]
+    }));
+
+    assert.equal(summary?.overallNote, 'POS 교육과 주방 청결 재확인이 필요합니다.');
+    assert.equal(summary?.specialNote, '금요일 직원 교육 완료 여부와 청소 사진 확인');
+    assert.deepEqual(summary?.inspectionItems.map(item => [item.id, item.label, item.result, item.memo]), [
+        ['cleanliness', '청결', '주의', '냉장고 하부 기름때 확인'],
+        ['hq-support', '본사 지원', '개선필요', 'POS 교육 자료와 배달 리뷰 이벤트 문구 필요']
+    ]);
+});
+
 void test('Given AI report summary When applying Then matching checklist items and special note are updated', () => {
     const applied = applySupervisionReportAiSummary({
         specialNote: '',

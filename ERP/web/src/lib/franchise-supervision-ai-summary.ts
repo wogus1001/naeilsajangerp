@@ -69,6 +69,21 @@ function cleanSummaryText(value: unknown, maxLength = SUPERVISION_AI_SUMMARY_MAX
         .slice(0, maxLength);
 }
 
+function readTextByKeys(value: Record<string, unknown>, keys: readonly string[], maxLength = SUPERVISION_AI_SUMMARY_MAX_FIELD_LENGTH): string {
+    for (const key of keys) {
+        const text = cleanSummaryText(value[key], maxLength);
+        if (text) return text;
+    }
+    return '';
+}
+
+function readValueByKeys(value: Record<string, unknown>, keys: readonly string[]): unknown {
+    for (const key of keys) {
+        if (value[key] !== undefined) return value[key];
+    }
+    return undefined;
+}
+
 function stripJsonFence(text: string): string {
     const trimmed = text.trim();
     const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
@@ -121,14 +136,14 @@ function extractJsonObjectText(text: string): string {
 
 function normalizeAiItem(value: unknown): SupervisionReportAiItemSummary | null {
     if (!isRecord(value)) return null;
-    const id = cleanSummaryText(value.id, 120);
-    const label = cleanSummaryText(value.label, 120);
+    const id = readTextByKeys(value, ['id', 'itemId', 'item_id', 'key', '항목ID'], 120);
+    const label = readTextByKeys(value, ['label', 'name', 'title', 'item', '항목', '점검항목'], 120);
     if (!id && !label) return null;
     return {
         id,
         label,
-        result: normalizeItemResult(value.result),
-        memo: cleanSummaryText(value.memo, SUPERVISION_AI_ITEM_MEMO_MAX_LENGTH)
+        result: normalizeItemResult(readValueByKeys(value, ['result', 'status', 'grade', '결과', '상태'])),
+        memo: readTextByKeys(value, ['memo', 'note', 'notes', 'content', 'description', '내용', '메모'], SUPERVISION_AI_ITEM_MEMO_MAX_LENGTH)
     };
 }
 
@@ -138,12 +153,22 @@ function hasSummaryContent(summary: SupervisionReportAiSummary): boolean {
 
 export function normalizeSupervisionReportAiSummary(value: unknown): SupervisionReportAiSummary {
     if (!isRecord(value)) return EMPTY_SUPERVISION_REPORT_AI_SUMMARY;
-    const inspectionItems = Array.isArray(value.inspectionItems)
-        ? value.inspectionItems.map(normalizeAiItem).filter(item => item !== null)
+    const rawInspectionItems = readValueByKeys(value, [
+        'inspectionItems',
+        'inspection_items',
+        'items',
+        'checklist',
+        'checklistItems',
+        'checklist_items',
+        '점검항목',
+        '체크리스트'
+    ]);
+    const inspectionItems = Array.isArray(rawInspectionItems)
+        ? rawInspectionItems.map(normalizeAiItem).filter(item => item !== null)
         : [];
     return {
-        overallNote: cleanSummaryText(value.overallNote),
-        specialNote: cleanSummaryText(value.specialNote),
+        overallNote: readTextByKeys(value, ['overallNote', 'overall_note', 'overallSummary', 'summary', '요약', '종합요약']),
+        specialNote: readTextByKeys(value, ['specialNote', 'special_note', 'specialNotes', 'actionItems', 'followUp', '특이사항', '후속조치']),
         inspectionItems
     };
 }
