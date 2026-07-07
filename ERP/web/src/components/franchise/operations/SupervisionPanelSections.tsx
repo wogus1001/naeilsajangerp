@@ -14,8 +14,10 @@ import {
 } from '@/lib/franchise-supervision';
 import type {
     SupervisionCorrectiveAction,
+    SupervisionCorrectiveActionEvent,
     SupervisionPayload,
     SupervisionReport,
+    SupervisionReportEvent,
     SupervisionVisit
 } from './supervisionTypes';
 import type { SupervisionReportAiSummary } from '@/lib/franchise-supervision-ai-summary';
@@ -348,6 +350,9 @@ export function ReportEditor(props: {
     readonly inspectionItems: readonly SupervisionInspectionItem[];
     readonly photoCount: number;
     readonly report: SupervisionReport | null;
+    readonly reportEvents: readonly SupervisionReportEvent[];
+    readonly correctiveActions: readonly SupervisionCorrectiveAction[];
+    readonly correctiveActionEvents: readonly SupervisionCorrectiveActionEvent[];
     readonly selectedVisit: SupervisionVisit | null;
     readonly specialNote: string;
     readonly templateName: string;
@@ -490,6 +495,13 @@ export function ReportEditor(props: {
                     <small>선택 {props.photoCount.toLocaleString()}개 · 저장된 사진 {savedPhotoCount.toLocaleString()}개</small>
                 </div>
             </div>
+            {props.report ? (
+                <ReportScopedTimeline
+                    reportEvents={props.reportEvents}
+                    correctiveActions={props.correctiveActions}
+                    correctiveActionEvents={props.correctiveActionEvents}
+                />
+            ) : null}
             <div className={styles.buttonRow}>
                 <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onBackToList}>
                     목록으로
@@ -576,81 +588,174 @@ export function ReportReviewList(props: {
     readonly onApprove: (report: SupervisionReport) => void;
     readonly onReject: (report: SupervisionReport, rejectReason: string) => void;
 }) {
-    const reports = props.reports;
+    const pendingReports = props.reports.filter(report => report.status === '제출');
+    const approvedReports = props.reports.filter(report => report.status === '승인');
+    const rejectedReports = props.reports.filter(report => report.status === '반려');
+    const [activeGroup, setActiveGroup] = React.useState<'pending' | 'archive' | 'rejected'>('pending');
     const [rejectReasons, setRejectReasons] = React.useState<Record<string, string>>({});
-    if (reports.length === 0) return <div className={styles.empty}>최근 점검 보고서가 없습니다.</div>;
+    if (props.reports.length === 0) return <div className={styles.empty}>최근 점검 보고서가 없습니다.</div>;
+    const groups = [
+        {
+            key: 'pending' as const,
+            title: '승인 대기',
+            caption: '팀장 검토가 필요한 제출 보고서입니다.',
+            emptyText: '승인 대기 중인 보고서가 없습니다.',
+            reports: pendingReports
+        },
+        {
+            key: 'archive' as const,
+            title: '승인 완료 보관함',
+            caption: '승인 완료된 보고서를 별도로 보관해 추후 확인합니다.',
+            emptyText: '승인 완료된 보고서가 없습니다.',
+            reports: approvedReports
+        },
+        {
+            key: 'rejected' as const,
+            title: '반려 보고서',
+            caption: '보완 후 재제출이 필요한 보고서입니다.',
+            emptyText: '반려된 보고서가 없습니다.',
+            reports: rejectedReports
+        }
+    ];
+    const selectedGroup = groups.find(group => group.key === activeGroup) || groups[0];
     return (
-        <div className={styles.tableWrap}>
-            <table className={styles.compactTable}>
-                <thead>
-                    <tr>
-                        <th>보고서</th>
-                        <th>SV</th>
-                        <th>상태</th>
-                        <th>제출/검토</th>
-                        <th>반려 사유</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {reports.map(report => {
-                        const rowRejectReason = rejectReasons[report.id] ?? (props.rejectReason && reports.length === 1 ? props.rejectReason : '');
-                        return (
-                            <tr key={report.id}>
-                                <td>
-                                    <div className={styles.reportTitleCell}>
-                                        <strong>{report.locationName}</strong>
-                                        <small>개선필요 {report.inspectionItems.filter(item => item.result === '개선필요').length.toLocaleString()}건 · 사진 {report.photoAttachments.length.toLocaleString()}개</small>
-                                    </div>
-                                </td>
-                                <td>{report.supervisorName}</td>
-                                <td><span className={reportStatusClass(report.status)}>{report.status}</span></td>
-                                <td>
-                                    <div className={styles.statusMeta}>
-                                        <small>제출 {displayDate(report.submittedAt)}</small>
-                                        <small>검토 {displayDate(report.reviewedAt)}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    {props.canManage && report.status === '제출' ? (
-                                        <input
-                                            className={styles.inlineInput}
-                                            type="text"
-                                            value={rowRejectReason}
-                                            placeholder="반려 시 입력"
-                                            onChange={event => {
-                                                const nextReason = event.currentTarget.value;
-                                                setRejectReasons(current => ({ ...current, [report.id]: nextReason }));
-                                                if (reports.length === 1) props.onRejectReason(nextReason);
-                                            }}
-                                        />
-                                    ) : (
-                                        <span className={styles.mutedText}>{report.rejectReason || '-'}</span>
-                                    )}
-                                </td>
-                                <td>
-                                    <div className={styles.actionCell}>
-                                        <button type="button" className={styles.secondaryButton} onClick={() => props.onOpenReport(report)}>
-                                            <ClipboardCheck size={13} /> 보고서 확인
-                                        </button>
-                                        {props.canManage && report.status === '제출' ? (
-                                            <>
-                                            <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={() => props.onApprove(report)}>
-                                                <Check size={13} /> 승인
-                                            </button>
-                                            <button type="button" className={styles.dangerButton} disabled={props.disabled} onClick={() => props.onReject(report, rowRejectReason)}>
-                                                <X size={13} /> 반려
-                                            </button>
-                                            </>
-                                        ) : null}
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+        <div className={styles.reviewStack}>
+            <div className={styles.reviewSegmentTabs}>
+                {groups.map(group => (
+                    <button
+                        key={group.key}
+                        type="button"
+                        className={activeGroup === group.key ? styles.reviewSegmentTabActive : styles.reviewSegmentTab}
+                        onClick={() => setActiveGroup(group.key)}
+                    >
+                        <span>{group.title}</span>
+                        <b>{group.reports.length.toLocaleString()}</b>
+                    </button>
+                ))}
+            </div>
+            <ReportReviewGroup
+                variant={selectedGroup.key}
+                title={selectedGroup.title}
+                caption={selectedGroup.caption}
+                emptyText={selectedGroup.emptyText}
+                reports={selectedGroup.reports}
+                canManage={props.canManage}
+                disabled={props.disabled}
+                rejectReasons={rejectReasons}
+                fallbackRejectReason={selectedGroup.key === 'pending' ? props.rejectReason : ''}
+                onRejectReason={nextRejectReasons => {
+                    setRejectReasons(nextRejectReasons);
+                    const onlyReason = pendingReports.length === 1 ? nextRejectReasons[pendingReports[0]?.id || ''] || '' : '';
+                    if (selectedGroup.key === 'pending' && pendingReports.length === 1) props.onRejectReason(onlyReason);
+                }}
+                onOpenReport={props.onOpenReport}
+                onApprove={props.onApprove}
+                onReject={props.onReject}
+            />
         </div>
+    );
+}
+
+function ReportReviewGroup(props: {
+    readonly variant: 'pending' | 'archive' | 'rejected';
+    readonly title: string;
+    readonly caption: string;
+    readonly emptyText: string;
+    readonly reports: readonly SupervisionReport[];
+    readonly canManage: boolean;
+    readonly disabled: boolean;
+    readonly rejectReasons: Readonly<Record<string, string>>;
+    readonly fallbackRejectReason: string;
+    readonly onRejectReason: (rejectReasons: Readonly<Record<string, string>>) => void;
+    readonly onOpenReport: (report: SupervisionReport) => void;
+    readonly onApprove: (report: SupervisionReport) => void;
+    readonly onReject: (report: SupervisionReport, rejectReason: string) => void;
+}) {
+    const groupClassName = [
+        styles.reviewGroup,
+        props.variant === 'archive' ? styles.reviewGroupArchive : '',
+        props.variant === 'rejected' ? styles.reviewGroupRejected : '',
+        props.variant === 'pending' ? styles.reviewGroupPending : ''
+    ].filter(Boolean).join(' ');
+    return (
+        <section className={groupClassName}>
+            <div className={styles.reviewGroupHeader}>
+                <div>
+                    <strong>{props.title}</strong>
+                    <span>{props.caption}</span>
+                </div>
+                <b>{props.reports.length.toLocaleString()}건</b>
+            </div>
+            {props.reports.length === 0 ? <div className={styles.empty}>{props.emptyText}</div> : (
+                <div className={styles.tableWrap}>
+                    <table className={styles.compactTable}>
+                        <thead>
+                            <tr>
+                                <th>보고서</th>
+                                <th>SV</th>
+                                <th>상태</th>
+                                <th>제출/검토</th>
+                                <th>반려 사유</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {props.reports.map(report => {
+                                const rowRejectReason = props.rejectReasons[report.id] ?? (props.fallbackRejectReason && props.reports.length === 1 ? props.fallbackRejectReason : '');
+                                return (
+                                    <tr key={report.id}>
+                                        <td>
+                                            <div className={styles.reportTitleCell}>
+                                                <strong>{report.locationName}</strong>
+                                                <small>개선필요 {report.inspectionItems.filter(item => item.result === '개선필요').length.toLocaleString()}건 · 사진 {report.photoAttachments.length.toLocaleString()}개</small>
+                                            </div>
+                                        </td>
+                                        <td>{report.supervisorName}</td>
+                                        <td><span className={reportStatusClass(report.status)}>{report.status}</span></td>
+                                        <td>
+                                            <div className={styles.statusMeta}>
+                                                <small>제출 {displayDate(report.submittedAt)}</small>
+                                                <small>검토 {displayDate(report.reviewedAt)}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {props.canManage && report.status === '제출' ? (
+                                                <input
+                                                    className={styles.inlineInput}
+                                                    type="text"
+                                                    value={rowRejectReason}
+                                                    placeholder="반려 시 입력"
+                                                    onChange={event => props.onRejectReason({ ...props.rejectReasons, [report.id]: event.currentTarget.value })}
+                                                />
+                                            ) : (
+                                                <span className={styles.mutedText}>{report.rejectReason || '-'}</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <div className={styles.actionCell}>
+                                                <button type="button" className={styles.secondaryButton} onClick={() => props.onOpenReport(report)}>
+                                                    <ClipboardCheck size={13} /> 보고서 확인
+                                                </button>
+                                                {props.canManage && report.status === '제출' ? (
+                                                    <>
+                                                        <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={() => props.onApprove(report)}>
+                                                            <Check size={13} /> 승인
+                                                        </button>
+                                                        <button type="button" className={styles.dangerButton} disabled={props.disabled} onClick={() => props.onReject(report, rowRejectReason)}>
+                                                            <X size={13} /> 반려
+                                                        </button>
+                                                    </>
+                                                ) : null}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </section>
     );
 }
 
@@ -724,12 +829,57 @@ export function EventTimeline({ data }: { readonly data: SupervisionPayload }) {
         createdAt: event.createdAt
     }));
     const events = [...reportEvents, ...actionEvents]
-        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
-        .slice(0, 10);
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const visibleEvents = events.slice(0, 5);
     if (events.length === 0) return <div className={styles.empty}>제출/승인/시정요청 처리 이력이 없습니다.</div>;
     return (
         <div className={styles.timeline}>
-            <strong>처리 이력</strong>
+            <div className={styles.timelineHeader}>
+                <strong>전체 처리 이력</strong>
+                <span>최근 {visibleEvents.length.toLocaleString()}건 / 전체 {events.length.toLocaleString()}건</span>
+            </div>
+            {visibleEvents.map(event => (
+                <div key={event.id} className={styles.timelineItem}>
+                    <span>{event.title}</span>
+                    <small>{event.actorName} · {event.createdAt?.slice(0, 16).replace('T', ' ') || '-'}</small>
+                    {event.memo ? <p>{event.memo}</p> : null}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function ReportScopedTimeline(props: {
+    readonly reportEvents: readonly SupervisionReportEvent[];
+    readonly correctiveActions: readonly SupervisionCorrectiveAction[];
+    readonly correctiveActionEvents: readonly SupervisionCorrectiveActionEvent[];
+}) {
+    const actionIds = new Set(props.correctiveActions.map(action => action.id));
+    const events = [
+        ...props.reportEvents.map(event => ({
+            id: `report-${event.id}`,
+            title: `보고서 ${event.eventType}`,
+            actorName: event.actorName,
+            memo: event.memo,
+            createdAt: event.createdAt
+        })),
+        ...props.correctiveActionEvents
+            .filter(event => actionIds.has(event.correctiveActionId))
+            .map(event => ({
+                id: `action-${event.id}`,
+                title: `시정요청 ${event.eventType}`,
+                actorName: event.actorName,
+                memo: event.memo || [event.fromStatus, event.toStatus].filter(Boolean).join(' → '),
+                createdAt: event.createdAt
+            }))
+    ].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    if (events.length === 0) return null;
+    return (
+        <div className={styles.timeline}>
+            <div className={styles.timelineHeader}>
+                <strong>이 보고서 처리 이력</strong>
+                <span>{events.length.toLocaleString()}건</span>
+            </div>
             {events.map(event => (
                 <div key={event.id} className={styles.timelineItem}>
                     <span>{event.title}</span>

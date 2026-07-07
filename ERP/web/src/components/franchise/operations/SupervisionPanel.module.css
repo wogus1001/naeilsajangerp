@@ -1127,6 +1127,146 @@ button.listItem {
     font-weight: 700;
 }
 
+.reviewStack {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.reviewSegmentTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+.reviewSegmentTab,
+.reviewSegmentTabActive {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 0 14px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.reviewSegmentTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.reviewSegmentTab span,
+.reviewSegmentTabActive span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reviewSegmentTab b,
+.reviewSegmentTabActive b {
+    display: inline-flex;
+    min-width: 24px;
+    min-height: 24px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 7px;
+    background: #f2f4f6;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.reviewSegmentTabActive b {
+    background: #ffffff;
+    color: #1b64da;
+}
+
+.reviewGroup {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 14px;
+    background: #ffffff;
+}
+
+.reviewGroupPending {
+    border-color: #d7e8ff;
+    background: #f7fbff;
+}
+
+.reviewGroupArchive {
+    border-color: #d8f5e8;
+    background: #f4fbf8;
+}
+
+.reviewGroupRejected {
+    border-color: #ffc9c9;
+    background: #fff8f8;
+}
+
+.reviewGroupHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.reviewGroupHeader div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.reviewGroupHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.reviewGroupHeader span {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.reviewGroupHeader b {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0 8px;
+    background: #e8f3ff;
+    color: #1b64da;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.reviewGroupArchive .reviewGroupHeader b {
+    background: #e6fcf5;
+    color: #087f5b;
+}
+
+.reviewGroupRejected .reviewGroupHeader b {
+    background: #fff5f5;
+    color: #e03131;
+}
+
 .statusMeta select {
     width: 100%;
     min-width: 120px;
@@ -1204,10 +1344,25 @@ button.listItem {
     background: #fbfcfe;
 }
 
-.timeline > strong {
+.timelineHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.timelineHeader strong {
     color: #191f28;
     font-size: 13px;
     font-weight: 900;
+}
+
+.timelineHeader span {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
 .timelineItem {

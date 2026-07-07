@@ -25,6 +25,13 @@
 
 ## 개발 과정 로그
 
+### 2026-07-07
+
+- 슈퍼바이징 `승인·시정요청` 탭의 보고서 검토 화면을 세션 단위로 정리했다. `승인 대기`, `승인 완료 보관함`, `반려 보고서`를 내부 탭으로 분리하고, 전역 처리 이력은 제거했다. 각 보고서의 제출/승인/반려/시정요청 이력은 `보고서 확인` 상세 화면 안의 `이 보고서 처리 이력`에서만 확인한다.
+- 검증: `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. build는 기존 baseline-browser-mapping/Browserslist/root inference 경고만 출력했다.
+- 브라우저 QA: 로컬 `http://localhost:3000/dashboard/franchise-operations`에서 `내일 / 관리자` 세션으로 `슈퍼바이징 > 승인·시정요청`에 진입했다. 기본 세션은 `승인 대기 0`만 표시하고 전역 `전체 처리 이력`은 노출되지 않았다. `승인 완료 보관함`에서 승인 보고서 1건을 확인했고, `보고서 확인`을 연 뒤에만 `이 보고서 처리 이력`이 표시되는 것을 확인했다. 승인 완료 보고서 상세는 읽기 전용 상태로 확인했다.
+- 이번 슈퍼바이징 보고서 이력 UI 정리 범위의 신규 SQL은 없다.
+
 ### 2026-07-01
 
 - 운영 배포 전 검증으로 `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts`, `npm run build`를 통과했다.

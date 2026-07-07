@@ -34,7 +34,6 @@ import { printSupervisionReport } from './SupervisionPanelPrint';
 import {
     CorrectiveActionList,
     DashboardOverview,
-    EventTimeline,
     ReportEditor,
     ReportList,
     ReportReviewList,
@@ -212,6 +211,18 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
     const selectedVisit = data.visits.find(visit => visit.id === selectedVisitId) || data.visits[0] || null;
     const selectedReportId = selectedVisit ? reportListItems.find(item => item.visitId === selectedVisit.id)?.reportId || '' : '';
     const selectedReport = selectedReportId ? data.reports.find(report => report.id === selectedReportId) || null : null;
+    const selectedReportEvents = React.useMemo(
+        () => selectedReport ? data.reportEvents.filter(event => event.reportId === selectedReport.id) : [],
+        [data.reportEvents, selectedReport]
+    );
+    const selectedReportActions = React.useMemo(
+        () => selectedReport ? data.correctiveActions.filter(action => action.reportId === selectedReport.id) : [],
+        [data.correctiveActions, selectedReport]
+    );
+    const selectedReportActionEvents = React.useMemo(() => {
+        const actionIds = new Set(selectedReportActions.map(action => action.id));
+        return data.correctiveActionEvents.filter(event => actionIds.has(event.correctiveActionId));
+    }, [data.correctiveActionEvents, selectedReportActions]);
     const visibleReportItems = React.useMemo(
         () => filterReportItems(reportListItems, activeFilter),
         [activeFilter, reportListItems]
@@ -519,6 +530,9 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                     inspectionItems={inspectionItems}
                                     photoCount={photoFiles.length}
                                     report={selectedReport}
+                                    reportEvents={selectedReportEvents}
+                                    correctiveActions={selectedReportActions}
+                                    correctiveActionEvents={selectedReportActionEvents}
                                     selectedVisit={selectedVisit}
                                     specialNote={specialNote}
                                     templateName={templateName}
@@ -556,7 +570,6 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                 onReject={(report, reason) => void submitReport('reject', report, reason)}
                             />
                             <CorrectiveActionList actions={visibleActions} disabled={isSaving} onStatusChange={changeActionStatus} />
-                            <EventTimeline data={data} />
                         </div>
                     </section>
                 </div>
