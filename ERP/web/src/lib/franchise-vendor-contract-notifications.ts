@@ -13,6 +13,7 @@ export type VendorContractNotificationContract = {
 
 export type VendorContractNotificationRecipient = {
     readonly companyId: string;
+    readonly contractId?: string | null;
     readonly profileId: string;
 };
 
@@ -54,7 +55,7 @@ function createVendorContractCandidate(
         leadId: null,
         recipientProfileId: cleanRecipientProfileId,
         severity: remainingDays <= 7 ? 'danger' : 'warning',
-        sourceId: `${contract.id}:vendor-contract-due:${remainingDays}`,
+        sourceId: `${contract.id}:vendor-contract-due`,
         sourceType: 'vendor-contract-due',
         title: `업체 계약 D-${remainingDays}`
     };
@@ -69,7 +70,7 @@ export function buildVendorContractNotifications(
     for (const recipient of recipients) {
         const companyId = cleanString(recipient.companyId);
         const profileId = cleanString(recipient.profileId);
-        if (!companyId || !profileId) continue;
+        if (!companyId || !profileId || cleanString(recipient.contractId)) continue;
         const companyRecipients = recipientsByCompany.get(companyId) || new Set<string>();
         companyRecipients.add(profileId);
         recipientsByCompany.set(companyId, companyRecipients);
@@ -81,12 +82,18 @@ export function buildVendorContractNotifications(
         }
 
         const remainingDays = daysUntilDate(contract.contractEndDate, now);
-        if (remainingDays !== 30 && remainingDays !== 7) return [];
+        if (remainingDays === null || remainingDays < 0 || remainingDays > 30) return [];
 
         const companyId = cleanString(contract.companyId);
-        const recipientsForContract = new Set(recipientsByCompany.get(companyId) || []);
+        const managerRecipients = recipientsByCompany.get(companyId) || new Set<string>();
+        const recipientsForContract = new Set(managerRecipients);
         const ownerProfileId = cleanString(contract.ownerProfileId);
-        if (ownerProfileId && recipientsByCompany.get(companyId)?.has(ownerProfileId)) {
+        const ownerIsScopedToContract = recipients.some(recipient =>
+            cleanString(recipient.companyId) === companyId
+            && cleanString(recipient.profileId) === ownerProfileId
+            && cleanString(recipient.contractId) === contract.id
+        );
+        if (ownerProfileId && ownerIsScopedToContract) {
             recipientsForContract.add(ownerProfileId);
         }
 

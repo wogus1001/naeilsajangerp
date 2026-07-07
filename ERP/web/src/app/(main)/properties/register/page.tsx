@@ -176,7 +176,9 @@ export default function RegisterPropertyPage() {
             try {
                 const companyId = getCompanyId();
                 if (companyId) {
-                    const res = await fetch(`/api/categories?companyId=${companyId}&type=industry_detail`);
+                    const res = await fetch(`/api/categories?companyId=${companyId}&type=industry_detail`, {
+                        headers: await getApiAuthHeaders()
+                    });
                     if (res.ok) {
                         const data = await readApiJson(res);
                         setCustomCategories(data);
@@ -738,9 +740,10 @@ export default function RegisterPropertyPage() {
         const createdBy = user.id || user.userId;
 
         if (companyId) {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             const res = await fetch('/api/categories', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     companyId: companyId,
                     categoryType: 'industry_detail',

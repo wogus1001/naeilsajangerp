@@ -52,6 +52,10 @@ type NotificationRecipientProfileRow = {
     readonly id: string;
     readonly company_id: string | null;
 };
+type NotificationCronCompanyRow = {
+    readonly company_id: string | null;
+};
+const DUE_NOTIFICATION_SOURCE_TYPES = new Set(['disclosure-due', 'vendor-contract-due']);
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
@@ -209,16 +213,26 @@ async function fetchVendorContractNotificationRecipients(
         : { data: [], error: null };
     if (ownerError) throw ownerError;
 
-    const recipients = [...(data || []), ...(owners || [])]
+    const managerRecipients = (data || [])
         .filter(row => row.company_id)
         .map(row => ({
             companyId: row.company_id || '',
+            contractId: null,
             profileId: row.id
         }));
+    const ownerProfilesById = new Map((owners || []).map(row => [row.id, row]));
+    const ownerRecipients = contracts.flatMap(contract => {
+        const ownerProfileId = cleanString(contract.ownerProfileId);
+        const owner = ownerProfileId ? ownerProfilesById.get(ownerProfileId) : null;
+        if (!owner?.company_id || owner.company_id !== contract.companyId) return [];
+        return [{
+            companyId: owner.company_id,
+            contractId: contract.id,
+            profileId: owner.id
+        }];
+    });
 
-    return requesterIsAdmin || recipients.some(recipient => recipient.profileId === requesterId)
-        ? recipients
-        : [...recipients, { companyId: companyId || '', profileId: requesterId }].filter(recipient => recipient.companyId);
+    return [...managerRecipients, ...ownerRecipients];
 }
 
 async function syncAutomaticNotifications(
@@ -242,7 +256,7 @@ async function syncAutomaticNotifications(
         .from('franchise_notifications')
         .select('id, source_id')
         .is('dismissed_at', null)
-        .in('source_type', [...FRANCHISE_NOTIFICATION_SOURCE_TYPES]);
+        .in('source_type', [...FRANCHISE_NOTIFICATION_SOURCE_TYPES].filter(sourceType => !DUE_NOTIFICATION_SOURCE_TYPES.has(sourceType)));
 
     if (scope.companyId) query = query.eq('company_id', scope.companyId);
     if (!scope.requesterIsAdmin) query = query.eq('recipient_profile_id', scope.requesterId);
@@ -265,13 +279,68 @@ async function syncAutomaticNotifications(
     if (updateError) throw updateError;
 }
 
+async function runScheduledNotificationGeneration(): Promise<{ readonly companyCount: number; readonly notificationCount: number }> {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('company_id')
+        .eq('role', 'manager')
+        .eq('status', 'active')
+        .not('company_id', 'is', null)
+        .returns<NotificationCronCompanyRow[]>();
+    if (error) throw error;
+
+    const companyIds = [...new Set((data || []).map(row => cleanString(row.company_id)).filter(Boolean))];
+    let notificationCount = 0;
+
+    for (const companyId of companyIds) {
+        const [leads, vendorContracts] = await Promise.all([
+            fetchNotificationLeads(companyId, '', true, 'admin'),
+            fetchVendorContractsForNotifications(companyId, true)
+        ]);
+        const vendorRecipients = await fetchVendorContractNotificationRecipients(companyId, '', true, vendorContracts);
+        const notificationCandidates = [
+            ...buildAutomaticFranchiseNotifications(leads),
+            ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
+        ];
+        await syncAutomaticNotifications(notificationCandidates, {
+            companyId,
+            requesterId: '',
+            requesterIsAdmin: true
+        });
+        if (canDispatchFranchiseNotificationAlimtalk({ companyId, requesterIsAdmin: true })) {
+            try {
+                await notifyAlimtalkFranchiseNotificationCandidates(supabaseAdmin, notificationCandidates);
+            } catch (error) {
+                console.error(
+                    'Scheduled franchise notification AlimTalk dispatch failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+        }
+        notificationCount += notificationCandidates.length;
+    }
+
+    return { companyCount: companyIds.length, notificationCount };
+}
+
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
+        const { searchParams } = new URL(request.url);
+        if (searchParams.get('cron') === '1') {
+            const secret = process.env.CRON_SECRET;
+            const authHeader = request.headers.get('authorization');
+            if (!secret || authHeader !== `Bearer ${secret}`) {
+                return fail(401, 'AUTH_REQUIRED', 'Invalid cron secret');
+            }
+            const result = await runScheduledNotificationGeneration();
+            return ok({ success: true, ...result });
+        }
+
         const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
 
-        const { searchParams } = new URL(request.url);
         const requestedCompanyName = cleanString(searchParams.get('company') || searchParams.get('companyName'));
         const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
         const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;

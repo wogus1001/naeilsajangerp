@@ -463,6 +463,9 @@ export async function PUT(request: Request) {
         if (existingIsWorkIntake && !canManageWorkIntakeRecord(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
         }
+        if (!existingIsWorkIntake && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && existing.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: property update requires assigned manager or team lead');
+        }
 
         // 2. Prepare updates
         const { companyName, managerId, name, status, operationType, address, isFavorite, ...rest } = body;
@@ -568,6 +571,9 @@ export async function DELETE(request: Request) {
         }
         if (isWorkIntakeProperty(targetProperty) && !canManageWorkIntakeRecord(requesterProfile, targetProperty)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
+        }
+        if (!isWorkIntakeProperty(targetProperty) && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && targetProperty.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: property delete requires assigned manager or team lead');
         }
 
         if (!isAdmin(requesterProfile) && company) {

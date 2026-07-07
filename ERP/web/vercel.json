@@ -3,6 +3,10 @@
     {
       "path": "/api/integrations/meta/sync",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/franchise-notifications?cron=1",
+      "schedule": "0 0 * * *"
     }
   ]
 }

@@ -30,6 +30,23 @@ test('buildAutomaticFranchiseNotifications creates disclosure D-3 reminder', () 
     assert.equal(notifications.some(item => item.sourceType === 'disclosure-due' && item.title === '정보공개서 D-3'), true);
 });
 
+test('buildAutomaticFranchiseNotifications keeps disclosure due source id stable during D-3 through D-1 window', () => {
+    const disclosureSummary = buildLeadDisclosureSummary([
+        { id: 'delivery-1', sentAt: '2026-06-03T00:00:00.000Z', sendStatus: 'sent' }
+    ], new Date('2026-06-14T00:00:00.000Z'));
+
+    const d3Notification = buildAutomaticFranchiseNotifications([
+        { ...baseLead, disclosureSummary }
+    ], new Date('2026-06-14T00:00:00.000Z')).find(item => item.sourceType === 'disclosure-due');
+    const d2Notification = buildAutomaticFranchiseNotifications([
+        { ...baseLead, disclosureSummary: { ...disclosureSummary, remainingDays: 2 } }
+    ], new Date('2026-06-15T00:00:00.000Z')).find(item => item.sourceType === 'disclosure-due');
+
+    assert.equal(d3Notification?.sourceId, 'lead-1:disclosure-due:delivery-1');
+    assert.equal(d2Notification?.sourceId, 'lead-1:disclosure-due:delivery-1');
+    assert.equal(d2Notification?.title, '정보공개서 D-2');
+});
+
 test('buildAutomaticFranchiseNotifications links notification to lead detail tab', () => {
     const notifications = buildAutomaticFranchiseNotifications([
         { ...baseLead, nextContactAt: '2026-06-13T09:00:00.000Z', disclosureSummary: buildLeadDisclosureSummary([]) }
@@ -94,17 +111,19 @@ test('buildVendorContractNotifications creates D-30 and D-7 alerts for owner and
         }
     ], [
         { companyId: 'company-1', profileId: 'manager-1' },
-        { companyId: 'company-1', profileId: 'owner-1' },
-        { companyId: 'company-1', profileId: 'owner-2' }
+        { companyId: 'company-1', contractId: 'vendor-contract-1', profileId: 'owner-1' },
+        { companyId: 'company-1', contractId: 'vendor-contract-2', profileId: 'owner-2' }
     ], new Date('2026-07-01T09:00:00+09:00'));
 
     assert.equal(notifications.some(item => item.title === '업체 계약 D-30'), true);
     assert.equal(notifications.some(item => item.title === '업체 계약 D-7' && item.severity === 'danger'), true);
-    assert.equal(notifications.some(item => item.recipientProfileId === 'owner-2'), true);
+    assert.equal(notifications.some(item => item.sourceId === 'vendor-contract-2:vendor-contract-due'), true);
+    assert.equal(notifications.some(item => item.recipientProfileId === 'owner-2' && item.actionUrl.includes('vendor-contract-2')), true);
+    assert.equal(notifications.some(item => item.recipientProfileId === 'owner-1' && item.actionUrl.includes('vendor-contract-2')), false);
     assert.equal(notifications.some(item => item.actionUrl === '/contracts/vendor?contractId=vendor-contract-2'), true);
 });
 
-test('buildVendorContractNotifications skips terminal contracts and non-reminder days', () => {
+test('buildVendorContractNotifications keeps active contracts in the D-30 window until expiry', () => {
     const notifications = buildVendorContractNotifications([
         {
             companyId: 'company-1',
@@ -128,7 +147,9 @@ test('buildVendorContractNotifications skips terminal contracts and non-reminder
         { companyId: 'company-1', profileId: 'manager-1' }
     ], new Date('2026-07-01T09:00:00+09:00'));
 
-    assert.equal(notifications.length, 0);
+    assert.equal(notifications.length, 1);
+    assert.equal(notifications[0]?.title, '업체 계약 D-29');
+    assert.equal(notifications[0]?.sourceId, 'vendor-contract-2:vendor-contract-due');
 });
 
 test('buildVendorContractNotifications skips stale owner recipients outside contract company', () => {
@@ -144,7 +165,7 @@ test('buildVendorContractNotifications skips stale owner recipients outside cont
         }
     ], [
         { companyId: 'company-1', profileId: 'manager-1' },
-        { companyId: 'company-2', profileId: 'stale-owner' }
+        { companyId: 'company-2', contractId: 'vendor-contract-1', profileId: 'stale-owner' }
     ], new Date('2026-07-01T09:00:00+09:00'));
 
     assert.equal(notifications.some(item => item.recipientProfileId === 'stale-owner'), false);

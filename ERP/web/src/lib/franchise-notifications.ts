@@ -117,12 +117,15 @@ function createCandidate(
     const companyId = cleanString(lead.companyId);
     const recipientProfileId = cleanString(lead.managerId);
     if (!companyId || !recipientProfileId) return null;
+    const sourceIdSuffix = sourceType === 'disclosure-due'
+        ? cleanString(data.deliveryId)
+        : cleanString(data.remainingDays);
 
     return {
         companyId,
         recipientProfileId,
         sourceType,
-        sourceId: `${lead.id}:${sourceType}:${data.remainingDays ?? ''}`,
+        sourceId: `${lead.id}:${sourceType}:${sourceIdSuffix}`,
         leadId: lead.id,
         severity,
         title,
@@ -180,7 +183,7 @@ export function buildAutomaticFranchiseNotifications(
             }
         }
 
-        if (disclosure?.remainingDays === 3 || disclosure?.remainingDays === 1) {
+        if (typeof disclosure?.remainingDays === 'number' && disclosure.remainingDays >= 1 && disclosure.remainingDays <= 3) {
             const candidate = createCandidate(
                 lead,
                 'disclosure-due',

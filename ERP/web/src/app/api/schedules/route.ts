@@ -182,12 +182,12 @@ export async function POST(request: Request) {
             .from('schedules')
             .insert({
                 id: randomUUID(),
+                ...rest,
                 company_id: companyId,
                 user_id: userUuid,
                 customer_id: customerId || null,
                 property_id: propertyId || null,
                 business_card_id: businessCardId || null,
-                ...rest,
                 created_at: new Date().toISOString()
             })
             .select('*, user:profiles(name), company:companies(name)')

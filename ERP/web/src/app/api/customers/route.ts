@@ -383,6 +383,9 @@ export async function PUT(request: Request) {
         if (!canAccessCompanyResource(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
+        if (!isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && existing.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: customer update requires assigned manager or team lead');
+        }
 
         const updates: any = { updated_at: new Date().toISOString() };
         const targetData = { ...(existing.data || {}), ...rest };
@@ -550,6 +553,12 @@ export async function DELETE(request: Request) {
             if (forbidden) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
             }
+            const unauthorized = allTargets.some(target =>
+                !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && target.manager_id !== requesterProfile.id
+            );
+            if (unauthorized) {
+                return fail(403, 'FORBIDDEN', 'Forbidden: customer delete requires assigned manager or team lead');
+            }
 
             // 청크 단위로 삭제 수행
             const BATCH_SIZE = 200;
@@ -585,6 +594,9 @@ export async function DELETE(request: Request) {
 
         if (!canAccessCompanyResource(requesterProfile, target)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
+        }
+        if (!isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && target.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: customer delete requires assigned manager or team lead');
         }
 
         const { error } = await supabaseAdmin
