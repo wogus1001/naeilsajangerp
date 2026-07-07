@@ -177,6 +177,9 @@ export async function PATCH(request: Request) {
         const now = new Date().toISOString();
         const currentStatus = normalizeReportStatus(existing.status);
         const nextStatus = nextReportStatus(currentStatus, event);
+        if (nextStatus === currentStatus && event.kind === 'submit' && currentStatus === '제출') {
+            return ok({ success: true, id: existing.id, status: currentStatus });
+        }
         if (nextStatus === currentStatus && event.kind !== 'saveDraft') {
             return fail(409, 'VALIDATION_ERROR', '현재 보고서 상태에서는 요청한 처리를 할 수 없습니다.');
         }

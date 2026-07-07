@@ -178,6 +178,11 @@ export function normalizeReportStatus(value: unknown): SupervisionReportStatus {
     return isOneOf(candidate, SUPERVISION_REPORT_STATUSES) ? candidate : '임시저장';
 }
 
+export function canEditSupervisionReport(status: unknown): boolean {
+    const currentStatus = normalizeReportStatus(status);
+    return currentStatus === '임시저장' || currentStatus === '반려';
+}
+
 export function normalizeItemResult(value: unknown): SupervisionItemResult {
     const candidate = cleanString(value);
     return isOneOf(candidate, SUPERVISION_ITEM_RESULTS) ? candidate : '양호';

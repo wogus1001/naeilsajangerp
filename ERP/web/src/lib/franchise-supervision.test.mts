@@ -5,6 +5,7 @@ import {
     buildCorrectiveActionSeeds,
     buildSupervisionReportListItems,
     buildSupervisionScheduleInsert,
+    canEditSupervisionReport,
     isMissingSupervisionReportItem,
     mergeInspectionItems,
     nextReportStatus,
@@ -230,6 +231,14 @@ void test('Given a submitted report When approving or rejecting Then only submit
     assert.equal(nextReportStatus('승인', { kind: 'submit' }), '승인');
     assert.equal(nextReportStatus('제출', { kind: 'saveDraft' }), '제출');
     assert.equal(nextReportStatus('반려', { kind: 'submit' }), '제출');
+});
+
+void test('Given a report status When editing Then only draft or rejected reports are writable', () => {
+    assert.equal(canEditSupervisionReport(undefined), true);
+    assert.equal(canEditSupervisionReport('임시저장'), true);
+    assert.equal(canEditSupervisionReport('반려'), true);
+    assert.equal(canEditSupervisionReport('제출'), false);
+    assert.equal(canEditSupervisionReport('승인'), false);
 });
 
 void test('Given inspection items When only improvement-needed items exist Then corrective action seeds are created for those items', () => {

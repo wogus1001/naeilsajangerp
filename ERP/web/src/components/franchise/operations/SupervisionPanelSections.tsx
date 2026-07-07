@@ -4,6 +4,7 @@ import React from 'react';
 import { Check, ClipboardCheck, Pencil, Plus, Printer, Save, Send, Trash2, X } from 'lucide-react';
 import {
     CORRECTIVE_ACTION_STATUSES,
+    canEditSupervisionReport,
     kstDateKey,
     normalizeItemResult,
     SUPERVISION_ITEM_RESULTS,
@@ -364,7 +365,8 @@ export function ReportEditor(props: {
     readonly onBackToList: () => void;
 }) {
     if (!props.selectedVisit) return <div className={styles.empty}>보고서를 작성할 방문 일정을 선택해주세요.</div>;
-    const canSubmit = props.report?.status !== '승인';
+    const canEditReport = canEditSupervisionReport(props.report?.status);
+    const editorDisabled = props.disabled || !canEditReport;
     const summary = summarizeInspectionItems(props.inspectionItems);
     const actionRequiredItems = getActionRequiredInspectionItems(props.inspectionItems);
     const savedPhotoCount = props.report?.photoAttachments.length ?? 0;
@@ -435,9 +437,10 @@ export function ReportEditor(props: {
                             type="text"
                             value={props.templateName}
                             placeholder="예: 정기 방문 점검 템플릿"
+                            disabled={editorDisabled}
                             onChange={event => props.onTemplateName(event.currentTarget.value)}
                         />
-                        <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onSaveTemplate}>
+                        <button type="button" className={styles.secondaryButton} disabled={editorDisabled} onClick={props.onSaveTemplate}>
                             <Save size={13} /> 템플릿 저장
                         </button>
                     </div>
@@ -446,7 +449,7 @@ export function ReportEditor(props: {
             <SupervisionReportAiSummaryPanel
                 userId={props.userId}
                 companyName={props.companyName}
-                disabled={props.disabled}
+                disabled={editorDisabled}
                 selectedVisitId={props.selectedVisit.id}
                 inspectionItems={props.inspectionItems}
                 onApplySummary={props.onApplyAiSummary}
@@ -461,6 +464,7 @@ export function ReportEditor(props: {
                         </div>
                         <select
                             value={item.result}
+                            disabled={editorDisabled}
                             onChange={event => props.onItemChange(props.inspectionItems.map(next => (
                                 next.id === item.id ? { ...next, result: normalizeItemResult(event.currentTarget.value) } : next
                             )))}
@@ -470,6 +474,7 @@ export function ReportEditor(props: {
                         <textarea
                             value={item.memo}
                             placeholder="현장 확인 내용, 수치, 후속 조치 메모"
+                            disabled={editorDisabled}
                             onChange={event => props.onItemChange(props.inspectionItems.map(next => (
                                 next.id === item.id ? { ...next, memo: event.currentTarget.value } : next
                             )))}
@@ -478,10 +483,10 @@ export function ReportEditor(props: {
                 ))}
             </div>
             <div className={styles.reportFooterGrid}>
-                <TextField label="특이사항" value={props.specialNote} placeholder="본사 지원 필요사항, 현장 이슈" onChange={props.onSpecialNote} />
+                <TextField label="특이사항" value={props.specialNote} placeholder="본사 지원 필요사항, 현장 이슈" disabled={editorDisabled} onChange={props.onSpecialNote} />
                 <div className={styles.field}>
                     <label>사진 첨부</label>
-                    <input type="file" multiple accept="image/*" onChange={event => props.onFiles(Array.from(event.currentTarget.files || []))} />
+                    <input type="file" multiple accept="image/*" disabled={editorDisabled} onChange={event => props.onFiles(Array.from(event.currentTarget.files || []))} />
                     <small>선택 {props.photoCount.toLocaleString()}개 · 저장된 사진 {savedPhotoCount.toLocaleString()}개</small>
                 </div>
             </div>
@@ -489,16 +494,17 @@ export function ReportEditor(props: {
                 <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onBackToList}>
                     목록으로
                 </button>
-                <button type="button" className={styles.secondaryButton} disabled={props.disabled || !canSubmit} onClick={props.onSave}>
+                <button type="button" className={styles.secondaryButton} disabled={editorDisabled} onClick={props.onSave}>
                     <Save size={13} /> 임시저장
                 </button>
-                <button type="button" className={styles.primaryButton} disabled={props.disabled || !canSubmit} onClick={props.onSubmit}>
-                    <Send size={13} /> 제출
+                <button type="button" className={styles.primaryButton} disabled={editorDisabled} onClick={props.onSubmit}>
+                    <Send size={13} /> {props.report?.status === '제출' ? '제출 완료' : '제출'}
                 </button>
                 <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={props.onPrint}>
                     <Printer size={13} /> PDF/인쇄
                 </button>
                 {props.canManage && props.report?.status === '제출' ? <span className={styles.badgeBlue}>승인 대기</span> : null}
+                {!canEditReport && props.report?.status !== '제출' ? <span className={reportStatusClass(props.report?.status || '임시저장')}>{props.report?.status}</span> : null}
             </div>
         </div>
     );
@@ -566,6 +572,7 @@ export function ReportReviewList(props: {
     readonly reports: readonly SupervisionReport[];
     readonly rejectReason: string;
     readonly onRejectReason: (value: string) => void;
+    readonly onOpenReport: (report: SupervisionReport) => void;
     readonly onApprove: (report: SupervisionReport) => void;
     readonly onReject: (report: SupervisionReport, rejectReason: string) => void;
 }) {
@@ -622,18 +629,21 @@ export function ReportReviewList(props: {
                                     )}
                                 </td>
                                 <td>
-                                    {props.canManage && report.status === '제출' ? (
-                                        <div className={styles.actionCell}>
+                                    <div className={styles.actionCell}>
+                                        <button type="button" className={styles.secondaryButton} onClick={() => props.onOpenReport(report)}>
+                                            <ClipboardCheck size={13} /> 보고서 확인
+                                        </button>
+                                        {props.canManage && report.status === '제출' ? (
+                                            <>
                                             <button type="button" className={styles.secondaryButton} disabled={props.disabled} onClick={() => props.onApprove(report)}>
                                                 <Check size={13} /> 승인
                                             </button>
                                             <button type="button" className={styles.dangerButton} disabled={props.disabled} onClick={() => props.onReject(report, rowRejectReason)}>
                                                 <X size={13} /> 반려
                                             </button>
-                                        </div>
-                                    ) : (
-                                        <span className={styles.mutedText}>-</span>
-                                    )}
+                                            </>
+                                        ) : null}
+                                    </div>
                                 </td>
                             </tr>
                         );
@@ -766,12 +776,13 @@ function TextField(props: {
     readonly label: string;
     readonly value: string;
     readonly placeholder?: string;
+    readonly disabled?: boolean;
     readonly onChange: (value: string) => void;
 }) {
     return (
         <div className={`${styles.field} ${styles.fieldFull}`}>
             <label>{props.label}</label>
-            <textarea value={props.value} placeholder={props.placeholder} onChange={event => props.onChange(event.currentTarget.value)} />
+            <textarea value={props.value} placeholder={props.placeholder} disabled={props.disabled} onChange={event => props.onChange(event.currentTarget.value)} />
         </div>
     );
 }

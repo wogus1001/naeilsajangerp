@@ -355,6 +355,15 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
         await runSaving(() => updateCorrectiveAction({ ...scope, companyId: data.companyId, id: action.id, status, memo: action.memo }));
     };
 
+    const openReportForReview = (report: SupervisionReport) => {
+        if (report.visitId) {
+            setSelectedVisitId(report.visitId);
+        }
+        setActiveFilter('all');
+        setActiveView('reports');
+        setReportMode('editor');
+    };
+
     const openQueueItem = (item: SupervisionOperationQueueItem) => {
         setActiveView(item.target);
         setActiveFilter(QUEUE_FILTER_BY_TYPE[item.type]);
@@ -542,6 +551,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                 reports={visibleReports}
                                 rejectReason={rejectReason}
                                 onRejectReason={setRejectReason}
+                                onOpenReport={openReportForReview}
                                 onApprove={report => void submitReport('approve', report)}
                                 onReject={(report, reason) => void submitReport('reject', report, reason)}
                             />
