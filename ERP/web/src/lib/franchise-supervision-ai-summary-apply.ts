@@ -8,6 +8,19 @@ import type {
 const REPORT_TONE_ISSUE_PATTERN = /(합니다|했습니다|해요|하셨습니다|같습니다|라고 합니다|라고 하셨|드리기로|얘기함|다녀왔고)/;
 const FOLLOW_UP_HINT_PATTERN = /(필요|예정|확인|요청|재교육|전달|개선|보완|사진|기한|담당|완료|진행)/;
 
+function buildAppliedSpecialNote(input: {
+    readonly existingSpecialNote: string;
+    readonly overallNote: string;
+    readonly specialNote: string;
+}): string {
+    const overallNote = input.overallNote.trim();
+    const specialNote = input.specialNote.trim();
+    if (overallNote && specialNote) return `종합 요약: ${overallNote}\n후속 확인: ${specialNote}`;
+    if (overallNote) return `종합 요약: ${overallNote}`;
+    if (specialNote) return specialNote;
+    return input.existingSpecialNote;
+}
+
 export function applySupervisionReportAiSummary({
     inspectionItems,
     specialNote,
@@ -25,7 +38,11 @@ export function applySupervisionReportAiSummary({
                 memo: next.memo || item.memo
             };
         }),
-        specialNote: summary.specialNote || summary.overallNote || specialNote
+        specialNote: buildAppliedSpecialNote({
+            existingSpecialNote: specialNote,
+            overallNote: summary.overallNote,
+            specialNote: summary.specialNote
+        })
     };
 }
 

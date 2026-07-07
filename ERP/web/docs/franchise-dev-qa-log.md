@@ -1097,3 +1097,10 @@
 - 보정: AI helper를 parser/prompt/fallback/apply/text/types 파일로 분리하고, AI/NVIDIA 회귀 테스트를 `franchise-supervision-ai-summary.test.mts`로 분리했다. 품질 경고는 대화체·존댓말 표현, 짧은 주의/개선필요 기록, 후속조치 부재, 원문 근거 부재를 적용 전 확인하도록 표시한다. 화면에는 `NVIDIA NIM`, `사용 모델` 문구를 노출하지 않는다.
 - 신규 SQL: 없음.
 - 검증: `npx tsx --test src/lib/franchise-supervision.test.mts src/lib/franchise-supervision-ai-summary.test.mts` 30건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://localhost:3000`에서 Playwright로 `내일 / admin` 로그인 후 슈퍼바이징 점검 보고서 AI 패널 노출, 모델명 미노출, mock AI 응답 기반 항목별 적용/원문 근거/검토 UI 렌더링, 390px 모바일 가로 overflow 없음, console error 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-07 슈퍼바이징 AI 보고서 출력 중복 제거 QA
+
+- 범위: 운영 PDF 확인 결과 `조치 필요 항목` 카드와 `전체 점검 내역` 표에 동일한 긴 메모가 반복되어 보고서가 장황하게 보이는 문제를 보정했다.
+- 보정: AI 프롬프트와 응답 정규화에서 `점주 의견 기준`, `직원 진술 기준` 같은 출처 접두어가 항목마다 반복되지 않게 했다. AI 종합 요약은 보고서 특이사항에 `종합 요약`으로 남기고, 후속 확인 사항은 별도 줄로 유지한다. PDF/인쇄의 `조치 필요 항목`은 상태와 항목명만 요약하고, 상세 메모는 `전체 점검 내역` 표에서만 확인하게 했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-supervision-ai-summary.test.mts src/lib/franchise-supervision.test.mts` 30건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://localhost:3000`에서 Playwright로 `내일 / admin` 로그인 후 `가맹 운영 > 슈퍼바이징 > 점검 보고서 > 보고서 작성`에 진입했고, AI 패널에서 모델명/엔비디아 문구 미노출, PDF/인쇄 팝업에서 `조치 필요 항목`과 `전체 점검 내역`이 중복 메모 없이 분리되는 것을 확인했다.

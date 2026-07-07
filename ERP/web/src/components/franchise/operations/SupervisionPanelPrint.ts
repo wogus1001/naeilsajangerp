@@ -21,6 +21,9 @@ export function printSupervisionReport(input: {
     const report = input.report;
     const summary = summarizeInspectionItems(input.items);
     const actionRequiredItems = getActionRequiredInspectionItems(input.items);
+    const actionTitle = actionRequiredItems.length > 0
+        ? `주의 ${summary.warningCount.toLocaleString()}건 · 개선필요 ${summary.improvementCount.toLocaleString()}건`
+        : '후속 조치 대상 없음';
     const generatedAt = new Intl.DateTimeFormat('ko-KR', {
         timeZone: 'Asia/Seoul',
         year: 'numeric',
@@ -31,7 +34,6 @@ export function printSupervisionReport(input: {
         <div class="action-card">
             <span class="${resultClass(item.result)}">${escapeHtml(item.result)}</span>
             <strong>${escapeHtml(item.label)}</strong>
-            <p>${escapeHtml(item.memo || '추가 메모 없음')}</p>
         </div>
     `).join('');
     const rows = input.items.map(item => `
@@ -93,9 +95,24 @@ export function printSupervisionReport(input: {
                 .box span, .metric span { display: block; color: #6b7684; font-size: 11px; font-weight: 800; }
                 .box strong, .metric strong { display: block; margin-top: 5px; font-size: 15px; }
                 .metric strong { font-size: 22px; font-variant-numeric: tabular-nums; }
-                .action-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-                .action-card strong { display: block; margin: 6px 0 3px; font-size: 13px; }
-                .action-card p { color: #4e5968; font-size: 12px; }
+                .section-title {
+                    display: flex;
+                    align-items: flex-end;
+                    justify-content: space-between;
+                    gap: 12px;
+                    margin: 22px 0 10px;
+                }
+                .section-title h2 { margin: 0; }
+                .section-title span { color: #6b7684; font-size: 12px; font-weight: 800; }
+                .action-items { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+                .action-card {
+                    display: flex;
+                    min-height: 54px;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                }
+                .action-card strong { display: block; font-size: 13px; }
                 .badge-good, .badge-warning, .badge-critical, .badge-neutral {
                     display: inline-flex;
                     min-height: 22px;
@@ -152,7 +169,10 @@ export function printSupervisionReport(input: {
                     <div class="metric"><span>개선필요</span><strong>${summary.improvementCount.toLocaleString()}</strong><span>시정요청 후보</span></div>
                     <div class="metric"><span>기록</span><strong>${summary.memoCount.toLocaleString()}</strong><span>메모 · 사진 ${(report?.photoAttachments.length || 0).toLocaleString()}개</span></div>
                 </section>
-                <h2>조치 필요 항목</h2>
+                <div class="section-title">
+                    <h2>조치 필요 항목</h2>
+                    <span>${escapeHtml(actionTitle)}</span>
+                </div>
                 ${actionCards ? `<section class="action-items">${actionCards}</section>` : '<p class="note-box">현재 후속 조치가 필요한 항목이 없습니다.</p>'}
                 <h2>전체 점검 내역</h2>
                 <table>

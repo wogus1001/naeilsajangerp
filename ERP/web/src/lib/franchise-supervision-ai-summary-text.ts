@@ -38,6 +38,8 @@ function toReportTone(text: string): string {
         .replace(/손님/g, '고객')
         .replace(/점주이/g, '점주가')
         .replace(/고객한테/g, '고객에게')
+        .replace(/^(점주 의견|직원 진술|현장 확인|본사 요청)\s*기준\s*/gm, '')
+        .replace(/^(점주 의견|직원 진술|현장 확인|본사 요청)\s*[:：]\s*/gm, '')
         .replace(/오늘\s+(.+?)\s+다녀왔고\.?/g, '$1 점검 진행.')
         .replace(/오늘\s+(.+?)\s+방문했고\.?/g, '$1 방문 점검 진행.')
         .replace(/점주(?:와|랑)\s*(.+?)\s*정도\s*얘기함\.?/g, '점주 면담 $1 진행.')

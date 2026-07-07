@@ -81,7 +81,7 @@ void test('Given conversational AI report JSON When extracting Then memos are co
                 id: 'service',
                 label: '서비스',
                 result: '주의',
-                memo: '손님한테 인사는 잘 하고 있었다고 합니다. 점주님이 자료 다시 보내드리기로 했습니다.',
+                memo: '점주 의견 기준 손님한테 인사는 잘 하고 있었다고 합니다. 점주님이 자료 다시 보내드리기로 했습니다.',
                 evidence: '점주님이 자료 다시 보내드리기로 했습니다.'
             }
         ]
@@ -94,6 +94,7 @@ void test('Given conversational AI report JSON When extracting Then memos are co
     ].join('\n');
 
     assert.doesNotMatch(combinedText, /점주님|손님|합니다|했습니다|해요|하셨습니다|하셨어서|같습니다|얘기함|보내드리기로/);
+    assert.doesNotMatch(summary?.inspectionItems[0]?.memo || '', /점주 의견 기준/);
     assert.match(summary?.overallNote || '', /점주/);
     assert.match(summary?.inspectionItems[0]?.memo || '', /고객/);
 });
@@ -189,12 +190,14 @@ void test('Given supervision AI prompt When building Then report style and evide
 
     assert.match(promptText, /보고서 문체/);
     assert.match(promptText, /구어체 종결어미를 금지/);
-    assert.match(promptText, /현상\/근거 \+ 운영 영향 \+ 필요한 조치/);
+    assert.match(promptText, /현상 \+ 운영 영향 \+ 필요한 조치/);
     assert.match(promptText, /보고서 검토자가 바로 후속 조치를 판단/);
-    assert.match(promptText, /2~4문장/);
+    assert.match(promptText, /2~3문장/);
     assert.match(promptText, /evidence/);
     assert.match(promptText, /원문 근거/);
-    assert.match(promptText, /점주 의견 기준 배달 주문 감소 확인/);
+    assert.match(promptText, /출처 문구는 반복하지 않는다/);
+    assert.doesNotMatch(promptText, /결과: "점주 의견 기준/);
+    assert.match(promptText, /배달 주문 감소 확인/);
 });
 
 void test('Given AI report summary When applying Then matching checklist items and special note are updated', () => {
@@ -213,7 +216,7 @@ void test('Given AI report summary When applying Then matching checklist items a
         }
     });
 
-    assert.equal(applied.specialNote, '본사 지원 요청');
+    assert.equal(applied.specialNote, '종합 요약: 전체 요약\n후속 확인: 본사 지원 요청');
     assert.deepEqual(applied.inspectionItems, [
         { id: 'cleanliness', label: '청결', result: '주의', memo: '마감 청소 확인 필요' },
         { id: 'quality', label: '품질', result: '양호', memo: '기존 메모' }
