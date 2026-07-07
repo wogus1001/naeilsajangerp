@@ -21,6 +21,7 @@ import {
     NVIDIA_MAX_REQUEST_TIMEOUT_MS,
     NVIDIA_MIN_REQUEST_TIMEOUT_MS,
     NVIDIA_PRIMARY_REQUEST_TIMEOUT_MS,
+    describeNvidiaProviderIssueForUser,
     normalizeNvidiaBooleanEnv,
     normalizeNvidiaModelId
 } from '@/lib/nvidia-chat-config';
@@ -217,7 +218,7 @@ async function summarizeWithNvidia(input: {
         }),
         model: 'local-fallback',
         fallbackUsed: true,
-        providerIssue: issues[0]
+        providerIssue: describeNvidiaProviderIssueForUser(issues[0] || '')
     };
 }
 

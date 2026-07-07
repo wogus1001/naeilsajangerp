@@ -15,6 +15,7 @@ import {
     buildNvidiaChatCompletionBody,
     DEFAULT_NVIDIA_FALLBACK_MODEL,
     DEFAULT_NVIDIA_MODEL,
+    describeNvidiaProviderIssueForUser,
     normalizeNvidiaBooleanEnv,
     normalizeNvidiaModelId
 } from './nvidia-chat-config.js';
@@ -164,6 +165,20 @@ void test('Given NVIDIA boolean env values When normalizing Then only explicit t
     assert.equal(normalizeNvidiaBooleanEnv('on'), true);
     assert.equal(normalizeNvidiaBooleanEnv('false'), false);
     assert.equal(normalizeNvidiaBooleanEnv(''), false);
+});
+
+void test('Given NVIDIA provider outage When describing for user Then raw status code is hidden', () => {
+    const message = describeNvidiaProviderIssueForUser('NVIDIA 요청이 실패했습니다. 상태 코드: 503');
+
+    assert.equal(message, 'AI 서버가 일시적으로 혼잡합니다.');
+    assert.doesNotMatch(message, /NVIDIA|503|상태 코드/u);
+});
+
+void test('Given NVIDIA timeout When describing for user Then delay message is shown without provider name', () => {
+    const message = describeNvidiaProviderIssueForUser('NVIDIA 응답이 10초 안에 끝나지 않아 중단했습니다.');
+
+    assert.equal(message, 'AI 응답이 지연되어 요청을 중단했습니다.');
+    assert.doesNotMatch(message, /NVIDIA/u);
 });
 
 void test('Given supervision AI transcript with sensitive values When masking Then outbound text hides direct identifiers', () => {

@@ -38,6 +38,24 @@ export function normalizeNvidiaBooleanEnv(value: string): boolean {
     return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
 }
 
+export function describeNvidiaProviderIssueForUser(issue: string): string {
+    const normalizedIssue = issue.trim();
+    if (!normalizedIssue) return 'AI 정리가 일시적으로 원활하지 않습니다.';
+    if (/상태 코드:\s*(?:429|500|502|503|504)/u.test(normalizedIssue)) {
+        return 'AI 서버가 일시적으로 혼잡합니다.';
+    }
+    if (/초 안에 끝나지 않아|중단했습니다|timeout|timed out/i.test(normalizedIssue)) {
+        return 'AI 응답이 지연되어 요청을 중단했습니다.';
+    }
+    if (/인증|권한|401|403/u.test(normalizedIssue)) {
+        return 'AI 연동 설정을 확인해야 합니다.';
+    }
+    if (/JSON|보고서 형식|응답 형식/u.test(normalizedIssue)) {
+        return 'AI 응답 형식이 맞지 않습니다.';
+    }
+    return 'AI 정리가 일시적으로 원활하지 않습니다.';
+}
+
 export function buildNvidiaChatCompletionBody({
     forceJson,
     messages,
