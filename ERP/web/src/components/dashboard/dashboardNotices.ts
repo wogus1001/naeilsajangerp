@@ -1,3 +1,5 @@
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+
 export type DashboardNotice = {
     readonly id?: string | number;
     readonly title?: string;
@@ -17,10 +19,12 @@ export function normalizeDashboardNotices(payload: unknown): DashboardNotice[] {
 
 export async function fetchDashboardNotices(companyName: string): Promise<DashboardNotice[]> {
     try {
-        const response = await fetch(`/api/notices?companyName=${encodeURIComponent(companyName || '')}&limit=5`);
+        const response = await fetch(`/api/notices?companyName=${encodeURIComponent(companyName || '')}&limit=5`, {
+            headers: await getApiAuthHeaders()
+        });
         const payload: unknown = await response.json();
         if (!response.ok) {
-            console.error('Failed to fetch dashboard notices:', payload);
+            console.warn('Failed to fetch dashboard notices:', payload);
             return [];
         }
         return normalizeDashboardNotices(payload);
