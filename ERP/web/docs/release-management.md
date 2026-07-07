@@ -179,13 +179,14 @@ YYYY-MM-DD
 
 - 2026-07-07
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-  - 기능 커밋: 이번 슈퍼바이징 보고서 이력 세션 분리 커밋 예정
+  - 기능 커밋: `cff58ee 수정 슈퍼바이징 보고서 이력 세션 분리`
   - 주요 기능: `가맹 운영 > 슈퍼바이징 > 승인·시정요청`에서 보고서 검토 화면을 `승인 대기`, `승인 완료 보관함`, `반려 보고서` 세션으로 분리했다. 전체 처리 이력은 제거하고, `보고서 확인` 상세 화면에서 해당 보고서의 제출/승인/반려/시정요청 이력만 확인한다.
   - 신규 SQL: 없음.
   - dev 반영: none
-  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
-  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - main 반영: Vercel production 배포 완료
+  - 배포 URL: `https://www.fcerp.co.kr` / `https://fcerp.co.kr` (`dpl_9F5AmwUrYQnumoUDYsSHx4ApqtL1`, READY; source `https://naeilsajang-be4b3ulzs-jaehyuns-projects-b4d20c6f.vercel.app`)
   - 검증: `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. Playwright로 로컬 `http://localhost:3000`에서 `내일 / 관리자` 세션으로 `슈퍼바이징 > 승인·시정요청` 진입, 세션 탭 분리, 전역 이력 미노출, 승인 완료 보관함과 보고서별 이력 표시를 확인했다.
+  - 배포 검증: `npx vercel deploy --dry --project naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym --yes`에서 `framework=Next.js`, project `naeilsajang`, `.env.local`, `.omo`, `ERP/web/handoff.md`, `.next`, `node_modules` 제외를 확인했다. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/login`, `curl -I -L https://www.fcerp.co.kr/dashboard/franchise-operations`는 200 응답이었다.
   - 남은 이슈: 운영 배포 후 실서버 세션에서 동일 화면의 승인 완료 보관함과 보고서별 이력 표시를 live QA한다.
 - 2026-07-07
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
