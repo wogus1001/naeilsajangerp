@@ -31,7 +31,7 @@ export function canViewElectronicContract(
 ): boolean {
     if (actor.role === 'admin') return true;
     if (contract.sentByProfileId && contract.sentByProfileId === actor.id) return true;
-    const managerRoles = new Set(['manager', 'super_manager']);
+    const managerRoles = new Set(['manager', 'sub_manager']);
     return Boolean(
         actor.role &&
         managerRoles.has(actor.role) &&

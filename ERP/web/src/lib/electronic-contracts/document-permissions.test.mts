@@ -62,6 +62,15 @@ test('Given a same company manager When checking document access Then viewing is
     assert.equal(allowed, true);
 });
 
+test('Given a same company sub manager When checking document access Then viewing is allowed', () => {
+    const allowed = canViewElectronicContract(
+        { id: 'sub-manager-2', role: 'sub_manager', companyId: 'company-1' },
+        { sentByProfileId: 'owner-1', companyId: 'company-1' }
+    );
+
+    assert.equal(allowed, true);
+});
+
 test('Given a same company staff member When checking document access Then viewing is denied', () => {
     const allowed = canViewElectronicContract(
         { id: 'staff-2', role: 'staff', companyId: 'company-1' },

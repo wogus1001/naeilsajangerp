@@ -4,6 +4,11 @@ import { extractTokenExpiresInMs } from './platform-response';
 
 export const UCANSIGN_BASE_URL = process.env.UCANSIGN_BASE_URL || 'https://app.ucansign.com/openapi';
 const DEFAULT_TOKEN_EXPIRES_MS = 30 * 60 * 1000;
+export const UCANSIGN_NOT_CONNECTED_MESSAGE = 'User is not connected to UCanSign';
+
+export function isUcansignNotConnectedError(error: unknown): boolean {
+    return error instanceof Error && error.message === UCANSIGN_NOT_CONNECTED_MESSAGE;
+}
 
 // Service Role Client (for backend token management)
 // Service Role Client (for backend token management)
@@ -54,7 +59,7 @@ const getUserToken = async (userId: string, forceRefresh = false): Promise<strin
         .single();
 
     if (error || !profile || !profile.ucansign_access_token) {
-        throw new Error('User is not connected to UCanSign');
+        throw new Error(UCANSIGN_NOT_CONNECTED_MESSAGE);
     }
 
     const { ucansign_access_token: accessToken, ucansign_refresh_token: refreshToken, ucansign_expires_at: expiresAt } = profile;
@@ -178,7 +183,9 @@ export const uCanSignClient = async (userId: string, endpoint: string, options: 
 
         return resultBody;
     } catch (error) {
-        console.error('DEBUG CAUGHT ERROR in Client:', error);
+        if (!isUcansignNotConnectedError(error)) {
+            console.error('UCanSign client request failed:', error);
+        }
         throw error;
     }
 };
@@ -205,11 +212,8 @@ export const getContracts = async (userId: string, status?: string): Promise<Con
         url += `&status=${status}`;
     }
 
-    console.log(`[UCanSignClient] Requesting: ${url}`);
     const response = await uCanSignClient(userId, url);
-    // console.log('Documents Response:', JSON.stringify(response, null, 2));
     const list = response?.result?.record?.list || response?.result?.list || [];
-    console.log(`[UCanSignClient] Returned ${list.length} items for status ${status}`);
 
     return list.map((item: any) => ({
         ...item,

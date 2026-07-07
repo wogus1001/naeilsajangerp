@@ -58,6 +58,8 @@
 - 정보공개서 Gmail 발송 폼에서 후보자명을 입력하지 않으면 발송이 차단되는지, 입력 후 알림톡 미리보기의 `#{후보자명}`/`#{브랜드명}` 변수와 실제 `alimtalk_send_logs`의 `disclosure_email_sent` 발송 로그가 맞는지 운영 실계정으로 확인한다. 수령 확인 버튼 클릭 후 `disclosure_confirmed` 로그에 `확인일`/`계약가능일` 변수가 채워지는지, 수령 확인이 없는 발송/열람 추정 건이 내부 `정보공개서 수령 미확인` 큐로 잡히는지도 확인한다. `franchise_contract_eligible` 테스트 데이터로 가맹계약 가능 상태 알림톡의 후보자명, 수령확인일, 계약가능일 표시도 확인한다.
 - 슈퍼바이징 SQL 적용 후 실계정으로 `/dashboard/franchise-operations` 슈퍼바이징 탭에서 SV 배정 생성, 방문 일정 생성, 보고서 임시저장/제출, 관리자 승인/반려, `개선필요` 항목의 시정요청 생성과 상태 변경 persistence를 확인한다.
 - 슈퍼바이징 v2 SQL 적용 후 실계정으로 KPI 클릭 필터, 회사 점검 템플릿 저장/재조회, 보고서 PDF/인쇄, 보고서 제출/승인/반려 이력, 시정요청 상태 변경 이력, 방문 일정 수정/취소 시 공용 일정 동기화, 내부 알림톡 차단/성공 로그를 확인한다.
+- 2026-07-07 보안 감사 후속 배포 후 모객 DB에서 Meta 연동과 후보지 연결 패널의 `requesterId is required` 콘솔 오류가 재발하지 않는지 확인한다. 전자계약 템플릿/다운로드 권한은 `sub_manager`가 같은 회사 범위에서 접근 가능한지 확인하고, UCanSign 미연결 계정의 대시보드 진입 시 서버 콘솔에 불필요한 error 로그가 반복되지 않는지 확인한다.
+- 보안 감사 SQL 보완: `supabase_platform_audit_required_sql_2026_07_07.sql`은 `share_links.revoked_at`, `system_settings`, 중복 방지 unique index를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 
 ## 주요 문서 역할
 

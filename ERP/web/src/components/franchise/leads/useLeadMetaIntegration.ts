@@ -3,6 +3,7 @@
 import React from 'react';
 import { EMPTY_META_STATE } from './constants';
 import type { MetaConnection, MetaFieldMapping, MetaIntegrationState, MetaLeadForm } from './types';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 
 type LeadAlertType = 'success' | 'error' | 'info';
@@ -36,7 +37,8 @@ export function useLeadMetaIntegration({
             const params = new URLSearchParams({ requesterId: userId });
             if (companyName) params.set('company', companyName);
 
-            const response = await fetch(`/api/integrations/meta?${params.toString()}`, { cache: 'no-store' });
+            const headers = await getApiAuthHeaders();
+            const response = await fetch(`/api/integrations/meta?${params.toString()}`, { cache: 'no-store', headers });
             const payload = await response.json();
             if (!response.ok) {
                 throw new Error(readApiError(payload));
@@ -89,9 +91,10 @@ export function useLeadMetaIntegration({
 
         setSavingMetaFormId(form.id);
         try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             const response = await fetch('/api/integrations/meta/forms', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     requesterId: userId,
                     id: form.id,
@@ -132,9 +135,10 @@ export function useLeadMetaIntegration({
 
         setIsMetaSyncing(true);
         try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             const response = await fetch('/api/integrations/meta/sync', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     requesterId: userId,
                     formId
@@ -167,9 +171,10 @@ export function useLeadMetaIntegration({
         if (!confirmed) return;
 
         try {
+            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             const response = await fetch(`/api/integrations/meta?id=${encodeURIComponent(connection.id)}`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ requesterId: userId })
             });
             const payload = await response.json();

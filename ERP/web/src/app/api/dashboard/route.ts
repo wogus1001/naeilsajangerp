@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { canAccessCompanyScope, getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { isUcansignNotConnectedError } from '@/lib/ucansign/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,7 +140,9 @@ export async function GET(request: Request) {
                 type: '전자계약'
             }));
         } catch (error) {
-            console.error('Failed to fetch electronic contracts:', error);
+            if (!isUcansignNotConnectedError(error)) {
+                console.error('Failed to fetch electronic contracts:', error);
+            }
             // Non-blocking
         }
 
