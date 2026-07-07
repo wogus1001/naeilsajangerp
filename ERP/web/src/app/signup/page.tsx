@@ -147,6 +147,12 @@ export default function SignupPage() {
             return;
         }
 
+        if (phoneNormalized.length < 10 || phoneNormalized.length > 11) {
+            showAlert('휴대폰 번호를 정확히 입력해주세요.', 'error');
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const res = await fetch('/api/signup', {
                 method: 'POST',
