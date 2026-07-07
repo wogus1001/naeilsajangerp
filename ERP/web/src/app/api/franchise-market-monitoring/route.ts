@@ -483,7 +483,8 @@ export async function POST(request: Request) {
             warnings
         });
     } catch (error) {
-        return fail(500, 'INTERNAL_ERROR', error instanceof Error ? error.message : '브랜드 모니터링 처리 중 오류가 발생했습니다.');
+        console.error('Franchise market monitoring error:', error);
+        return fail(500, 'INTERNAL_ERROR', '브랜드 모니터링 처리 중 오류가 발생했습니다.');
     }
 }
 

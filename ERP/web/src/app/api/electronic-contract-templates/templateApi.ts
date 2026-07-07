@@ -88,7 +88,7 @@ export function numberValue(record: Record<string, unknown>, key: string, fallba
 export function canManageTemplate(requester: RequesterProfile | null, companyId: string): boolean {
     if (!requester) return false;
     if (isAdmin(requester)) return true;
-    if (requester.role === 'partner_vendor') return false;
+    if (requester.role !== 'manager' && requester.role !== 'super_manager') return false;
     return canAccessCompanyScope(requester, companyId);
 }
 

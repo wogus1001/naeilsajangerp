@@ -18,7 +18,7 @@ const FALLBACK_ITEM_KEYWORDS: Record<string, readonly string[]> = {
     'inventory-logistics': ['재고', '물류', '발주', '원재료', '식자재', '배송', '납품'],
     'hq-support': ['본사', '자료', '문구', '지원', '요청', '이벤트'],
     'training-notice': ['교육', '공지', '신메뉴', '매뉴얼', 'POS', '포스', '완료'],
-    etc: ['특이사항', '다음', '확인', '사진', '일정', '후속', '요청']
+    other: ['특이사항', '다음', '확인', '사진', '일정', '후속', '요청']
 };
 
 const FALLBACK_IMPROVEMENT_KEYWORDS = [
@@ -354,7 +354,7 @@ export function buildFallbackSupervisionReportAiSummary({
         .filter((item): item is SupervisionReportAiItemSummary => item !== null);
 
     if (summaries.length === 0) {
-        const etcItem = inspectionItems.find(item => item.id === 'etc') || inspectionItems[inspectionItems.length - 1];
+        const etcItem = inspectionItems.find(item => item.id === 'other') || inspectionItems[inspectionItems.length - 1];
         if (etcItem) {
             summaries.push({
                 id: etcItem.id,

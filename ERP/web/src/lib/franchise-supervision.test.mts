@@ -241,6 +241,17 @@ void test('Given AI response cannot be parsed When building fallback summary The
     assert.match(summary.specialNote, /금요일|교육 완료|청소 사진/);
 });
 
+void test('Given fallback memo without matching checklist keywords When building fallback summary Then other item is used', () => {
+    const summary = buildFallbackSupervisionReportAiSummary({
+        transcript: '다음 방문 때 사진과 후속 확인 일정을 다시 잡기로 했다.',
+        inspectionItems: mergeInspectionItems([])
+    });
+
+    const other = summary.inspectionItems.find(item => item.id === 'other');
+    assert.equal(other?.label, '기타');
+    assert.match(other?.memo || '', /후속 확인/);
+});
+
 void test('Given oversized AI transcript When validating Then a readable validation error is raised', () => {
     assert.throws(
         () => validateSupervisionAiTranscript('가'.repeat(12_001)),

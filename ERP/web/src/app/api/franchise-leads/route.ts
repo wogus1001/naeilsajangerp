@@ -172,7 +172,7 @@ function parseNullableNumber(value: unknown): number | null {
 function parseNullableDate(value: unknown): string | null {
     if (value === null || value === undefined || value === '') return null;
     const parsed = new Date(String(value));
-    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function transformLead(row: FranchiseLeadRow | null | undefined) {

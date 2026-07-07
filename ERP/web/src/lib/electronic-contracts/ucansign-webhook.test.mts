@@ -56,3 +56,9 @@ test('Given missing or wrong webhook secret When checking request Then request i
     assert.equal(isAuthorizedUcansignWebhook(request, undefined), false);
     assert.equal(isAuthorizedUcansignWebhook(request, 'secret-1'), false);
 });
+
+test('Given webhook secret in query string When checking request Then request is rejected', () => {
+    const request = new Request('https://example.test/api/webhook?secret=secret-1');
+
+    assert.equal(isAuthorizedUcansignWebhook(request, 'secret-1'), false);
+});

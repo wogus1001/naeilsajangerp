@@ -826,8 +826,10 @@ async function handleBatchUpload(payload: any, requesterProfile: any) {
     const cardUuids = validCards.map((c: any) => c.id);
 
     if (cardUuids.length > 0) {
-        await supabaseAdmin.from('business_card_promoted').delete().in('business_card_id', cardUuids);
-        await supabaseAdmin.from('business_card_history').delete().in('business_card_id', cardUuids);
+        const { error: promotedDeleteError } = await supabaseAdmin.from('business_card_promoted').delete().in('business_card_id', cardUuids);
+        if (promotedDeleteError) throw promotedDeleteError;
+        const { error: historyDeleteError } = await supabaseAdmin.from('business_card_history').delete().in('business_card_id', cardUuids);
+        if (historyDeleteError) throw historyDeleteError;
     }
 
     // 3. Process Promoted Items
@@ -848,7 +850,8 @@ async function handleBatchUpload(payload: any, requesterProfile: any) {
     }
 
     if (promotedToInsert.length > 0) {
-        await supabaseAdmin.from('business_card_promoted').insert(promotedToInsert);
+        const { error: promotedInsertError } = await supabaseAdmin.from('business_card_promoted').insert(promotedToInsert);
+        if (promotedInsertError) throw promotedInsertError;
     }
 
     // 4. Process Work History
@@ -870,7 +873,8 @@ async function handleBatchUpload(payload: any, requesterProfile: any) {
     }
 
     if (historyToInsert.length > 0) {
-        await supabaseAdmin.from('business_card_history').insert(historyToInsert);
+        const { error: historyInsertError } = await supabaseAdmin.from('business_card_history').insert(historyToInsert);
+        if (historyInsertError) throw historyInsertError;
     }
 
     return ok({

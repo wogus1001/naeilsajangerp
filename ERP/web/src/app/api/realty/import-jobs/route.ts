@@ -564,6 +564,7 @@ export async function POST(request: Request) {
         const rowErrors: Array<{ source: string; listingId?: string; message: string }> = [...collection.errors];
 
         for (const listing of collection.listings) {
+            let createdPropertyIdForRollback: string | null = null;
             try {
                 const existingExternal = trackingTablesAvailable
                     ? await findExistingExternalListing(supabaseAdmin, context.companyId, context.requesterProfile.id, listing)
@@ -622,6 +623,7 @@ export async function POST(request: Request) {
                     });
 
                 if (!property?.id) throw new Error('ERP 물건지 저장 실패');
+                if (!existingPropertyId) createdPropertyIdForRollback = property.id;
 
                 const externalListing = trackingTablesAvailable
                     ? await upsertExternalListing(supabaseAdmin, {
@@ -654,7 +656,16 @@ export async function POST(request: Request) {
                     duplicateOfPropertyId: duplicateProperty?.id || null
                 });
             } catch (error) {
-                if (isMissingRealtyTableError(error) || isMissingRealtySchemaError(error)) throw error;
+                if (isMissingRealtyTableError(error) || isMissingRealtySchemaError(error)) {
+                    if (createdPropertyIdForRollback) {
+                        const { error: rollbackError } = await supabaseAdmin
+                            .from('properties')
+                            .delete()
+                            .eq('id', createdPropertyIdForRollback);
+                        if (rollbackError) console.error('Failed to rollback imported property after schema error:', rollbackError);
+                    }
+                    throw error;
+                }
                 failedCount++;
                 rowErrors.push({
                     source: listing.source,

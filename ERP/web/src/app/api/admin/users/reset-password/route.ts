@@ -8,9 +8,7 @@ export async function POST(request: Request) {
         // 1. Check if requester is Admin
         const supabase = await createClient();
 
-        // DEBUG: Header Check
         const authHeader = request.headers.get('Authorization');
-        console.log('[DEBUG-API] ResetPassword Auth Header:', authHeader ? 'Header present' : 'Header missing');
 
         let user;
 
@@ -28,17 +26,9 @@ export async function POST(request: Request) {
             user = session?.user;
         }
 
-        console.log('[DEBUG-API] ResetPassword User ID:', user?.id || 'No User');
-
         if (!user) {
             return NextResponse.json({
-                error: 'Unauthorized: Invalid token or session',
-                debug: {
-                    details: 'User verification failed',
-                    authHeaderPresent: !!authHeader,
-                    authHeaderLength: authHeader?.length || 0,
-                    tokenPreview: authHeader ? authHeader.substring(0, 15) + '...' : 'N/A',
-                }
+                error: 'Unauthorized: Invalid token or session'
             }, { status: 401 });
         }
 
@@ -70,8 +60,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Password reset error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: '비밀번호 재설정 중 오류가 발생했습니다.' }, { status: 500 });
     }
 }

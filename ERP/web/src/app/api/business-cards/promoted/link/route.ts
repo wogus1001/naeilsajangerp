@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { canAccessCompanyResource, getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export async function POST(request: Request) {
     try {
         const { promotedId, propertyId } = await request.json();
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
                 .single(),
             supabaseAdmin
                 .from('properties')
-                .select('id, company_id, manager_id, promotedCustomers, name')
+                .select('id, company_id, manager_id, data, name')
                 .eq('id', propertyId)
                 .single()
         ]);
@@ -52,8 +56,9 @@ export async function POST(request: Request) {
                 const card = promotedItem.business_cards;
 
                 if (property) {
-                    const currentList = property.promotedCustomers || [];
-                    const exists = currentList.some((c: any) => c.targetId === card.id);
+                    const propertyData = isRecord(property.data) ? property.data : {};
+                    const currentList = Array.isArray(propertyData.promotedCustomers) ? propertyData.promotedCustomers : [];
+                    const exists = currentList.some((customer: unknown) => isRecord(customer) && customer.targetId === card.id);
 
                     if (!exists) {
                         const newCustomer = {
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
                         const newList = [...currentList, newCustomer];
                         await supabaseAdmin
                             .from('properties')
-                            .update({ promotedCustomers: newList })
+                            .update({ data: { ...propertyData, promotedCustomers: newList } })
                             .eq('id', propertyId);
                     }
                 }

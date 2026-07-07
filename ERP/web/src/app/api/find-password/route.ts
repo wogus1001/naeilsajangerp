@@ -24,11 +24,11 @@ export async function POST(request: Request) {
             .single();
 
         if (profile && profile.name === name && profile.company?.name === companyName) {
-            // Cannot return password.
-            return NextResponse.json({ error: '비밀번호는 암호화되어 저장됩니다. 관리자에게 비밀번호 초기화를 요청해주세요.' }, { status: 400 });
-        } else {
-            return NextResponse.json({ error: 'User not found or details do not match' }, { status: 404 });
+            console.info('Find password request matched a profile; reset must be handled by an administrator.');
         }
+        return NextResponse.json({
+            message: '입력하신 정보가 확인되면 관리자에게 비밀번호 재설정을 요청해주세요.'
+        });
     } catch (error) {
         console.error('Find password error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
