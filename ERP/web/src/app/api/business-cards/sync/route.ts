@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { requireCompanyOperatorRequester } from '@/lib/admin-route-auth';
+import { isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic'; // Cache bust check
@@ -6,10 +8,16 @@ export const dynamic = 'force-dynamic'; // Cache bust check
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
+        const operatorGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
+        if (!operatorGuard.ok) return operatorGuard.response;
+
         const { companyId } = await request.json();
 
         if (!companyId) {
             return NextResponse.json({ error: 'Company ID is required for sync security.' }, { status: 400 });
+        }
+        if (!isAdmin(operatorGuard.requester) && operatorGuard.requester.company_id !== companyId) {
+            return NextResponse.json({ error: 'Forbidden: cross-company sync denied' }, { status: 403 });
         }
 
         const results = {

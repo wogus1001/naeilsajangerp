@@ -71,11 +71,38 @@ supabase_company_contract_templates_migration.sql
 supabase_franchise_lead_documents_migration.sql
 supabase_franchise_contract_store_linkage_migration.sql
 supabase_franchise_location_meeting_tool_presets_migration.sql
+supabase_franchise_location_meeting_tool_versions_migration.sql
+supabase_franchise_vendor_contracts_migration.sql
+supabase_franchise_vendor_contract_events_migration.sql
+supabase_franchise_vendors_migration.sql
+supabase_franchise_alimtalk_operations_migration.sql
+supabase_franchise_supervision_migration.sql
+supabase_franchise_supervision_v2_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, 또는 `franchise_location_meeting_tool_presets` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, 또는 `franchise_supervisor_assignments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+## Franchise Supervision Setup
+
+Run `supabase_franchise_supervision_migration.sql` before enabling the `가맹 운영 > 슈퍼바이징` tab in production. The migration creates supervisor assignments, store visits, inspection reports, and corrective actions. The tab uses existing `franchise_locations`, `profiles`, and company-scoped access rules; `admin` and `manager` can manage company-wide supervision, while ordinary staff/SV users work around assigned stores and their own reports.
+
+After the MVP migration is applied, run `supabase_franchise_supervision_v2_migration.sql` for the second-phase features. **SQL 등록 필요**. The v2 migration adds company report templates, report submit/approve/reject events, corrective-action events, a report `template_id`, and draft AlimTalk templates/scenarios for internal SV operations.
+
+The MVP supports active SV assignment per operating store, visit scheduling with a lightweight `schedules` sync, inspection report draft/submission, manager approval/rejection, image metadata upload under `property-documents/franchise-supervision/<company_id>/<report_id>/...`, and corrective-action creation for `개선필요` inspection items. The v2 UI reorganizes the tab into `운영 리포트 / 배정 관리 / 방문 일정 / 점검 보고서 / 승인·시정요청`, makes KPI cards clickable filters, lets managers save the company inspection template, prints inspection reports, syncs visit changes back to `schedules`, and leaves report/action history for audit. The assignment tab removes the separate region field and provides store-based and supervisor-based list views with search, SV, and assignment-status filters; managers open an inline editor below the selected operating-store row, and the list is paginated to keep the assignment screen scannable. The operating report also exposes a computed `오늘 처리 큐` for today/tomorrow visits, missing reports, pending approvals, and overdue corrective actions; this queue uses existing supervision tables and does not require extra SQL. The report tab now includes a visit-based inspection report list that shows missing/submitted/approved states, improvement counts, photo counts, and the selected report editor in one workflow. The review tab uses table-style approval and corrective-action queues so managers can compare pending reports, rejection reasons, assignees, due dates, and status updates without scanning card stacks. Internal AlimTalk hooks are wired for visit creation, report approval/rejection, and corrective-action assignment when the v2 scenarios are approved and enabled. Report save/approval transitions, assignment/report company scope, event-table RLS, and supervision photo URL handling are hardened in the v2 route review pass.
+
+## Franchise Vendor Contract Vault Setup
+
+Run `supabase_franchise_vendors_migration.sql` before enabling direct vendor registration in `/dashboard/franchise-vendors`. Then run or re-run `supabase_franchise_vendor_contracts_migration.sql` before enabling `/contracts/vendor` so the vault has the `vendor_id` linkage column. Run `supabase_franchise_vendor_contract_events_migration.sql` before enabling vendor contract renewal/termination history.
+
+The vendor contract vault stores company-scoped contracts with logistics, food material, interior, marketing, lease, and other vendors. Contract files are uploaded to the existing `property-documents` bucket under `franchise-vendor-contracts/<company_id>/<contract_id>/...`; the API issues short-lived signed URLs for viewing instead of storing public document URLs.
+
+The vault can also link a completed or in-progress electronic contract from the same company. Vendor contract D-30 and D-7 expiration alerts are synced into the existing in-app franchise notification table for the contract owner and company team leads. If the SQL is not applied, the page shows a migration notice and the write API returns a migration-required error.
+
+The 2A renewal flow adds `/api/franchise-vendor-contracts/actions`. `renew` marks the old contract as `renewed`, creates a new active contract copy, and writes lifecycle events. `terminate` marks the contract as `terminated` with a reason. The UI shows an internal expiry work queue, selected contract detail panel, and newest-first lifecycle history.
+
+The vendor management view has an `업체 생성` button inside the vendor list and stores vendor master records in `franchise_vendors`. New vault contracts created from `업체 선택` store `vendor_id`, so vendor management merges contracts by master ID first; older direct-entry contracts still fall back to vendor-name matching for contract counts, renewal/expiration risk, latest memo, and a jump back to the filtered contract vault.
 
 ## Signup And Partner Vendor Setup
 
@@ -184,6 +211,8 @@ Franchise-specific intake uses separate protected routes:
 
 The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/matching-requests/promote` to create a first-ingress `franchise_leads` record from an 예비 창업자 등록 request. The hidden lead-registration route keeps `/api/admin/franchise-intake/leads/promote` available for future internal review flows. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target through the matching or property update endpoint. The staff edit modal supports the same file attachment metadata policy as the intake form, and promotion no longer creates an automatic 상담 이력 entry in the target lead; only explicit staff-entered 상담 이력 appears in lead detail.
 
+When `SOLAPI_SMS_ENABLED=true`, intake registration can send a Solapi SMS after the core DB write succeeds. Set `FRANCHISE_INTAKE_ALERT_PHONES` to comma-separated receiver numbers for 입점요청/예비 창업자 등록 alerts. If this env is empty, the route falls back to `SIGNUP_ADMIN_ALERT_PHONES`. Missing Solapi env or SMS failure is logged and does not block registration.
+
 Apply `supabase_franchise_lead_registration_requests_migration.sql` before enabling the lead-registration intake screen. Apply `supabase_franchise_property_promotion_migration.sql` so each company can promote the same source property only once through the `franchise_locations(company_id, source_property_id)` unique index.
 
 Admin user approval depends on UUID lookup through `/api/users`. Keep the full UUID regex format `8-4-4-4-12`; otherwise a valid profile UUID can be misread as a legacy short login id and approval fails with `User not found`.
@@ -285,6 +314,16 @@ Run `supabase_franchise_notifications_migration.sql` before enabling in-app fran
 The header bell uses `/api/franchise-notifications` to create and read 담당자 alerts. V1 alerts are in-app only and are derived from franchise lead data: disclosure not sent, Gmail send failure, disclosure D-3/D-1, contract eligibility, overdue contact, today's contact, and HOT lead follow-up scheduling. Stale automatic alerts are dismissed during sync when their source condition no longer applies. Read alerts keep their `read_at` audit record in the database but are hidden from the header popover so the list only shows items that still require 담당자 확인. Future Kakao 알림톡 delivery can reuse `franchise_notifications.delivery_channel`, `kakao_template_key`, and `data`.
 
 The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
+
+## Franchise AlimTalk Operations Setup
+
+Run `supabase_franchise_alimtalk_operations_migration.sql` before enabling `/admin/alimtalk`.
+
+The admin AlimTalk operations page manages the six first-stage Kakao AlimTalk cases selected for review: signup approval request, signup approval completion, disclosure email sent notice, disclosure receipt confirmation, franchise contract eligibility, and vendor contract expiration reminders. The page tracks template review status and provider IDs, global send scenarios, company-level monthly limits, and send logs. Scenario management shows one combined send-flow board plus individual scenario cards for ON/OFF and fallback settings. It does not submit templates to Kakao/SOLAPI; operators record the approved `templateId` and `channelId` after provider review.
+
+Templates must be `승인완료` and enabled before send hooks can use them. Company settings can disable AlimTalk for a company or set monthly volume thresholds. If the migration is missing, the page shows a SQL-required notice instead of failing the admin shell.
+
+AlimTalk phase 2 connects approved templates to real business events. The current hooks cover signup approval request, signup approval completion, disclosure receipt confirmation, franchise contract eligibility, and vendor contract D-30/D-7 reminders. The disclosure email sent notice remains disabled until its Kakao template review is approved. Send hooks check scenario enabled state, template approval, company send settings, monthly limits, and fallback policy before sending; each result is recorded in `alimtalk_send_logs`. Missing provider env, disabled scenarios, pending templates, or missing template/channel IDs skip or block the external send without blocking the core ERP action. Phase 3 expands operations with usage dashboards, failure analytics, manual resend, provider status checks, calendar/vendor-expiry queues, and any billing or retry tables that later become necessary.
 
 ## Electronic Contract v2 Setup
 

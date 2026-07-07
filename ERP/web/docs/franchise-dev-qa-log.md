@@ -25,6 +25,14 @@
 
 ## 개발 과정 로그
 
+### 2026-07-01
+
+- 운영 배포 전 검증으로 `git diff --check`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts`, `npm run build`를 통과했다.
+- Vercel dry-run에서 배포 대상 프로젝트가 `naeilsajang`, framework가 Next.js로 감지되는 것을 확인했다. 첫 dry-run에서 루트 `.omo`, `.claude`, `.agents` 등 로컬 작업 산출물이 업로드 대상에 포함되는 문제가 보여 `.vercelignore`를 추가했고, 재확인에서 `.env.local`, `.next`, `.vercel`, `node_modules`, `.omo`, `MAC_CONTEXT.md`, `ERP/web/handoff.md`가 ignored 목록에 포함되는 것을 확인했다.
+- 운영 배포는 `dpl_CEyXPQ2hVy5PnifeFkUMpcesxLLN`으로 완료됐다. `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다.
+- 운영 smoke로 `curl -I -L https://www.fcerp.co.kr/login`, `curl -I -L https://www.fcerp.co.kr/landing`이 200 응답을 반환했다. 배포 직후 error log scan은 `No logs found`였다.
+- 이번 배포 중 신규 SQL은 없다. 사용자 확인 기준 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 실서버 등록 완료 상태다. Vercel 원격 빌드는 Node.js 20 deprecation 경고를 출력했으므로 2026-10-01 전 Node.js 24.x 전환을 검토한다.
+
 ### 2026-06-30
 
 - Kakao 비즈니스 심사 대응을 위해 공개 화면 하단에 사업자정보 푸터를 추가했다. `/landing`, `/login`, `/signup`, `/privacy`에 `상호: 주식회사 내일사장`, `대표: 박규태`, `사업자등록번호: 448-81-03095`, `주소: 경기도 하남시 조정대로45 미사센텀비즈 F922`, `이메일: cs@sajang.app`, `연락처: 070-8095-2881`을 노출한다. 개인정보처리방침 문의 이메일도 `cs@sajang.app`로 맞췄다.
@@ -43,7 +51,6 @@
 - 검증: `npx tsx --test src/app/api/user/update/route.test.mts src/lib/profile-contact.test.mts src/lib/user-role-policy.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 추가 단위 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/app/api/franchise-work-intake/route.test.mts src/app/api/user/update/route.test.mts`를 통과했다.
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3106`에서 Playwright auth/API mock으로 `/profile`을 열고 이메일 `manager-updated@mirae.test`, 휴대폰 `010-9999-8888` 저장 요청과 성공 모달 `회원정보가 수정되었습니다.`를 확인했다. 같은 세션에서 `/dashboard/franchise-leads/work-intake`를 열고 입점 요청 행의 `미래 / 작성자 김팀장 / 공실` 표시를 확인했다. console/page error 0건, 1440px body overflow 0건이었다.
-- 운영 배포 확인: `naeilsajang` production 배포가 Ready 상태이고 `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias가 연결된 것을 `vercel inspect`로 확인했다. `https://www.fcerp.co.kr/login`은 HTTP 200, apex 도메인 `/login`은 `www`로 308 redirect 후 HTTP 200을 반환했다.
 - 이번 개인정보 저장 핫픽스 범위의 신규 SQL은 없다.
 - 직원 관리에서 기존 회사 브랜드 임직원 가입자가 `sub_manager`(매니저)로 접수되는 정책과 화면 분류가 어긋나 직원 목록/승인 대기에서 누락될 수 있던 문제를 수정했다. `sub_manager`와 `staff`를 회사 직원 그룹으로 함께 표시하고, 팀장 승인/팀장 승격 대상에도 매니저를 포함했다.
 - 개인정보 수정 화면에 등록 이메일과 휴대폰 번호 입력을 추가했다. 저장 API는 본인 인증 세션 기준으로만 수정되며, 이메일 변경 시 Supabase Auth 이메일과 `profiles.email`을 함께 갱신하고 휴대폰은 `profiles.phone`, `profiles.phone_normalized`에 저장한다. 회사 로고 등록/삭제 UI와 API는 팀장(`manager`)만 사용할 수 있도록 제한했다.
@@ -742,14 +749,6 @@
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3047`에서 임시 데모 env를 주입해 `/demo`, `/demo/manager`, `/demo/partner`를 확인했다. 로그인 전 접근 게이트, 잘못된 비밀번호 오류, 정상 로그인, 딥링크 유지, 로그아웃 후 로그인 화면 복귀, 모바일 390px 로그인 화면 horizontal overflow 0건을 확인했다.
 - 신규 SQL은 없다.
 
-## 2026-06-26 회사 검색/메뉴 설정 핫픽스 QA
-
-- 회사 검색 API의 후처리 매칭이 대소문자를 구분해 `Platinum Partners`가 소문자 `p` 검색에서 누락될 수 있던 문제를 수정했다. 회사명과 검색어를 NFC, 공백 제거, lowercase 기준으로 정규화한 뒤 비교한다.
-- 회사 검색 후보 수집 상한을 10건에서 30건으로 늘리고, 한 글자 검색에서도 fallback 후보 수집이 동작하게 보정했다.
-- `company_menu_features`에 선택 메뉴 행만 들어간 신규 회사가 나머지 메뉴까지 모두 켜져 보이는 문제를 수정했다. 유효한 메뉴 설정 행이 하나라도 있으면 누락 메뉴는 OFF, 설정 행이 전혀 없는 기존 회사는 기존 전체 ON fallback을 유지한다.
-- 검증: 작업 브랜치와 main release worktree에서 `npx tsx --test src/lib/company-search.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과.
-- 실서버 확인: 기존 운영 도메인 기준 회사 검색 API에서 `query=p` 응답에 `Platinum Partners`가 포함되고, `query=platinumpartners`는 `Platinum Partners` 1건을 반환했다.
-
 ## 2026-06-29 점포개발 미팅 도구 1차 QA
 
 - `/dashboard/franchise-leads/market-insights`의 출점 후보지 목록 액션에 `리포트` 버튼을 추가했다. 후보지별 `출점 검토 리포트` 다이얼로그에서 목표매출과 재료비/인건비/월세·관리비/로열티/기타비용 금액·비율을 입력하고 세전수익/세전 수익률을 즉시 계산한다.
@@ -787,6 +786,80 @@
 - 검증: `npx tsx --test src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool.test.mts` 14건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브라우저 QA: 로컬 production 서버 `http://localhost:3126`의 `/demo`에서 데모 게이트 로그인, `출점 후보지`, `리포트` 모달 진입을 1280px/390px으로 확인했다. 목표매출 `4500` 입력은 `4,500`으로 표시되고, 비율은 실제 키 입력 순서로 `4` 입력 후 `4`, `.` 입력 후 `4.`, `5` 입력 후 `4.5`, blur 후 `4.5`가 유지됐으며 금액은 `203`으로 계산됐다. dialog overflow와 console/page error는 없었다.
 - 신규 SQL: 이번 보강의 신규 SQL은 없다. 기존 `supabase_franchise_location_meeting_tool_presets_migration.sql`은 사용자 확인 기준 실서버 등록 완료 상태다.
+
+## 2026-06-30 점포개발 미팅 도구 2차-1/2차-4 QA
+
+- 2차-1 출력물 고도화: 출점 검토 리포트 PDF/인쇄 HTML을 다이얼로그에서 분리한 순수 유틸로 옮기고, 후보지 요약, 목표매출 1차/2차/3차 비교표, 현재 선택안 비용 구조, 검토 의견, 내부 검토 안내가 보이는 미팅 자료형 레이아웃으로 정리했다. 기존 Blob URL 기반 인쇄 방식은 유지한다.
+- 2차-4 후보지별 버전 이력: 신규 `/api/franchise-locations/meeting-tool-versions` GET/POST와 `franchise_location_meeting_tool_versions` 테이블 migration을 추가했다. 현재안 저장은 기존 `franchise_locations.data.meetingTool` PATCH를 유지하고, 버전 이력은 후보지별 snapshot으로 별도 저장한다.
+- 권한 정책: 버전 이력 API는 `getAuthenticatedRequesterProfile`과 `canAccessFranchiseLocation`을 사용한다. 관리자 예외, 브랜드 직원 회사 범위, 협력업체 작성자 전용 접근 규칙을 기존 후보지 접근 정책과 동일하게 적용한다.
+- UI: 리포트 다이얼로그에 `리포트 버전 이력` 영역을 추가했다. 담당자는 버전명을 입력해 `현재안 버전 저장`을 누르고, 목록에서 목표매출/수익률이 표시된 이전안을 `불러오기`로 되돌릴 수 있다. 이전안을 불러온 뒤 후보지 현재안에 반영하려면 기존 `저장` 버튼을 누른다.
+- 구조 정리: 기존 대형 다이얼로그에서 프리셋/버전 이력 상태 훅과 계산표/프리셋/결과/액션 렌더 섹션을 분리했다. `LocationMeetingToolDialog.tsx`는 217 pure LOC로 낮추고, 신규 기능/API/테스트 지원 파일은 모두 250 pure LOC 이하로 유지했다.
+- 데모 모드: 데모 가드가 신규 버전 이력 API를 차단할 때 원문 `Demo mode blocked real API request`가 사용자 화면에 노출되지 않게 했다. 데모에서는 빈 버전 이력으로 보이고, 저장류 액션은 데모 비활성화 안내 문구로 처리한다.
+- 코드리뷰 후 보강: 기본 버전명이 목록에서 `v2 v2 검토안`처럼 중복 표시되지 않도록 display title 유틸과 테스트를 추가했다. 동시 저장으로 DB unique 제약 `23505`가 발생하면 500 대신 409 재시도 안내를 반환하도록 보강했고, 중복키 메시지를 테이블 미적용 424로 오인하지 않게 missing-table 판별을 `42P01`/`PGRST205`로 좁혔다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과. 기존 local dev 서버 `http://localhost:3000`의 `/demo`에서 출점 후보지 `리포트` 다이얼로그를 desktop/mobile로 확인했고, `분석표 프리셋`과 `리포트 버전 이력` 노출, dialog horizontal overflow 0, console/page error 없음, 데모 API 차단 원문 미노출을 확인했다.
+- 신규 SQL: `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료. SQL 등록 전 버전 이력 API는 424와 SQL 적용 안내를 반환하도록 구현되어 있으며, 적용 완료 환경에서는 실계정 버전 저장/불러오기 live QA를 진행한다.
+
+## 2026-06-30 출점 검토 리포트 인쇄/PDF 헤더 QA
+
+- 요청 반영: PDF 저장 및 인쇄용 출점 검토 리포트 상단에서 `내부 검토 자료` 배지를 제거했다. 우측 메타 영역의 `생성일` 라벨도 제거하고, 날짜는 시간 없이 `YYYY. MM. DD.` 형식으로만 표시한다.
+- 검증: `npx tsx --test src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 2건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build` 통과했다.
+- 브라우저 QA: Playwright print media 렌더에서 헤더 텍스트가 `하남 미사 후보지 출점 검토 리포트 / 경기 하남시 조정대로45 / 2026. 06. 30. / 담당 김팀장`으로 표시되는 것을 확인했다. 헤더에 `내부 검토 자료`, `생성일`, `오전/오후`, `hh:mm` 시간 표기, PDF 안내 문구가 노출되지 않았다.
+
+## 2026-06-30 점포개발 미팅 도구 2차-5 QA
+
+- 2차-5 상권분석·목표매출 보고서 형태 고도화: 출점 검토 리포트 다이얼로그에 `상권분석·목표매출 근거` 섹션을 추가했다. 입력 필드는 `상권 요약`, `수요 근거`, `목표매출 산정 근거`, `리스크/확인사항` 4개이며 후보지별 `meetingTool.marketReport`에 저장된다.
+- 프리셋 분리: `marketReport`는 후보지 전용 보고서 근거이므로 회사 공용 프리셋 저장 데이터에서는 제외한다. 프리셋 적용 시 기존 후보지의 `marketReport`와 `reportMemo`는 유지된다.
+- 출력물 반영: PDF/인쇄 HTML의 목표매출 시나리오 비교표 아래에 `상권분석·목표매출 근거` 섹션을 추가했다. HTML escape와 줄바꿈 표시를 테스트로 고정했다.
+- 버전 이력 연동: 후보지별 버전 이력은 `MeetingToolDraft` snapshot을 저장하므로, `marketReport`도 버전 저장/불러오기 대상에 자연스럽게 포함된다. 별도 SQL은 추가하지 않았다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 12건 통과. 관련 회귀 묶음 `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/app/api/franchise-locations/meeting-tool-presets/route.test.mts src/lib/franchise-location-meeting-tool-versions.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts src/app/api/franchise-locations/meeting-tool-versions/route.test.mts` 30건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브라우저 QA: 기존 local dev 서버 `http://localhost:3000`의 `/demo`에서 데모 게이트 로그인 후 `출점 후보지` -> `리포트` 다이얼로그를 1280px/390px로 확인했다. `상권분석·목표매출 근거` 섹션 노출, `목표매출 산정 근거` 입력 유지, textarea 5개 노출, page horizontal overflow 0, textarea clipping 0을 확인했다. console page error는 없고, 기존 Supabase GoTrue 다중 인스턴스 warning만 관찰했다.
+- 코드리뷰: 새 subagent 1차 요구사항 리뷰는 PASS였으나, 후속 gate/code review에서 `franchise-location-meeting-tool.ts` 비대화와 `page.module.css` 미팅 도구 스타일 누적이 blocker로 확인됐다. 보강으로 미팅 도구 모델/정규화/계산/상권분석 근거 정의를 작은 lib 모듈로 분리했고, `meetingTool*` 스타일은 `LocationMeetingTool.module.css`로 이동했다.
+- 후속 QA evidence: 코드리뷰/QA artifact를 `.omo/evidence/2cha-5-report-dialog-review-fix/code-review.md`, `.omo/evidence/2cha-5-report-dialog-review-fix/manualQa.json`에 남겼다. fresh local dev QA는 `.omo/evidence/2cha-5-report-dialog-review-fix/fresh-qa-result.json`에 남겼다. `/demo`에서 출점 후보지 `리포트` 다이얼로그를 열고 4개 상권분석 입력값 유지, PDF/인쇄 출력물의 섹션 포함 및 HTML escape, 1280px/390px horizontal overflow 0, page error 0을 확인했다.
+- 신규 SQL: 이번 2차-5 범위의 신규 SQL은 없다. 기존 후보지별 리포트 버전 이력용 `supabase_franchise_location_meeting_tool_versions_migration.sql`은 사용자 확인 기준 실서버 등록 완료 상태다.
+
+## 2026-07-01 플랫폼 코드리뷰 보안 하드닝 QA
+
+- 범위: 플랫폼 전체 코드리뷰에서 서비스-role API와 legacy requester 신뢰 경로를 우선 점검했다. 새 subagent 2개를 병렬로 사용해 프론트 호출부 인증 헤더 누락과 mutating route 권한 누락 후보를 교차 확인했다.
+- 인증 공통화: `api-auth`의 요청자 해석은 Supabase access token이 확인된 경우에만 허용하도록 정리했다. query/header의 `requesterId`, `userId`, `x-user-id`는 토큰 사용자와 일치할 때만 보조 검증값으로 사용하며, literal `admin` alias/legacy fallback은 제거했다.
+- UCanSign/계약 legacy API: `/api/contracts`, `/api/contracts/templates`, `/api/points`, `/api/folders`, `/api/embedding`, `/api/ucansign/*`, `/api/user/status` 계열을 `requireAuthenticatedUcansignUser` 중심으로 통일했다. UCanSign OAuth callback은 unsigned base64 `state.uid`를 신뢰하지 않고, httpOnly pending cookie와 sanitised return path만 사용한다.
+- 관리자/운영자 API: `system/settings`, debug route는 admin 세션을 요구한다. 고객/물건지 batch/sync와 명함 DB sync는 admin 또는 팀장만 실행 가능하며, 팀장은 자기 회사 범위에서만 실행된다.
+- 명함/대시보드 메모: `/api/business-cards`는 자체 legacy requester 해석기를 제거하고 공통 인증 헬퍼를 사용한다. 관련 명함 목록/상세/매물카드/선택 모달/프랜차이즈 리드 연동 호출부에 auth headers를 붙였다. `/api/dashboard/memo`는 더 이상 `userId` 파라미터로 대상 사용자를 고르지 않고, 인증된 본인 메모만 읽고 저장한다.
+- 공지/프로젝트/템플릿/내보내기: 공지 작성/수정/삭제는 인증된 작성자, 같은 회사 팀장, admin 권한으로 제한했다. 프로젝트/템플릿 API는 legacy `admin` fallback을 제거했다. 관리자 설정의 JSON 내보내기는 새 탭 raw API open 대신 auth header가 붙는 fetch 후 blob 다운로드 방식으로 변경했다.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npx tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts` 10건, `git diff --check`, `npm run build` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 검색 검증: `rg "admin%|legacyId === 'admin'|legacyUser === 'admin'" ERP/web/src -n` 결과 없음. UCanSign auth 검색에 남는 2건은 직접 `window.location` 이동이 아니라 auth header를 붙이는 `response=json` redirect 요청이다.
+- 신규 SQL: 없음.
+- 남은 후속 감사: 공개 회원가입, webhook/외부 callback, 도메인별 custom guard를 쓰는 일부 franchise/integration route는 의도된 공개/도메인 정책을 확인하며 별도 정규화한다.
+
+## 2026-07-01 서비스 화면 세션 헤더/Node 24 전환 QA
+
+- 범위: 운영 preview QA 중 `고객 DB 조회 실패: requesterId is required`와 명함 신규입력 client-side exception이 확인되어, 모객 DB/고객/명함/점포개발 화면의 legacy service route 호출부에 Supabase 세션 auth header를 붙였다.
+- 보강: 고객 목록/상세, 명함 목록/상세, 모객 DB, 고객/명함 -> 모객 DB 전환, 점포 목록/상세/신규등록/선택 모달/물건지도 fetch 호출에 `getApiAuthHeaders()`를 적용했다. `/api/users` 응답이 오류 payload일 때 `.forEach`가 터지지 않도록 배열 guard를 추가했다. `BusinessCard`와 `PropertyCard`의 정적 순환 import는 `next/dynamic`으로 끊어 명함 신규입력 client-side exception 재발 가능성을 낮췄다.
+- Node 24 전환: `ERP/web/package.json`에 `"engines": { "node": "24.x" }`를 추가했고, 로컬 검증은 `node@24`로 실행했다.
+- 검증: `npx -p node@24 -c 'node ./node_modules/typescript/bin/tsc --noEmit --pretty false'`, `npx -p node@24 -c 'npm run lint -- --quiet'`, `npx -p node@24 -c 'npm run build'`, `npx -p node@24 -p tsx -c 'tsx --test src/lib/api-auth.test.mts src/app/api/users/userRouteHelpers.test.mts'` 10건, `git diff --check` 통과.
+- 브라우저 QA: 로컬 production 서버에서 `/dashboard/franchise-leads`, `/business-cards/register`, `/properties`, `/properties/map`의 client-side exception/pageerror가 없는 것을 확인했다. preview 배포 `https://naeilsajang-g9878xa3f-jaehyuns-projects-b4d20c6f.vercel.app`에서 사용자 Chrome 로그인 세션으로 `모객 DB`, `명함관리 > 신규입력`, `점포 목록`을 실제 클릭 확인했고, `requesterId is required` 모달과 명함 신규입력 client-side exception은 재현되지 않았다.
+- 제외: preview `물건지도`의 지도 타일 공백은 Kakao JavaScript 키 허용 도메인에 preview host가 없어 `domain mismatched`가 발생한 것이므로 이번 수정 범위에서 제외했다. 운영 도메인 `www.fcerp.co.kr` 기준 SDK 응답은 정상이다.
+- 신규 SQL: 없음.
+
+## 2026-07-01 출점 검토 리포트 Kakao 상권 지도
+
+- 기능 커밋: `a98c692 feat(franchise): add meeting report market map`
+- 2차-5 후속으로 출점 검토 리포트 다이얼로그에 `상권 지도` 섹션을 추가했다. 후보지 좌표가 있으면 Kakao 지도에 마커와 상권 반경을 표시하고, 좌표가 없으면 후보지 주소로 Kakao 지오코딩을 시도한다.
+- 반경은 300m/500m/1km 중 선택하며 후보지별 `franchise_locations.data.meetingTool.marketMap.radiusMeters`에 저장한다. 후보지 전용 기준이므로 회사 공용 프리셋 저장 데이터에서는 제외하고, 프리셋 적용 시 기존 반경 설정은 유지한다. 후보지별 리포트 버전 이력은 `MeetingToolDraft` snapshot을 저장하므로 반경 기준도 버전 저장/불러오기 대상에 포함된다.
+- 지도에는 확대/축소, 일반/스카이뷰/지적편집도 전환, 거리재기, 면적재기 도구를 추가했다. 거리/면적은 지도 클릭 지점을 기준으로 물건지 지도와 같은 계산 유틸을 사용하며, 되돌리기/초기화를 제공한다. 측정 모드와 클릭 점은 후보지 `meetingTool.marketMap`에 저장해 저장/버전 불러오기 후에도 유지한다. PDF/인쇄 출력물은 새 출력창에서 Kakao SDK를 다시 로드하고, 좌표 또는 주소 지오코딩 결과로 지도 타일, 마커, 반경 원, 측정 선·면·점을 렌더링한 뒤 인쇄창을 열도록 보강했다. 별도 표시 반경/주소/좌표 기준 박스는 출력하지 않는다. 출력물의 `상권분석·목표매출 근거`는 `현재 선택안 비용 구조` 아래로 이동했고, 카드가 페이지 경계에서 반으로 잘리지 않도록 카드 단위 page break를 보강했다.
+- 실서버 인쇄 미리보기에서 저장 좌표가 없는 후보지가 `지도에 표시할 주소나 좌표가 없습니다.`로 떨어지는 사례를 확인해, 리포트 다이얼로그의 Kakao 지도 섹션에서 이미 지오코딩된 중심 좌표를 PDF/인쇄 HTML에 함께 전달하도록 보강했다. 출력 HTML은 저장 좌표보다 전달받은 중심 좌표를 우선 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts src/components/franchise/market-insights/locationMeetingToolReport.test.mts` 17건 통과, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: 로컬 dev 서버 `http://localhost:3000/demo` 접근과 데모 로그인은 확인했다. MCP Playwright에서는 데모 투어 레이어가 닫힘 클릭 후에도 pointer를 계속 가로채 출점 후보지 리포트 다이얼로그까지 실클릭 확인이 제한됐다. 실제 로그인 세션에서 Kakao 도메인 허용 기준 지도 로딩과 반경 저장을 live QA한다.
+- 신규 SQL: 없음.
+
+## 2026-07-01 업체 계약함 MVP QA
+
+- 범위: 프랜차이즈 메뉴에 `/contracts/vendor` 업체 계약함을 추가했다. 물류, 식자재, 인테리어, 마케팅, 임대차, 기타 업체 계약을 회사 범위로 등록하고, 계약 담당자, 시작일/만료일, 상태, 메모, 기존 전자계약 연결 또는 업로드 파일을 관리한다.
+- 신규 SQL: `supabase_franchise_vendor_contracts_migration.sql`을 추가했다. SQL 미적용 상태에서는 목록 API가 `schemaReady:false`를 반환해 화면에 적용 안내를 표시하고, 저장 API는 migration-required 안내를 반환한다.
+- 업로드 보안: 업체 계약 파일은 기존 `property-documents` bucket의 `franchise-vendor-contracts/<companyId>/<contractId>/...` prefix만 허용한다. 열람은 public URL이 아니라 `/api/franchise-vendor-contracts?action=open`에서 권한 확인 후 5분 signed URL을 발급한다.
+- 알림 연동: 계약 만료 D-30/D-7은 기존 `franchise_notifications`에 `vendor-contract-due` source type으로 동기화한다. 수신자는 계약 담당자와 회사 팀장이고, 종료/갱신/보관 상태는 자동 알림에서 제외한다.
+- UI: 사이드바 프랜차이즈 그룹과 헤더 breadcrumb에 `업체 계약함`을 추가했다. 화면은 필터, 요약, 계약 등록/수정 패널, 계약 목록을 제공한다. 증거 묶음 PDF 출력은 이번 범위에서 제외했다.
+- 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts src/lib/company-menu-features.test.mts` 28건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `npm run build`는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 병렬 검증 중 build 전 `.next/types`를 읽은 `tsc` 1회가 새 라우트 타입을 못 보고 실패했으나, build 완료 후 순차 재실행한 `npx tsc --noEmit --pretty false`는 통과했다.
+- 남은 live QA: SQL 적용 후 실계정으로 업체 계약 신규 등록, 업로드 문서 열람 signed URL, 전자계약 연결, 수정/삭제, D-30/D-7 알림 생성과 헤더 알림 표시를 확인한다.
 
 ## 다음 QA 체크리스트
 
@@ -842,11 +915,170 @@
 - Docs Steward는 QA 결과가 바뀌면 이 문서를 직접 갱신하고 `Doc Update Brief`에 변경 이유를 남긴다.
 - Docs Steward는 `ERP/web/handoff.md`, 코드, SQL migration, env, package 파일을 수정하지 않는다.
 
+## 2026-07-01 업체 계약함 2차-2A 갱신/종료 이력 QA
+
+- 범위: `/contracts/vendor` 업체 계약함에 만료 업무 큐, 계약 상세 패널, 갱신/종료 처리, 처리 이력 조회를 추가했다. 갱신은 기존 계약을 `renewed`로 닫고 새 active 계약을 복사 생성하며, 종료는 사유를 필수로 받아 `terminated` 상태와 이벤트를 남긴다.
+- 신규 SQL: `supabase_franchise_vendor_contract_events_migration.sql`을 추가했다. 이벤트 테이블은 회사 범위, 원본 계약, 연결 신규 계약, 이벤트 타입, 이전/이후 상태, 사유, 생성자를 저장한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다.
+- API: `/api/franchise-vendor-contracts/actions`를 추가했다. `GET`은 선택 계약의 lifecycle 이벤트를 최신순으로 조회하고, `POST`는 `renew`/`terminate` 액션을 처리한다. 이벤트 SQL 미적용 상태에서는 424 SQL 적용 안내를 반환한다.
+- UI: 목록 상단에 `전체`, `갱신 필요`, `만료`, `담당자 미지정`, `종료/보관` 큐를 추가하고, 행의 `상세` 버튼에서 계약 상세와 처리 이력을 확인한다. 상세 패널에서 새 계약명/시작일/만료일/사유로 갱신 처리하고, 별도 종료 사유로 해지 처리한다.
+- 검증: `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts` 11건 통과. 확장 회귀 `npx tsx --test src/lib/franchise-vendor-contracts.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 24건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3108`에서 `/login`, `/contracts/vendor` HTTP 200 응답을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: SQL 적용 후 실계정으로 신규 등록, 상세 이력 조회, 갱신 처리 후 새 계약 생성, 종료/해지 처리, 큐 카운트/필터, 기존 D-30/D-7 알림 제외 상태를 확인한다.
+
+## 2026-07-01 업체 관리 별도 메뉴 QA
+
+- 범위: 프랜차이즈 메뉴에 `/dashboard/franchise-vendors` 업체 관리를 별도 메뉴로 추가했다. 새 업체 마스터 테이블은 만들지 않고 기존 업체 계약함 데이터를 업체명 기준으로 집계한다.
+- UI: 업체별 계약 수, 진행 계약 수, 만료/갱신 필요 건수, 다음 계약/만료일, 상태 배지, 최근 메모를 목록으로 보여준다. 상단 요약은 등록 업체, 전체 계약, 진행 계약, 관리 필요 업체를 표시한다. `계약 보기`는 `/contracts/vendor?q=<업체명>`으로 이동하고 계약함은 query string을 초기 검색어로 사용한다.
+- 샘플 데이터: 사용자가 SQL 적용 완료를 알렸으나, 현재 `.env.local`의 Supabase URL이 localhost가 아닌 hosted `supabase.co` 프로젝트라 실데이터 오염 가능성이 있다. 사용자가 hosted DB 샘플 주입을 명시 확인하기 전까지 샘플 주입은 보류한다.
+- 검증: `npx tsx --test src/lib/company-menu-features.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/lib/franchise-vendor-contracts.test.mts src/lib/franchise-notifications.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 39건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. production 서버 `http://localhost:3110/dashboard/franchise-vendors`에서 Playwright mock 데이터로 desktop 1280px/mobile 390px 렌더링을 확인했고, 업체 관리 본문 텍스트, 샘플 업체 3개, 관리 필요 업체 요약, horizontal overflow 0, console/page error 0건을 확인했다.
+
+## 2026-07-01 업체 마스터 등록 및 계약 상세 배치 QA
+
+- 범위: `/dashboard/franchise-vendors` 업체 목록 안에 `업체 생성` 버튼을 추가하고, 버튼을 눌렀을 때 같은 목록 섹션 안에서 업체 생성/수정 폼이 열리도록 변경했다. 업체 마스터는 `franchise_vendors`에 저장하고, 기존 계약함 집계와 업체명 기준으로 병합해 계약이 없는 업체도 목록에 표시한다.
+- UI: 업체 목록에는 업체명/구분/거래상태, 담당자 연락처, 계약 수, 진행 계약, 관리 필요 건수, 다음 계약, 최근 메모, `수정`, `계약 보기`를 표시한다. 계약함의 계약 상세 패널은 기존처럼 화면 하단 전체 폭으로 떨어지지 않고, 상단 작업영역의 우측에 표시되도록 배치했다.
+- 신규 SQL: `supabase_franchise_vendors_migration.sql`을 추가했다. 이 SQL은 회사 범위 업체 마스터, 담당자/연락처/이메일/사업자번호/거래상태/메모, 회사별 업체명 unique index, RLS를 포함한다. 사용자 확인 기준 Supabase SQL Editor 등록 완료.
+- 검증: `npx tsx --test src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts` 5건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet` 통과. 파일별 pure LOC는 신규/수정 TSX/CSS 모두 250줄 이하로 확인했다.
+
+## 2026-07-01 업체 계약함 목록 배치 및 업체 마스터 연동 QA
+
+- 범위: `/contracts/vendor`에서 상단 `신규 계약` 버튼을 제거하고, 항상 보이는 좌측 `계약 등록` 폼만 등록 진입점으로 남겼다. 계약 목록은 폼 아래 전체 폭이 아니라 폼 우측 상단에 표시되며, 계약 상세는 행의 `상세` 클릭 시 같은 우측 컬럼에서 목록 아래에 열린다.
+- 연동: 계약 등록 폼에 `업체 선택`을 추가했다. `/api/franchise-vendors`의 active 업체 마스터를 불러오고, 업체 관리에서 등록한 업체를 선택하면 계약 구분과 업체명이 자동 입력되며 계약에는 `vendor_id`가 함께 저장된다. 업체 관리 집계는 `vendor_id`를 우선 사용하고 기존 직접입력 계약은 업체명 fallback으로 병합한다. 계약함에만 있는 업체는 기존처럼 `직접 입력`으로 등록할 수 있다.
+- 코드리뷰 보정: 파일 input이 공통 `.formGrid input` 스타일을 받아 페이지 전체 가로 overflow를 만드는 문제를 `input:not([type="file"])`로 수정했다. 업체 관리 SQL 미적용 시 계약함 업체 선택이 조용히 빈 목록이 되지 않도록 별도 안내를 추가했다. 계약 저장 API는 `vendor_id`가 있을 때 해당 업체가 같은 회사인지 확인한다.
+- 신규 SQL: `supabase_franchise_vendor_contracts_migration.sql`에 `vendor_id` 컬럼, 인덱스, `franchise_vendors` FK를 추가했다. `supabase_seed_franchise_vendor_contract_samples.sql`은 샘플 업체 마스터를 먼저 생성하고 계약 샘플에 `vendor_id`를 연결하도록 보강했다. 사용자 확인 기준 Supabase SQL Editor 등록 완료.
+- 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false` 통과. 남은 검증은 lint/build/브라우저 QA다.
+
+## 2026-07-02 업체 계약 등록 페이지 분리 QA
+
+- 범위: `/contracts/vendor`의 좌측 상시 계약 등록 폼을 제거하고, 헤더 `계약 등록` 버튼을 통해 `/contracts/vendor/register` 전용 페이지에서 신규 계약을 등록하도록 변경했다. 계약 목록의 `수정`은 같은 등록 페이지에 `contractId` query로 진입해 기존 값을 불러온다.
+- UI: 업체 계약함 목록 화면은 검색, 구분/상태 필터, 만료 업무 큐, 계약 목록, 상세 패널 중심으로 정리했다. 등록/수정 폼은 별도 페이지에서 업체 마스터 선택, 직접 입력, 전자계약 연결, 파일 업로드, 담당자/상태/메모 입력을 그대로 제공한다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/app/(main)/contracts/vendor/vendorContractsModel.test.mts src/app/(main)/dashboard/franchise-vendors/vendorManagementModel.test.mts src/lib/franchise-vendor-contracts.test.mts` 17건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3120`에서 Playwright mock 세션으로 `/contracts/vendor` 목록 화면에 상시 등록 폼이 남지 않는 것, `계약 등록` 버튼의 `/contracts/vendor/register` 이동, `목록으로` 복귀, 목록 `수정`의 `contractId` 기반 수정 페이지 이동과 기존 계약명 로딩, desktop horizontal overflow 0건을 확인했다.
+
+## 2026-07-02 Vercel Node 24 운영 설정 정렬 QA
+
+- 범위: 운영 도메인이 연결된 Vercel `naeilsajang` 프로젝트의 Node.js Version이 20.x로 남아 있어, 앱 `package.json`의 `engines.node=24.x`와 맞도록 프로젝트 설정을 24.x로 변경했다.
+- 배포: 설정 변경은 다음 빌드부터 적용되므로 production 재배포를 진행했다. 배포 ID는 `dpl_CfPurRkjSkWModDNQ9KzAbSyYLVZ`이고, source URL은 `https://naeilsajang-nqdt3v6sc-jaehyuns-projects-b4d20c6f.vercel.app`이다.
+- 검증: `npx vercel project inspect naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `Node.js Version=24.x`를 확인했다. `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/contracts/vendor`, `curl -I -L https://www.fcerp.co.kr/contracts/vendor/register`는 200 응답이었다.
+
+## 2026-07-02 알림톡 운영 관리 QA
+
+- 범위: 어드민에 `/admin/alimtalk` 알림톡 운영 관리 페이지를 추가했다. 페이지는 회사별 발송량, 템플릿 관리, 시나리오 관리, 발송 로그 탭으로 구성한다. 1차 신청 대상은 회원가입 승인 요청/완료, 정보공개서 이메일 발송 안내, 정보공개서 수령 확인 완료, 가맹계약 가능일 도래, 업체계약 만료 D-30/D-7 총 6개다.
+- 신규 SQL: `supabase_franchise_alimtalk_operations_migration.sql`을 추가했다. `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`와 6개 기본 템플릿/시나리오 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다.
+- API/UI: `/api/admin/alimtalk-operations`는 admin 세션만 허용한다. SQL 미적용 상태에서는 `schemaReady:false`를 반환해 화면에 SQL 적용 안내를 표시한다. 템플릿은 검수 상태, template/channel ID, 사용 여부를 저장하고, 시나리오는 ON/OFF와 SMS fallback을 저장한다. 시나리오 관리는 전체 발송 플로우 보드와 개별 시나리오 카드로 구성한다. 회사별 설정은 발송 사용 여부, 월 한도, 주의 기준을 저장한다.
+- 후속 계획: 알림톡 2차는 승인 템플릿을 실제 업무 이벤트 발송 훅에 연결하고 `alimtalk_send_logs`에 요청/성공/실패/fallback을 남기는 범위로 둔다. 알림톡 3차는 사용량 대시보드, 실패 분석, 수동 재발송, provider 상태 점검, 공용 달력/업체계약 만료 큐, 비용 리포트로 분리한다.
+- 검증: `npx tsx --test src/lib/alimtalk-operations.test.mts src/app/admin/alimtalk/alimtalkOperationsTableState.test.mts` 5건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3126/admin/alimtalk`에서 Playwright mock API로 desktop 1280px/mobile 390px 렌더링, 회사별 발송량/템플릿/시나리오/발송 로그 탭 전환, 전체 발송 플로우 보드, 개별 시나리오 카드, 수신자 로그 표시, horizontal overflow 0건, console/page error 0건을 확인했다.
+
+## 2026-07-02 가맹 운영 슈퍼바이징 MVP QA
+
+- 범위: `/dashboard/franchise-operations`의 가맹 운영 탭을 `대시보드 / 슈퍼바이징 / 가맹점 목록 / 가맹점 등록`으로 확장했다. 슈퍼바이징 탭은 요약 KPI, SV 배정, 방문 일정, 점검 보고서 저장/제출, 관리자 승인/반려, 시정요청 상태 변경을 한 화면에서 처리한다.
+## 2026-07-03 슈퍼바이징 2차 고도화 QA
+
+- 범위: `/dashboard/franchise-operations`의 `슈퍼바이징` 탭을 `운영 리포트 / 배정 관리 / 방문 일정 / 점검 보고서 / 승인·시정요청` 내부 탭으로 재구성했다. 상단 KPI 카드는 클릭 시 오늘 방문, 이번주 예정, 미제출 보고서, 승인 대기, 진행 중 시정요청 큐로 이동하고 목록을 필터링한다.
+- 보고서: 기본 점검 항목을 `매출/객수`, `청결`, `서비스`, `품질`, `재고/물류`, `본사 지원`, `교육/공지 이행`, `기타`로 확장했다. 팀장/admin은 현재 점검 항목을 회사 공용 템플릿으로 저장할 수 있고, 보고서 작성 화면에서 사진 첨부 메타와 특이사항을 함께 저장한다. 보고서 PDF/인쇄 출력은 운영점, SV, 방문일, 상태, 점검 항목, 특이사항, 첨부 이미지 URL이 있는 사진을 포함한다.
+- 이력/동기화: 보고서 임시저장/제출/승인/반려는 `franchise_supervision_report_events`에, 시정요청 생성/상태변경/메모변경은 `franchise_corrective_action_events`에 남긴다. 보고서 제출/승인/반려에 따라 방문 일정 상태를 `승인대기 / 완료 / 보고서대기`로 동기화하고, 임시저장은 방문 상태를 바꾸지 않는다. 방문 수정/취소 시 연결된 `schedules` 일정의 날짜/상태/담당자를 갱신한다.
+- 운영 큐: `/api/franchise-supervision` 초기 조회 응답에 `operationQueue`를 추가했다. 기존 방문/보고서/시정요청 행만 계산해 오늘 방문, 내일 방문 준비, 점검 보고서 미제출, 보고서 승인 대기, 시정요청 기한 초과 항목을 우선순위로 내려준다. `운영 리포트`의 `오늘 처리 큐`에서 항목을 누르면 기존 방문 일정/점검 보고서/승인·시정요청 탭과 필터로 이동한다. 신규 SQL은 없다.
+- 보고서/승인 UI: 점검 보고서 탭에 방문 기준 보고서 목록 리스트를 추가했다. 미작성/임시저장/제출/승인/반려 상태, 방문 목적, SV, 개선필요 수, 사진 수, 특이사항을 표로 비교하고 `확인/작성`을 누르면 같은 탭의 보고서 작성 폼으로 이어진다. 승인·시정요청 탭은 카드 목록 대신 승인 큐와 시정요청 큐 테이블로 정리해 반려 사유 입력, 제출/검토일, 담당자, 기한, 상태 변경을 한 화면에서 처리한다. 신규 SQL은 없다.
+- 배정관리 UI: 담당지역 입력/표시를 제거하고 `SV 배정 저장`/`배정 수정 저장` 버튼으로 신규와 수정 상태를 구분했다. 운영점별 보기에서는 전체/SV/배정상태/검색 필터와 페이지네이션으로 운영점별 현재 담당자를 먼저 확인하고, `수정`/`배정` 클릭 시 선택 행 바로 아래에 인라인 편집 폼을 연다. SV별 보기에서는 슈퍼바이저별 담당 운영점 목록과 배정 수를 확인한다. `배정됨`/`미배정` 배지는 셀 폭으로 늘어나지 않고 내용 폭만 차지하도록 보정했다. 기존 `franchise_supervisor_assignments` PATCH API를 사용하므로 신규 SQL은 없다.
+- 알림톡: 내부 운영 알림용 `supervision_visit_due`, `supervision_report_missing`, `supervision_report_reviewed`, `supervision_corrective_action_due` 템플릿/시나리오 seed를 추가했다. 2차-2 범위에서는 방문 생성, 보고서 승인/반려, 시정요청 생성 시 내부 담당자/SV에게 발송 훅을 연결했다. `supervision_report_missing` 자동 발송은 방문 D-1/D-day와 함께 스케줄러/운영 큐 연결 범위로 남긴다. 시나리오나 템플릿이 미승인/비활성 상태이면 본 업무 저장은 성공하고 알림톡 로그에 blocked/skipped 상태가 남는다.
+- 신규 SQL: `supabase_franchise_supervision_v2_migration.sql`을 추가했다. 회사별 점검 템플릿, 보고서 이벤트, 시정요청 이벤트, 보고서 `template_id`, 내부 알림톡 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
+- 코드리뷰 보정: 보고서 저장/조회 시 `template_id` 기준으로 회사 점검 템플릿 항목을 실제 병합하도록 수정했다. 승인/반려는 실제 `제출` 상태에서만 처리하고, 임시저장은 방문 상태·미제출 알림을 만들지 않게 했다. 방문 생성의 `assignment_id`, 시정요청 생성의 `report_id`, 내부 알림톡 수신자 조회는 회사 범위를 다시 검증한다. 보고서 첨부는 저장 경로만 신뢰하고 조회 시 `property-documents/franchise-supervision/...` 경로에서 public URL을 재생성한다. v2 이벤트 테이블 RLS는 참조 보고서/시정요청 회사와 `actor_profile_id = auth.uid()`를 확인하는 insert-only 정책으로 보강했다. 보고서 라우트와 슈퍼바이징 패널은 지원 파일/섹션 파일로 분리해 유지보수 리스크를 낮췄다. 추가 코드리뷰에서 나온 미제출 보고서 필터 불일치를 보정해 미래 예정 방문은 미제출 목록에 뜨지 않게 했고, 같은 방문에 보고서 row가 여러 개 있으면 최신 업데이트/제출/검토 시각 기준으로 선택한다. 승인 큐의 반려 사유 입력도 행별 상태로 분리했다.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright mock 세션에서 `/dashboard/franchise-operations` 슈퍼바이징 탭을 1280px/390px로 확인했고, 운영 리포트/점검 보고서 화면 모두 page-level horizontal overflow 0건이었다. 추가 운영 큐 QA에서는 1280px/390px 모두 `오늘 처리 큐` 렌더, `점검 보고서 미제출` 큐 클릭 후 점검 보고서 탭 이동, console/page error 0건을 확인했다. 이번 보고서 목록/승인·시정요청 큐 고도화 QA에서는 Chrome mock 세션으로 1280px/390px에서 점검 보고서 `확인/작성`, `미작성` 상태, 승인 대기 보고서, 시정요청 메모 렌더링을 확인했고 page-level horizontal overflow 0건, console/page error 0건이었다.
+- 남은 live QA: v2 SQL 적용 후 실계정으로 템플릿 저장/재조회, 방문 생성/수정/취소와 공용 일정 동기화, 보고서 제출/승인/반려 이력, 시정요청 상태 변경 이력, 보고서 인쇄 미리보기, `오늘 처리 큐` 항목 이동, 알림톡 발송 로그를 확인한다. 방문 D-1/D-day 및 보고서 미제출 자동 발송은 스케줄러 범위로 남긴다.
+
+- 신규 SQL: `supabase_franchise_supervision_migration.sql`을 추가했다. `franchise_supervisor_assignments`, `franchise_store_visits`, `franchise_inspection_reports`, `franchise_corrective_actions`, 상태 제약, 인덱스, RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
+- API/UI: `/api/franchise-supervision` 초기 조회와 `/assignments`, `/visits`, `/reports`, `/actions` mutation 라우트를 추가했다. `admin`/`manager`는 회사 전체를 관리하고, 일반 직원/SV는 본인 배정·방문·보고서 중심으로 제한한다. 방문 생성 시 기존 `schedules`에 회사 일정 1건을 같이 만들며, 보고서 사진은 기존 `property-documents` 버킷의 `franchise-supervision/<company_id>/<report_id>/...` 경로 메타데이터로 저장한다.
+- 후속 계획: 2차는 알림톡/문자/이메일 자동 발송 훅, 공용 달력 양방향 동기화, 점검 보고서 PDF 출력, 보고서 템플릿 빌더, 대표 대시보드 KPI 연결로 둔다. 1차에서는 발송 이벤트와 PDF 자동 출력은 직접 실행하지 않는다.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts src/lib/upload-storage-policy.test.mts src/lib/upload-storage-access.test.mts` 14건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://127.0.0.1:3130`에서 Playwright mock 세션/API로 `/dashboard/franchise-operations` 슈퍼바이징 탭을 1280px/390px에서 확인했고, 필수 문구 누락 0건, page-level horizontal overflow 0건, console/page error 0건이었다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 남은 live QA는 SQL 적용 후 실계정으로 SV 배정, 방문 일정, 보고서 저장/제출, 승인/반려, 시정요청 생성/상태 변경 persistence 확인이다.
+
+## 2026-07-02 진행현황 확인/수정 첨부 열람 QA
+
+- 범위: 입점요청 등록 폼에 `현재 상태=영업중`일 때 `현재 영업중 상호/매장명` 입력을 추가하고, 진행현황의 입점요청/예비 창업자 등록 액션을 `확인/수정`으로 통일했다. 모달 상단에는 등록 요약과 첨부 자료 영역을 두고, 하단에는 기존 수정 폼을 유지한다. 버튼 노출과 수정/삭제 권한은 기존 작성자, 회사 팀장, admin 정책을 그대로 유지한다.
+- 첨부: 신규 입점요청 첨부는 row 생성 후 `/api/upload`를 통해 이미지 파일은 `property-images`, PDF/문서는 `property-documents`에 저장하고 `storageBucket`, `storagePath`, `publicUrl` 메타를 `properties.data.fileAttachments`에 반영한다. 이미지 파일은 썸네일/열기/다운로드를 제공하고, PDF/문서는 다운로드 버튼을 제공한다. 과거처럼 URL 없이 파일명/용량/타입만 남은 첨부는 원본 파일을 복원할 수 없으므로 `재첨부 필요`로 안내한다.
+- 코드리뷰 보정: 진행현황 표시는 불완전한 API 데이터에서도 crash가 나지 않도록 표시 helper를 null-safe하게 보강했다. 파일 선택 직후 저장 전에도 브라우저 `blob:` URL로 파일명 링크와 다운로드 버튼이 보이도록 pending file URL을 관리한다. HEIC는 현재 업로드 route에서 허용하지 않으므로 UI 허용 문구에서 제외했다.
+- 신규 SQL: 없음. 기존 `properties.data` JSON과 Storage 업로드 경로를 사용한다.
+- 검증: `npx tsx --test src/lib/work-intake-display.test.mts src/lib/franchise-property-registration-uploads.test.mts src/lib/franchise-property-registration.test.mts src/lib/franchise-file-attachments.test.mts 'src/app/(main)/dashboard/franchise-leads/work-intake/requests.test.mts'` 14건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. Playwright mock 세션에서 `/dashboard/franchise-leads/work-intake` 확인/수정 모달을 열고 새로 선택한 PDF의 `다운로드` 버튼이 visible 상태이며 `blob:` 링크와 파일명 download 속성을 갖는 것을 확인했다.
+- 남은 live QA: 운영 배포 후 실계정으로 입점요청 `영업중` 매장명 저장/재조회, 신규 이미지 썸네일, PDF 다운로드, URL 없는 과거 첨부의 `재첨부 필요` 안내, 예비 창업자 등록 `확인/수정` 제목과 기존 권한 정책 유지 여부를 확인한다.
+
+## 2026-07-02 입점요청/예비 창업자 등록 Solapi 문자 알림 QA
+
+- 범위: 입점요청 저장 성공 후 `[ERP] 입점요청 등록` 문자를, 예비 창업자 등록 저장 성공 후 `[ERP] 예비창업자 등록` 문자를 Solapi로 발송한다. 예비 창업자 등록은 동일 연락처 dedupe로 기존 모객 DB가 업데이트되는 경우에도 등록 시도 알림을 보낸다.
+- 운영 env: `SOLAPI_SMS_ENABLED=true`, `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_SENDER_PHONE`이 필요하다. 인입 알림 전용 수신 번호는 `FRANCHISE_INTAKE_ALERT_PHONES`에 쉼표 구분으로 등록한다. 이 값이 비어 있으면 기존 `SIGNUP_ADMIN_ALERT_PHONES`로 fallback 한다.
+- 안정성: 문자 발송은 DB 저장 성공 후 별도 `try/catch`에서 처리하며, Solapi 설정 누락/실패는 서버 로그만 남기고 입점요청/예비 창업자 등록 응답을 실패시키지 않는다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/solapi-notifications.test.mts` 9건 통과. Solapi 전화번호 정규화, 회원가입 문구, 입점요청/예비 창업자 등록 문구, `FRANCHISE_INTAKE_ALERT_PHONES` 파싱을 확인했다. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: 운영 Vercel Production env에 `FRANCHISE_INTAKE_ALERT_PHONES`와 Solapi 필수 키 이름이 존재함을 확인했다. 배포 후 실서버에서 입점요청/예비 창업자 등록을 1건씩 생성해 실제 수신 번호 문자 도착을 확인한다.
+
+## 2026-07-02 입점요청/예비 창업자 등록 진행현황 이동 QA
+
+- 범위: 입점요청과 예비 창업자 등록 저장 성공 후 작성 폼에 남지 않고 진행현황 화면으로 이동한다. 입점요청은 `?tab=properties`, 예비 창업자 등록은 `?tab=matchingRequests`를 붙여 방금 등록한 유형의 탭이 바로 열리게 했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 로컬 dev 서버 `http://127.0.0.1:3000`에서 Playwright mock 세션으로 입점요청 등록 후 `진행현황 > 입점 요청` 탭 이동, 예비 창업자 등록 후 `진행현황 > 예비 창업자 등록` 탭 이동을 확인했다.
+
+## 2026-07-02 알림톡 승인 템플릿 발송 훅 QA
+
+- 범위: 승인된 Kakao/SOLAPI 알림톡 템플릿을 실제 업무 이벤트에 연결했다. 연결 대상은 회원가입 승인 요청, 회원가입 승인 완료, 정보공개서 수령 확인 완료, 가맹계약 가능 상태, 업체 계약 만료 D-30/D-7이다. 검수중인 정보공개서 확인 안내 템플릿은 승인 전까지 실제 발송 훅에서 제외한다.
+- 동작: 각 훅은 `alimtalk_scenarios.enabled`, 템플릿 `approved/enabled`, template/channel ID, 회사별 발송 사용 여부와 월 한도, Solapi env를 확인한 뒤 발송한다. 발송 성공/실패/차단 결과는 `alimtalk_send_logs`에 남기고, 알림톡 실패는 본 업무 저장/승인/확인 흐름을 실패시키지 않는다.
+- 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
+- 검증: `npx tsx --test src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts src/lib/solapi-notifications.test.mts src/lib/franchise-notifications.test.mts` 19건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다. 남은 live QA는 운영 admin에서 승인 템플릿 ID, channel ID, 시나리오 ON, 회사 설정을 저장한 뒤 각 이벤트별 실발송/로그 확인이다.
+
+## 2026-07-02 업체 계약 만료 알림톡 변수 정합성 QA
+
+- 범위: 정보공개서 알림톡은 Google OAuth 인증 완료 이후로 미루고, 우선 Gmail 의존성이 없는 `vendor_contract_due` 업체 계약 만료 안내를 테스트 대상으로 분리했다.
+- 보정: 승인 템플릿의 `D-#{남은일수}` 형식과 담당자 표시를 지원하도록 업체 계약 만료 후보 변수에 `남은일수`를 추가하고, 기존 seed 호환을 위해 `남은기간`도 `D-7`/`D-30` 형태로 함께 보낸다. 수신자별 프로필 이름은 `담당자명` 변수로 발송 직전에 주입한다.
+- 테스트 조건: 계약 상태가 `terminated`, `renewed`, `archived`가 아니고 만료일이 실행일 기준 정확히 D-30 또는 D-7인 계약만 대상이다. 수신자는 계약 담당자와 회사 팀장이고, 중복 발송 방지를 위해 `contractId:vendor-contract-due:남은일수` source 기준으로 로그가 남는다.
+- 신규 SQL: 없음. 운영에서는 `/admin/alimtalk`에서 `vendor_contract_due` 템플릿을 `approved/enabled`로 저장하고 template ID, channel ID, 시나리오 ON, 회사별 발송 사용 여부를 확인한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 6건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-02 업체 계약 만료 알림톡 수신자 스코프 QA
+
+- 범위: admin 전역 알림 조회가 회사 스코프 없이 모든 회사 업체계약 후보를 실제 알림톡 발송까지 시도하지 않도록 차단했다. 회사가 특정된 요청 또는 일반 회사 계정 요청에서는 기존처럼 발송한다.
+- 보정: 업체계약 담당자(`owner_profile_id`)는 해당 계약 회사의 활성 수신자 목록에 있을 때만 후보에 추가한다. 과거 테스트 계약이나 잘못된 담당자 참조가 남아 있어도 다른 프로필로 알림톡이 재생성되지 않게 했다.
+- 신규 SQL: 없음. 운영 테스트 데이터 정리는 사용자가 Supabase SQL Editor에서 직접 실행한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-notification-alimtalk-scope.test.mts src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-03 알림톡 운영 UI 단순화 QA
+
+- 범위: `/admin/alimtalk` 템플릿 관리에서 별도 `사용` 체크와 템플릿 본문 미리보기를 제거했다. 템플릿은 `상태=승인완료`로 저장하면 기존처럼 자동 사용 처리된다.
+- 시나리오 관리: 전체 발송 플로우 보드와 `시나리오 사용` 체크를 제거했다. 각 시나리오 카드의 `템플릿` 노드를 클릭하면 카카오 알림톡 미리보기 형태로 템플릿 본문과 변수 칩을 확인할 수 있게 했다. 대체 발송 저장은 기존 시나리오 enabled 상태를 보존하고 fallback 설정만 저장한다.
+- 신규 SQL: 없음.
+- 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://127.0.0.1:3010/admin/alimtalk`에서 Playwright mock API로 템플릿 관리 본문 미노출, 시나리오 관리 전체 플로우/사용 체크 미노출, 템플릿 노드 클릭 시 알림톡 미리보기와 변수 칩 노출을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
+## 2026-07-03 어드민 메뉴 순서 및 정보공개서 확인 안내 알림톡 QA
+
+- 범위: 어드민 관리 홈의 관리 메뉴 카드 순서를 `회원 및 권한 관리`, `회사별 메뉴 관리`, `프랜차이즈 인입 관리`, `전자계약 관리`, `알림톡 운영 관리`, `시스템 설정`으로 조정했다. 정보공개서 Gmail 발송 폼에는 필수 `후보자명` 입력과 발송 전 `정보공개서 확인 안내` 알림톡 미리보기를 추가했다.
+- 알림톡 연동: Gmail 발송 성공 시 `recipientName`을 발송 이력의 `recipient_name`에 저장하고, 후보자 휴대폰이 있으면 `disclosure_email_sent` 시나리오로 `#{후보자명}`, `#{브랜드명}` 변수를 채워 알림톡을 발송한다. 수령 확인 클릭 시에는 기존 `disclosure_confirmed` 시나리오를 유지하며, 발송 당시 저장된 브랜드명을 우선 사용한다.
+- 신규 SQL: 없음. 기존 `supabase_franchise_alimtalk_operations_migration.sql`의 `alimtalk_templates`, `alimtalk_scenarios`, `alimtalk_company_settings`, `alimtalk_send_logs`를 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 9건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 스모크로 후보자명 미입력 시 발송 요청 차단, 알림톡 목업 변수 노출, `disclosure_email_sent`/`disclosure_confirmed` 변수 매핑을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: 운영 Google OAuth 승인/연결 계정으로 실제 Gmail 발송을 1건 실행해 `정보공개서 확인 안내` 알림톡 도착, 발송 로그 성공, 수령 확인 버튼 클릭 후 `정보공개서 수령 확인 완료` 알림톡과 계약 가능일 표시를 확인한다.
+
+## 2026-07-03 정보공개서 수령 확인 알림톡 변수 및 미확인 큐 QA
+
+- 범위: 운영 테스트에서 `정보공개서 수령 확인 완료` 알림톡은 도착했지만 승인 템플릿의 `확인일`/`계약가능일` 계열 변수가 비어 보이는 문제를 보정했다. `disclosure_confirmed` 변수 생성은 `확인일`, `수령확인일`, `수령일`, `계약가능일`을 모두 채우며, 계약 가능일은 기존 14일 숙고기간 계산 유틸을 사용한다.
+- 미확인 큐: 메일 열람 추정은 Gmail/메일 클라이언트 프록시 때문에 법적 수령 신호로 쓰지 않는다. 대신 정보공개서가 `sent` 또는 `opened` 상태이고 `confirmed_at`이 없으며 발송 후 1일 이상 지난 경우 내부 `정보공개서 수령 미확인` 업무 큐를 생성한다. 이 큐는 외부 알림톡 자동 발송이 아니라 담당자 follow-up용 내부 알림이다.
+- 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts src/lib/alimtalk-send-support.test.mts src/lib/alimtalk-operations.test.mts` 15건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 스모크로 `opened` 상태이지만 수령확인이 없는 발송 이력이 `disclosure-unconfirmed` 후보로 생성되고, `disclosure_confirmed` 변수가 `계약가능일: 2026. 07. 17.`, `확인일/수령확인일/수령일: 2026. 07. 03.` 형태로 채워지는 것을 확인했다.
+- 남은 live QA: 운영에서 실제 수령 확인 버튼 클릭 후 `alimtalk_send_logs`의 변수 payload와 카카오 알림톡 표시가 일치하는지 확인한다. Gmail 열람 추정은 환경별 차이가 크므로 `opened_at`은 참고값으로만 확인하고, 미확인 큐 생성 여부는 발송 후 1일 경과 데이터로 점검한다.
+
+## 2026-07-03 가맹계약 가능 상태 알림톡 변수 QA
+
+- 범위: 운영 테스트에서 `가맹계약 가능 상태 안내` 알림톡은 도착했지만 승인 템플릿의 `후보자명`, `수령확인일`, `계약가능일` 계열 변수가 비어 보이는 문제를 보정했다. 계약 가능 알림 후보 생성 시 `confirmedAt`, `latestSentAt`을 함께 전달하고, 알림톡 변수 빌더는 `후보자명`, `예비창업자명`, `확인일`, `수령확인일`, `수령일`, `계약가능일`, `계약가능예정일`, `가능일`을 모두 채운다.
+- 신규 SQL: 없음. 기존 정보공개서 발송 이력, 알림 후보 생성 로직, 알림톡 운영 테이블을 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-notifications.test.mts` 11건 통과. `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 새 회귀 테스트로 `disclosure-eligible` 후보의 `franchise_contract_eligible` 변수 별칭이 모두 채워지는 것을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 남은 live QA: 운영 배포 후 내일 회사 admin 계정 테스트 데이터로 `가맹계약 가능 상태 안내` 알림톡을 다시 발송해 카카오 메시지와 `alimtalk_send_logs.variables`에 후보자명, 수령확인일, 계약가능일이 표시되는지 확인한다.
+
+## 2026-07-03 슈퍼바이징 역할별 운영 UX QA
+
+- 범위: 슈퍼바이징 탭을 팀장/관리자 관점과 SV 관점으로 분리했다. `admin`/`manager`에게만 `배정 관리` 내부 탭을 노출하고, 일반 SV는 운영 리포트/방문 일정/점검 보고서/승인·시정요청 중심으로 사용한다. 운영 리포트 문구는 팀장에게 회사 전체 현황, SV에게 내 담당 운영점 현황으로 보이게 정리했다.
+- 방문 점검: 방문 일정은 목록을 먼저 보여주고, `새 방문` 또는 `수정`을 눌렀을 때 하단 등록/수정 폼에서 처리한다. 폼은 SV 선택을 먼저 두고, 선택한 SV에게 활성 배정된 운영점만 표시한다. 방문 목록에는 검색, SV 필터, 상태 필터, 페이지네이션, 수정/삭제 액션을 추가했다. 삭제는 이력 보존을 위해 방문을 `취소` 상태로 바꾸고 연결된 공용 일정도 `cancelled`로 동기화한다.
+- 점검 보고서: `보고서 목록`과 `보고서 작성`을 분리해 목록에서 미작성/임시저장/제출/승인/반려 상태를 먼저 비교하고, 선택한 방문만 작성 화면으로 이동한다. `오늘 처리 큐` 문구는 `운영 우선순위`로 바꿔 방문/보고서/승인/시정요청을 처리 순서대로 보는 영역으로 정리했다.
+- 신규 SQL: 없음. 기존 `supabase_franchise_supervision_migration.sql` 및 `supabase_franchise_supervision_v2_migration.sql` 적용 환경을 그대로 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts src/lib/franchise-supervision-assignments.test.mts` 13건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet` 통과. 브라우저 QA는 로그인 가드가 있으면 사용자 제공 테스트 계정(`내일` 회사 `admin`, 비밀번호는 문서화하지 않음)으로 Playwright 로그인 후 확인한다.
+- 남은 live QA: 실계정에서 팀장에게만 `배정 관리`가 보이는지, SV 선택 후 배정 운영점만 표시되는지, 방문 수정/삭제 후 목록과 공용 일정 상태가 갱신되는지, 보고서 목록/작성 전환과 운영 우선순위 이동이 끊기지 않는지 확인한다.
+
 ## 2026-07-07 보안 감사 후속 및 인증 헤더 회귀 QA
 
 - 범위: 외부 보안 감사 후속으로 남은 SQL-only 항목을 별도 SQL로 정리하고, 세션 기반 인증 전환 후 모객 DB 화면에서 남아 있던 `requesterId is required` 콘솔 오류를 보정했다. Meta 연동 조회/저장/동기화/연결해제와 후보지 연결용 외부 매물 목록 조회가 `getApiAuthHeaders()`를 사용한다.
 - 전자계약 권한: 감사 후속 중 잘못 옮겨진 존재하지 않는 `super_manager` 역할을 유효 역할인 `sub_manager`로 정정했다. 같은 회사 `sub_manager`는 전자계약 문서 조회와 회사 템플릿 관리를 기존 정책대로 사용할 수 있다.
 - UCanSign: UCanSign 미연결 계정이 대시보드에 들어올 때 계약 목록 조회는 빈 상태로 유지하되, 서버 콘솔에는 예상 가능한 미연결 error 로그를 반복 출력하지 않게 정리했다.
 - 신규 SQL: `supabase_platform_audit_required_sql_2026_07_07.sql`을 추가했다. `share_links.revoked_at`, `system_settings`, 중복 방지 unique index를 포함하며 사용자가 Supabase SQL Editor에서 직접 적용한다. **SQL 등록 필요**.
-- 검증: `npx tsx --test src/lib/electronic-contracts/document-permissions.test.mts` 11건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 검증: `npx tsx --test src/lib/electronic-contracts/document-permissions.test.mts` 11건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check` 통과.
 - 남은 live QA: 운영 배포 후 모객 DB에서 Meta 연동 패널과 후보지 연결 패널 진입 시 `requesterId is required` 콘솔 오류가 재발하지 않는지, UCanSign 미연결 계정의 대시보드 진입 로그가 조용한지, 같은 회사 `sub_manager` 계정의 전자계약 접근이 유지되는지 확인한다.

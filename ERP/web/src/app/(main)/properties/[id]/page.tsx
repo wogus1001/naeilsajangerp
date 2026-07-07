@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import PropertyCard from '@/components/properties/PropertyCard';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 export default function PropertyDetailPage() {
     const router = useRouter();
@@ -19,7 +20,9 @@ export default function PropertyDetailPage() {
         async function fetchProperty() {
             try {
                 // console.log('Fetching property with ID:', id);
-                const res = await fetch(`/api/properties?id=${id}`);
+                const res = await fetch(`/api/properties?id=${id}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     const data = await readApiJson(res);
                     setProperty(data);

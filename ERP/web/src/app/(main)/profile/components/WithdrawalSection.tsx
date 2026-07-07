@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle } from 'lucide-react';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import styles from '../page.module.css';
 import type { ProfileUser, ShowAlert, ShowConfirm } from './profileTypes';
 
@@ -41,7 +42,10 @@ export function WithdrawalSection({ user, showAlertAction, showConfirmAction }: 
                             showConfirmAction('정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', async () => {
                                 try {
                                     const userId = user.uid || user.id || '';
-                                    const res = await fetch(`/api/users?id=${userId}&requesterId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+                                    const res = await fetch(`/api/users?id=${encodeURIComponent(userId)}`, {
+                                        method: 'DELETE',
+                                        headers: await getApiAuthHeaders()
+                                    });
                                     const data: unknown = await res.json();
 
                                     if (res.ok) {

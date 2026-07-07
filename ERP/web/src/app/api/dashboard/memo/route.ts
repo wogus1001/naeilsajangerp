@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Service Role Client (Bypasses RLS for migration/support)
@@ -10,24 +11,18 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 // GET: Fetch user's memo
 export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-        return NextResponse.json({ error: 'userId required' }, { status: 400 });
-    }
 
     try {
-        const email = `${userId}@example.com`;
-        const { data: user } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
-
-        if (!user) return NextResponse.json({ content: '' });
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
 
         const { data: memo } = await supabaseAdmin
             .from('memos')
             .select('content')
-            .eq('user_id', user.id)
-            .single();
+            .eq('user_id', requester.id)
+            .maybeSingle();
 
         return NextResponse.json({ content: memo ? memo.content : '' });
     } catch (error) {
@@ -39,23 +34,25 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const { userId, content } = await request.json();
-
-        const email = `${userId}@sajang.app`;
-        // Use admin client to lookup profile
-        const { data: user } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
-
-        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
+        const { content } = await request.json();
+        const nextContent = typeof content === 'string' ? content : '';
 
         // Upsert Memo
         // Check existence
-        const { data: existing } = await supabaseAdmin.from('memos').select('id').eq('user_id', user.id).single();
+        const { data: existing } = await supabaseAdmin.from('memos').select('id').eq('user_id', requester.id).maybeSingle();
 
         if (existing) {
-            const { error } = await supabaseAdmin.from('memos').update({ content, updated_at: new Date() }).eq('id', existing.id);
+            const { error } = await supabaseAdmin
+                .from('memos')
+                .update({ content: nextContent, updated_at: new Date().toISOString() })
+                .eq('id', existing.id);
             if (error) throw error;
         } else {
-            const { error } = await supabaseAdmin.from('memos').insert({ user_id: user.id, content });
+            const { error } = await supabaseAdmin.from('memos').insert({ user_id: requester.id, content: nextContent });
             if (error) throw error;
         }
 

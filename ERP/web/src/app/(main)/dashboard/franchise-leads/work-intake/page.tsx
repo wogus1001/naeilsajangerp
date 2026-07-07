@@ -17,22 +17,29 @@ const EMPTY_DATA: WorkIntakeData = {
     matchingRequests: []
 };
 
-function formatDate(value: string): string {
-    if (!value) return '-';
-    const date = new Date(value);
+function cleanText(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function formatDate(value: unknown): string {
+    const text = cleanText(value);
+    if (!text) return '-';
+    const date = new Date(text);
     if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
-function formatManwon(value: string): string {
-    if (!value.trim()) return '-';
-    const parsed = Number(value.replace(/,/g, ''));
-    if (!Number.isFinite(parsed)) return value;
+function formatManwon(value: unknown): string {
+    const text = cleanText(value);
+    if (!text) return '-';
+    const parsed = Number(text.replace(/,/g, ''));
+    if (!Number.isFinite(parsed)) return text;
     return `${new Intl.NumberFormat('ko-KR').format(parsed)}만원`;
 }
 
-function joinParts(parts: readonly string[]): string {
-    return parts.map(part => part.trim()).filter(Boolean).join(' / ') || '-';
+function joinParts(parts: readonly unknown[]): string {
+    return parts.map(cleanText).filter(Boolean).join(' / ') || '-';
 }
 
 export default function FranchiseWorkIntakePage() {
@@ -72,6 +79,10 @@ export default function FranchiseWorkIntakePage() {
     }, []);
 
     React.useEffect(() => {
+        const tab = new URLSearchParams(window.location.search).get('tab');
+        if (tab === 'matchingRequests' || tab === 'properties') {
+            setActiveTab(tab);
+        }
         void loadData();
     }, [loadData]);
 
@@ -135,7 +146,7 @@ export default function FranchiseWorkIntakePage() {
                                         <div className={styles.actionGroup}>
                                             {item.canEdit ? (
                                                 <button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'properties', item })}>
-                                                    <Pencil size={14} /> 수정
+                                                    <Pencil size={14} /> 확인/수정
                                                 </button>
                                             ) : null}
                                             {item.canDelete ? (
@@ -169,7 +180,7 @@ export default function FranchiseWorkIntakePage() {
                                         <div className={styles.actionGroup}>
                                             {item.canEdit ? (
                                                 <button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'matchingRequests', item })}>
-                                                    <Pencil size={14} /> 수정
+                                                    <Pencil size={14} /> 확인/수정
                                                 </button>
                                             ) : null}
                                             {item.canDelete ? (

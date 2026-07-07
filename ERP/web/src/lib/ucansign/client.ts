@@ -1,7 +1,9 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { extractTokenExpiresInMs } from './platform-response';
 
 export const UCANSIGN_BASE_URL = process.env.UCANSIGN_BASE_URL || 'https://app.ucansign.com/openapi';
+const DEFAULT_TOKEN_EXPIRES_MS = 30 * 60 * 1000;
 export const UCANSIGN_NOT_CONNECTED_MESSAGE = 'User is not connected to UCanSign';
 
 export function isUcansignNotConnectedError(error: unknown): boolean {
@@ -23,7 +25,7 @@ const updateTokenInDB = async (userId: string, authResult: any) => {
         const { error } = await supabaseAdmin.from('profiles').update({
             ucansign_access_token: authResult.accessToken,
             ucansign_refresh_token: authResult.refreshToken, // Maintain if new one not provided? uCanSign usually rotates.
-            ucansign_expires_at: Date.now() + (29 * 60 * 1000)
+            ucansign_expires_at: Date.now() + extractTokenExpiresInMs(authResult, DEFAULT_TOKEN_EXPIRES_MS)
         }).eq('id', userId);
 
         if (error) console.error('Failed to update token in Supabase:', error);

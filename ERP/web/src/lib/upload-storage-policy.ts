@@ -2,6 +2,8 @@ const PROPERTY_IMAGES_BUCKET = 'property-images';
 const PROPERTY_DOCUMENTS_BUCKET = 'property-documents';
 const LEAD_DOCUMENT_PREFIX = 'franchise-lead-documents';
 const DISCLOSURE_PREFIX = 'franchise-disclosures';
+const VENDOR_CONTRACT_PREFIX = 'franchise-vendor-contracts';
+const SUPERVISION_PREFIX = 'franchise-supervision';
 const PROPERTY_DOCUMENT_PREFIX = 'properties';
 
 type UploadBucket = typeof PROPERTY_IMAGES_BUCKET | typeof PROPERTY_DOCUMENTS_BUCKET;
@@ -28,6 +30,16 @@ export type UploadStorageTarget =
     | (BaseUploadTarget & {
         readonly kind: 'disclosure';
         readonly companyId: string;
+    })
+    | (BaseUploadTarget & {
+        readonly kind: 'vendorContract';
+        readonly companyId: string;
+        readonly contractId: string;
+    })
+    | (BaseUploadTarget & {
+        readonly kind: 'supervisionReport';
+        readonly companyId: string;
+        readonly reportId: string;
     });
 
 export type UploadStorageParseResult =
@@ -120,6 +132,42 @@ export function parseUploadStorageTarget(input: {
                 companyId,
                 kind: 'disclosure',
                 path
+            }
+        };
+    }
+
+    if (segments[0] === VENDOR_CONTRACT_PREFIX) {
+        if (segments.length < 4) return { ok: false, error: 'Invalid vendor contract storage path' };
+        const companyId = cleanString(input.companyId);
+        if (!companyId || companyId !== segments[1]) {
+            return { ok: false, error: 'Invalid vendor contract storage path' };
+        }
+        return {
+            ok: true,
+            target: {
+                bucket,
+                companyId,
+                contractId: segments[2],
+                kind: 'vendorContract',
+                path
+            }
+        };
+    }
+
+    if (segments[0] === SUPERVISION_PREFIX) {
+        if (segments.length < 4) return { ok: false, error: 'Invalid supervision report storage path' };
+        const companyId = cleanString(input.companyId);
+        if (!companyId || companyId !== segments[1]) {
+            return { ok: false, error: 'Invalid supervision report storage path' };
+        }
+        return {
+            ok: true,
+            target: {
+                bucket,
+                companyId,
+                kind: 'supervisionReport',
+                path,
+                reportId: segments[2]
             }
         };
     }

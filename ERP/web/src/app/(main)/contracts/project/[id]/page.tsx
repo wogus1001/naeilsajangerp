@@ -14,6 +14,7 @@ import jsPDF from 'jspdf';
 import EditProjectModal from '../../_components/EditProjectModal';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import styles from './page.module.css';
 
 const STATUS_OPTIONS = [
@@ -117,7 +118,9 @@ function ProjectEditor() {
                 const uid = storedUser ? JSON.parse(storedUser).id : null;
                 const userIdQuery = uid ? `?userId=${uid}` : '';
 
-                const res = await fetch(`/api/projects/${params.id}${userIdQuery}`);
+                const res = await fetch(`/api/projects/${params.id}${userIdQuery}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 if (!res.ok) throw new Error('Failed to fetch project');
                 const projectData = await res.json();
 
@@ -222,7 +225,7 @@ function ProjectEditor() {
 
                 await fetch(`/api/projects/${project.id}${userIdQuery}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(payload)
                 });
                 setAutoSaveStatus('saved'); // 저장 완료 표시
@@ -386,7 +389,10 @@ function ProjectEditor() {
                 // 1. DB에서 삭제
                 const storedUser = localStorage.getItem('user');
                 const uid = storedUser ? JSON.parse(storedUser).id : null;
-                await fetch(`/api/templates/${templateId}?userId=${uid}`, { method: 'DELETE' });
+                await fetch(`/api/templates/${templateId}?userId=${uid}`, {
+                    method: 'DELETE',
+                    headers: await getApiAuthHeaders()
+                });
             } catch (err) {
                 console.error('템플릿 DB 삭제 실패:', err);
             }
@@ -426,11 +432,12 @@ function ProjectEditor() {
         try {
             const storedUser = localStorage.getItem('user');
             const uid = storedUser ? JSON.parse(storedUser).id : null;
+            const authHeaders = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
             await Promise.all(
                 newFiltered.map((t, i) =>
                     fetch(`/api/templates/${t.id}?userId=${uid}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: authHeaders,
                         body: JSON.stringify({ sort_order: i + 1 })
                     })
                 )
@@ -510,7 +517,7 @@ function ProjectEditor() {
 
             const res = await fetch(`/api/projects/${project.id}${userIdQuery}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
 
@@ -609,7 +616,8 @@ function ProjectEditor() {
                 const userIdQuery = uid ? `?userId=${uid}` : '';
 
                 const res = await fetch(`/api/projects/${project.id}${userIdQuery}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: await getApiAuthHeaders()
                 });
 
                 if (res.ok) {

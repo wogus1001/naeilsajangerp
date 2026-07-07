@@ -1,6 +1,7 @@
 import {
     errorMessageFromResponse,
     extractApiKeyAccessToken,
+    extractTokenExpiresInMs,
     extractUcansignFileUrl,
     extractUcansignTemplateName,
     filenameFromDisposition,
@@ -19,6 +20,7 @@ const UCANSIGN_REQUEST_TIMEOUT_MS = 20_000;
 export const UCANSIGN_PLATFORM_BASE_URL = process.env.UCANSIGN_BASE_URL || 'https://app.ucansign.com/openapi';
 export {
     extractApiKeyAccessToken,
+    extractTokenExpiresInMs,
     extractUcansignDocumentId,
     extractUcansignFileUrl,
     extractUcansignTemplateName
@@ -95,7 +97,7 @@ async function issueApiKeyAccessToken(): Promise<string> {
     }
     cachedPlatformToken = {
         accessToken,
-        expiresAt: Date.now() + TOKEN_EXPIRES_MS
+        expiresAt: Date.now() + extractTokenExpiresInMs(body, TOKEN_EXPIRES_MS)
     };
     return accessToken;
 }

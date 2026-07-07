@@ -9,7 +9,8 @@ import {
     canManageTemplate,
     fetchTemplateForRequester,
     fetchTemplateVersions,
-    latestVersionForTemplate
+    latestVersionForTemplate,
+    signedTemplateSourceUrl
 } from '../../templateApi';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ async function ensureBucket(supabaseAdmin: ReturnType<typeof getSupabaseAdmin>):
     if (listError) throw listError;
     if (buckets.some(bucket => bucket.name === TEMPLATE_BUCKET)) return;
     const { error } = await supabaseAdmin.storage.createBucket(TEMPLATE_BUCKET, {
-        public: true,
+        public: false,
         fileSizeLimit: COMPANY_CONTRACT_TEMPLATE_MAX_BYTES,
         allowedMimeTypes: ['application/pdf']
     });
@@ -86,11 +87,10 @@ export async function POST(request: Request, context: RouteContext) {
             });
         if (uploadError) throw uploadError;
 
-        const { data: publicData } = supabaseAdmin.storage.from(TEMPLATE_BUCKET).getPublicUrl(storagePath);
         const { error: updateError } = await supabaseAdmin
             .from('company_contract_template_versions')
             .update({
-                source_file_url: publicData.publicUrl,
+                source_file_url: null,
                 source_file_path: storagePath,
                 source_file_name: fileValue.name,
                 source_file_size: fileValue.size,
@@ -102,7 +102,7 @@ export async function POST(request: Request, context: RouteContext) {
 
         return ok({
             versionId: latestVersion.id,
-            sourceFileUrl: publicData.publicUrl,
+            sourceFileUrl: await signedTemplateSourceUrl(supabaseAdmin, { source_file_path: storagePath, source_file_url: null }),
             sourceFilePath: storagePath,
             sourceFileName: fileValue.name,
             sourceFileSize: fileValue.size,

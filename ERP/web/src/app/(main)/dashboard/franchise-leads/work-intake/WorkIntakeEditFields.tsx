@@ -26,6 +26,8 @@ import styles from './WorkIntakeEditModal.module.css';
 type WorkIntakeEditFieldsProps = {
     readonly form: WorkIntakeEditForm;
     readonly onChangeAction: (form: WorkIntakeEditForm) => void;
+    readonly pendingPropertyFiles?: readonly File[];
+    readonly onPendingPropertyFilesChangeAction?: (files: readonly File[]) => void;
 };
 
 function formatManwonInput(value: string): string {
@@ -148,9 +150,21 @@ function MatchingRequestEditFields({ value, onChange }: {
     );
 }
 
-export function WorkIntakeEditFields({ form, onChangeAction }: WorkIntakeEditFieldsProps) {
+export function WorkIntakeEditFields({
+    form,
+    onChangeAction,
+    pendingPropertyFiles = [],
+    onPendingPropertyFilesChangeAction
+}: WorkIntakeEditFieldsProps) {
     if (form.kind === 'properties') {
-        return <PropertyWorkIntakeEditFields value={form.value} onChangeAction={value => onChangeAction({ kind: 'properties', value })} />;
+        return (
+            <PropertyWorkIntakeEditFields
+                value={form.value}
+                pendingFiles={pendingPropertyFiles}
+                onChangeAction={value => onChangeAction({ kind: 'properties', value })}
+                onPendingFilesChangeAction={onPendingPropertyFilesChangeAction}
+            />
+        );
     }
     if (form.kind === 'leadRegistrations') {
         return <LeadRegistrationEditFields value={form.value} onChange={value => onChangeAction({ kind: 'leadRegistrations', value })} />;

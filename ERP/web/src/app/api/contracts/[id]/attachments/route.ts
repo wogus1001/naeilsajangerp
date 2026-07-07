@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server';
 import { getAttachments } from '@/lib/ucansign/client';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAuthenticatedUcansignUser } from '@/lib/ucansign/route-auth';
 
 export async function GET(
     request: Request,
@@ -8,14 +10,14 @@ export async function GET(
 ) {
     try {
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
+        const userIdParam = searchParams.get('userId');
         const params = await context.params;
+        const supabaseAdmin = getSupabaseAdmin();
 
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-        }
+        const authResult = await requireAuthenticatedUcansignUser(supabaseAdmin, request, userIdParam);
+        if (!authResult.ok) return authResult.response;
 
-        const attachments = await getAttachments(userId, params.id);
+        const attachments = await getAttachments(authResult.userId, params.id);
         return NextResponse.json(attachments);
     } catch (error: any) {
         console.error('Attachments Fetch Error:', error);

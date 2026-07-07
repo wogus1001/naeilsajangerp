@@ -1,17 +1,23 @@
 type WorkIntakePropertyMeta = {
-    readonly companyName: string;
-    readonly authorName?: string;
-    readonly status: string;
+    readonly companyName?: unknown;
+    readonly authorName?: unknown;
+    readonly status?: unknown;
 };
 
-function joinParts(parts: readonly string[]): string {
-    return parts.map(part => part.trim()).filter(Boolean).join(' / ') || '-';
+function cleanText(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function joinParts(parts: readonly unknown[]): string {
+    return parts.map(cleanText).filter(Boolean).join(' / ') || '-';
 }
 
 export function formatWorkIntakePropertyMeta(item: WorkIntakePropertyMeta): string {
+    const authorName = cleanText(item.authorName);
     return joinParts([
         item.companyName,
-        item.authorName ? `작성자 ${item.authorName}` : '',
+        authorName ? `작성자 ${authorName}` : '',
         item.status
     ]);
 }

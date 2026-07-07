@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canAccessCompanyScope, isAdmin, type RequesterProfile } from '@/lib/api-auth';
 
+const TEMPLATE_SOURCE_BUCKET = 'property-documents';
+const TEMPLATE_SOURCE_SIGNED_URL_TTL_SECONDS = 60 * 5;
+
 export type ContractTemplateRow = {
     readonly id: string;
     readonly company_id: string;
@@ -164,4 +167,19 @@ export function latestVersionForTemplate(
     templateId: string
 ): ContractTemplateVersionRow | null {
     return versions.find(version => version.template_id === templateId) || null;
+}
+
+export async function signedTemplateSourceUrl(
+    supabaseAdmin: SupabaseClient,
+    version: Pick<ContractTemplateVersionRow, 'source_file_path' | 'source_file_url'>
+): Promise<string> {
+    if (!version.source_file_path) return '';
+    const { data, error } = await supabaseAdmin.storage
+        .from(TEMPLATE_SOURCE_BUCKET)
+        .createSignedUrl(version.source_file_path, TEMPLATE_SOURCE_SIGNED_URL_TTL_SECONDS);
+    if (error) {
+        console.warn('Electronic contract template signed URL warning:', error.message);
+        return '';
+    }
+    return data.signedUrl || '';
 }

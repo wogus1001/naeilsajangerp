@@ -1,9 +1,13 @@
 
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAdminRequester } from '@/lib/admin-route-auth';
 
 export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
+    const adminGuard = await requireAdminRequester(supabaseAdmin, request);
+    if (!adminGuard.ok) return adminGuard.response;
+
     const { searchParams } = new URL(request.url);
     const rawEmail = searchParams.get('email');
     const rawName = searchParams.get('name');

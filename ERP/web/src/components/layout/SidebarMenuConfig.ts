@@ -46,7 +46,9 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
             { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '프랜차이즈', featureKey: 'marketInsights', icon: 'mapPin' },
             { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store' },
             { title: '물건지 지도', url: '/dashboard/franchise-locations', category: '가맹 운영', featureKey: 'franchiseLocations', icon: 'mapPin' },
-            { title: '전자계약', url: '/contracts/electronic', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature' }
+            { title: '전자계약', url: '/contracts/electronic', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature' },
+            { title: '업체 관리', url: '/dashboard/franchise-vendors', category: '프랜차이즈', featureKey: 'vendorManagement', icon: 'users' },
+            { title: '업체 계약함', url: '/contracts/vendor', category: '프랜차이즈', featureKey: 'vendorContracts', icon: 'fileSignature' }
         ]
     },
     {

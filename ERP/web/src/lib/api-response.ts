@@ -5,6 +5,7 @@ export type ApiErrorCode =
     | 'AUTH_REQUIRED'
     | 'FORBIDDEN'
     | 'NOT_FOUND'
+    | 'CONFLICT'
     | 'INTERNAL_ERROR';
 
 export type ApiSuccess<T> = {

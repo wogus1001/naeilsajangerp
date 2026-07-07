@@ -28,6 +28,7 @@ import {
     getDisclosureEligibility,
     isContractLockedLeadStatus
 } from '@/lib/franchise-disclosure-deliveries';
+import { notifyFranchiseIntakeRegistration } from '@/lib/solapi-notifications';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
@@ -171,7 +172,7 @@ function parseNullableNumber(value: unknown): number | null {
 function parseNullableDate(value: unknown): string | null {
     if (value === null || value === undefined || value === '') return null;
     const parsed = new Date(String(value));
-    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function transformLead(row: FranchiseLeadRow | null | undefined) {
@@ -204,10 +205,13 @@ function transformLead(row: FranchiseLeadRow | null | undefined) {
     };
 }
 
+const FRANCHISE_LEAD_LIST_HARD_LIMIT = 5000;
+
 function parseRequestedLimit(limitParam: string | null, hasSearch: boolean) {
-    if (hasSearch || limitParam === 'all') return null;
+    if (hasSearch || limitParam === 'all') return FRANCHISE_LEAD_LIST_HARD_LIMIT;
     const parsed = parseInt(limitParam || '500', 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    return Math.min(requested, FRANCHISE_LEAD_LIST_HARD_LIMIT);
 }
 
 function splitFilter(value: string | null) {
@@ -237,6 +241,28 @@ function isPendingLeadRegistrationRequest(lead: TransformedLead): boolean {
 
 function isMatchingRequestLead(lead: { readonly source?: string | null }): boolean {
     return lead.source === FRANCHISE_MATCHING_REQUEST_SOURCE;
+}
+
+function isFranchiseMatchingRequestBody(body: Record<string, unknown>): boolean {
+    return body.source === FRANCHISE_MATCHING_REQUEST_SOURCE || body.sourceType === 'franchise_matching_request';
+}
+
+async function notifyMatchingRequestRegistration(body: Record<string, unknown>): Promise<void> {
+    try {
+        await notifyFranchiseIntakeRegistration({
+            kind: 'matchingRequest',
+            companyName: cleanString(body.companyName),
+            title: cleanString(body.name) || cleanString(body.desiredBrand) || cleanString(body.desiredCategory),
+            contact: cleanString(body.mobile),
+            region: cleanString(body.desiredRegion)
+        });
+    } catch (notificationError) {
+        if (notificationError instanceof Error) {
+            console.error('Franchise matching request SMS notification failed:', notificationError.message);
+        } else {
+            console.error('Franchise matching request SMS notification failed:', String(notificationError));
+        }
+    }
 }
 
 function matchesLeadSearch(lead: TransformedLead, terms: string[]) {
@@ -542,7 +568,7 @@ export async function GET(request: Request) {
 
         const limitParam = searchParams.get('limit');
         const maxLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
-        const needsFullData = includeSummary || maxLimit === null;
+        const needsFullData = includeSummary;
         const dbSearchFilter = searchTerms.length > 0 ? buildLeadDbSearchFilter(searchTerms) : null;
         const statusFilters = splitFilter(searchParams.get('status')).map(normalizeLeadStatus);
         const sourceFilters = splitFilter(searchParams.get('source'));
@@ -606,7 +632,7 @@ export async function GET(request: Request) {
                 hasMore = false;
             }
 
-            if (!needsFullData && maxLimit !== null && rows.length >= maxLimit) {
+            if (rows.length >= maxLimit && (!needsFullData || rows.length >= FRANCHISE_LEAD_LIST_HARD_LIMIT)) {
                 hasMore = false;
                 rows = rows.slice(0, maxLimit);
             }
@@ -620,11 +646,11 @@ export async function GET(request: Request) {
 
         const total = leads.length;
         const summary = buildSummary(leads);
-        if (maxLimit !== null && leads.length > maxLimit) {
+        if (leads.length > maxLimit) {
             leads = leads.slice(0, maxLimit);
         }
 
-        return ok({ leads, summary, total });
+        return ok({ leads, summary, total, truncated: total >= maxLimit });
     } catch (error) {
         if (!(error instanceof Error)) {
             logRouteError('Franchise leads GET error:', error);
@@ -680,6 +706,9 @@ export async function POST(request: Request) {
                     .single();
 
                 if (updateError) throw updateError;
+                if (isFranchiseMatchingRequestBody(body)) {
+                    await notifyMatchingRequestRegistration(body);
+                }
                 return ok({ lead: transformLead(updated), deduplicated: true });
             }
         }
@@ -691,6 +720,9 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+        if (isFranchiseMatchingRequestBody(body)) {
+            await notifyMatchingRequestRegistration(body);
+        }
         return ok({ lead: transformLead(inserted), deduplicated: false }, 201);
     } catch (error) {
         if (!(error instanceof Error)) {

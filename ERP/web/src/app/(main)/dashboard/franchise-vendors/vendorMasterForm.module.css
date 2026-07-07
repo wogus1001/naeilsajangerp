@@ -1,0 +1,115 @@
+.formBox {
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 16px;
+}
+
+.statusLine {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: #6b7684;
+    font-size: 13px;
+}
+
+.statusLine strong {
+    color: #191f28;
+    font-size: 16px;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.formGrid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.formGrid input,
+.formGrid select,
+.formGrid textarea {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 14px;
+    padding: 0 12px;
+}
+
+.formGrid textarea {
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+.wide {
+    grid-column: 1 / -1;
+}
+
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.primaryButton,
+.secondaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 14px;
+}
+
+.primaryButton {
+    border: 1px solid #3182f6;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.secondaryButton {
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #333d4b;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+@media (max-width: 1024px) {
+    .formGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .formGrid,
+    .statusLine {
+        grid-template-columns: 1fr;
+    }
+
+    .statusLine {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

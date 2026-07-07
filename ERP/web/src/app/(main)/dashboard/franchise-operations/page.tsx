@@ -1,28 +1,18 @@
 "use client";
 
 import React from 'react';
-import { BarChart3, List, PencilLine, Plus } from 'lucide-react';
-import { ExportActions } from '@/components/franchise/ExportActions';
+import { BarChart3, ClipboardCheck, List, PencilLine } from 'lucide-react';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { FranchiseOperationDashboard } from '@/components/franchise/operations/FranchiseOperationDashboard';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
+import { SupervisionPanel } from '@/components/franchise/operations/SupervisionPanel';
 import type { FranchiseLocation } from '@/components/franchise/operations/types';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
-import {
-    buildOperationExportColumns,
-    buildOperationExportRows
-} from '@/components/franchise/franchiseDbExport';
-import {
-    buildDatedExportFilename,
-    downloadTableAsXlsx,
-    openPrintableTable,
-    type TableExportPayload
-} from '@/utils/tableExport';
 import styles from '../franchise-leads/page.module.css';
 
-type MasterView = 'dashboard' | 'list' | 'form';
+type MasterView = 'dashboard' | 'supervision' | 'list' | 'form';
 
 const MASTER_VIEWS: readonly {
     readonly key: MasterView;
@@ -30,6 +20,7 @@ const MASTER_VIEWS: readonly {
     readonly icon: React.ComponentType<{ readonly size?: number }>;
 }[] = [
     { key: 'dashboard', label: '대시보드', icon: BarChart3 },
+    { key: 'supervision', label: '슈퍼바이징', icon: ClipboardCheck },
     { key: 'list', label: '가맹점 목록', icon: List },
     { key: 'form', label: '가맹점 등록', icon: PencilLine }
 ];
@@ -43,32 +34,6 @@ export default function FranchiseOperationsPage() {
             setMasterView('form');
         }
     }, [controller.locationForm.id]);
-
-    const buildExportPayload = (): TableExportPayload => {
-        const columns = buildOperationExportColumns();
-        return {
-            title: '가맹 운영',
-            filename: buildDatedExportFilename('가맹운영'),
-            sheetName: '가맹 운영',
-            columns,
-            rows: buildOperationExportRows(controller.operationalLocations),
-            filterSummary: `운영 가맹점 ${controller.operationalLocations.length.toLocaleString()}건`
-        };
-    };
-
-    const runExportAction = async (action: (payload: TableExportPayload) => void | Promise<void>) => {
-        try {
-            await action(buildExportPayload());
-        } catch (error) {
-            console.error('Failed to export franchise operations:', error);
-            window.alert(error instanceof Error ? error.message : '가맹 운영 추출에 실패했습니다.');
-        }
-    };
-
-    const openNewLocationForm = () => {
-        controller.resetLocationForm();
-        setMasterView('form');
-    };
 
     const editLocation = (location: FranchiseLocation) => {
         controller.editLocation(location);
@@ -103,19 +68,6 @@ export default function FranchiseOperationsPage() {
                             );
                         })}
                     </div>
-                    <div className={styles.locationMasterToolbarActions}>
-                        <ExportActions
-                            rowCount={controller.operationalLocations.length}
-                            disabled={controller.isLoading || masterView === 'form'}
-                            onExcelAction={() => runExportAction(downloadTableAsXlsx)}
-                            onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
-                            onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
-                        />
-                        <button className={styles.secondaryButton} onClick={openNewLocationForm}>
-                            <Plus size={14} />
-                            새 가맹점
-                        </button>
-                    </div>
                 </div>
                 <div className={styles.operationWorkspaceBody}>
                     {masterView === 'dashboard' ? (
@@ -139,6 +91,10 @@ export default function FranchiseOperationsPage() {
                             onDelete={(location) => void controller.deleteLocation(location)}
                             onStatusChange={(location, status) => void controller.updateLocationStatus(location, status)}
                         />
+                    ) : null}
+
+                    {masterView === 'supervision' ? (
+                        <SupervisionPanel userId={controller.userId} companyName={controller.companyName} />
                     ) : null}
 
                     {masterView === 'form' ? (

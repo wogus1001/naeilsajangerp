@@ -5,7 +5,7 @@ import {
     type NoticeAuthor,
     type NoticeRow
 } from '@/lib/notices';
-import { normalizeLoginId } from '@/lib/login-id';
+import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Service Role Client moved to handlers
@@ -17,12 +17,23 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const companyName = searchParams.get('companyName');
         const limit = parseNoticeLimit(searchParams.get('limit'));
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
 
         // 1. Resolve Company ID if needed
-        let companyId = null;
+        let companyId: string | null = null;
         if (companyName) {
             const { data: company } = await supabaseAdmin.from('companies').select('id').eq('name', companyName).single();
-            if (company) companyId = company.id;
+            if (!company) return NextResponse.json([]);
+            companyId = company.id;
+        }
+        if (!isAdmin(requester)) {
+            if (companyId && companyId !== requester.company_id) {
+                return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+            }
+            companyId = requester.company_id;
         }
 
         // 2. Build Query
@@ -93,21 +104,27 @@ export async function POST(request: Request) {
         const title = readText(body, 'title');
         const content = readText(body, 'content');
         const type = readText(body, 'type');
-        const authorId = readText(body, 'authorId');
-        const authorUid = readText(body, 'authorUid');
         const companyName = readText(body, 'companyName');
         const isPinned = readBoolean(body, 'isPinned');
 
-        // Resolve IDs
-        // Author
-        const author = await resolveNoticeAuthor({ authorId, authorUid, companyName });
-        if (!author) return NextResponse.json({ error: 'Author not found' }, { status: 400 });
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
+        if (type === 'system' && !isAdmin(requester)) {
+            return NextResponse.json({ error: '관리자 권한이 필요합니다.', code: 'FORBIDDEN' }, { status: 403 });
+        }
 
-        // Company
         let companyUuid = null;
-        if (type === 'team' && companyName) {
+        if (type === 'team' && isAdmin(requester) && companyName) {
             const { data: company } = await supabaseAdmin.from('companies').select('id').eq('name', companyName).single();
             if (company) companyUuid = company.id;
+        } else if (type === 'team') {
+            companyUuid = requester.company_id;
+        }
+
+        if (type === 'team' && !companyUuid) {
+            return NextResponse.json({ error: 'Company scope is required' }, { status: 400 });
         }
 
         const { data: newNotice, error } = await supabaseAdmin
@@ -116,7 +133,7 @@ export async function POST(request: Request) {
                 title,
                 content,
                 type,
-                author_id: author.id,
+                author_id: requester.id,
                 company_id: companyUuid,
                 is_pinned: isPinned
             })
@@ -132,16 +149,6 @@ export async function POST(request: Request) {
     }
 }
 
-type ResolvedAuthor = {
-    readonly id: string;
-};
-
-type ResolveNoticeAuthorInput = {
-    readonly authorId: string;
-    readonly authorUid: string;
-    readonly companyName: string;
-};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -155,44 +162,4 @@ function readText(source: unknown, key: string): string {
 function readBoolean(source: unknown, key: string): boolean {
     if (!isRecord(source)) return false;
     return source[key] === true;
-}
-
-async function resolveNoticeAuthor(input: ResolveNoticeAuthorInput): Promise<ResolvedAuthor | null> {
-    const supabaseAdmin = getSupabaseAdmin();
-    if (input.authorUid) {
-        const { data } = await supabaseAdmin
-            .from('profiles')
-            .select('id')
-            .eq('id', input.authorUid)
-            .maybeSingle<ResolvedAuthor>();
-        if (data) return data;
-    }
-
-    if (input.companyName && input.authorId) {
-        const { data: company } = await supabaseAdmin
-            .from('companies')
-            .select('id')
-            .eq('name', input.companyName)
-            .maybeSingle<{ readonly id: string }>();
-
-        if (company?.id) {
-            const loginIdNormalized = normalizeLoginId(input.authorId);
-            const { data } = await supabaseAdmin
-                .from('profiles')
-                .select('id')
-                .eq('company_id', company.id)
-                .eq('login_id_normalized', loginIdNormalized)
-                .maybeSingle<ResolvedAuthor>();
-            if (data) return data;
-        }
-    }
-
-    if (!input.authorId) return null;
-    const email = `${input.authorId}@example.com`;
-    const { data } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle<ResolvedAuthor>();
-    return data || null;
 }

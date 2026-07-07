@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import JSZip from 'jszip';
 import {
     extractApiKeyAccessToken,
+    extractTokenExpiresInMs,
     extractUcansignDocumentId,
     extractUcansignFileUrl,
     extractUcansignTemplateName,
@@ -24,6 +25,12 @@ test('Given UCanSign API key token response When extracting token Then access to
 test('Given malformed UCanSign token response When extracting token Then empty string is returned', () => {
     assert.equal(extractApiKeyAccessToken({ code: 1, msg: 'failed' }), '');
     assert.equal(extractApiKeyAccessToken({ result: { accessToken: '' } }), '');
+});
+
+test('Given UCanSign token response with ttl When extracting expiration Then response ttl is preferred', () => {
+    assert.equal(extractTokenExpiresInMs({ result: { expiresIn: 1800 } }, 30 * 60 * 1000), 1800 * 1000);
+    assert.equal(extractTokenExpiresInMs({ expires_in: '900' }, 30 * 60 * 1000), 900 * 1000);
+    assert.equal(extractTokenExpiresInMs({ result: {} }, 30 * 60 * 1000), 30 * 60 * 1000);
 });
 
 test('Given UCanSign template detail response When extracting name Then known name fields are supported', () => {

@@ -62,7 +62,7 @@ export async function PATCH(request: Request, context: RouteContext) {
                 company_id: details.version.company_id,
                 version_number: nextVersionNumber,
                 status: 'draft',
-                source_file_url: details.version.source_file_url || null,
+                source_file_url: null,
                 source_file_path: details.version.source_file_path || null,
                 source_file_name: details.version.source_file_name || null,
                 source_file_size: details.version.source_file_size || null,

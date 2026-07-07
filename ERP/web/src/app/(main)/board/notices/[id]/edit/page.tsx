@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 export default function NoticeEditPage() {
     const router = useRouter();
@@ -63,7 +64,7 @@ export default function NoticeEditPage() {
         try {
             const res = await fetch(`/api/notices/${params?.id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     title,
                     content,

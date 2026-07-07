@@ -234,6 +234,10 @@ test('Given a valid preset body When saving Then only reusable meeting tool data
             costRows: [
                 { key: 'materialCost', amount: '1,575', memo: '표준' }
             ],
+            marketReport: {
+                targetSalesBasis: '프리셋에 저장되면 안 되는 목표매출 근거',
+                tradeAreaSummary: '후보지 전용 상권 요약'
+            },
             reportMemo: '후보지별 보고 메모',
             targetSales: '4,500'
         },
@@ -255,6 +259,7 @@ test('Given a valid preset body When saving Then only reusable meeting tool data
         'targetSales',
         'targetScenarios'
     ]);
+    assert.equal(upsert.data.marketReport, undefined);
     assert.equal(upsert.data.reportMemo, undefined);
     assert.ok(isJsonRecord(payload.data));
     assert.ok(isJsonRecord(payload.data.preset));

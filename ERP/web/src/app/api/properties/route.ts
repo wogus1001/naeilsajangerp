@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
-import { parseSearchTerms } from '@/utils/search';
+import { buildPostgrestIlikeOrFilter, parseSearchTerms } from '@/utils/search';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -11,6 +11,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { notifyFranchiseIntakeRegistration } from '@/lib/solapi-notifications';
 import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
@@ -44,6 +45,17 @@ const SHARED_DATA_BLOCKLIST = new Set([
     '소유주전화',
     '비공개메모'
 ]);
+const PROPERTY_DB_SEARCH_COLUMNS = [
+    'name',
+    'address',
+    'status',
+    'operation_type',
+    'data->>name',
+    'data->>brand',
+    'data->>address',
+    'data->>region',
+    'data->>memo'
+];
 
 async function getSharedPropertyIdByToken(supabaseAdmin: any, shareToken: string) {
     if (!shareToken) return null;
@@ -70,6 +82,10 @@ function canAccessProperty(
 
 function isWorkIntakeProperty(property: { operation_type?: string | null }): boolean {
     return property.operation_type === '물건등록';
+}
+
+function isFranchisePropertyRegistration(operationType: unknown, data: Record<string, unknown>): boolean {
+    return operationType === '물건등록' && data.sourceType === 'franchise_property_registration';
 }
 
 function requesterFallbackFromBody(body: unknown): string | null {
@@ -137,10 +153,23 @@ function matchesPropertySearch(property: unknown, terms: string[]) {
     return terms.some(term => searchable.includes(term));
 }
 
+function buildPropertyDbSearchFilter(terms: string[]) {
+    return buildPostgrestIlikeOrFilter(terms, PROPERTY_DB_SEARCH_COLUMNS);
+}
+
 function parsePositiveLimit(value: string | null) {
     if (!value || value === 'all') return null;
     const parsed = parseInt(value, 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+const PROPERTY_LIST_HARD_LIMIT = 5000;
+
+function parseRequestedPropertyLimit(value: string | null, hasSearch: boolean) {
+    const parsed = hasSearch || value === 'all'
+        ? PROPERTY_LIST_HARD_LIMIT
+        : parsePositiveLimit(value) || 500;
+    return Math.min(parsed, PROPERTY_LIST_HARD_LIMIT);
 }
 
 // GET
@@ -288,6 +317,9 @@ export async function GET(request: Request) {
             } else if (requesterProfile?.id) {
                 query = query.eq('manager_id', requesterProfile.id);
             }
+            if (dbSearchFilter) {
+                query = query.or(dbSearchFilter);
+            }
 
             return query;
         };
@@ -301,7 +333,8 @@ export async function GET(request: Request) {
         }
 
         const limitParam = searchParams.get('limit');
-        const requestedLimit = searchTerms.length > 0 ? null : parsePositiveLimit(limitParam);
+        const requestedLimit = parseRequestedPropertyLimit(limitParam, searchTerms.length > 0);
+        const dbSearchFilter = searchTerms.length > 0 ? buildPropertyDbSearchFilter(searchTerms) : null;
         const pageSize = 1000;
         let properties: any[] = [];
         let page = 0;
@@ -309,7 +342,7 @@ export async function GET(request: Request) {
 
         while (hasMore) {
             const from = page * pageSize;
-            const to = requestedLimit ? Math.min(from + pageSize - 1, requestedLimit - 1) : from + pageSize - 1;
+            const to = Math.min(from + pageSize - 1, requestedLimit - 1);
             const query = buildScopedQuery(from, to);
 
             if (!query) {
@@ -321,7 +354,7 @@ export async function GET(request: Request) {
 
             if (data && data.length > 0) {
                 properties = properties.concat(data);
-                hasMore = data.length === pageSize && (!requestedLimit || properties.length < requestedLimit);
+                hasMore = data.length === pageSize && properties.length < requestedLimit;
                 page++;
             } else {
                 hasMore = false;
@@ -410,6 +443,24 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
+        if (isFranchisePropertyRegistration(operationType, rest)) {
+            try {
+                await notifyFranchiseIntakeRegistration({
+                    kind: 'property',
+                    companyName: typeof companyName === 'string' ? companyName : null,
+                    title: typeof name === 'string' ? name : null,
+                    contact: null,
+                    region: typeof rest.propertyRegion === 'string' ? rest.propertyRegion : typeof address === 'string' ? address : null
+                });
+            } catch (notificationError) {
+                if (notificationError instanceof Error) {
+                    console.error('Franchise property intake SMS notification failed:', notificationError.message);
+                } else {
+                    console.error('Franchise property intake SMS notification failed:', String(notificationError));
+                }
+            }
+        }
+
         return ok(transformProperty(inserted), 201);
 
     } catch (error) {
@@ -439,6 +490,9 @@ export async function PUT(request: Request) {
         }
         if (existingIsWorkIntake && !canManageWorkIntakeRecord(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
+        }
+        if (!existingIsWorkIntake && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && existing.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: property update requires assigned manager or team lead');
         }
 
         // 2. Prepare updates
@@ -545,6 +599,9 @@ export async function DELETE(request: Request) {
         }
         if (isWorkIntakeProperty(targetProperty) && !canManageWorkIntakeRecord(requesterProfile, targetProperty)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
+        }
+        if (!isWorkIntakeProperty(targetProperty) && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && targetProperty.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: property delete requires assigned manager or team lead');
         }
 
         if (!isAdmin(requesterProfile) && company) {

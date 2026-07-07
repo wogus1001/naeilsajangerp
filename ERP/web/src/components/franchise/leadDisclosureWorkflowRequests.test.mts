@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { deleteDisclosureDocumentRequest } from './leadDisclosureWorkflowRequests.js';
+import { deleteDisclosureDocumentRequest, sendDisclosureEmailRequest } from './leadDisclosureWorkflowRequests.js';
 
 type FetchCall = {
     readonly url: string;
@@ -37,4 +37,32 @@ test('Given a saved disclosure document When deleting it Then the archive endpoi
     assert.equal(url.pathname, '/api/franchise-disclosure-documents');
     assert.equal(url.searchParams.get('id'), 'document-1');
     assert.equal(url.searchParams.get('requesterId'), 'admin');
+});
+
+test('sendDisclosureEmailRequest includes customer phone in request body', async () => {
+    let requestBody: unknown = null;
+    globalThis.fetch = async (_input: string | URL | Request, init?: RequestInit) => {
+        requestBody = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
+        return new Response(JSON.stringify({ data: {} }), { status: 200 });
+    };
+
+    await sendDisclosureEmailRequest({
+        requesterId: 'profile-1',
+        leadId: 'lead-1',
+        documentId: 'document-1',
+        recipientName: '테스트_오지훈',
+        recipientEmail: 'lead@example.com',
+        recipientPhone: '010-6447-4633',
+        memo: '발송 테스트'
+    });
+
+    assert.deepEqual(requestBody, {
+        requesterId: 'profile-1',
+        leadId: 'lead-1',
+        documentId: 'document-1',
+        recipientName: '테스트_오지훈',
+        recipientEmail: 'lead@example.com',
+        recipientPhone: '010-6447-4633',
+        memo: '발송 테스트'
+    });
 });

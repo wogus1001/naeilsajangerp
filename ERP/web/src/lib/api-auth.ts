@@ -73,17 +73,6 @@ export async function resolveUserUuid(
 
     if (userByEmail?.id) return userByEmail.id;
 
-    if (normalized === 'admin') {
-        const { data: adminUser } = await supabaseAdmin
-            .from('profiles')
-            .select('id')
-            .ilike('email', 'admin%')
-            .limit(1)
-            .maybeSingle();
-
-        if (adminUser?.id) return adminUser.id;
-    }
-
     return null;
 }
 
@@ -128,20 +117,16 @@ export async function getRequesterProfile(
     fallbackRaw?: string | null
 ): Promise<RequesterProfile | null> {
     const authenticatedUserId = await resolveAuthenticatedUserId(request);
+    if (!authenticatedUserId) return null;
+
     const requesterRaw = extractRequesterRaw(request, fallbackRaw);
 
-    if (authenticatedUserId) {
-        if (requesterRaw) {
-            const requesterId = await resolveUserUuid(supabaseAdmin, requesterRaw);
-            if (requesterId && requesterId !== authenticatedUserId) return null;
-        }
-        return fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
+    if (requesterRaw) {
+        const requesterId = await resolveUserUuid(supabaseAdmin, requesterRaw);
+        if (!requesterId || requesterId !== authenticatedUserId) return null;
     }
 
-    const requesterId = await resolveUserUuid(supabaseAdmin, requesterRaw);
-    if (!requesterId) return null;
-
-    return fetchRequesterProfileById(supabaseAdmin, requesterId);
+    return fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
 }
 
 export async function getAuthenticatedRequesterProfile(

@@ -31,6 +31,8 @@ export function renderPropertyRegistrationField(
     selectAddress: (result: KakaoAddressResult) => void,
     updatePrivateAreaUnit: (unit: PropertyAreaUnit) => void
 ) {
+    if (field.visibleWhen && form[field.visibleWhen.key] !== field.visibleWhen.value) return null;
+
     const label = (
         <span>
             {field.label} {field.required && <b>*</b>}

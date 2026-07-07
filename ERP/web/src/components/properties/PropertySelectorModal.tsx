@@ -6,6 +6,7 @@ import styles from './PropertySelectorModal.module.css';
 import PropertyCard from './PropertyCard';
 import { AlertModal } from '@/components/common/AlertModal';
 import { matchesSearchTerms, parseSearchTerms } from '@/utils/search';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 import { readApiJson } from '@/utils/apiResponse';
@@ -66,7 +67,9 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
         setLoading(true);
         try {
             const query = buildPropertyQueryString(500);
-            const res = await fetch(`/api/properties${query}`);
+            const res = await fetch(`/api/properties${query}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const data = await readApiJson(res);
                 setProperties(data);
@@ -96,7 +99,10 @@ export default function PropertySelectorModal({ isOpen, onClose, onSelect }: Pro
         void (async () => {
             try {
                 const query = buildPropertyQueryString('all', searchTerm);
-                const res = await fetch(`/api/properties${query}`, { signal: controller.signal });
+                const res = await fetch(`/api/properties${query}`, {
+                    signal: controller.signal,
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     const data = await readApiJson(res);
                     if (searchFetchControllerRef.current === controller) {

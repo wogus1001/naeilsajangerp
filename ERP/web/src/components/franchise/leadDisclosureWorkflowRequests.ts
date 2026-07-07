@@ -64,7 +64,9 @@ type SendDisclosureEmailInput = {
     readonly requesterId: string;
     readonly leadId: string;
     readonly documentId: string;
+    readonly recipientName: string;
     readonly recipientEmail: string;
+    readonly recipientPhone: string;
     readonly memo: string;
 };
 
@@ -82,9 +84,10 @@ export async function fetchLeadDisclosureWorkflowState(input: FetchDisclosureWor
     if (input.companyId) documentParams.set('companyId', input.companyId);
     if (input.companyName) documentParams.set('company', input.companyName);
     const deliveryParams = new URLSearchParams({ requesterId: input.userId, leadId: input.leadId });
+    const headers = await getApiAuthHeaders();
     const [documentResponse, deliveryResponse] = await Promise.all([
-        fetch(`/api/franchise-disclosure-documents?${documentParams.toString()}`, { cache: 'no-store' }),
-        fetch(`/api/franchise-lead-disclosures?${deliveryParams.toString()}`, { cache: 'no-store' })
+        fetch(`/api/franchise-disclosure-documents?${documentParams.toString()}`, { cache: 'no-store', headers }),
+        fetch(`/api/franchise-lead-disclosures?${deliveryParams.toString()}`, { cache: 'no-store', headers })
     ]);
     const documentPayload = await documentResponse.json();
     const deliveryPayload = await deliveryResponse.json();
@@ -129,7 +132,7 @@ export async function uploadDisclosureFileRequest(input: UploadDisclosureFileInp
 export async function saveDisclosureDocumentRequest(input: SaveDisclosureDocumentInput): Promise<FranchiseDisclosureDocument> {
     const response = await fetch('/api/franchise-disclosure-documents', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             requesterId: input.requesterId,
             companyId: input.companyId,
@@ -148,7 +151,10 @@ export async function deleteDisclosureDocumentRequest(input: DeleteDisclosureDoc
         id: input.documentId,
         requesterId: input.requesterId
     });
-    const response = await fetch(`/api/franchise-disclosure-documents?${params.toString()}`, { method: 'DELETE' });
+    const response = await fetch(`/api/franchise-disclosure-documents?${params.toString()}`, {
+        method: 'DELETE',
+        headers: await getApiAuthHeaders()
+    });
     const payload = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
 }
@@ -159,7 +165,10 @@ export async function fetchGmailConnectionStatus(input: {
 }): Promise<GmailConnectionStatus> {
     const params = new URLSearchParams({ requesterId: input.userId });
     if (input.companyName) params.set('company', input.companyName);
-    const response = await fetch(`/api/integrations/gmail/status?${params.toString()}`, { cache: 'no-store' });
+    const response = await fetch(`/api/integrations/gmail/status?${params.toString()}`, {
+        cache: 'no-store',
+        headers: await getApiAuthHeaders()
+    });
     const payload = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<GmailConnectionStatus>(payload);
@@ -171,7 +180,7 @@ export async function disconnectGmailRequest(input: {
 }): Promise<void> {
     const response = await fetch('/api/integrations/gmail/disconnect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             requesterId: input.requesterId,
             companyName: input.companyName
@@ -184,12 +193,14 @@ export async function disconnectGmailRequest(input: {
 export async function sendDisclosureEmailRequest(input: SendDisclosureEmailInput): Promise<void> {
     const response = await fetch('/api/franchise-lead-disclosures/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             requesterId: input.requesterId,
             leadId: input.leadId,
             documentId: input.documentId,
+            recipientName: input.recipientName,
             recipientEmail: input.recipientEmail,
+            recipientPhone: input.recipientPhone,
             memo: input.memo
         })
     });

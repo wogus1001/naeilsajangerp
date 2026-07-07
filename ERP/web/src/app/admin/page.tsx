@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus, FileSignature, SlidersHorizontal } from 'lucide-react';
+import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus, FileSignature, SlidersHorizontal, MessageSquareText } from 'lucide-react';
 import Link from 'next/link';
 import { AlertModal } from '@/components/common/AlertModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -168,32 +168,6 @@ export default function AdminDashboardPage() {
                     <ChevronRight size={20} color="#adb5bd" />
                 </Link>
 
-                <Link href="/admin/settings" style={styles.menuItem}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ ...styles.menuIconBox, backgroundColor: '#f3f0ff', color: '#7950f2' }}>
-                            <Settings size={20} />
-                        </div>
-                        <div style={styles.menuTexts}>
-                            <span style={styles.menuTitle}>시스템 설정</span>
-                            <span style={styles.menuDesc}>전체 공지사항, 기능 On/Off 제어</span>
-                        </div>
-                    </div>
-                    <ChevronRight size={20} color="#adb5bd" />
-                </Link>
-
-                <Link href="/admin/electronic-contracts" style={styles.menuItem}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#1c64d1' }}>
-                            <FileSignature size={20} />
-                        </div>
-                        <div style={styles.menuTexts}>
-                            <span style={styles.menuTitle}>전자계약 관리</span>
-                            <span style={styles.menuDesc}>회사별 전자계약 사용량, 발송·완료 현황 확인</span>
-                        </div>
-                    </div>
-                    <ChevronRight size={20} color="#adb5bd" />
-                </Link>
-
                 <Link href="/admin/company-access" style={styles.menuItem}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <div style={{ ...styles.menuIconBox, backgroundColor: '#eefaf7', color: '#00a36c' }}>
@@ -215,6 +189,45 @@ export default function AdminDashboardPage() {
                         <div style={styles.menuTexts}>
                             <span style={styles.menuTitle}>프랜차이즈 인입 관리</span>
                             <span style={styles.menuDesc}>입점 요청, 예비 창업자 등록, 출점 후보지 반영</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
+                <Link href="/admin/electronic-contracts" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#1c64d1' }}>
+                            <FileSignature size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>전자계약 관리</span>
+                            <span style={styles.menuDesc}>회사별 전자계약 사용량, 발송·완료 현황 확인</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
+                <Link href="/admin/alimtalk" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#e8f3ff', color: '#3182f6' }}>
+                            <MessageSquareText size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>알림톡 운영 관리</span>
+                            <span style={styles.menuDesc}>템플릿, 발송 시나리오, 회사별 발송량 확인</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
+                <Link href="/admin/settings" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: '#f3f0ff', color: '#7950f2' }}>
+                            <Settings size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>시스템 설정</span>
+                            <span style={styles.menuDesc}>전체 공지사항, 기능 On/Off 제어</span>
                         </div>
                     </div>
                     <ChevronRight size={20} color="#adb5bd" />

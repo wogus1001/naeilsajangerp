@@ -2,14 +2,17 @@ export type FranchiseFileAttachment = {
     readonly name: string;
     readonly size: number;
     readonly type: string;
+    readonly storageBucket?: string;
+    readonly storagePath?: string;
+    readonly publicUrl?: string;
 };
 
 export const FRANCHISE_ATTACHMENT_POLICY = {
     maxFiles: 10,
     maxFileSizeBytes: 10 * 1024 * 1024,
     maxTotalSizeBytes: 50 * 1024 * 1024,
-    acceptedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic'],
-    accept: '.pdf,.jpg,.jpeg,.png,.webp,.heic,image/jpeg,image/png,image/webp,image/heic,application/pdf'
+    acceptedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.webp'],
+    accept: '.pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf'
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -59,10 +62,19 @@ export function normalizeFranchiseFileAttachments(value: unknown): readonly Fran
         if (!isRecord(item)) return attachments;
         const name = cleanString(item.name);
         if (!name) return attachments;
-        attachments.push({
+        const attachment: FranchiseFileAttachment = {
             name,
             size: readFileSize(item.size),
             type: cleanString(item.type) || getFranchiseAttachmentExtension(name)
+        };
+        const storageBucket = cleanString(item.storageBucket);
+        const storagePath = cleanString(item.storagePath);
+        const publicUrl = cleanString(item.publicUrl);
+        attachments.push({
+            ...attachment,
+            ...(storageBucket ? { storageBucket } : {}),
+            ...(storagePath ? { storagePath } : {}),
+            ...(publicUrl ? { publicUrl } : {})
         });
         return attachments;
     }, []);

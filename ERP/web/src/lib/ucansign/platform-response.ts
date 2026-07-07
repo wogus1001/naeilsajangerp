@@ -43,6 +43,26 @@ export function extractApiKeyAccessToken(response: unknown): string {
     return typeof accessToken === 'string' ? accessToken : '';
 }
 
+function numericValue(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+
+export function extractTokenExpiresInMs(response: unknown, fallbackMs: number): number {
+    const result = isRecord(response) && isRecord(response.result) ? response.result : response;
+    if (!isRecord(result)) return fallbackMs;
+    const value = numericValue(result.expiresIn)
+        ?? numericValue(result.expires_in)
+        ?? numericValue(result.expireIn)
+        ?? numericValue(result.expires);
+    if (!value || value <= 0) return fallbackMs;
+    return value > 60 * 60 * 24 ? value : value * 1000;
+}
+
 export function extractUcansignTemplateName(response: unknown): string {
     const value = isRecord(response) && isRecord(response.result) ? response.result : response;
     if (!isRecord(value)) return '';

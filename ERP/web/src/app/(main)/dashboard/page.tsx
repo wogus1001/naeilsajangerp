@@ -9,6 +9,7 @@ import { fetchDashboardModePreference } from '@/components/dashboard/dashboardMo
 import { fetchDashboardNotices, type DashboardNotice } from '@/components/dashboard/dashboardNotices';
 import { MainDashboardTypeA } from '@/components/dashboard/MainDashboardTypeA';
 import { DEFAULT_COMPANY_DASHBOARD_MODE, type CompanyDashboardMode } from '@/lib/company-menu-features';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     getRequesterId,
     getStoredCompanyId,
@@ -88,7 +89,9 @@ export default function DashboardPage() {
                 const params = new URLSearchParams({ userId: currentUserId });
                 if (companyId) params.set('companyId', companyId);
 
-                const res = await fetch(`/api/dashboard?${params.toString()}`);
+                const res = await fetch(`/api/dashboard?${params.toString()}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 const data = await res.json();
 
                 if (data.stats) {
@@ -117,7 +120,9 @@ export default function DashboardPage() {
         // Fetch Memo
         const fetchMemo = async () => {
             try {
-                const res = await fetch(`/api/dashboard/memo?userId=${currentUserId}`);
+                const res = await fetch('/api/dashboard/memo', {
+                    headers: await getApiAuthHeaders()
+                });
                 const data = await res.json();
                 setMemo(data.content || '');
                 setIsMemoLoaded(true);
@@ -147,7 +152,7 @@ export default function DashboardPage() {
         try {
             const res = await fetch('/api/notices', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     ...newNotice,
                     authorName: userData?.name || '관리자',
@@ -179,8 +184,8 @@ export default function DashboardPage() {
             try {
                 await fetch('/api/dashboard/memo', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, content: memo })
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ content: memo })
                 });
                 // Optional: Console log or toast for debug
                 console.log('Memo auto-saved');

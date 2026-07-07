@@ -1,6 +1,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { getRequesterProfile as getVerifiedRequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { fail, ok } from '@/lib/api-response';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
@@ -46,10 +47,6 @@ async function resolveIds(legacyCompany: string | null, legacyUser: string | nul
         const email = `${legacyUser}@example.com`;
         const { data: u } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
         if (u) userId = u.id;
-        else if (legacyUser === 'admin') {
-            const { data: a } = await supabaseAdmin.from('profiles').select('id').ilike('email', 'admin%').limit(1).single();
-            if (a) userId = a.id;
-        }
     }
     return { companyId, userId };
 }
@@ -85,19 +82,6 @@ async function resolveUserUuid(supabaseAdmin: any, rawUser: string | null) {
         .single();
 
     return profile?.id || null;
-}
-
-async function getRequesterProfile(supabaseAdmin: any, rawUser: string | null) {
-    const requesterId = await resolveUserUuid(supabaseAdmin, rawUser);
-    if (!requesterId) return null;
-
-    const { data: requester } = await supabaseAdmin
-        .from('profiles')
-        .select('id, role, company_id')
-        .eq('id', requesterId)
-        .single();
-
-    return requester || null;
 }
 
 function canAccessCard(requester: any, card: { company_id: string | null; manager_id: string | null }) {
@@ -164,13 +148,9 @@ export async function GET(request: Request) {
 
     // Fetch from Supabase
     const supabaseAdmin = getSupabaseAdmin();
-    const requesterRaw =
-        searchParams.get('requesterId') ||
-        searchParams.get('userId') ||
-        request.headers.get('x-user-id');
-    const requesterProfile = await getRequesterProfile(supabaseAdmin, requesterRaw);
+    const requesterProfile = await getVerifiedRequesterProfile(supabaseAdmin, request);
     if (!requesterProfile) {
-        return fail(401, 'AUTH_REQUIRED', 'requesterId or userId is required');
+        return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
     }
 
     const requesterId = requesterProfile.id;
@@ -447,10 +427,10 @@ export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
         const payload = await request.json();
-        const requesterRaw = payload.requesterId || payload.userId || payload.managerId || payload?.meta?.managerId || null;
-        const requesterProfile = await getRequesterProfile(supabaseAdmin, requesterRaw);
+        const requesterRaw = payload.requesterId || payload.userId || null;
+        const requesterProfile = await getVerifiedRequesterProfile(supabaseAdmin, request, requesterRaw);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
         }
 
         // Check if this is the new 3-file batch upload (has main, promoted, history arrays)
@@ -846,8 +826,10 @@ async function handleBatchUpload(payload: any, requesterProfile: any) {
     const cardUuids = validCards.map((c: any) => c.id);
 
     if (cardUuids.length > 0) {
-        await supabaseAdmin.from('business_card_promoted').delete().in('business_card_id', cardUuids);
-        await supabaseAdmin.from('business_card_history').delete().in('business_card_id', cardUuids);
+        const { error: promotedDeleteError } = await supabaseAdmin.from('business_card_promoted').delete().in('business_card_id', cardUuids);
+        if (promotedDeleteError) throw promotedDeleteError;
+        const { error: historyDeleteError } = await supabaseAdmin.from('business_card_history').delete().in('business_card_id', cardUuids);
+        if (historyDeleteError) throw historyDeleteError;
     }
 
     // 3. Process Promoted Items
@@ -868,7 +850,8 @@ async function handleBatchUpload(payload: any, requesterProfile: any) {
     }
 
     if (promotedToInsert.length > 0) {
-        await supabaseAdmin.from('business_card_promoted').insert(promotedToInsert);
+        const { error: promotedInsertError } = await supabaseAdmin.from('business_card_promoted').insert(promotedToInsert);
+        if (promotedInsertError) throw promotedInsertError;
     }
 
     // 4. Process Work History
@@ -890,7 +873,8 @@ async function handleBatchUpload(payload: any, requesterProfile: any) {
     }
 
     if (historyToInsert.length > 0) {
-        await supabaseAdmin.from('business_card_history').insert(historyToInsert);
+        const { error: historyInsertError } = await supabaseAdmin.from('business_card_history').insert(historyToInsert);
+        if (historyInsertError) throw historyInsertError;
     }
 
     return ok({
@@ -948,10 +932,10 @@ export async function PUT(request: Request) {
     if (!id) return fail(400, 'VALIDATION_ERROR', 'ID required');
 
     try {
-        const requesterRaw = body.requesterId || managerId || body.manager_id || null;
-        const requesterProfile = await getRequesterProfile(supabaseAdmin, requesterRaw);
+        const requesterRaw = body.requesterId || body.userId || null;
+        const requesterProfile = await getVerifiedRequesterProfile(supabaseAdmin, request, requesterRaw);
         if (!requesterProfile) {
-            return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+            return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
         }
 
         const { data: existingCard, error: existingCardError } = await supabaseAdmin
@@ -1119,9 +1103,9 @@ export async function DELETE(request: Request) {
     const requesterRaw = searchParams.get('requesterId') || request.headers.get('x-user-id');
 
     const supabaseAdmin = getSupabaseAdmin();
-    const requesterProfile = await getRequesterProfile(supabaseAdmin, requesterRaw);
+    const requesterProfile = await getVerifiedRequesterProfile(supabaseAdmin, request, requesterRaw);
     if (!requesterProfile) {
-        return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
     }
 
     const { data: targetCard, error: targetCardError } = await supabaseAdmin

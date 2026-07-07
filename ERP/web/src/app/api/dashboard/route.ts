@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { canAccessCompanyScope, getRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { canAccessCompanyScope, getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isUcansignNotConnectedError } from '@/lib/ucansign/client';
 
@@ -8,42 +8,25 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
         const requestedCompanyId = searchParams.get('companyId');
 
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-        }
-
         const supabaseAdmin = getSupabaseAdmin();
+        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
 
-        let companyId: string | null = null;
-
-        // Check if userId is a valid UUID
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
-
-        if (!isUuid || userId === 'admin') {
-            console.warn(`[Dashboard] Invalid UUID '${userId}'. Treating as Super Admin.`);
-            companyId = requestedCompanyId || null;
-        } else {
-            const requesterProfile = await getRequesterProfile(supabaseAdmin, request, userId);
-
-            if (!requesterProfile) {
-                console.error('Dashboard: User profile not found');
-                return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-            }
-
-            if (!requesterProfile?.company_id && !isAdmin(requesterProfile)) {
-                console.error('Dashboard: User profile or company not found');
-                return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-            }
-
-            if (requestedCompanyId && !canAccessCompanyScope(requesterProfile, requestedCompanyId)) {
-                return NextResponse.json({ error: 'Forbidden company scope' }, { status: 403 });
-            }
-
-            companyId = requestedCompanyId || requesterProfile.company_id;
+        if (!requesterProfile) {
+            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
         }
+
+        if (!requesterProfile.company_id && !isAdmin(requesterProfile)) {
+            console.error('Dashboard: User profile or company not found');
+            return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+        }
+
+        if (requestedCompanyId && !canAccessCompanyScope(requesterProfile, requestedCompanyId)) {
+            return NextResponse.json({ error: 'Forbidden company scope' }, { status: 403 });
+        }
+
+        const companyId = requestedCompanyId || (isAdmin(requesterProfile) ? null : requesterProfile.company_id);
 
         // 2. Parallel Data Fetching
         const now = new Date();
@@ -64,8 +47,6 @@ export async function GET(request: Request) {
         let propertyQuery = supabaseAdmin.from('properties').select('id, created_at');
         let customerQuery = supabaseAdmin.from('customers').select('id', { count: 'exact', head: true });
 
-        // Apply Company Scope only if not Admin (or if we resolved a specific company)
-        // For 'admin' / invalid UUID, we treat as Super Admin (See all)
         if (companyId) {
             scheduleQuery = scheduleQuery.eq('company_id', companyId);
             contractQuery = contractQuery.eq('company_id', companyId);
@@ -112,7 +93,7 @@ export async function GET(request: Request) {
             // Additional filtering if needed (e.g., private logic)
             // Assuming DB policy/query handles mostly correct data.
             // Check Scope if 'private' (personal)
-            if (s.scope === 'personal' && s.user_id !== userId) return false;
+            if (s.scope === 'personal' && s.user_id !== requesterProfile.id) return false;
             return true;
         });
 
@@ -142,7 +123,7 @@ export async function GET(request: Request) {
 
         try {
             const { getContracts } = await import('@/lib/ucansign/client');
-            const apiContracts = await getContracts(userId) || [];
+            const apiContracts = await getContracts(requesterProfile.id) || [];
 
             const ongoingMerged = apiContracts.filter((c: any) => {
                 const status = (c.status || '').toLowerCase();

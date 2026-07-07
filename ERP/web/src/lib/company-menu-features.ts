@@ -17,6 +17,8 @@ export type CompanyMenuFeatureKey =
     | 'businessCardRegister'
     | 'contracts'
     | 'electronicPremiumContracts'
+    | 'vendorContracts'
+    | 'vendorManagement'
     | 'contractCreate'
     | 'contractBuilder'
     | 'companyStaff';
@@ -177,6 +179,20 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         routePrefixes: ['/contracts/electronic']
     },
     {
+        key: 'vendorContracts',
+        category: '프랜차이즈',
+        title: '업체 계약함',
+        description: '외부 업체 계약과 만료 알림을 회사 단위로 관리합니다.',
+        routePrefixes: ['/contracts/vendor']
+    },
+    {
+        key: 'vendorManagement',
+        category: '프랜차이즈',
+        title: '업체 관리',
+        description: '계약 데이터를 업체별로 묶어 거래처 현황과 만료 리스크를 확인합니다.',
+        routePrefixes: ['/dashboard/franchise-vendors']
+    },
+    {
         key: 'contractCreate',
         category: '계약',
         title: '간편 서명 시작',
@@ -219,6 +235,8 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
         businessCardRegister: true,
         contracts: true,
         electronicPremiumContracts: true,
+        vendorContracts: true,
+        vendorManagement: true,
         contractCreate: true,
         contractBuilder: true,
         companyStaff: true

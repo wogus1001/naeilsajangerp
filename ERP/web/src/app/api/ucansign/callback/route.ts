@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { readUcansignReturnPath } from '@/lib/ucansign/route-auth';
+import { extractTokenExpiresInMs } from '@/lib/ucansign/platform-response';
+
+const DEFAULT_TOKEN_EXPIRES_MS = 30 * 60 * 1000;
 
 // Service Role Client
 // Service Role Client
@@ -13,20 +17,7 @@ export async function GET(request: Request) {
     const state = searchParams.get('state');
 
     const cookieStore = await cookies();
-    let userId = cookieStore.get('ucansign_pending_user')?.value;
-
-    // Fallback: Try decoding state
-    if (!userId && state) {
-        try {
-            const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-            if (decoded && decoded.uid) {
-                userId = decoded.uid;
-                console.log('Recovered userId from state parameter:', userId);
-            }
-        } catch (e) {
-            console.warn('Failed to decode state param:', e);
-        }
-    }
+    const userId = cookieStore.get('ucansign_pending_user')?.value;
 
     if (!userId) {
         return NextResponse.json({ error: 'Session expired or invalid user' }, { status: 400 });
@@ -60,16 +51,13 @@ export async function GET(request: Request) {
         const { error } = await supabaseAdmin.from('profiles').update({
             ucansign_access_token: tokenData.result.accessToken,
             ucansign_refresh_token: tokenData.result.refreshToken,
-            ucansign_expires_at: Date.now() + (29 * 60 * 1000) // 29 minutes safe buffer
+            ucansign_expires_at: Date.now() + extractTokenExpiresInMs(tokenData.result, DEFAULT_TOKEN_EXPIRES_MS)
         }).eq('id', userId);
 
         if (error) {
             console.error('Failed to update Supabase Profile:', error);
-            // Return detailed error for debugging
             return NextResponse.json({
-                error: 'Failed to save token',
-                details: error.message,
-                hint: error.hint || 'Check if columns ucansign_access_token exist'
+                error: 'Failed to save token'
             }, { status: 500 });
         }
 
@@ -77,26 +65,12 @@ export async function GET(request: Request) {
         const cookieStore2 = await cookies(); // Use same store
         cookieStore2.delete('ucansign_pending_user');
 
-        // Redirect to Profile page
-        // Redirect to original page or default Profile
-        let targetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/profile?ucansign=connected`;
-
-        // Try recovering return URL from state
-        if (state) {
-            try {
-                const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-                if (decoded && decoded.ret) {
-                    targetUrl = `${process.env.NEXT_PUBLIC_APP_URL}${decoded.ret}`;
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
+        const targetUrl = `${process.env.NEXT_PUBLIC_APP_URL}${readUcansignReturnPath(state)}`;
 
         return NextResponse.redirect(targetUrl);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('OAuth Callback Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
