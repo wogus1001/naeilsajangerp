@@ -66,7 +66,7 @@ export async function GET(request: Request) {
         const tokenHash = hashDisclosureConfirmationToken(token);
         const { data: delivery, error } = await supabaseAdmin
             .from('franchise_lead_disclosure_deliveries')
-            .select('id, company_id, lead_id, recipient_name, document_title, confirmed_at, data')
+            .select('id, company_id, lead_id, recipient_name, document_title, confirmed_at, sent_at, created_at, data')
             .eq('confirmation_token_hash', tokenHash)
             .maybeSingle<DisclosureConfirmationDeliveryRow>();
         if (error) throw error;

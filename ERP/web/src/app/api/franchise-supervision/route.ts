@@ -134,6 +134,18 @@ function readAttachments(
     }).filter(item => item.name && item.path);
 }
 
+function collectAttachmentPaths(rows: readonly ReportRow[]): string[] {
+    const paths = new Set<string>();
+    rows.forEach(row => {
+        if (!Array.isArray(row.photo_attachments)) return;
+        row.photo_attachments.filter(isRecord).forEach(item => {
+            const path = cleanString(item.path);
+            if (path.startsWith('franchise-supervision/')) paths.add(path);
+        });
+    });
+    return Array.from(paths);
+}
+
 function locationName(maps: NamedMaps, locationId: string): string {
     return maps.locations.get(locationId)?.name || '운영점 미지정';
 }
@@ -314,10 +326,18 @@ export async function GET(request: Request) {
         const templates = (templateResult.data || []).map(transformTemplate);
         const activeTemplate = templates.find(template => template.active) || templates[0] || buildDefaultReportTemplate();
         const templateItemsById = new Map(templates.map(template => [template.id, template.inspectionItems]));
-        const getAttachmentPublicUrl = (path: string) => supabaseAdmin.storage
-            .from('property-documents')
-            .getPublicUrl(path)
-            .data.publicUrl;
+        const signedAttachmentEntries = await Promise.all(collectAttachmentPaths(reports).map(async path => {
+            const { data, error } = await supabaseAdmin.storage
+                .from('property-documents')
+                .createSignedUrl(path, 60 * 5);
+            if (error) {
+                console.warn('Franchise supervision photo signed URL warning:', error.message);
+                return [path, ''] as const;
+            }
+            return [path, data.signedUrl || ''] as const;
+        }));
+        const signedAttachmentUrls = new Map(signedAttachmentEntries);
+        const getAttachmentPublicUrl = (path: string) => signedAttachmentUrls.get(path) || '';
         const transformedAssignments = assignments.map(row => transformAssignment(row, maps));
         const transformedVisits = visits.map(row => transformVisit(row, maps));
         const transformedReports = reports.map(row => transformReport(

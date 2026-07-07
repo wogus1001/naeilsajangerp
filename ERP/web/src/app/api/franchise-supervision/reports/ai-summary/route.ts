@@ -5,6 +5,7 @@ import {
     buildFallbackSupervisionReportAiSummary,
     buildSupervisionReportAiPrompt,
     extractSupervisionReportAiSummaryFromText,
+    maskSupervisionAiTranscriptSensitiveData,
     normalizeAiProviderEnvValue,
     validateSupervisionAiTranscript,
     type SupervisionReportAiPromptMessage,
@@ -14,6 +15,7 @@ import type { SupervisionInspectionItem } from '@/lib/franchise-supervision';
 import { fetchVisit, readVisitLocationName } from '../reportRouteSupport';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 type NvidiaChatMessage = {
     readonly message?: {
@@ -35,6 +37,10 @@ const DEFAULT_NVIDIA_FALLBACK_MODEL = 'meta/llama-3.1-8b-instruct';
 const DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS = 18_000;
 const NVIDIA_MIN_REQUEST_TIMEOUT_MS = 5_000;
 const NVIDIA_MAX_REQUEST_TIMEOUT_MS = 45_000;
+const NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS = 10_000;
+const AI_SUMMARY_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const AI_SUMMARY_RATE_LIMIT_MAX_CALLS = 20;
+const aiSummaryRateLimit = new Map<string, { readonly count: number; readonly windowStartedAt: number }>();
 const NVIDIA_LEGACY_FALLBACK_MODEL_ALIASES: Record<string, string> = {
     'mistral-medium-3.5-128b': DEFAULT_NVIDIA_FALLBACK_MODEL
 };
@@ -55,6 +61,19 @@ function getNvidiaConfig(env: NodeJS.ProcessEnv) {
             ? Math.min(Math.max(timeoutMs, NVIDIA_MIN_REQUEST_TIMEOUT_MS), NVIDIA_MAX_REQUEST_TIMEOUT_MS)
             : DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS
     };
+}
+
+function checkAiSummaryRateLimit(companyId: string | null, requesterId: string): boolean {
+    const now = Date.now();
+    const key = `${companyId || 'no-company'}:${requesterId}`;
+    const current = aiSummaryRateLimit.get(key);
+    if (!current || now - current.windowStartedAt > AI_SUMMARY_RATE_LIMIT_WINDOW_MS) {
+        aiSummaryRateLimit.set(key, { count: 1, windowStartedAt: now });
+        return true;
+    }
+    if (current.count >= AI_SUMMARY_RATE_LIMIT_MAX_CALLS) return false;
+    aiSummaryRateLimit.set(key, { count: current.count + 1, windowStartedAt: current.windowStartedAt });
+    return true;
 }
 
 function readContentPartText(value: unknown): string {
@@ -185,7 +204,7 @@ async function summarizeWithNvidia(input: {
             messages: input.messages,
             fetcher: input.fetcher,
             forceJson: true,
-            timeoutMs: requestTimeoutMs
+            timeoutMs: Math.min(requestTimeoutMs, NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS)
         });
         if (fallbackSummary.summary) return { summary: fallbackSummary.summary, model: fallbackModel, fallbackUsed: true };
         if (fallbackSummary.issue) issues.push(fallbackSummary.issue);
@@ -225,15 +244,19 @@ export async function POST(request: Request) {
         if (!canAccessSupervisorResource(authResult.auth.requester, visit)) {
             return fail(403, 'FORBIDDEN', '슈퍼바이징 접근 권한이 없습니다.');
         }
+        if (!checkAiSummaryRateLimit(visit.company_id, authResult.auth.requester.id)) {
+            return fail(429, 'VALIDATION_ERROR', 'AI 정리 요청이 많습니다. 잠시 후 다시 시도해주세요.');
+        }
 
+        const outboundTranscript = maskSupervisionAiTranscriptSensitiveData(transcript);
         const inspectionItems = mergeInspectionItems(parsed.inspectionItems);
         const result = await summarizeWithNvidia({
             env: process.env,
             fetcher: fetch,
-            transcript,
+            transcript: outboundTranscript,
             inspectionItems,
             messages: buildSupervisionReportAiPrompt({
-                transcript,
+                transcript: outboundTranscript,
                 locationName: readVisitLocationName(visit),
                 supervisorName: '담당자',
                 visitDate: visit.visit_date,
@@ -245,6 +268,6 @@ export async function POST(request: Request) {
         return ok(result);
     } catch (error) {
         console.error('Franchise supervision report AI summary POST error:', error);
-        return fail(500, 'INTERNAL_ERROR', error instanceof Error ? error.message : 'Failed to summarize supervision report note');
+        return fail(500, 'INTERNAL_ERROR', 'AI 점검 보고서 정리를 완료하지 못했습니다.');
     }
 }

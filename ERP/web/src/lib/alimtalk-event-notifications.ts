@@ -23,6 +23,8 @@ type LeadDisclosureRow = {
     readonly recipient_name: string | null;
     readonly document_title: string | null;
     readonly confirmed_at: string | null;
+    readonly sent_at?: string | null;
+    readonly created_at?: string | null;
     readonly data?: unknown;
 };
 
@@ -70,10 +72,12 @@ export function buildDisclosureConfirmedAlimtalkVariables(input: {
     readonly candidateName: string | null | undefined;
     readonly brandName: string | null | undefined;
     readonly confirmedAt: string | Date | null | undefined;
+    readonly providedAt?: string | Date | null | undefined;
 }): Record<string, string> {
     const confirmedAt = input.confirmedAt || new Date();
+    const providedAt = input.providedAt || confirmedAt;
     const confirmedDate = formatAlimtalkDate(confirmedAt);
-    const contractEligibleDate = formatAlimtalkDate(addDisclosureWaitDays(confirmedAt));
+    const contractEligibleDate = formatAlimtalkDate(addDisclosureWaitDays(providedAt));
     const candidateName = cleanString(input.candidateName) || '예비 창업자';
     return {
         브랜드명: cleanString(input.brandName) || '-',
@@ -191,7 +195,8 @@ export async function notifyAlimtalkDisclosureConfirmed(
         variables: buildDisclosureConfirmedAlimtalkVariables({
             brandName: storedBrandName || lead.interested_brand || company.name,
             candidateName: delivery.recipient_name || lead.name,
-            confirmedAt: delivery.confirmed_at || new Date()
+            confirmedAt: delivery.confirmed_at || new Date(),
+            providedAt: delivery.sent_at || delivery.created_at || delivery.confirmed_at
         })
     });
 }

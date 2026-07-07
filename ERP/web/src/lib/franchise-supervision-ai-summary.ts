@@ -55,6 +55,9 @@ const FALLBACK_WARNING_KEYWORDS = [
     '필요'
 ] as const;
 
+const PHONE_PATTERN = /(?:\+?82[-.\s]?)?0?1[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/g;
+const RESIDENT_REGISTRATION_PATTERN = /\b\d{6}[-\s]?[1-4]\d{6}\b/g;
+
 export type SupervisionReportAiItemSummary = {
     readonly id: string;
     readonly label: string;
@@ -509,4 +512,10 @@ export function buildSupervisionReportAiPrompt({
             ].join('\n')
         }
     ];
+}
+
+export function maskSupervisionAiTranscriptSensitiveData(value: string): string {
+    return value
+        .replace(PHONE_PATTERN, '[전화번호 마스킹]')
+        .replace(RESIDENT_REGISTRATION_PATTERN, '[주민등록번호 마스킹]');
 }

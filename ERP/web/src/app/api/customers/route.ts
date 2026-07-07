@@ -60,10 +60,13 @@ function transformCustomer(row: any) {
     };
 }
 
+const CUSTOMER_LIST_HARD_LIMIT = 5000;
+
 function parseRequestedLimit(limitParam: string | null, hasSearch: boolean) {
-    if (hasSearch || limitParam === 'all') return null;
+    if (hasSearch || limitParam === 'all') return CUSTOMER_LIST_HARD_LIMIT;
     const parsed = parseInt(limitParam || '10000', 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 10000;
+    const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : 10000;
+    return Math.min(requested, CUSTOMER_LIST_HARD_LIMIT);
 }
 
 function matchesCustomerSearch(customer: any, terms: string[]) {
@@ -205,11 +208,9 @@ export async function GET(request: Request) {
                 hasMore = false;
             }
 
-            if (maxLimit !== null && allCustomers.length >= maxLimit) {
+            if (allCustomers.length >= maxLimit) {
                 hasMore = false;
-                if (allCustomers.length > maxLimit) {
-                    allCustomers = allCustomers.slice(0, maxLimit);
-                }
+                allCustomers = allCustomers.slice(0, maxLimit);
             }
         }
 

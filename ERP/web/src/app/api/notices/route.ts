@@ -17,12 +17,23 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const companyName = searchParams.get('companyName');
         const limit = parseNoticeLimit(searchParams.get('limit'));
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
 
         // 1. Resolve Company ID if needed
-        let companyId = null;
+        let companyId: string | null = null;
         if (companyName) {
             const { data: company } = await supabaseAdmin.from('companies').select('id').eq('name', companyName).single();
-            if (company) companyId = company.id;
+            if (!company) return NextResponse.json([]);
+            companyId = company.id;
+        }
+        if (!isAdmin(requester)) {
+            if (companyId && companyId !== requester.company_id) {
+                return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+            }
+            companyId = requester.company_id;
         }
 
         // 2. Build Query

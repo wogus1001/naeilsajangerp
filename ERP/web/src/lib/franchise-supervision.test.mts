@@ -21,6 +21,7 @@ import {
     buildFallbackSupervisionReportAiSummary,
     buildSupervisionReportAiPrompt,
     extractSupervisionReportAiSummaryFromText,
+    maskSupervisionAiTranscriptSensitiveData,
     normalizeAiProviderEnvValue,
     validateSupervisionAiTranscript
 } from './franchise-supervision-ai-summary.js';
@@ -165,6 +166,17 @@ void test('Given quoted AI provider env value When normalizing Then accidental s
     assert.equal(normalizeAiProviderEnvValue('"nvapi-test"'), 'nvapi-test');
     assert.equal(normalizeAiProviderEnvValue('nvapi-test"'), 'nvapi-test');
     assert.equal(normalizeAiProviderEnvValue("'nvidia/model'"), 'nvidia/model');
+});
+
+void test('Given supervision AI transcript with sensitive values When masking Then outbound text hides direct identifiers', () => {
+    const masked = maskSupervisionAiTranscriptSensitiveData(
+        '점주 연락처 010-1234-5678, 예비창업자 주민번호 900101-1234567 확인 요청'
+    );
+
+    assert.equal(masked.includes('010-1234-5678'), false);
+    assert.equal(masked.includes('900101-1234567'), false);
+    assert.match(masked, /전화번호 마스킹/);
+    assert.match(masked, /주민등록번호 마스킹/);
 });
 
 void test('Given supervision AI prompt When building Then report style rules are included', () => {

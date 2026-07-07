@@ -31,7 +31,14 @@ export function canViewElectronicContract(
 ): boolean {
     if (actor.role === 'admin') return true;
     if (contract.sentByProfileId && contract.sentByProfileId === actor.id) return true;
-    return Boolean(actor.companyId && contract.companyId && actor.companyId === contract.companyId);
+    const managerRoles = new Set(['manager', 'super_manager']);
+    return Boolean(
+        actor.role &&
+        managerRoles.has(actor.role) &&
+        actor.companyId &&
+        contract.companyId &&
+        actor.companyId === contract.companyId
+    );
 }
 
 export function isElectronicContractCancelableStatus(status: string | null | undefined): boolean {

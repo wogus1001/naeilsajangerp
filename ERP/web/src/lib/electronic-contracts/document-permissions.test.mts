@@ -53,13 +53,22 @@ test('Given a same company member When checking document cancellation Then cance
     assert.equal(allowed, false);
 });
 
-test('Given a same company member When checking document access Then viewing is allowed', () => {
+test('Given a same company manager When checking document access Then viewing is allowed', () => {
+    const allowed = canViewElectronicContract(
+        { id: 'manager-2', role: 'manager', companyId: 'company-1' },
+        { sentByProfileId: 'owner-1', companyId: 'company-1' }
+    );
+
+    assert.equal(allowed, true);
+});
+
+test('Given a same company staff member When checking document access Then viewing is denied', () => {
     const allowed = canViewElectronicContract(
         { id: 'staff-2', role: 'staff', companyId: 'company-1' },
         { sentByProfileId: 'owner-1', companyId: 'company-1' }
     );
 
-    assert.equal(allowed, true);
+    assert.equal(allowed, false);
 });
 
 test('Given a different company member When checking document access Then viewing is denied', () => {

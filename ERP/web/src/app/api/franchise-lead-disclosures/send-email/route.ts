@@ -144,13 +144,15 @@ export async function POST(request: Request) {
         const openToken = createDisclosureOpenToken();
         const confirmationUrl = new URL('/api/franchise-lead-disclosures/confirm', getAppUrl(request));
         confirmationUrl.searchParams.set('token', confirmationToken);
+        const documentUrl = new URL('/api/franchise-lead-disclosures/document', getAppUrl(request));
+        documentUrl.searchParams.set('token', confirmationToken);
         const openTrackingUrl = new URL('/api/franchise-lead-disclosures/open', getAppUrl(request));
         openTrackingUrl.searchParams.set('token', openToken);
         const content = buildDisclosureEmailContent({
             leadName: recipientName,
             documentTitle: documentRow.title || '정보공개서',
             documentVersion: documentRow.version || 'v1',
-            documentUrl: documentRow.file_url,
+            documentUrl: documentUrl.toString(),
             confirmationUrl: confirmationUrl.toString(),
             openTrackingUrl: openTrackingUrl.toString(),
             memo: cleanString(body.memo) || undefined
@@ -204,47 +206,67 @@ export async function POST(request: Request) {
         if (insertError || !inserted) throw insertError || new Error('Disclosure delivery insert failed');
         const deliveryId = String((inserted as { readonly id: string }).id);
 
+        let gmailResult: Awaited<ReturnType<typeof sendGmailMessage>>;
         try {
-            const gmailResult = await sendGmailMessage(usableConnection.accessToken, rawMessage);
-            const sentAt = new Date().toISOString();
-            const { error: updateError } = await supabaseAdmin
-                .from('franchise_lead_disclosure_deliveries')
-                .update({
-                    send_status: 'sent',
-                    sent_at: sentAt,
-                    gmail_message_id: gmailResult.messageId,
-                    gmail_thread_id: gmailResult.threadId,
-                    send_error: null,
-                    updated_at: sentAt
-                })
-                .eq('id', deliveryId);
-            if (updateError) throw updateError;
-            try {
-                await notifyAlimtalkDisclosureEmailSent(supabaseAdmin, {
-                    brand_name: alimtalkBrandName,
-                    company_id: leadRow.company_id,
-                    id: deliveryId,
-                    lead_id: leadRow.id,
-                    recipient_name: recipientName,
-                    recipient_phone: alimtalkRecipientPhone
-                });
-            } catch (error) {
-                console.error(
-                    'Disclosure email sent AlimTalk notification failed:',
-                    error instanceof Error ? error.message : String(error)
-                );
-            }
-            return ok({
-                deliveryId,
-                sendStatus: 'sent',
-                sentAt,
-                gmailMessageId: gmailResult.messageId,
-                gmailThreadId: gmailResult.threadId
-            }, 201);
+            gmailResult = await sendGmailMessage(usableConnection.accessToken, rawMessage);
         } catch (error) {
             const message = await markFailed(supabaseAdmin, deliveryId, error);
             return fail(error instanceof GmailIntegrationError ? error.statusCode : 502, 'INTERNAL_ERROR', message);
         }
+
+        const sentAt = new Date().toISOString();
+        const sentUpdate = {
+            send_status: 'sent',
+            sent_at: sentAt,
+            gmail_message_id: gmailResult.messageId,
+            gmail_thread_id: gmailResult.threadId,
+            send_error: null,
+            updated_at: sentAt
+        };
+        const { error: updateError } = await supabaseAdmin
+            .from('franchise_lead_disclosure_deliveries')
+            .update(sentUpdate)
+            .eq('id', deliveryId);
+        let persistenceWarning = '';
+        if (updateError) {
+            console.error('Disclosure delivery sent-state update failed after Gmail success:', updateError);
+            const { error: recoveryError } = await supabaseAdmin
+                .from('franchise_lead_disclosure_deliveries')
+                .update({
+                    send_status: 'sent',
+                    sent_at: sentAt,
+                    send_error: null,
+                    updated_at: sentAt
+                })
+                .eq('id', deliveryId);
+            if (recoveryError) {
+                console.error('Disclosure delivery sent-state recovery failed:', recoveryError);
+                persistenceWarning = 'Gmail 발송은 완료됐지만 발송 이력 저장을 재확인해야 합니다.';
+            }
+        }
+        try {
+            await notifyAlimtalkDisclosureEmailSent(supabaseAdmin, {
+                brand_name: alimtalkBrandName,
+                company_id: leadRow.company_id,
+                id: deliveryId,
+                lead_id: leadRow.id,
+                recipient_name: recipientName,
+                recipient_phone: alimtalkRecipientPhone
+            });
+        } catch (error) {
+            console.error(
+                'Disclosure email sent AlimTalk notification failed:',
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+        return ok({
+            deliveryId,
+            sendStatus: 'sent',
+            sentAt,
+            gmailMessageId: gmailResult.messageId,
+            gmailThreadId: gmailResult.threadId,
+            ...(persistenceWarning ? { warning: persistenceWarning } : {})
+        }, persistenceWarning ? 202 : 201);
     } catch (error) {
         console.error('Franchise disclosure Gmail send error:', error);
         if (error instanceof GmailIntegrationError) {

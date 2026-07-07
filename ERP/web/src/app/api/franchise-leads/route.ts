@@ -205,10 +205,13 @@ function transformLead(row: FranchiseLeadRow | null | undefined) {
     };
 }
 
+const FRANCHISE_LEAD_LIST_HARD_LIMIT = 5000;
+
 function parseRequestedLimit(limitParam: string | null, hasSearch: boolean) {
-    if (hasSearch || limitParam === 'all') return null;
+    if (hasSearch || limitParam === 'all') return FRANCHISE_LEAD_LIST_HARD_LIMIT;
     const parsed = parseInt(limitParam || '500', 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    return Math.min(requested, FRANCHISE_LEAD_LIST_HARD_LIMIT);
 }
 
 function splitFilter(value: string | null) {
@@ -565,7 +568,7 @@ export async function GET(request: Request) {
 
         const limitParam = searchParams.get('limit');
         const maxLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
-        const needsFullData = includeSummary || maxLimit === null;
+        const needsFullData = includeSummary;
         const dbSearchFilter = searchTerms.length > 0 ? buildLeadDbSearchFilter(searchTerms) : null;
         const statusFilters = splitFilter(searchParams.get('status')).map(normalizeLeadStatus);
         const sourceFilters = splitFilter(searchParams.get('source'));
@@ -629,7 +632,7 @@ export async function GET(request: Request) {
                 hasMore = false;
             }
 
-            if (!needsFullData && maxLimit !== null && rows.length >= maxLimit) {
+            if (rows.length >= maxLimit && (!needsFullData || rows.length >= FRANCHISE_LEAD_LIST_HARD_LIMIT)) {
                 hasMore = false;
                 rows = rows.slice(0, maxLimit);
             }
@@ -643,11 +646,11 @@ export async function GET(request: Request) {
 
         const total = leads.length;
         const summary = buildSummary(leads);
-        if (maxLimit !== null && leads.length > maxLimit) {
+        if (leads.length > maxLimit) {
             leads = leads.slice(0, maxLimit);
         }
 
-        return ok({ leads, summary, total });
+        return ok({ leads, summary, total, truncated: total >= maxLimit });
     } catch (error) {
         if (!(error instanceof Error)) {
             logRouteError('Franchise leads GET error:', error);

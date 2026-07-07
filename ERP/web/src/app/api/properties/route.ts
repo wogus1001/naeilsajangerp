@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
-import { parseSearchTerms } from '@/utils/search';
+import { buildPostgrestIlikeOrFilter, parseSearchTerms } from '@/utils/search';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -45,6 +45,17 @@ const SHARED_DATA_BLOCKLIST = new Set([
     '소유주전화',
     '비공개메모'
 ]);
+const PROPERTY_DB_SEARCH_COLUMNS = [
+    'name',
+    'address',
+    'status',
+    'operation_type',
+    'data->>name',
+    'data->>brand',
+    'data->>address',
+    'data->>region',
+    'data->>memo'
+];
 
 async function getSharedPropertyIdByToken(supabaseAdmin: any, shareToken: string) {
     if (!shareToken) return null;
@@ -142,10 +153,23 @@ function matchesPropertySearch(property: unknown, terms: string[]) {
     return terms.some(term => searchable.includes(term));
 }
 
+function buildPropertyDbSearchFilter(terms: string[]) {
+    return buildPostgrestIlikeOrFilter(terms, PROPERTY_DB_SEARCH_COLUMNS);
+}
+
 function parsePositiveLimit(value: string | null) {
     if (!value || value === 'all') return null;
     const parsed = parseInt(value, 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+const PROPERTY_LIST_HARD_LIMIT = 5000;
+
+function parseRequestedPropertyLimit(value: string | null, hasSearch: boolean) {
+    const parsed = hasSearch || value === 'all'
+        ? PROPERTY_LIST_HARD_LIMIT
+        : parsePositiveLimit(value) || 500;
+    return Math.min(parsed, PROPERTY_LIST_HARD_LIMIT);
 }
 
 // GET
@@ -293,6 +317,9 @@ export async function GET(request: Request) {
             } else if (requesterProfile?.id) {
                 query = query.eq('manager_id', requesterProfile.id);
             }
+            if (dbSearchFilter) {
+                query = query.or(dbSearchFilter);
+            }
 
             return query;
         };
@@ -306,7 +333,8 @@ export async function GET(request: Request) {
         }
 
         const limitParam = searchParams.get('limit');
-        const requestedLimit = searchTerms.length > 0 ? null : parsePositiveLimit(limitParam);
+        const requestedLimit = parseRequestedPropertyLimit(limitParam, searchTerms.length > 0);
+        const dbSearchFilter = searchTerms.length > 0 ? buildPropertyDbSearchFilter(searchTerms) : null;
         const pageSize = 1000;
         let properties: any[] = [];
         let page = 0;
@@ -314,7 +342,7 @@ export async function GET(request: Request) {
 
         while (hasMore) {
             const from = page * pageSize;
-            const to = requestedLimit ? Math.min(from + pageSize - 1, requestedLimit - 1) : from + pageSize - 1;
+            const to = Math.min(from + pageSize - 1, requestedLimit - 1);
             const query = buildScopedQuery(from, to);
 
             if (!query) {
@@ -326,7 +354,7 @@ export async function GET(request: Request) {
 
             if (data && data.length > 0) {
                 properties = properties.concat(data);
-                hasMore = data.length === pageSize && (!requestedLimit || properties.length < requestedLimit);
+                hasMore = data.length === pageSize && properties.length < requestedLimit;
                 page++;
             } else {
                 hasMore = false;

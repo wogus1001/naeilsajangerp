@@ -146,6 +146,10 @@ export async function PATCH(request: Request) {
 
         const attachmentsOnly = getFirst(body, ['attachmentsOnly', 'attachments_only']) === true;
         if (attachmentsOnly) {
+            const currentStatus = normalizeReportStatus(existing.status);
+            if (currentStatus !== '임시저장' && currentStatus !== '제출') {
+                return fail(409, 'VALIDATION_ERROR', '승인 또는 반려된 보고서의 첨부는 변경할 수 없습니다.');
+            }
             const { error } = await authResult.auth.supabaseAdmin
                 .from('franchise_inspection_reports')
                 .update({
@@ -155,6 +159,14 @@ export async function PATCH(request: Request) {
                 })
                 .eq('id', id);
             if (error) throw error;
+            await insertReportEvent({
+                actorProfileId: authResult.auth.requester.id,
+                companyId: existing.company_id,
+                eventType: currentStatus === '제출' ? '제출' : '임시저장',
+                memo: '첨부 사진 변경',
+                reportId: existing.id,
+                supabaseAdmin: authResult.auth.supabaseAdmin
+            });
             return ok({ success: true });
         }
         const event = readStatusEvent(getFirst(body, ['event']));

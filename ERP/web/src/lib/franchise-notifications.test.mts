@@ -252,14 +252,15 @@ test('buildDisclosureConfirmedAlimtalkVariables maps disclosure confirmed templa
     assert.deepEqual(buildDisclosureConfirmedAlimtalkVariables({
         brandName: '테스트치킨',
         candidateName: '김후보',
-        confirmedAt: '2026-07-03T00:00:00.000Z'
+        confirmedAt: '2026-07-05T00:00:00.000Z',
+        providedAt: '2026-07-03T00:00:00.000Z'
     }), {
         브랜드명: '테스트치킨',
         계약가능예정일: '2026. 07. 17.',
         계약가능일: '2026. 07. 17.',
-        수령확인일: '2026. 07. 03.',
-        수령일: '2026. 07. 03.',
-        확인일: '2026. 07. 03.',
+        수령확인일: '2026. 07. 05.',
+        수령일: '2026. 07. 05.',
+        확인일: '2026. 07. 05.',
         예비창업자명: '김후보',
         후보자명: '김후보'
     });
