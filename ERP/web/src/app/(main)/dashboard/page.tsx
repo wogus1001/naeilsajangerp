@@ -89,7 +89,9 @@ export default function DashboardPage() {
                 const params = new URLSearchParams({ userId: currentUserId });
                 if (companyId) params.set('companyId', companyId);
 
-                const res = await fetch(`/api/dashboard?${params.toString()}`);
+                const res = await fetch(`/api/dashboard?${params.toString()}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 const data = await res.json();
 
                 if (data.stats) {

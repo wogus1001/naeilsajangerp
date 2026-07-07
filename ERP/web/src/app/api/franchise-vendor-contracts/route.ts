@@ -10,7 +10,9 @@ import {
     isMissingVendorSchemaError,
     isVendorInCompany,
     readJsonBody,
-    validateRequired
+    validateRequired,
+    validateVendorContractStorage,
+    VENDOR_CONTRACT_STORAGE_BUCKET
 } from './vendorContractRouteHelpers';
 
 export const dynamic = 'force-dynamic';
@@ -50,8 +52,15 @@ async function openUploadedContract(contractId: string, companyId: string) {
     if (!data.storage_bucket || !data.storage_path) {
         return fail(400, 'VALIDATION_ERROR', '열람할 업로드 문서가 없습니다.');
     }
+    const storageValidation = validateVendorContractStorage({
+        storageBucket: data.storage_bucket,
+        storagePath: data.storage_path
+    }, companyId);
+    if (!storageValidation.ok) {
+        return fail(storageValidation.status, 'FORBIDDEN', storageValidation.message);
+    }
     const { data: signed, error: signedError } = await supabaseAdmin.storage
-        .from(data.storage_bucket)
+        .from(VENDOR_CONTRACT_STORAGE_BUCKET)
         .createSignedUrl(data.storage_path, 60 * 5);
     if (signedError) throw signedError;
     return ok({ url: signed.signedUrl });
@@ -127,6 +136,10 @@ export async function POST(request: Request) {
         if (!await isVendorInCompany(auth.supabaseAdmin, vendorId, scope.companyId)) {
             return fail(403, 'FORBIDDEN', '업체 관리의 회사 범위가 일치하지 않습니다.');
         }
+        const storageValidation = validateVendorContractStorage(body, scope.companyId);
+        if (!storageValidation.ok) {
+            return fail(storageValidation.status, 'FORBIDDEN', storageValidation.message);
+        }
 
         const { data, error } = await auth.supabaseAdmin
             .from('franchise_vendor_contracts')
@@ -173,6 +186,10 @@ export async function PATCH(request: Request) {
         const vendorId = cleanString(body.vendorId);
         if (!await isVendorInCompany(auth.supabaseAdmin, vendorId, existing.company_id)) {
             return fail(403, 'FORBIDDEN', '업체 관리의 회사 범위가 일치하지 않습니다.');
+        }
+        const storageValidation = validateVendorContractStorage(body, existing.company_id);
+        if (!storageValidation.ok) {
+            return fail(storageValidation.status, 'FORBIDDEN', storageValidation.message);
         }
 
         const { data, error } = await auth.supabaseAdmin

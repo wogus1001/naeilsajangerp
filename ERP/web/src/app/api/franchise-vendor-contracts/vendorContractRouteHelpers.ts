@@ -4,8 +4,10 @@ import {
     normalizeVendorContractCategory,
     normalizeVendorContractDocumentSource
 } from '@/lib/franchise-vendor-contracts';
+import { parseUploadStorageTarget } from '@/lib/upload-storage-policy';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const VENDOR_CONTRACT_STORAGE_BUCKET = 'property-documents';
 
 export type VendorContractPayload = {
     readonly id?: unknown;
@@ -35,6 +37,10 @@ type VendorScopeRow = {
     readonly id: string;
     readonly company_id: string | null;
 };
+
+export type VendorContractStorageValidationResult =
+    | { readonly ok: true }
+    | { readonly ok: false; readonly status: 400 | 403; readonly message: string };
 
 export function cleanString(value: unknown): string {
     return String(value ?? '').trim();
@@ -120,6 +126,31 @@ export async function isVendorInCompany(
     return Boolean(data && data.company_id === companyId);
 }
 
+export function validateVendorContractStorage(
+    body: VendorContractPayload,
+    companyId: string
+): VendorContractStorageValidationResult {
+    const storagePath = cleanString(body.storagePath);
+    const storageBucket = cleanString(body.storageBucket) || VENDOR_CONTRACT_STORAGE_BUCKET;
+    if (!storagePath && !cleanString(body.storageBucket)) return { ok: true };
+    if (!storagePath) {
+        return { ok: false, status: 400, message: '업로드 문서 경로가 필요합니다.' };
+    }
+    if (storageBucket !== VENDOR_CONTRACT_STORAGE_BUCKET) {
+        return { ok: false, status: 400, message: '업로드 문서 버킷이 올바르지 않습니다.' };
+    }
+
+    const parsed = parseUploadStorageTarget({
+        bucket: storageBucket,
+        companyId,
+        path: storagePath
+    });
+    if (!parsed.ok || parsed.target.kind !== 'vendorContract') {
+        return { ok: false, status: 403, message: '업로드 문서 경로의 회사 범위가 일치하지 않습니다.' };
+    }
+    return { ok: true };
+}
+
 export function buildMutationPayload(
     body: VendorContractPayload,
     companyId: string,
@@ -129,6 +160,7 @@ export function buildMutationPayload(
     const id = cleanString(body.id);
     const electronicContractId = cleanString(body.electronicContractId);
     const vendorId = cleanString(body.vendorId);
+    const storagePath = cleanString(body.storagePath);
     const payload = {
         category: normalizeVendorContractCategory(body.category),
         contract_end_date: normalizeDate(body.contractEndDate),
@@ -140,8 +172,8 @@ export function buildMutationPayload(
         memo: cleanString(body.memo) || null,
         owner_profile_id: cleanString(body.ownerProfileId) || requester.id,
         status: cleanString(body.status) || 'active',
-        storage_bucket: cleanString(body.storageBucket) || null,
-        storage_path: cleanString(body.storagePath) || null,
+        storage_bucket: storagePath ? VENDOR_CONTRACT_STORAGE_BUCKET : null,
+        storage_path: storagePath || null,
         updated_by: requester.id,
         vendor_id: vendorId || null,
         vendor_name: cleanString(body.vendorName)
