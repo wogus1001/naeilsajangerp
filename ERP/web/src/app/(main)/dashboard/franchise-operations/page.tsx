@@ -1,18 +1,19 @@
 "use client";
 
 import React from 'react';
-import { BarChart3, ClipboardCheck, List, PencilLine } from 'lucide-react';
+import { BarChart3, Calculator, ClipboardCheck, List, PencilLine } from 'lucide-react';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { FranchiseOperationDashboard } from '@/components/franchise/operations/FranchiseOperationDashboard';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
+import { LaborPlanningPanel } from '@/components/franchise/operations/LaborPlanningPanel';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
 import { SupervisionPanel } from '@/components/franchise/operations/SupervisionPanel';
 import type { FranchiseLocation } from '@/components/franchise/operations/types';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
 import styles from '../franchise-leads/page.module.css';
 
-type MasterView = 'dashboard' | 'supervision' | 'list' | 'form';
+type MasterView = 'dashboard' | 'supervision' | 'labor' | 'list' | 'form';
 
 const MASTER_VIEWS: readonly {
     readonly key: MasterView;
@@ -21,6 +22,7 @@ const MASTER_VIEWS: readonly {
 }[] = [
     { key: 'dashboard', label: '대시보드', icon: BarChart3 },
     { key: 'supervision', label: '슈퍼바이징', icon: ClipboardCheck },
+    { key: 'labor', label: '인력 세팅', icon: Calculator },
     { key: 'list', label: '가맹점 목록', icon: List },
     { key: 'form', label: '가맹점 등록', icon: PencilLine }
 ];
@@ -95,6 +97,14 @@ export default function FranchiseOperationsPage() {
 
                     {masterView === 'supervision' ? (
                         <SupervisionPanel userId={controller.userId} companyName={controller.companyName} />
+                    ) : null}
+
+                    {masterView === 'labor' ? (
+                        <LaborPlanningPanel
+                            userId={controller.userId}
+                            companyName={controller.companyName}
+                            locations={controller.operationalLocations}
+                        />
                     ) : null}
 
                     {masterView === 'form' ? (

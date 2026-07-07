@@ -1,0 +1,1085 @@
+.panel {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.section,
+.viewTabs,
+.notice {
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.notice {
+    padding: 14px;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.viewTabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px;
+}
+
+.viewTab,
+.viewTabActive {
+    display: inline-flex;
+    height: 38px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 7px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.viewTab {
+    border: 1px solid #dfe3e8;
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.viewTabActive {
+    border: 1px solid #3182f6;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.sectionHeader {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.sectionHeader > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.sectionHeader h3 {
+    margin: 0;
+    color: #191f28;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.sectionHeader p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.inputLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+}
+
+.formStepHeader {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fbfcfe;
+}
+
+.formStepHeader div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.formStepHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.formStepHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.quickGrid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 1fr));
+    gap: 10px;
+    min-width: 0;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+}
+
+.advancedPanel {
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.field,
+.fieldWide {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.fieldWide {
+    grid-column: span 3;
+}
+
+.field span,
+.fieldWide span {
+    color: #4e5968;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.field input,
+.field select,
+.fieldWide input,
+.fieldWide textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #dfe3e8;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.field input:disabled {
+    background: #f8fafc;
+    color: #8b95a1;
+}
+
+.field input,
+.field select,
+.fieldWide input {
+    height: 38px;
+    padding: 0 10px;
+}
+
+.fieldWide textarea {
+    min-height: 72px;
+    padding: 10px;
+    resize: vertical;
+}
+
+.switchField {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 4px 8px;
+    align-content: center;
+    min-width: 0;
+    border: 1px solid #dfe3e8;
+    border-radius: 7px;
+    padding: 9px 10px;
+    background: #ffffff;
+}
+
+.switchField input {
+    grid-row: span 2;
+    width: 16px;
+    height: 16px;
+    margin: 1px 0 0;
+}
+
+.switchField span {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.switchField small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.savedPlans {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    min-width: 0;
+    padding: 14px;
+}
+
+.savedPlanRow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.savedPlanMain {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 4px;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.savedPlanMain b,
+.savedPlanMain span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.savedPlanMain b {
+    color: #191f28;
+    font-size: 13px;
+}
+
+.savedPlanMain span {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.savedPlanActions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+}
+
+.editingBanner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    border: 1px solid #b9d7ff;
+    border-radius: 8px;
+    background: #f5f9ff;
+    padding: 12px 14px;
+}
+
+.editingBanner div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.editingBanner strong {
+    color: #1b64da;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.editingBanner span {
+    overflow: hidden;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.weekdayRow,
+.weekdayRowInline,
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 0 14px 14px;
+}
+
+.weekdayRowInline {
+    padding: 0;
+}
+
+.actions {
+    justify-content: flex-end;
+}
+
+.settingsSummary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 14px 14px;
+}
+
+.settingsSummary span {
+    border-radius: 999px;
+    background: #f2f4f6;
+    padding: 5px 8px;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.weekday,
+.weekdayActive,
+.secondaryButton,
+.primaryButton,
+.dangerButton {
+    display: inline-flex;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 7px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.weekday,
+.secondaryButton {
+    border: 1px solid #dfe3e8;
+    background: #ffffff;
+    color: #4e5968;
+}
+
+.dangerButton {
+    border: 1px solid #ff9ea3;
+    background: #fff5f5;
+    color: #f03e3e;
+}
+
+.weekdayActive,
+.primaryButton {
+    border: 1px solid #3182f6;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.primaryButton:disabled,
+.dangerButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.resultGrid,
+.roleGrid,
+.scheduleGrid,
+.utilityGrid,
+.bottomGrid {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+}
+
+.resultGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.scenarioGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 14px 14px;
+}
+
+.roleGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metricCard,
+.scenarioCard,
+.scenarioCardSelected,
+.roleCard,
+.scheduleCard,
+.utilityResult,
+.documentItem {
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fbfcfe;
+}
+
+.scenarioCard,
+.scenarioCardSelected {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+}
+
+.scenarioCardSelected {
+    border-color: #3182f6;
+    background: #f5f9ff;
+}
+
+.scenarioCard:hover,
+.scenarioCardSelected:hover {
+    border-color: #b9d7ff;
+}
+
+.scenarioCardHeader {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.scenarioCardHeader div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.scenarioCardHeader strong {
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.scenarioCardHeader span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.scenarioBadgesafe,
+.scenarioBadgewatch,
+.scenarioBadgeover {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 4px 7px;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.scenarioBadgesafe {
+    background: #e6f7ef;
+    color: #00855a;
+}
+
+.scenarioBadgewatch {
+    background: #fff3df;
+    color: #b45309;
+}
+
+.scenarioBadgeover {
+    background: #fff0f0;
+    color: #e03131;
+}
+
+.scenarioMeta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.scenarioMeta div {
+    min-width: 0;
+    border-radius: 7px;
+    background: #ffffff;
+    padding: 8px;
+}
+
+.scenarioMeta dt {
+    color: #8b95a1;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.scenarioMeta dd {
+    margin: 3px 0 0;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.scenarioRoleList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.scenarioRoleList span {
+    border-radius: 999px;
+    background: #f2f4f6;
+    padding: 4px 7px;
+    color: #4e5968;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.subSectionHeader {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px 4px;
+}
+
+.subSectionHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.subSectionHeader span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.metricCard span,
+.metricCard small,
+.roleCard span,
+.scheduleCard span,
+.scheduleCard small,
+.utilityResult span {
+    display: block;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.metricCard strong {
+    display: block;
+    margin: 5px 0;
+    color: #191f28;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.roleCard {
+    display: grid;
+    gap: 10px;
+}
+
+.roleCard strong,
+.scheduleCard strong,
+.utilityResult strong,
+.documentItem strong {
+    display: block;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.roleCard dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.roleCard div,
+.roleCard dt,
+.roleCard dd {
+    min-width: 0;
+}
+
+.roleCard dt {
+    color: #8b95a1;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.roleCard dd {
+    margin: 3px 0 0;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.scheduleGrid {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 14px;
+}
+
+.scheduleCard {
+    display: grid;
+    gap: 6px;
+}
+
+.scheduleSummaryBar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 820px;
+}
+
+.scheduleSummaryBar div {
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #fbfcfe;
+    padding: 10px 12px;
+}
+
+.scheduleSummaryBar span {
+    display: block;
+    color: #8b95a1;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.scheduleSummaryBar strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 3px;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scheduleLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    align-items: center;
+    min-width: 820px;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 8px 10px;
+}
+
+.scheduleLegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #4e5968;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.scheduleLegend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+}
+
+.legendManager {
+    background: #b9d7ff;
+}
+
+.legendStaff {
+    background: #9ee8cd;
+}
+
+.legendPartTime {
+    background: #ffd99a;
+}
+
+.legendSupport {
+    background: #dfe3e8;
+}
+
+.scheduleTable {
+    min-width: 820px;
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.scheduleHeaderRow,
+.scheduleRow {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+}
+
+.scheduleHeaderRow {
+    border-bottom: 1px solid #e5e8eb;
+    background: #f8fafc;
+}
+
+.scheduleDayHeader,
+.scheduleDayCell {
+    border-right: 1px solid #e5e8eb;
+}
+
+.scheduleDayHeader {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    color: #4e5968;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.scheduleHours,
+.scheduleBars {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(18px, 1fr));
+}
+
+.scheduleHours {
+    align-items: center;
+    min-height: 34px;
+    padding: 0 10px;
+    color: #8b95a1;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.scheduleRow {
+    border-bottom: 1px solid #eef2f7;
+}
+
+.scheduleRow:last-child {
+    border-bottom: 0;
+}
+
+.scheduleDayCell {
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 10px 12px;
+    background: #fbfcfe;
+}
+
+.scheduleDayCell strong {
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.scheduleDayCell span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.4;
+}
+
+.scheduleDayCell small {
+    color: #8b95a1;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.4;
+}
+
+.scheduleTrack {
+    min-width: 0;
+    padding: 8px 10px 10px;
+    background-image: linear-gradient(to right, #eef2f7 1px, transparent 1px);
+    background-size: calc(100% / 16) 100%;
+}
+
+.scheduleRowTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.scheduleRowTop strong {
+    color: #333d4b;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.scheduleRowTop span {
+    color: #8b95a1;
+    font-size: 10px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.scheduleBars {
+    gap: 5px 0;
+}
+
+.scheduleBar {
+    display: flex;
+    min-width: 0;
+    min-height: 26px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(49, 130, 246, 0.16);
+    border-radius: 7px;
+    padding: 0 9px;
+    color: #191f28;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.scheduleBar strong,
+.scheduleBar span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scheduleBar span {
+    flex: 0 0 auto;
+    color: #4e5968;
+}
+
+.scheduleShiftList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.scheduleShiftList span {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    padding: 4px 7px;
+    color: #4e5968;
+    font-size: 10px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.scheduleBarManager {
+    background: #e8f3ff;
+}
+
+.scheduleBarStaff {
+    background: #e6f7ef;
+}
+
+.scheduleBarPartTime {
+    background: #fff3df;
+}
+
+.scheduleBarSupport {
+    background: #f2f4f6;
+}
+
+.scheduleClosed {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #dfe3e8;
+    border-radius: 7px;
+    background: rgba(248, 250, 252, 0.72);
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.utilityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dayInputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.utilityCard {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fbfcfe;
+}
+
+.utilityCardHeader {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.utilityCardHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.utilityCardHeader span {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.45;
+    text-align: right;
+}
+
+.utilityFieldRow,
+.utilityMetricGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+.utilityMetricGrid {
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+}
+
+.utilityResult {
+    background: #ffffff;
+}
+
+.utilityResult strong {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    white-space: nowrap;
+}
+
+.utilityNotice {
+    margin: 0;
+    padding: 0 14px 14px;
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.55;
+}
+
+.bottomGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.6fr);
+    padding: 0;
+}
+
+.documentList {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+}
+
+.documentItem {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
+
+.documentItem a {
+    color: #1b64da;
+    font-size: 12px;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.emptyState {
+    min-width: 0;
+    margin: 14px;
+    border: 1px dashed #dfe3e8;
+    border-radius: 8px;
+    padding: 18px;
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: center;
+}
+
+@media (max-width: 980px) {
+    .bottomGrid,
+    .utilityGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .formGrid,
+    .quickGrid,
+    .resultGrid,
+    .scenarioGrid,
+    .roleGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .fieldWide {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 560px) {
+    .formGrid,
+    .quickGrid,
+    .resultGrid,
+    .scenarioGrid,
+    .roleGrid,
+    .dayInputs,
+    .utilityFieldRow,
+    .utilityMetricGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .fieldWide {
+        grid-column: span 1;
+    }
+
+    .actions {
+        justify-content: stretch;
+    }
+
+    .formStepHeader,
+    .sectionHeader,
+    .subSectionHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .primaryButton,
+    .secondaryButton {
+        flex: 1 1 160px;
+    }
+
+    .savedPlanRow {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .savedPlanActions,
+    .editingBanner {
+        width: 100%;
+    }
+
+    .editingBanner {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

@@ -78,11 +78,12 @@ supabase_franchise_vendors_migration.sql
 supabase_franchise_alimtalk_operations_migration.sql
 supabase_franchise_supervision_migration.sql
 supabase_franchise_supervision_v2_migration.sql
+supabase_franchise_labor_planning_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, 또는 `franchise_supervisor_assignments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, `franchise_supervisor_assignments`, 또는 `franchise_labor_settings` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 ## Franchise Supervision Setup
 
@@ -91,6 +92,12 @@ Run `supabase_franchise_supervision_migration.sql` before enabling the `가맹 �
 After the MVP migration is applied, run `supabase_franchise_supervision_v2_migration.sql` for the second-phase features. **SQL 등록 필요**. The v2 migration adds company report templates, report submit/approve/reject events, corrective-action events, a report `template_id`, and draft AlimTalk templates/scenarios for internal SV operations.
 
 The MVP supports active SV assignment per operating store, visit scheduling with a lightweight `schedules` sync, inspection report draft/submission, manager approval/rejection, image metadata upload under `property-documents/franchise-supervision/<company_id>/<report_id>/...`, and corrective-action creation for `개선필요` inspection items. The v2 UI reorganizes the tab into `운영 리포트 / 배정 관리 / 방문 일정 / 점검 보고서 / 승인·시정요청`, makes KPI cards clickable filters, lets managers save the company inspection template, prints inspection reports, syncs visit changes back to `schedules`, and leaves report/action history for audit. The assignment tab removes the separate region field and provides store-based and supervisor-based list views with search, SV, and assignment-status filters; managers open an inline editor below the selected operating-store row, and the list is paginated to keep the assignment screen scannable. The operating report also exposes a computed `오늘 처리 큐` for today/tomorrow visits, missing reports, pending approvals, and overdue corrective actions; this queue uses existing supervision tables and does not require extra SQL. The report tab now includes a visit-based inspection report list that shows missing/submitted/approved states, improvement counts, photo counts, and the selected report editor in one workflow. The review tab uses table-style approval and corrective-action queues so managers can compare pending reports, rejection reasons, assignees, due dates, and status updates without scanning card stacks. Internal AlimTalk hooks are wired for visit creation, report approval/rejection, and corrective-action assignment when the v2 scenarios are approved and enabled. Report save/approval transitions, assignment/report company scope, event-table RLS, and supervision photo URL handling are hardened in the v2 route review pass.
+
+## Franchise Labor Planning Setup
+
+Run `supabase_franchise_labor_planning_migration.sql` before enabling saved labor plans in `가맹 운영 > 인력 세팅`. **SQL 등록 필요**. The migration creates company labor settings, store-level staffing plans, and role-level staffing recommendations.
+
+The tab supports temporary calculation without SQL, but plan persistence and history require the migration. The calculator uses company/year labor settings for minimum hourly wage, employee/employer insurance rates, withholding rate, and overtime/night/holiday multipliers; saved plans store the settings snapshot used at calculation time. The first release includes monthly-sales-based staffing recommendations, weekly schedule cost projection, payroll/3.3%/day-wage calculators, and a labor document box that links into electronic contracts. Results are labelled as operational budget estimates, not legal or payroll filing advice.
 
 ## Franchise Vendor Contract Vault Setup
 
