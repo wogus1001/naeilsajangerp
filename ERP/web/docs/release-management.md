@@ -179,6 +179,17 @@ YYYY-MM-DD
 
 - 2026-07-07
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `6bc9455 개선 슈퍼바이징 AI 보고서 출력 정리`
+  - 주요 기능: 슈퍼바이징 점검 보고서 AI 결과에서 `점주 의견 기준`, `직원 진술 기준` 같은 출처 접두어가 항목별 메모에 반복되지 않게 프롬프트와 응답 정규화를 보강했다. AI 종합 요약은 보고서 특이사항에 `종합 요약`으로 보존하고, PDF/인쇄의 `조치 필요 항목`은 상태와 항목명 요약만 보여주며 상세 메모는 `전체 점검 내역` 표에만 남긴다.
+  - 신규 SQL: 없음.
+  - dev 반영: none
+  - main 반영: Vercel production 배포 완료
+  - 배포 URL: `https://www.fcerp.co.kr` / `https://fcerp.co.kr` (`dpl_4keMEHZv2Qd4H2MwAY6QNrYiqmnD`, READY; source `https://naeilsajang-5wckwi1um-jaehyuns-projects-b4d20c6f.vercel.app`)
+  - 검증: `npx tsx --test src/lib/franchise-supervision-ai-summary.test.mts src/lib/franchise-supervision.test.mts` 30건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright로 로컬 `http://localhost:3000`에서 `내일 / admin` 로그인 후 `가맹 운영 > 슈퍼바이징 > 점검 보고서 > 보고서 작성` 진입, AI 패널 모델명 미노출, PDF/인쇄 팝업의 조치 필요 항목/전체 점검 내역 분리 표시를 확인했다.
+  - 배포 검증: `npx vercel deploy --dry --project naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym --yes`에서 `framework=Next.js`, project `naeilsajang`, `.env.local`, `.omo`, `ERP/web/handoff.md`, `.next`, `node_modules` 제외를 확인했다. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/login`, `curl -I -L https://www.fcerp.co.kr/dashboard/franchise-operations`는 200 응답이었다.
+  - 남은 이슈: 실서버 로그인 세션에서 실제 운영 데이터로 AI 정리 적용 후 PDF 저장/인쇄를 한 번 더 확인한다.
+- 2026-07-07
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 보안 감사 후속/인증 헤더 회귀 보정 커밋 예정
   - 주요 기능: Meta 연동 및 후보지 연결 API 호출에 Supabase 세션 인증 헤더를 붙여 모객 DB의 `requesterId is required` 콘솔 오류를 보정했다. 전자계약 권한의 잘못된 `super_manager` 참조를 실제 역할 `sub_manager`로 수정하고, UCanSign 미연결 계정의 대시보드 진입 시 예상 가능한 미연결 로그를 error로 반복 출력하지 않게 했다. 보안 감사 SQL-only 항목은 `supabase_platform_audit_required_sql_2026_07_07.sql`에 정리했다.
   - 신규 SQL: `share_links.revoked_at`, `system_settings`, 중복 방지 unique index 적용용 SQL이 있다. 사용자가 Supabase SQL Editor에서 직접 적용한다. **SQL 등록 필요**.
