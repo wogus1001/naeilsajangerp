@@ -403,3 +403,18 @@ The official Naver API MVP is used for blog/news/local search and DataLab trends
 - Current P0 is to prevent SearchAPI 429/monthly quota failures from overwriting previously successful Naver review/ad values and to split UI labels into quota exceeded, provider missing, and no result states.
 - Google Places enrichment intentionally uses Text Search rating/review counts only; Place Details review bodies are not requested by default.
 - Franchise list exports are available on 모객 DB, 출점 후보지, and 가맹 운영. Excel downloads use the current filters, sort, and visible table columns where applicable; PDF and print open the shared browser print view so operators can save as PDF from the print dialog. No extra SQL is required.
+
+## NVIDIA NIM AI Summary Setup
+
+The `가맹 운영 > 슈퍼바이징 > 점검 보고서` AI meeting summary panel calls NVIDIA NIM from the server only. Do not expose the API key to client code.
+
+```bash
+NVIDIA_API_KEY=
+NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+NVIDIA_MODEL=mistralai/mistral-medium-3.5-128b
+NVIDIA_FALLBACK_MODEL=nvidia/nemotron-3-nano-30b-a3b
+NVIDIA_REQUEST_TIMEOUT_MS=45000
+NVIDIA_FORCE_JSON=false
+```
+
+`NVIDIA_FORCE_JSON=false` is the default because some NVIDIA preview models do not support structured output mode. The prompt still requests JSON only, and the server parser falls back to a local report draft when the provider response cannot be parsed or the model call fails. No SQL is required for this integration.

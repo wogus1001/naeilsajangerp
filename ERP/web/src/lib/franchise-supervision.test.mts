@@ -25,6 +25,13 @@ import {
     normalizeAiProviderEnvValue,
     validateSupervisionAiTranscript
 } from './franchise-supervision-ai-summary.js';
+import {
+    buildNvidiaChatCompletionBody,
+    DEFAULT_NVIDIA_FALLBACK_MODEL,
+    DEFAULT_NVIDIA_MODEL,
+    normalizeNvidiaBooleanEnv,
+    normalizeNvidiaModelId
+} from './nvidia-chat-config.js';
 
 void test('Given saved inspection item values When merging with defaults Then missing template items are restored', () => {
     const items = mergeInspectionItems([
@@ -166,6 +173,51 @@ void test('Given quoted AI provider env value When normalizing Then accidental s
     assert.equal(normalizeAiProviderEnvValue('"nvapi-test"'), 'nvapi-test');
     assert.equal(normalizeAiProviderEnvValue('nvapi-test"'), 'nvapi-test');
     assert.equal(normalizeAiProviderEnvValue("'nvidia/model'"), 'nvidia/model');
+});
+
+void test('Given NVIDIA model env aliases When normalizing Then callable model ids are used', () => {
+    assert.equal(normalizeNvidiaModelId('', DEFAULT_NVIDIA_MODEL), DEFAULT_NVIDIA_MODEL);
+    assert.equal(normalizeNvidiaModelId('mistral-medium-3.5-128b', DEFAULT_NVIDIA_MODEL), DEFAULT_NVIDIA_MODEL);
+    assert.equal(
+        normalizeNvidiaModelId('llama-3.1-8b-instruct', DEFAULT_NVIDIA_MODEL),
+        'meta/llama-3.1-8b-instruct'
+    );
+    assert.equal(
+        normalizeNvidiaModelId('nemotron-3-nano-30b-a3b', DEFAULT_NVIDIA_MODEL),
+        DEFAULT_NVIDIA_FALLBACK_MODEL
+    );
+});
+
+void test('Given NVIDIA chat config When building request body Then JSON forcing is opt-in', () => {
+    const body = buildNvidiaChatCompletionBody({
+        model: DEFAULT_NVIDIA_MODEL,
+        forceJson: false,
+        messages: [{ role: 'user', content: '점검 메모' }]
+    });
+
+    assert.equal(body.model, DEFAULT_NVIDIA_MODEL);
+    assert.equal(body.response_format, undefined);
+    assert.equal(body.reasoning_effort, 'high');
+    assert.equal(body.stream, false);
+});
+
+void test('Given NVIDIA fallback model When building request body Then Nemotron thinking is disabled', () => {
+    const body = buildNvidiaChatCompletionBody({
+        model: DEFAULT_NVIDIA_FALLBACK_MODEL,
+        forceJson: true,
+        messages: [{ role: 'user', content: '점검 메모' }]
+    });
+
+    assert.deepEqual(body.chat_template_kwargs, { enable_thinking: false });
+    assert.deepEqual(body.response_format, { type: 'json_object' });
+});
+
+void test('Given NVIDIA boolean env values When normalizing Then only explicit truthy values enable options', () => {
+    assert.equal(normalizeNvidiaBooleanEnv('true'), true);
+    assert.equal(normalizeNvidiaBooleanEnv('1'), true);
+    assert.equal(normalizeNvidiaBooleanEnv('on'), true);
+    assert.equal(normalizeNvidiaBooleanEnv('false'), false);
+    assert.equal(normalizeNvidiaBooleanEnv(''), false);
 });
 
 void test('Given supervision AI transcript with sensitive values When masking Then outbound text hides direct identifiers', () => {

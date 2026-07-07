@@ -11,11 +11,23 @@ import {
     type SupervisionReportAiPromptMessage,
     type SupervisionReportAiSummary
 } from '@/lib/franchise-supervision-ai-summary';
+import {
+    buildNvidiaChatCompletionBody,
+    DEFAULT_NVIDIA_BASE_URL,
+    DEFAULT_NVIDIA_FALLBACK_MODEL,
+    DEFAULT_NVIDIA_MODEL,
+    DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS,
+    NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS,
+    NVIDIA_MAX_REQUEST_TIMEOUT_MS,
+    NVIDIA_MIN_REQUEST_TIMEOUT_MS,
+    normalizeNvidiaBooleanEnv,
+    normalizeNvidiaModelId
+} from '@/lib/nvidia-chat-config';
 import type { SupervisionInspectionItem } from '@/lib/franchise-supervision';
 import { fetchVisit, readVisitLocationName } from '../reportRouteSupport';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 45;
 
 type NvidiaChatMessage = {
     readonly message?: {
@@ -31,32 +43,21 @@ type SupervisionReportAiResult = {
     readonly providerIssue?: string;
 };
 
-const DEFAULT_NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b';
-const DEFAULT_NVIDIA_FALLBACK_MODEL = 'meta/llama-3.1-8b-instruct';
-const DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS = 18_000;
-const NVIDIA_MIN_REQUEST_TIMEOUT_MS = 5_000;
-const NVIDIA_MAX_REQUEST_TIMEOUT_MS = 45_000;
-const NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS = 10_000;
 const AI_SUMMARY_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const AI_SUMMARY_RATE_LIMIT_MAX_CALLS = 20;
 const aiSummaryRateLimit = new Map<string, { readonly count: number; readonly windowStartedAt: number }>();
-const NVIDIA_LEGACY_FALLBACK_MODEL_ALIASES: Record<string, string> = {
-    'mistral-medium-3.5-128b': DEFAULT_NVIDIA_FALLBACK_MODEL
-};
-
-function normalizeNvidiaFallbackModel(value: unknown): string {
-    const model = normalizeAiProviderEnvValue(value);
-    return NVIDIA_LEGACY_FALLBACK_MODEL_ALIASES[model] || model || DEFAULT_NVIDIA_FALLBACK_MODEL;
-}
 
 function getNvidiaConfig(env: NodeJS.ProcessEnv) {
     const timeoutMs = Number.parseInt(normalizeAiProviderEnvValue(env.NVIDIA_REQUEST_TIMEOUT_MS), 10);
     return {
         apiKey: normalizeAiProviderEnvValue(env.NVIDIA_API_KEY),
         baseUrl: normalizeAiProviderEnvValue(env.NVIDIA_BASE_URL) || DEFAULT_NVIDIA_BASE_URL,
-        model: normalizeAiProviderEnvValue(env.NVIDIA_MODEL) || DEFAULT_NVIDIA_MODEL,
-        fallbackModel: normalizeNvidiaFallbackModel(env.NVIDIA_FALLBACK_MODEL),
+        model: normalizeNvidiaModelId(normalizeAiProviderEnvValue(env.NVIDIA_MODEL), DEFAULT_NVIDIA_MODEL),
+        fallbackModel: normalizeNvidiaModelId(
+            normalizeAiProviderEnvValue(env.NVIDIA_FALLBACK_MODEL),
+            DEFAULT_NVIDIA_FALLBACK_MODEL
+        ),
+        forceJson: normalizeNvidiaBooleanEnv(normalizeAiProviderEnvValue(env.NVIDIA_FORCE_JSON)),
         requestTimeoutMs: Number.isFinite(timeoutMs)
             ? Math.min(Math.max(timeoutMs, NVIDIA_MIN_REQUEST_TIMEOUT_MS), NVIDIA_MAX_REQUEST_TIMEOUT_MS)
             : DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS
@@ -109,14 +110,11 @@ async function requestNvidiaSummary(input: {
     readonly forceJson: boolean;
     readonly timeoutMs: number;
 }): Promise<NvidiaSummaryRequestResult> {
-    const requestBody: Record<string, unknown> = {
+    const requestBody = buildNvidiaChatCompletionBody({
         model: input.model,
         messages: input.messages,
-        temperature: 0.2,
-        top_p: 0.95,
-        max_tokens: 1600
-    };
-    if (input.forceJson) requestBody.response_format = { type: 'json_object' };
+        forceJson: input.forceJson
+    });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), input.timeoutMs);
@@ -149,7 +147,7 @@ async function requestNvidiaSummary(input: {
     const payload: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
         const issue = response.status === 401 || response.status === 403
-            ? 'NVIDIA 인증에 실패했습니다. NVIDIA_API_KEY 값을 확인해 주세요.'
+            ? 'NVIDIA 인증 또는 모델 호출 권한을 확인해 주세요.'
             : `NVIDIA 요청이 실패했습니다. 상태 코드: ${response.status}`;
         console.warn('Franchise supervision AI summary NVIDIA request failed:', {
             model: input.model,
@@ -180,7 +178,7 @@ async function summarizeWithNvidia(input: {
     readonly transcript: string;
     readonly inspectionItems: readonly SupervisionInspectionItem[];
 }): Promise<SupervisionReportAiResult> {
-    const { apiKey, baseUrl, model, fallbackModel, requestTimeoutMs } = getNvidiaConfig(input.env);
+    const { apiKey, baseUrl, forceJson, model, fallbackModel, requestTimeoutMs } = getNvidiaConfig(input.env);
     if (!apiKey) throw new Error('NVIDIA_API_KEY 환경변수 설정이 필요합니다.');
     const issues: string[] = [];
 
@@ -190,7 +188,7 @@ async function summarizeWithNvidia(input: {
         model,
         messages: input.messages,
         fetcher: input.fetcher,
-        forceJson: true,
+        forceJson,
         timeoutMs: requestTimeoutMs
     });
     if (primaryJsonSummary.summary) return { summary: primaryJsonSummary.summary, model, fallbackUsed: false };
@@ -203,7 +201,7 @@ async function summarizeWithNvidia(input: {
             model: fallbackModel,
             messages: input.messages,
             fetcher: input.fetcher,
-            forceJson: true,
+            forceJson,
             timeoutMs: Math.min(requestTimeoutMs, NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS)
         });
         if (fallbackSummary.summary) return { summary: fallbackSummary.summary, model: fallbackModel, fallbackUsed: true };

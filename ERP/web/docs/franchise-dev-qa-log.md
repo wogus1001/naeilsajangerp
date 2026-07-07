@@ -1082,3 +1082,11 @@
 - 신규 SQL: `supabase_platform_audit_required_sql_2026_07_07.sql`을 추가했다. `share_links.revoked_at`, `system_settings`, 중복 방지 unique index를 포함하며 사용자가 Supabase SQL Editor에서 직접 적용한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/electronic-contracts/document-permissions.test.mts` 11건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check` 통과.
 - 남은 live QA: 운영 배포 후 모객 DB에서 Meta 연동 패널과 후보지 연결 패널 진입 시 `requesterId is required` 콘솔 오류가 재발하지 않는지, UCanSign 미연결 계정의 대시보드 진입 로그가 조용한지, 같은 회사 `sub_manager` 계정의 전자계약 접근이 유지되는지 확인한다.
+
+## 2026-07-07 슈퍼바이징 NVIDIA NIM AI 요약 설정 QA
+
+- 범위: `가맹 운영 > 슈퍼바이징 > 점검 보고서`의 AI 회의록 정리 호출 기본 모델을 운영 테스트 가능한 `mistralai/mistral-medium-3.5-128b` 기준으로 정리했다. fallback은 빠른 `nvidia/nemotron-3-nano-30b-a3b`로 두고, `NVIDIA_FORCE_JSON=false` 기본값으로 preview 모델의 structured output 미지원 문제를 피한다.
+- env: 로컬 `.env.local`에는 `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL`, `NVIDIA_FALLBACK_MODEL`, `NVIDIA_REQUEST_TIMEOUT_MS`, `NVIDIA_FORCE_JSON`를 설정한다. 실제 키 값은 문서/커밋에 남기지 않는다.
+- 보정: 모델 alias(`mistral-medium-3.5-128b`, `nemotron-3-nano-30b-a3b`)를 정식 NVIDIA 모델 ID로 정규화하고, Mistral 요청에는 `reasoning_effort=high`, `stream=false`를 포함한다. 인증/권한 실패 메시지는 env 변수명을 노출하지 않고 안내한다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts`에서 NVIDIA 모델 정규화, JSON forcing opt-in, Nemotron thinking 비활성화, boolean env 정규화 회귀 테스트를 포함해 확인한다. 운영 Vercel에는 동일 env 키를 별도로 등록한 뒤 실계정에서 AI 정리 응답과 local fallback 메시지를 확인한다.
