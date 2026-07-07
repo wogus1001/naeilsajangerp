@@ -1,10 +1,11 @@
 export const DEFAULT_NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
-export const DEFAULT_NVIDIA_MODEL = 'mistralai/mistral-medium-3.5-128b';
-export const DEFAULT_NVIDIA_FALLBACK_MODEL = 'nvidia/nemotron-3-nano-30b-a3b';
-export const DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS = 25_000;
+export const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3-nano-30b-a3b';
+export const DEFAULT_NVIDIA_FALLBACK_MODEL = 'meta/llama-3.1-8b-instruct';
+export const DEFAULT_NVIDIA_REQUEST_TIMEOUT_MS = 12_000;
 export const NVIDIA_MIN_REQUEST_TIMEOUT_MS = 5_000;
-export const NVIDIA_MAX_REQUEST_TIMEOUT_MS = 45_000;
-export const NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS = 15_000;
+export const NVIDIA_MAX_REQUEST_TIMEOUT_MS = 25_000;
+export const NVIDIA_PRIMARY_REQUEST_TIMEOUT_MS = 10_000;
+export const NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS = 8_000;
 
 type NvidiaChatMessage = {
     readonly role: string;
@@ -19,11 +20,12 @@ type BuildNvidiaChatCompletionBodyInput = {
 
 const NVIDIA_MODEL_ALIASES: Record<string, string> = {
     'llama-3.1-8b-instruct': 'meta/llama-3.1-8b-instruct',
+    'meta/llama-3.1-8b-instruct': DEFAULT_NVIDIA_FALLBACK_MODEL,
     'mistral-medium-3.5-128b': 'mistralai/mistral-medium-3.5-128b',
-    'mistralai/mistral-medium-3.5-128b': DEFAULT_NVIDIA_MODEL,
+    'mistralai/mistral-medium-3.5-128b': 'mistralai/mistral-medium-3.5-128b',
     'nemotron-3-ultra-550b-a55b': 'nvidia/nemotron-3-ultra-550b-a55b',
-    'nemotron-3-nano-30b-a3b': DEFAULT_NVIDIA_FALLBACK_MODEL,
-    'nvidia/nemotron-3-nano-30b-a3b': DEFAULT_NVIDIA_FALLBACK_MODEL
+    'nemotron-3-nano-30b-a3b': DEFAULT_NVIDIA_MODEL,
+    'nvidia/nemotron-3-nano-30b-a3b': DEFAULT_NVIDIA_MODEL
 };
 
 export function normalizeNvidiaModelId(value: string, fallbackModel: string): string {
@@ -44,14 +46,14 @@ export function buildNvidiaChatCompletionBody({
     const requestBody: Record<string, unknown> = {
         model,
         messages,
-        temperature: 0.7,
-        top_p: 1,
-        max_tokens: 2000,
+        temperature: 0.2,
+        top_p: 0.8,
+        max_tokens: 1100,
         stream: false
     };
 
     if (model.includes('mistral-medium')) {
-        requestBody.reasoning_effort = 'high';
+        requestBody.reasoning_effort = 'low';
     }
     if (model.includes('nemotron')) {
         requestBody.chat_template_kwargs = { enable_thinking: false };

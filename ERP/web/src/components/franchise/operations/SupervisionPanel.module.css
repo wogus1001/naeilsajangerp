@@ -776,7 +776,7 @@
     gap: 8px;
 }
 
-.aiSummaryPreviewGrid div {
+.aiSummaryPreviewGrid label {
     display: grid;
     gap: 6px;
     min-width: 0;
@@ -792,7 +792,82 @@
     font-weight: 900;
 }
 
-.aiSummaryPreviewGrid p {
+.aiSummaryPreviewGrid textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.aiSummaryBulkActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.aiSummaryReviewList {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.aiSummaryReviewItem {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 10px;
+    background: #ffffff;
+}
+
+.aiSummaryReviewHeader {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 132px;
+    gap: 8px;
+    align-items: center;
+}
+
+.aiSummaryReviewHeader strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aiSummaryApplyToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.aiSummaryReviewItem textarea {
+    min-height: 84px;
+    resize: vertical;
+}
+
+.aiSummaryEvidence {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #f9fafb;
+}
+
+.aiSummaryEvidence span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.aiSummaryEvidence p,
+.aiSummaryEmpty {
     margin: 0;
     color: #333d4b;
     font-size: 12px;
@@ -801,28 +876,32 @@
     overflow-wrap: anywhere;
 }
 
-.aiSummaryItemList {
-    display: flex;
-    flex-wrap: wrap;
+.aiSummaryWarnings {
+    display: grid;
     gap: 6px;
+    border: 1px solid #ffe8a3;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fffbf0;
 }
 
-.aiSummaryItemList span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    min-height: 28px;
-    border: 1px solid #e5e8eb;
-    border-radius: 999px;
-    padding: 0 10px;
-    background: #ffffff;
+.aiSummaryWarnings strong {
+    color: #8a4b00;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.aiSummaryWarnings p {
+    margin: 0;
     color: #4e5968;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
+    line-height: 1.5;
 }
 
-.aiSummaryItemList b {
-    color: #3182f6;
+.aiSummaryWarnings b {
+    margin-right: 6px;
+    color: #b76e00;
 }
 
 .primaryButton,
@@ -1169,6 +1248,7 @@ button.listItem {
     .inlineControls,
     .aiSummaryActions,
     .aiSummaryPreviewGrid,
+    .aiSummaryReviewHeader,
     .assignmentToolbar,
     .assignmentFilters,
     .listFilters,

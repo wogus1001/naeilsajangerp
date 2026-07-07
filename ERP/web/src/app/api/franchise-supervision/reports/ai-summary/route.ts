@@ -20,6 +20,7 @@ import {
     NVIDIA_FALLBACK_REQUEST_TIMEOUT_MS,
     NVIDIA_MAX_REQUEST_TIMEOUT_MS,
     NVIDIA_MIN_REQUEST_TIMEOUT_MS,
+    NVIDIA_PRIMARY_REQUEST_TIMEOUT_MS,
     normalizeNvidiaBooleanEnv,
     normalizeNvidiaModelId
 } from '@/lib/nvidia-chat-config';
@@ -181,6 +182,7 @@ async function summarizeWithNvidia(input: {
     const { apiKey, baseUrl, forceJson, model, fallbackModel, requestTimeoutMs } = getNvidiaConfig(input.env);
     if (!apiKey) throw new Error('NVIDIA_API_KEY 환경변수 설정이 필요합니다.');
     const issues: string[] = [];
+    const primaryTimeoutMs = Math.min(requestTimeoutMs, NVIDIA_PRIMARY_REQUEST_TIMEOUT_MS);
 
     const primaryJsonSummary = await requestNvidiaSummary({
         apiKey,
@@ -189,7 +191,7 @@ async function summarizeWithNvidia(input: {
         messages: input.messages,
         fetcher: input.fetcher,
         forceJson,
-        timeoutMs: requestTimeoutMs
+        timeoutMs: primaryTimeoutMs
     });
     if (primaryJsonSummary.summary) return { summary: primaryJsonSummary.summary, model, fallbackUsed: false };
     if (primaryJsonSummary.issue) issues.push(primaryJsonSummary.issue);

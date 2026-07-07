@@ -2,11 +2,26 @@
 
 import React from 'react';
 import { ChevronDown, Sparkles } from 'lucide-react';
-import { SUPERVISION_AI_SUMMARY_MAX_INPUT_LENGTH, type SupervisionReportAiSummary } from '@/lib/franchise-supervision-ai-summary';
-import type { SupervisionInspectionItem } from '@/lib/franchise-supervision';
+import {
+    buildSupervisionReportAiQualityWarnings,
+    SUPERVISION_AI_SUMMARY_MAX_INPUT_LENGTH,
+    type SupervisionReportAiItemSummary,
+    type SupervisionReportAiSummary
+} from '@/lib/franchise-supervision-ai-summary';
+import type { SupervisionInspectionItem, SupervisionItemResult } from '@/lib/franchise-supervision';
 import { summarizeSupervisionReportRequest } from './supervisionRequests';
 import type { SupervisionScope } from './supervisionTypes';
 import styles from './SupervisionPanel.module.css';
+
+type EditableAiSummaryItem = SupervisionReportAiItemSummary & {
+    readonly selected: boolean;
+};
+
+type EditableAiSummary = {
+    readonly overallNote: string;
+    readonly specialNote: string;
+    readonly inspectionItems: readonly EditableAiSummaryItem[];
+};
 
 type SupervisionReportAiSummaryPanelProps = SupervisionScope & {
     readonly disabled: boolean;
@@ -25,9 +40,31 @@ export function SupervisionReportAiSummaryPanel({
 }: SupervisionReportAiSummaryPanelProps) {
     const [open, setOpen] = React.useState(false);
     const [transcript, setTranscript] = React.useState('');
-    const [summary, setSummary] = React.useState<SupervisionReportAiSummary | null>(null);
+    const [summary, setSummary] = React.useState<EditableAiSummary | null>(null);
     const [loading, setLoading] = React.useState(false);
     const [message, setMessage] = React.useState('');
+
+    const selectedSummary = React.useMemo<SupervisionReportAiSummary | null>(() => {
+        if (!summary) return null;
+        return {
+            overallNote: summary.overallNote,
+            specialNote: summary.specialNote,
+            inspectionItems: summary.inspectionItems
+                .filter(item => item.selected)
+                .map(item => ({
+                    id: item.id,
+                    label: item.label,
+                    result: item.result,
+                    memo: item.memo,
+                    evidence: item.evidence
+                }))
+        };
+    }, [summary]);
+
+    const qualityWarnings = React.useMemo(
+        () => selectedSummary ? buildSupervisionReportAiQualityWarnings(selectedSummary) : [],
+        [selectedSummary]
+    );
 
     const summarize = async () => {
         const cleaned = transcript.trim();
@@ -50,15 +87,20 @@ export function SupervisionReportAiSummaryPanel({
                 transcript: cleaned,
                 inspectionItems
             });
-            setSummary(result.summary);
+            setSummary({
+                overallNote: result.summary.overallNote,
+                specialNote: result.summary.specialNote,
+                inspectionItems: result.summary.inspectionItems.map(item => ({
+                    ...item,
+                    selected: true
+                }))
+            });
             if (result.model === 'local-fallback') {
                 setMessage(result.providerIssue
                     ? `${result.providerIssue} 입력 메모 기준으로 임시 초안을 만들었습니다.`
-                    : 'NVIDIA 응답을 보고서 형식으로 읽지 못해 입력 메모 기준으로 임시 초안을 만들었습니다.');
+                    : 'AI 응답을 보고서 형식으로 읽지 못해 입력 메모 기준으로 임시 초안을 만들었습니다.');
             } else {
-                setMessage(result.fallbackUsed
-                    ? `AI 정리 결과를 불러왔습니다. 대체 요청으로 ${result.model}을 사용했습니다.`
-                    : `AI 정리 결과를 불러왔습니다. 사용 모델: ${result.model}`);
+                setMessage('AI 정리 결과를 불러왔습니다. 적용 전 내용을 확인해 주세요.');
             }
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'AI 점검 보고서 정리에 실패했습니다.');
@@ -68,9 +110,32 @@ export function SupervisionReportAiSummaryPanel({
     };
 
     const applySummary = () => {
-        if (!summary) return;
-        onApplySummary(summary);
+        if (!selectedSummary) return;
+        onApplySummary(selectedSummary);
         setMessage('미리보기 결과를 점검 보고서에 적용했습니다. 저장 또는 제출을 눌러 반영하세요.');
+    };
+
+    const updateSummaryText = (field: 'overallNote' | 'specialNote', value: string) => {
+        setSummary(prev => prev ? { ...prev, [field]: value } : prev);
+    };
+
+    const updateSummaryItem = (itemIndex: number, patch: Partial<EditableAiSummaryItem>) => {
+        setSummary(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                inspectionItems: prev.inspectionItems.map((item, index) => (
+                    index === itemIndex ? { ...item, ...patch } : item
+                ))
+            };
+        });
+    };
+
+    const setAllItemsSelected = (selected: boolean) => {
+        setSummary(prev => prev ? {
+            ...prev,
+            inspectionItems: prev.inspectionItems.map(item => ({ ...item, selected }))
+        } : prev);
     };
 
     return (
@@ -86,7 +151,6 @@ export function SupervisionReportAiSummaryPanel({
                     AI 회의록 정리
                 </span>
                 <span className={styles.aiSummaryMeta}>
-                    NVIDIA NIM
                     <ChevronDown size={16} className={open ? styles.aiSummaryChevronOpen : ''} />
                 </span>
             </button>
@@ -116,27 +180,80 @@ export function SupervisionReportAiSummaryPanel({
                         <div className={styles.aiSummaryPreview}>
                             <div className={styles.reportSectionHeading}>
                                 <h4>정리 결과 미리보기</h4>
-                                <p>확인 후 적용하면 체크리스트 메모와 특이사항이 채워집니다.</p>
+                                <p>항목별 적용 여부와 문구를 확인한 뒤 점검 보고서에 반영합니다.</p>
                             </div>
                             <div className={styles.aiSummaryPreviewGrid}>
-                                <div>
+                                <label>
                                     <span>요약</span>
-                                    <p>{summary.overallNote || '추가 확인 필요'}</p>
-                                </div>
-                                <div>
+                                    <textarea
+                                        value={summary.overallNote}
+                                        placeholder="점검 종합 요약"
+                                        onChange={event => updateSummaryText('overallNote', event.currentTarget.value)}
+                                    />
+                                </label>
+                                <label>
                                     <span>특이사항</span>
-                                    <p>{summary.specialNote || '추가 확인 필요'}</p>
+                                    <textarea
+                                        value={summary.specialNote}
+                                        placeholder="후속 조치, 본사 지원 요청, 사진 확인 일정"
+                                        onChange={event => updateSummaryText('specialNote', event.currentTarget.value)}
+                                    />
+                                </label>
+                            </div>
+                            <div className={styles.aiSummaryBulkActions}>
+                                <button type="button" className={styles.secondaryButton} onClick={() => setAllItemsSelected(true)}>
+                                    전체 적용
+                                </button>
+                                <button type="button" className={styles.secondaryButton} onClick={() => setAllItemsSelected(false)}>
+                                    전체 제외
+                                </button>
+                            </div>
+                            <div className={styles.aiSummaryReviewList}>
+                                {summary.inspectionItems.length > 0 ? summary.inspectionItems.map((item, itemIndex) => (
+                                    <article key={`${item.id}-${item.label}-${itemIndex}`} className={styles.aiSummaryReviewItem}>
+                                        <div className={styles.aiSummaryReviewHeader}>
+                                            <label className={styles.aiSummaryApplyToggle}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.selected}
+                                                    onChange={event => updateSummaryItem(itemIndex, { selected: event.currentTarget.checked })}
+                                                />
+                                                적용
+                                            </label>
+                                            <strong>{item.label || item.id}</strong>
+                                            <select
+                                                value={item.result}
+                                                onChange={event => updateSummaryItem(itemIndex, { result: event.currentTarget.value as SupervisionItemResult })}
+                                            >
+                                                <option value="양호">양호</option>
+                                                <option value="주의">주의</option>
+                                                <option value="개선필요">개선필요</option>
+                                            </select>
+                                        </div>
+                                        <textarea
+                                            value={item.memo}
+                                            placeholder="보고서에 적용할 점검 기록"
+                                            onChange={event => updateSummaryItem(itemIndex, { memo: event.currentTarget.value })}
+                                        />
+                                        <div className={styles.aiSummaryEvidence}>
+                                            <span>원문 근거</span>
+                                            <p>{item.evidence || 'AI가 별도 근거를 반환하지 않았습니다. 원문과 대조해 주세요.'}</p>
+                                        </div>
+                                    </article>
+                                )) : <p className={styles.aiSummaryEmpty}>점검 항목 반영 내용 없음</p>}
+                            </div>
+                            {qualityWarnings.length > 0 ? (
+                                <div className={styles.aiSummaryWarnings}>
+                                    <strong>적용 전 확인 필요</strong>
+                                    {qualityWarnings.map(warning => (
+                                        <p key={warning.key}>
+                                            <b>{warning.label}</b>
+                                            {warning.message}
+                                        </p>
+                                    ))}
                                 </div>
-                            </div>
-                            <div className={styles.aiSummaryItemList}>
-                                {summary.inspectionItems.length > 0 ? summary.inspectionItems.map(item => (
-                                    <span key={`${item.id}-${item.label}`}>
-                                        <b>{item.result}</b>
-                                        {item.label || item.id}
-                                    </span>
-                                )) : <span>점검 항목 반영 내용 없음</span>}
-                            </div>
-                            <button type="button" className={styles.secondaryButton} onClick={applySummary}>
+                            ) : null}
+                            <button type="button" className={styles.secondaryButton} onClick={applySummary} disabled={!selectedSummary}>
                                 점검 보고서에 적용
                             </button>
                         </div>

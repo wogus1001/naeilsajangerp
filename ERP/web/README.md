@@ -411,10 +411,12 @@ The `가맹 운영 > 슈퍼바이징 > 점검 보고서` AI meeting summary pane
 ```bash
 NVIDIA_API_KEY=
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
-NVIDIA_MODEL=mistralai/mistral-medium-3.5-128b
-NVIDIA_FALLBACK_MODEL=nvidia/nemotron-3-nano-30b-a3b
-NVIDIA_REQUEST_TIMEOUT_MS=45000
+NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
+NVIDIA_FALLBACK_MODEL=meta/llama-3.1-8b-instruct
+NVIDIA_REQUEST_TIMEOUT_MS=12000
 NVIDIA_FORCE_JSON=false
 ```
 
-`NVIDIA_FORCE_JSON=false` is the default because some NVIDIA preview models do not support structured output mode. The prompt still requests JSON only, and the server parser falls back to a local report draft when the provider response cannot be parsed or the model call fails. No SQL is required for this integration.
+`NVIDIA_FORCE_JSON=false` is the default because some NVIDIA preview models do not support structured output mode. The prompt still requests JSON only, and the server parser falls back to a local report draft when the provider response cannot be parsed or the model call fails. The synchronous report button should use a fast model (`nvidia/nemotron-3-nano-30b-a3b`) first and a short fallback (`meta/llama-3.1-8b-instruct`) second; slower high-quality models such as Mistral Medium should be reserved for a future async re-summary job.
+
+The AI result is not applied directly. Operators review the summary, special notes, item-level verdicts, memos, and source evidence first, can exclude or edit individual checklist items, and see quality warnings for conversational wording, short action notes, missing follow-up, or missing evidence before applying the draft. No SQL is required for this integration.

@@ -1085,8 +1085,15 @@
 
 ## 2026-07-07 슈퍼바이징 NVIDIA NIM AI 요약 설정 QA
 
-- 범위: `가맹 운영 > 슈퍼바이징 > 점검 보고서`의 AI 회의록 정리 호출 기본 모델을 운영 테스트 가능한 `mistralai/mistral-medium-3.5-128b` 기준으로 정리했다. fallback은 빠른 `nvidia/nemotron-3-nano-30b-a3b`로 두고, `NVIDIA_FORCE_JSON=false` 기본값으로 preview 모델의 structured output 미지원 문제를 피한다.
+- 범위: `가맹 운영 > 슈퍼바이징 > 점검 보고서`의 AI 회의록 정리 호출을 버튼 클릭 동기 UX에 맞게 재정리했다. 실 API 스모크에서 `mistralai/mistral-medium-3.5-128b`는 짧은 프롬프트 호출은 성공했지만 실제 SV 점검 프롬프트는 20초 내 완료되지 않았다. 기본 모델은 빠른 `nvidia/nemotron-3-nano-30b-a3b`, fallback은 `meta/llama-3.1-8b-instruct`로 둔다.
 - env: 로컬 `.env.local`에는 `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL`, `NVIDIA_FALLBACK_MODEL`, `NVIDIA_REQUEST_TIMEOUT_MS`, `NVIDIA_FORCE_JSON`를 설정한다. 실제 키 값은 문서/커밋에 남기지 않는다.
-- 보정: 모델 alias(`mistral-medium-3.5-128b`, `nemotron-3-nano-30b-a3b`)를 정식 NVIDIA 모델 ID로 정규화하고, Mistral 요청에는 `reasoning_effort=high`, `stream=false`를 포함한다. 인증/권한 실패 메시지는 env 변수명을 노출하지 않고 안내한다.
+- 보정: 모델 alias(`mistral-medium-3.5-128b`, `nemotron-3-nano-30b-a3b`, `llama-3.1-8b-instruct`)를 정식 NVIDIA 모델 ID로 정규화한다. 기본 동기 호출은 10초, fallback은 8초 안에 끊어 UI가 장시간 멈추지 않게 하고, 실패 시 로컬 초안을 반환한다. Mistral Medium은 2차에서 비동기 고품질 재정리 작업으로 분리하는 것이 적합하다.
 - 신규 SQL: 없음.
-- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts`에서 NVIDIA 모델 정규화, JSON forcing opt-in, Nemotron thinking 비활성화, boolean env 정규화 회귀 테스트를 포함해 확인한다. 운영 Vercel에는 동일 env 키를 별도로 등록한 뒤 실계정에서 AI 정리 응답과 local fallback 메시지를 확인한다.
+- 검증: 실 API 스모크 기준 모델 목록 조회 200, Mistral 짧은 JSON 응답 200, Mistral 실제 SV 프롬프트 timeout, Nemotron Nano 실제 SV 프롬프트 약 3초 응답, Llama 8B 실제 SV 프롬프트 약 2초 응답을 확인했다. `npx tsx --test src/lib/franchise-supervision.test.mts`에서 NVIDIA 모델 정규화, JSON forcing opt-in, Nemotron thinking 비활성화, Mistral light reasoning, boolean env 정규화 회귀 테스트를 확인한다. 운영 Vercel에는 동일 env 키를 별도로 등록한 뒤 실계정에서 AI 정리 응답과 local fallback 메시지를 확인한다.
+
+## 2026-07-07 슈퍼바이징 AI 회의록 검토 UI QA
+
+- 범위: `가맹 운영 > 슈퍼바이징 > 점검 보고서 > 보고서 작성`의 AI 회의록 정리 결과를 바로 적용하지 않고 검토 단계로 분리했다. 결과 미리보기에서 요약/특이사항을 직접 수정하고, 체크리스트 항목별로 적용 여부, 판정, 메모, 원문 근거를 확인·수정한 뒤 보고서에 반영한다.
+- 보정: AI helper를 parser/prompt/fallback/apply/text/types 파일로 분리하고, AI/NVIDIA 회귀 테스트를 `franchise-supervision-ai-summary.test.mts`로 분리했다. 품질 경고는 대화체·존댓말 표현, 짧은 주의/개선필요 기록, 후속조치 부재, 원문 근거 부재를 적용 전 확인하도록 표시한다. 화면에는 `NVIDIA NIM`, `사용 모델` 문구를 노출하지 않는다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-supervision.test.mts src/lib/franchise-supervision-ai-summary.test.mts` 30건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 dev 서버 `http://localhost:3000`에서 Playwright로 `내일 / admin` 로그인 후 슈퍼바이징 점검 보고서 AI 패널 노출, 모델명 미노출, mock AI 응답 기반 항목별 적용/원문 근거/검토 UI 렌더링, 390px 모바일 가로 overflow 없음, console error 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
