@@ -13,8 +13,8 @@ type DemoRolePageProps = {
 };
 
 export const metadata: Metadata = {
-    title: 'FC ERP 데모 | 기능 설명 투어',
-    description: '실제형 샘플 데이터와 화면별 가이드로 FC ERP 주요 기능을 역할별로 체험합니다.'
+    title: '프랜차이즈 본부 ERP 데모 | 기능 설명 투어',
+    description: '실제형 샘플 데이터와 화면별 가이드로 프랜차이즈 본부 ERP 주요 기능을 역할별로 체험합니다.'
 };
 
 export const dynamic = 'force-dynamic';

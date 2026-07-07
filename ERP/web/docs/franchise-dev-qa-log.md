@@ -58,10 +58,10 @@
 - 브라우저 QA: 로컬 production 서버 `127.0.0.1:3105`에서 Playwright auth/API mock으로 `/company/staff`와 `/profile`을 확인했다. 직원 관리에서 `sub_manager`와 `staff`가 `직원 (2)`로 표시되고 `sub_manager` 가입 요청이 `승인 대기 중인 가입 요청 (1)`에 표시되는 것을 확인했다. 프로필 화면에서는 팀장에게만 `로고 등록` 버튼이 보이고, 매니저 계정에서는 숨겨지며 이메일/휴대폰 값이 표시됐다. console/page error 0건이었다.
 - 이번 직원 관리/개인정보 수정 범위의 신규 SQL은 없다.
 - OAuth 심사 영상과 신규 도메인 공개 진입을 위해 `/landing` 상단 메뉴에 `로그인` 링크를 추가했다. 사용자는 랜딩 페이지에서 바로 `/login`으로 이동할 수 있다.
-- 로그인 화면의 브랜드명을 `부동산 ERP`에서 `FC ERP`로 변경하고, 부제도 `창업 및 부동산 전문가를 위한 통합 솔루션`으로 정리했다. `/signup`, `/privacy`, 앱 metadata도 `FC ERP` 기준으로 맞췄다.
+- 로그인 화면의 브랜드명을 `부동산 ERP`에서 `프랜차이즈 본부 ERP`로 변경하고, 부제도 `창업 및 부동산 전문가를 위한 통합 솔루션`으로 정리했다. `/signup`, `/privacy`, 앱 metadata도 `프랜차이즈 본부 ERP` 기준으로 맞췄다.
 - 출점 검토 리포트의 `PDF 저장`/`인쇄`가 새 창에서 `about:blank`로 남는 문제를 수정했다. 보고서 새 창은 `document.write` 대신 Blob URL로 완성된 HTML을 열고, 로드 완료 후 브라우저 인쇄를 실행한다.
 - 검증: `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
-- 브라우저 QA: 로컬 production 서버 `http://localhost:3114`에서 Playwright로 1280px/390px `/landing` 로그인 링크 노출, 클릭 시 `/login` 이동, `/login`의 `FC ERP` 노출과 `부동산 ERP` 미노출, `/signup`/`/privacy`의 `FC ERP` 문구를 확인했다. console/page error는 없었다.
+- 브라우저 QA: 로컬 production 서버 `http://localhost:3114`에서 Playwright로 1280px/390px `/landing` 로그인 링크 노출, 클릭 시 `/login` 이동, `/login`의 `프랜차이즈 본부 ERP` 노출과 `부동산 ERP` 미노출, `/signup`/`/privacy`의 `프랜차이즈 본부 ERP` 문구를 확인했다. console/page error는 없었다.
 - 추가 검증: `npx tsx --test src/lib/franchise-location-meeting-tool.test.mts` 7건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `npm run build` 통과. Playwright 브라우저 스모크로 보고서 새 창이 `blob:` URL로 열리고 본문 `출점 검토 리포트`가 비어 있지 않게 로드되는 것을 확인했다.
 - 이번 OAuth 공개 진입점/리포트 PDF·인쇄 blank 핫픽스 범위의 신규 SQL은 없다.
 

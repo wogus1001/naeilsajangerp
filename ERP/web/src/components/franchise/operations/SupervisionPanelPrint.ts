@@ -163,7 +163,7 @@ export function printSupervisionReport(input: {
                 <p class="note-box">${escapeHtml(input.specialNote || report?.specialNote || '-')}</p>
                 <h2>사진 및 첨부</h2>
                 <section class="photos">${photos || '<p class="note-box">첨부 사진 없음</p>'}</section>
-                <footer class="footer">본 보고서는 FC ERP 슈퍼바이징 기록 기준으로 생성된 본사 내부 검토 자료입니다.</footer>
+                <footer class="footer">본 보고서는 프랜차이즈 본부 ERP 슈퍼바이징 기록 기준으로 생성된 본사 내부 검토 자료입니다.</footer>
             </main>
             <script>window.onload = () => { window.print(); };</script>
         </body>

@@ -4,13 +4,13 @@ import { BusinessInfoFooter } from "@/components/common/BusinessInfoFooter";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 | FC ERP",
+  title: "개인정보처리방침 | 프랜차이즈 본부 ERP",
   description:
-    "FC ERP의 개인정보 처리 및 Google Gmail API 데이터 사용 정책입니다.",
+    "프랜차이즈 본부 ERP의 개인정보 처리 및 Google Gmail API 데이터 사용 정책입니다.",
 };
 
 const effectiveDate = "2026년 6월 16일";
-const appName = "FC ERP";
+const appName = "프랜차이즈 본부 ERP";
 const contactEmail = "cs@sajang.app";
 
 const policySections = [

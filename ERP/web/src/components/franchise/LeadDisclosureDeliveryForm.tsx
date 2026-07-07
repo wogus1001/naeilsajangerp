@@ -109,7 +109,7 @@ export function LeadDisclosureDeliveryForm({
                 <div className={styles.disclosureAlimtalkMock}>
                     <span className={styles.disclosureAlimtalkNotice}>알림톡 도착</span>
                     <div className={styles.disclosureAlimtalkBubble}>
-                        <strong>[FC ERP] 정보공개서 확인 안내</strong>
+                        <strong>[프랜차이즈 본부 ERP] 정보공개서 확인 안내</strong>
                         <p>
                             {previewCandidateName}님, {previewBrandName} 정보공개서가 이메일로 발송되었습니다.
                         </p>
