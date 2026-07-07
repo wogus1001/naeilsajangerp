@@ -841,3 +841,12 @@
 - 버그를 발견하면 `재현 조건`, `원인`, `수정 파일`, `재검증 결과` 순서로 추가한다.
 - Docs Steward는 QA 결과가 바뀌면 이 문서를 직접 갱신하고 `Doc Update Brief`에 변경 이유를 남긴다.
 - Docs Steward는 `ERP/web/handoff.md`, 코드, SQL migration, env, package 파일을 수정하지 않는다.
+
+## 2026-07-07 보안 감사 후속 및 인증 헤더 회귀 QA
+
+- 범위: 외부 보안 감사 후속으로 남은 SQL-only 항목을 별도 SQL로 정리하고, 세션 기반 인증 전환 후 모객 DB 화면에서 남아 있던 `requesterId is required` 콘솔 오류를 보정했다. Meta 연동 조회/저장/동기화/연결해제와 후보지 연결용 외부 매물 목록 조회가 `getApiAuthHeaders()`를 사용한다.
+- 전자계약 권한: 감사 후속 중 잘못 옮겨진 존재하지 않는 `super_manager` 역할을 유효 역할인 `sub_manager`로 정정했다. 같은 회사 `sub_manager`는 전자계약 문서 조회와 회사 템플릿 관리를 기존 정책대로 사용할 수 있다.
+- UCanSign: UCanSign 미연결 계정이 대시보드에 들어올 때 계약 목록 조회는 빈 상태로 유지하되, 서버 콘솔에는 예상 가능한 미연결 error 로그를 반복 출력하지 않게 정리했다.
+- 신규 SQL: `supabase_platform_audit_required_sql_2026_07_07.sql`을 추가했다. `share_links.revoked_at`, `system_settings`, 중복 방지 unique index를 포함하며 사용자가 Supabase SQL Editor에서 직접 적용한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/electronic-contracts/document-permissions.test.mts` 11건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 남은 live QA: 운영 배포 후 모객 DB에서 Meta 연동 패널과 후보지 연결 패널 진입 시 `requesterId is required` 콘솔 오류가 재발하지 않는지, UCanSign 미연결 계정의 대시보드 진입 로그가 조용한지, 같은 회사 `sub_manager` 계정의 전자계약 접근이 유지되는지 확인한다.

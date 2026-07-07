@@ -148,6 +148,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-07
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `ec27976 fix(security): 보안 감사 후속 인증 회귀 보정`
+  - 주요 기능: Meta 연동 및 후보지 연결 API 호출에 Supabase 세션 인증 헤더를 붙여 모객 DB의 `requesterId is required` 콘솔 오류를 보정했다. 전자계약 권한의 잘못된 `super_manager` 참조를 실제 역할 `sub_manager`로 수정하고, UCanSign 미연결 계정의 대시보드 진입 시 예상 가능한 미연결 로그를 error로 반복 출력하지 않게 했다. 보안 감사 SQL-only 항목은 `supabase_platform_audit_required_sql_2026_07_07.sql`에 정리했다.
+  - 신규 SQL: `share_links.revoked_at`, `system_settings`, 중복 방지 unique index 적용용 SQL이 있다. 사용자가 Supabase SQL Editor에서 직접 적용한다. **SQL 등록 필요**.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/electronic-contracts/document-permissions.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과 예정.
+  - 남은 이슈: 운영 배포 후 모객 DB Meta 연동/후보지 연결 콘솔 오류 재발 여부, UCanSign 미연결 계정 대시보드 로그, 같은 회사 `sub_manager` 전자계약 접근을 live QA한다.
 - 2026-06-30
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 공개 사업자정보/진행현황 권한 안내 문구 정리 커밋 예정

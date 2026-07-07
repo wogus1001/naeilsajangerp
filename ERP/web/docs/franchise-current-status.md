@@ -41,6 +41,8 @@
 - 진행현황에서 입점 요청/예비 창업자 등록의 수정·삭제 버튼이 작성자, 팀장, 관리자에게만 보이고, 일반 직원/협력업체에는 권한 안내만 보이는지 운영 배포 후 실계정으로 확인한다.
 - 공개 페이지 `/landing`, `/login`, `/signup`, `/privacy` 하단의 사업자정보가 운영 도메인에서 노출되고 Kakao 비즈니스 심사 화면에서 동일 정보로 인식되는지 확인한다.
 - 물건지 지도는 실서버 Kakao 도메인에서 타일/마커/반경 원/측정 도구를 확인.
+- 2026-07-07 보안 감사 후속 배포 후 모객 DB에서 Meta 연동과 후보지 연결 패널의 `requesterId is required` 콘솔 오류가 재발하지 않는지 확인한다. 전자계약 템플릿/다운로드 권한은 `sub_manager`가 같은 회사 범위에서 접근 가능한지 확인하고, UCanSign 미연결 계정의 대시보드 진입 시 서버 콘솔에 불필요한 error 로그가 반복되지 않는지 확인한다.
+- 보안 감사 SQL 보완: `supabase_platform_audit_required_sql_2026_07_07.sql`은 `share_links.revoked_at`, `system_settings`, 중복 방지 unique index를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 
 ## 주요 문서 역할
 
