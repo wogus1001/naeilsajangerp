@@ -73,10 +73,14 @@ export function FranchiseLocationMapFilters({
                     <div className={styles.statusFilters} aria-label="상태 필터">
                         <button
                             type="button"
+                            aria-pressed={allStatusSelected}
                             className={allStatusSelected ? styles.statusChipActive : styles.statusChip}
                             onClick={onSelectAllStatuses}
                         >
                             전체 상태
+                            <span className={styles.statusChipState}>
+                                {allStatusSelected ? '전체 표시' : '부분 표시'}
+                            </span>
                         </button>
                         {FRANCHISE_LOCATION_STATUSES.map(status => {
                             const isActive = filters.statuses.has(status);
@@ -84,6 +88,7 @@ export function FranchiseLocationMapFilters({
                                 <button
                                     key={status}
                                     type="button"
+                                    aria-pressed={isActive}
                                     className={isActive ? styles.statusChipActive : styles.statusChip}
                                     onClick={() => onToggleStatus(status)}
                                 >
@@ -92,6 +97,9 @@ export function FranchiseLocationMapFilters({
                                         style={{ backgroundColor: LOCATION_MAP_STATUS_COLORS[status] }}
                                     />
                                     {status}
+                                    <span className={styles.statusChipState}>
+                                        {isActive ? '표시' : '숨김'}
+                                    </span>
                                 </button>
                             );
                         })}
