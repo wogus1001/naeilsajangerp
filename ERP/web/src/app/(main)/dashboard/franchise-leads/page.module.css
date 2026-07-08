@@ -5328,6 +5328,28 @@
     padding: 12px;
 }
 
+.locationList.ownerPortalSectionList {
+    gap: 12px;
+    padding: 14px;
+}
+
+.locationItem.ownerPortalListItem {
+    gap: 16px;
+    padding: 16px;
+    border-color: #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalListItem .locationItemMain {
+    display: grid;
+    gap: 6px;
+}
+
+.ownerPortalListItem .locationItemActions {
+    padding-top: 2px;
+}
+
 .ownerPortalReadMeter {
     display: flex;
     flex-wrap: wrap;
@@ -5431,7 +5453,7 @@
 }
 
 .ownerPortalSubmissionDetails {
-    margin-top: 8px;
+    margin-top: 10px;
     border: 1px solid #e5e8eb;
     border-radius: 8px;
     background: #ffffff;
@@ -5591,7 +5613,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 10px;
 }
 
 .ownerPortalFileLink,

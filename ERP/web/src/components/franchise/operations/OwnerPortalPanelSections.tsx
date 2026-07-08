@@ -266,10 +266,10 @@ export function OwnerPortalAccountsSection(props: AccountSectionProps) {
                         <strong>점주 계정 목록</strong>
                         <span>활성/중지 상태와 임시 비밀번호 여부를 확인합니다.</span>
                     </div>
-                    <div className={styles.locationList}>
+                    <div className={`${styles.locationList} ${styles.ownerPortalSectionList}`}>
                         {props.accounts.length === 0 ? <div className={styles.locationEmpty}>발급된 점주 계정이 없습니다.</div> : null}
                         {props.accounts.map(account => (
-                            <article className={styles.locationItem} key={account.id}>
+                            <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={account.id}>
                                 <div className={styles.locationItemMain}>
                                     <strong>{getLocationName(props.locations, account.locationId)}</strong>
                                     <span>{account.loginId} · {account.ownerName || '점주명 미입력'} · {account.status}</span>
@@ -410,7 +410,7 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                     </div>
                     {props.notices.length === 0 ? <div className={styles.locationEmpty}>발행한 공지가 없습니다.</div> : null}
                     {pagedNotices.map(notice => (
-                        <article className={styles.locationItem} key={notice.id}>
+                        <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={notice.id}>
                             <div className={styles.locationItemMain}>
                                 <strong>{notice.title}</strong>
                                 <span>{notice.location_id ? getLocationName(props.locations, notice.location_id) : '전체 가맹점'} · {formatDate(notice.created_at)}</span>
@@ -551,33 +551,33 @@ export function OwnerPortalSubmissionsSection({ locations, submissions, isBusy, 
                     <option value="rejected">반려</option>
                 </select>
             </div>
-            <div className={styles.locationList}>
+            <div className={`${styles.locationList} ${styles.ownerPortalSectionList}`}>
                 {visibleSubmissions.length === 0 ? (
                     <div className={styles.locationEmpty}>
                         {submissionView === 'pending' ? '처리할 점주 제출 건이 없습니다.' : '처리 완료된 제출 건이 없습니다.'}
                     </div>
                 ) : null}
                 {visibleSubmissions.map(submission => {
-	                    const reviewMode = getOwnerSubmissionReviewMode(submission.submission_type, submission.status);
-	                    const payloadTitle = getSubmissionPayloadTitle(submission);
-	                    const detailRows = getSubmissionDetailRows(submission);
-	                    return (
-	                        <article className={styles.locationItem} key={submission.id}>
-	                            <div className={styles.locationItemMain}>
-	                                <strong>{submission.title}</strong>
-	                                <span>{getLocationName(locations, submission.location_id)} · {getSubmissionTypeLabel(submission.submission_type)} · {getSubmissionStatusLabel(submission.status)} · {formatDate(submission.created_at)}</span>
-	                                {payloadTitle ? <small>{payloadTitle}</small> : null}
-	                                <details className={styles.ownerPortalSubmissionDetails}>
-	                                    <summary>내용 확인</summary>
-	                                    <div className={styles.ownerPortalSubmissionDetailGrid}>
-	                                        {detailRows.map(row => (
-	                                            <div className={styles.ownerPortalSubmissionDetailItem} key={`${submission.id}-${row.label}`}>
-	                                                <strong>{row.label}</strong>
-	                                                <span>{row.value}</span>
-	                                            </div>
-	                                        ))}
-	                                    </div>
-	                                </details>
+                    const reviewMode = getOwnerSubmissionReviewMode(submission.submission_type, submission.status);
+                    const payloadTitle = getSubmissionPayloadTitle(submission);
+                    const detailRows = getSubmissionDetailRows(submission);
+                    return (
+                        <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={submission.id}>
+                            <div className={styles.locationItemMain}>
+                                <strong>{submission.title}</strong>
+                                <span>{getLocationName(locations, submission.location_id)} · {getSubmissionTypeLabel(submission.submission_type)} · {getSubmissionStatusLabel(submission.status)} · {formatDate(submission.created_at)}</span>
+                                {payloadTitle ? <small>{payloadTitle}</small> : null}
+                                <details className={styles.ownerPortalSubmissionDetails}>
+                                    <summary>내용 확인</summary>
+                                    <div className={styles.ownerPortalSubmissionDetailGrid}>
+                                        {detailRows.map(row => (
+                                            <div className={styles.ownerPortalSubmissionDetailItem} key={`${submission.id}-${row.label}`}>
+                                                <strong>{row.label}</strong>
+                                                <span>{row.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </details>
                                 {submission.files && submission.files.length > 0 ? (
                                     <div className={styles.ownerPortalSubmissionDetailGrid}>
                                         <div className={styles.ownerPortalSubmissionDetailItem}>
@@ -615,7 +615,7 @@ export function OwnerPortalSubmissionsSection({ locations, submissions, isBusy, 
                             </div>
                         </article>
                     );
-	                })}
+                })}
                     {filteredSubmissions.length > 0 ? (
                         <div className={styles.ownerPortalPagination}>
                             <span>총 {filteredSubmissions.length}건</span>
