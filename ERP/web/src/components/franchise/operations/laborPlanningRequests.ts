@@ -28,6 +28,7 @@ export function buildLaborPlanInput(form: LaborPlanForm, settings: LaborSettings
         monthlySalesTarget: form.monthlySalesManwon * 10_000,
         targetLaborRatio: form.targetLaborRatio,
         operatingWeekdays: form.operatingWeekdays,
+        partTimeWeekdays: form.partTimeWeekdays,
         openTime: form.openTime,
         closeTime: form.closeTime,
         ownerWorks: form.ownerWorks,

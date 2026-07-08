@@ -24,6 +24,8 @@ type Props = {
     readonly userId: string;
     readonly companyName: string;
     readonly locations: readonly FranchiseLocation[];
+    readonly initialLocationId?: string;
+    readonly initialMonthlySalesManwon?: number;
 };
 
 const DEFAULT_WEEKDAYS: readonly LaborWeekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -36,13 +38,14 @@ const LABOR_VIEWS = [
 
 type LaborView = typeof LABOR_VIEWS[number]['key'];
 
-function defaultForm(locationId: string): LaborPlanForm {
+function defaultForm(locationId: string, monthlySalesManwon = 6000): LaborPlanForm {
     return {
         locationId,
         title: '기본 인력 세팅안',
-        monthlySalesManwon: 6000,
+        monthlySalesManwon,
         targetLaborRatio: 19,
         operatingWeekdays: DEFAULT_WEEKDAYS,
+        partTimeWeekdays: DEFAULT_WEEKDAYS,
         openTime: '10:00',
         closeTime: '22:00',
         ownerWorks: false,
@@ -60,8 +63,15 @@ function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleDateString('ko-KR') : '-';
 }
 
-export function LaborPlanningPanel({ userId, companyName, locations }: Props) {
-    const [form, setForm] = React.useState<LaborPlanForm>(() => defaultForm(locations[0]?.id || ''));
+export function LaborPlanningPanel({
+    userId,
+    companyName,
+    locations,
+    initialLocationId = '',
+    initialMonthlySalesManwon
+}: Props) {
+    const initialSales = initialMonthlySalesManwon && initialMonthlySalesManwon > 0 ? initialMonthlySalesManwon : 6000;
+    const [form, setForm] = React.useState<LaborPlanForm>(() => defaultForm(initialLocationId || locations[0]?.id || '', initialSales));
     const [settings, setSettings] = React.useState<LaborSettings>(DEFAULT_LABOR_SETTINGS);
     const [companyId, setCompanyId] = React.useState('');
     const [schemaReady, setSchemaReady] = React.useState(true);
@@ -81,10 +91,20 @@ export function LaborPlanningPanel({ userId, companyName, locations }: Props) {
     );
 
     React.useEffect(() => {
-        setForm(current => current.locationId ? current : { ...current, locationId: locations[0]?.id || '' });
-    }, [locations]);
+        setForm(current => {
+            const nextLocationId = initialLocationId && locations.some(location => location.id === initialLocationId)
+                ? initialLocationId
+                : current.locationId || locations[0]?.id || '';
+            const nextSales = initialMonthlySalesManwon && initialMonthlySalesManwon > 0
+                ? initialMonthlySalesManwon
+                : current.monthlySalesManwon;
+            if (current.locationId === nextLocationId && current.monthlySalesManwon === nextSales) return current;
+            return { ...current, locationId: nextLocationId, monthlySalesManwon: nextSales };
+        });
+    }, [initialLocationId, initialMonthlySalesManwon, locations]);
 
     const load = React.useCallback(async () => {
+        if (!scope.userId.trim()) return;
         setIsLoading(true);
         try {
             const [settingsPayload, plansPayload] = await Promise.all([
@@ -113,9 +133,25 @@ export function LaborPlanningPanel({ userId, companyName, locations }: Props) {
 
     const toggleWeekday = (weekday: LaborWeekday) => {
         const set = new Set(form.operatingWeekdays);
+        const partTimeSet = new Set(form.partTimeWeekdays);
+        if (set.has(weekday)) {
+            set.delete(weekday);
+            partTimeSet.delete(weekday);
+        } else {
+            set.add(weekday);
+            partTimeSet.add(weekday);
+        }
+        const operatingWeekdays = LABOR_WEEKDAYS.map(day => day.key).filter(day => set.has(day));
+        const partTimeWeekdays = LABOR_WEEKDAYS.map(day => day.key).filter(day => partTimeSet.has(day) && set.has(day));
+        updateForm({ operatingWeekdays, partTimeWeekdays });
+    };
+
+    const togglePartTimeWeekday = (weekday: LaborWeekday) => {
+        if (!form.operatingWeekdays.includes(weekday)) return;
+        const set = new Set(form.partTimeWeekdays);
         if (set.has(weekday)) set.delete(weekday);
         else set.add(weekday);
-        updateForm({ operatingWeekdays: LABOR_WEEKDAYS.map(day => day.key).filter(day => set.has(day)) });
+        updateForm({ partTimeWeekdays: LABOR_WEEKDAYS.map(day => day.key).filter(day => set.has(day) && form.operatingWeekdays.includes(day)) });
     };
 
     const runCalculate = async () => {
@@ -164,6 +200,7 @@ export function LaborPlanningPanel({ userId, companyName, locations }: Props) {
             monthlySalesManwon: Math.round(plan.monthlySalesTarget / 10_000),
             targetLaborRatio: plan.targetLaborRatio,
             operatingWeekdays: plan.operatingWeekdays.length > 0 ? plan.operatingWeekdays : current.operatingWeekdays,
+            partTimeWeekdays: plan.summary?.partTimeWeekdays?.length ? plan.summary.partTimeWeekdays : plan.operatingWeekdays.length > 0 ? plan.operatingWeekdays : current.partTimeWeekdays,
             openTime: plan.openTime || current.openTime,
             closeTime: plan.closeTime || current.closeTime,
             ownerWorks: Boolean(plan.summary?.ownerWorks),
@@ -186,6 +223,7 @@ export function LaborPlanningPanel({ userId, companyName, locations }: Props) {
             monthlySalesManwon: Math.round(plan.monthlySalesTarget / 10_000),
             targetLaborRatio: plan.targetLaborRatio,
             operatingWeekdays: plan.operatingWeekdays.length > 0 ? plan.operatingWeekdays : current.operatingWeekdays,
+            partTimeWeekdays: plan.summary?.partTimeWeekdays?.length ? plan.summary.partTimeWeekdays : plan.operatingWeekdays.length > 0 ? plan.operatingWeekdays : current.partTimeWeekdays,
             openTime: plan.openTime || current.openTime,
             closeTime: plan.closeTime || current.closeTime,
             ownerWorks: Boolean(plan.summary?.ownerWorks),
@@ -272,6 +310,7 @@ export function LaborPlanningPanel({ userId, companyName, locations }: Props) {
                         isSaving={isSaving}
                         onUpdateForm={updateForm}
                         onToggleWeekday={toggleWeekday}
+                        onTogglePartTimeWeekday={togglePartTimeWeekday}
                         onCalculate={() => void runCalculate()}
                         onSave={() => void saveCurrentPlan()}
                     />

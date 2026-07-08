@@ -1,19 +1,18 @@
 "use client";
 
 import React from 'react';
-import { BarChart3, Calculator, ClipboardCheck, List, PencilLine } from 'lucide-react';
+import { BarChart3, List, PencilLine } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { FranchiseOperationDashboard } from '@/components/franchise/operations/FranchiseOperationDashboard';
 import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
 import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
-import { LaborPlanningPanel } from '@/components/franchise/operations/LaborPlanningPanel';
 import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
-import { SupervisionPanel } from '@/components/franchise/operations/SupervisionPanel';
 import type { FranchiseLocation } from '@/components/franchise/operations/types';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
 import styles from '../franchise-leads/page.module.css';
 
-type MasterView = 'dashboard' | 'supervision' | 'labor' | 'list' | 'form';
+type MasterView = 'dashboard' | 'list' | 'form';
 
 const MASTER_VIEWS: readonly {
     readonly key: MasterView;
@@ -21,13 +20,12 @@ const MASTER_VIEWS: readonly {
     readonly icon: React.ComponentType<{ readonly size?: number }>;
 }[] = [
     { key: 'dashboard', label: '대시보드', icon: BarChart3 },
-    { key: 'supervision', label: '슈퍼바이징', icon: ClipboardCheck },
-    { key: 'labor', label: '인력 세팅', icon: Calculator },
     { key: 'list', label: '가맹점 목록', icon: List },
     { key: 'form', label: '가맹점 등록', icon: PencilLine }
 ];
 
 export default function FranchiseOperationsPage() {
+    const router = useRouter();
     const controller = useFranchiseOperationsController();
     const [masterView, setMasterView] = React.useState<MasterView>('dashboard');
 
@@ -90,20 +88,11 @@ export default function FranchiseOperationsPage() {
                             updatingStatusId={controller.updatingStatusId}
                             deletingLocationId={controller.deletingLocationId}
                             onEdit={editLocation}
+                            onOpenOwnerPortal={(location) => {
+                                router.push(`/dashboard/franchise-operations/owner-portal?locationId=${encodeURIComponent(location.id)}`);
+                            }}
                             onDelete={(location) => void controller.deleteLocation(location)}
                             onStatusChange={(location, status) => void controller.updateLocationStatus(location, status)}
-                        />
-                    ) : null}
-
-                    {masterView === 'supervision' ? (
-                        <SupervisionPanel userId={controller.userId} companyName={controller.companyName} />
-                    ) : null}
-
-                    {masterView === 'labor' ? (
-                        <LaborPlanningPanel
-                            userId={controller.userId}
-                            companyName={controller.companyName}
-                            locations={controller.operationalLocations}
                         />
                     ) : null}
 

@@ -117,18 +117,33 @@ function filterScenarioShifts(day: LaborDaySchedule, roles: readonly LaborRoleRe
 
 function buildScenarioSchedule(
     result: LaborPlanResult,
-    roles: readonly LaborRoleRecommendation[],
-    monthlyLaborCost: number
+    roles: readonly LaborRoleRecommendation[]
 ): readonly LaborDaySchedule[] {
     const activeDays = result.weeklySchedule.filter(day => day.totalHours > 0);
-    const dailyCost = Math.round(monthlyLaborCost / Math.max(1, activeDays.length * WEEKS_PER_MONTH));
+    const partTimeDays = activeDays.filter(day => day.shifts.some(shift => shift.startsWith('알바 ')));
+    const dailyRoleCost = (role: LaborRoleRecommendation, day: LaborDaySchedule): number => {
+        if (role.roleType === 'part_time') {
+            return day.shifts.some(shift => shift.startsWith('알바 '))
+                ? role.monthlyCost / Math.max(1, partTimeDays.length * WEEKS_PER_MONTH)
+                : 0;
+        }
+        return role.monthlyCost / Math.max(1, activeDays.length * WEEKS_PER_MONTH);
+    };
+    const dailyRoleHours = (role: LaborRoleRecommendation, day: LaborDaySchedule): number => {
+        if (role.roleType === 'part_time') {
+            return day.shifts.some(shift => shift.startsWith('알바 '))
+                ? role.weeklyHours * role.headcount / Math.max(1, partTimeDays.length)
+                : 0;
+        }
+        return role.weeklyHours * role.headcount / Math.max(1, activeDays.length);
+    };
     return result.weeklySchedule.map(day => {
         if (day.totalHours <= 0) return day;
         return {
             ...day,
             shifts: filterScenarioShifts(day, roles),
-            totalHours: Math.round(roles.reduce((sum, role) => sum + role.weeklyHours * role.headcount / Math.max(1, activeDays.length), 0)),
-            dailyCost
+            totalHours: Math.round(roles.reduce((sum, role) => sum + dailyRoleHours(role, day), 0)),
+            dailyCost: Math.round(roles.reduce((sum, role) => sum + dailyRoleCost(role, day), 0))
         };
     });
 }
@@ -149,6 +164,6 @@ export function buildLaborScenarioResult(result: LaborPlanResult, scenarioKey: L
         laborRatio,
         totalHeadcount: roles.reduce((sum, role) => sum + role.headcount, 0),
         roles,
-        weeklySchedule: buildScenarioSchedule(result, roles, monthlyLaborCost)
+        weeklySchedule: buildScenarioSchedule(result, roles)
     };
 }

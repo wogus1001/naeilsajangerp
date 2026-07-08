@@ -17,6 +17,7 @@ const baseInput = {
     monthlySalesTarget: 60_000_000,
     targetLaborRatio: 19,
     operatingWeekdays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const,
+    partTimeWeekdays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const,
     openTime: '10:00',
     closeTime: '22:00',
     ownerWorks: false,
@@ -58,12 +59,34 @@ void test('Given operating times crossing midnight When calculating hours Then n
 void test('Given weekly schedule When calculating labor plan Then inactive weekdays are marked as closed', () => {
     const result = calculateLaborPlan({
         ...baseInput,
-        operatingWeekdays: ['mon', 'tue', 'wed'] as const
+        operatingWeekdays: ['mon', 'tue', 'wed'] as const,
+        partTimeWeekdays: ['mon', 'tue', 'wed'] as const
     });
 
     assert.equal(result.weeklySchedule.length, 7);
     assert.deepEqual(result.weeklySchedule.filter(day => day.dailyCost === 0).map(day => day.weekday), ['thu', 'fri', 'sat', 'sun']);
     assert.ok(result.weeklySchedule.find(day => day.weekday === 'mon')?.totalHours);
+});
+
+void test('Given selected part-time weekdays When calculating labor plan Then part-time shifts only appear on selected days', () => {
+    const result = calculateLaborPlan({
+        ...baseInput,
+        partTimeWeekdays: ['fri', 'sat'] as const
+    });
+    const monday = result.weeklySchedule.find(day => day.weekday === 'mon');
+    const friday = result.weeklySchedule.find(day => day.weekday === 'fri');
+
+    assert.deepEqual(result.partTimeWeekdays, ['fri', 'sat']);
+    assert.equal(monday?.shifts.some(shift => shift.startsWith('알바 ')), false);
+    assert.equal(friday?.shifts.some(shift => shift.startsWith('알바 ')), true);
+    assert.ok((monday?.dailyCost || 0) < (friday?.dailyCost || 0));
+
+    const displayResult = buildLaborScenarioResult(result, 'standard');
+    const displayMonday = displayResult.weeklySchedule.find(day => day.weekday === 'mon');
+    const displayFriday = displayResult.weeklySchedule.find(day => day.weekday === 'fri');
+    assert.equal(displayMonday?.shifts.some(shift => shift.startsWith('알바 ')), false);
+    assert.equal(displayFriday?.shifts.some(shift => shift.startsWith('알바 ')), true);
+    assert.ok((displayMonday?.dailyCost || 0) < (displayFriday?.dailyCost || 0));
 });
 
 void test('Given labor plan result When building scenario summaries Then options are ordered by staffing level', () => {

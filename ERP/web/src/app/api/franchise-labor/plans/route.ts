@@ -7,6 +7,7 @@ import {
     isLaborRecord,
     isMissingLaborSchemaError,
     numberFromBody,
+    partTimeWeekdaysFromBody,
     readLaborJsonBody,
     resolveLaborAuth,
     resolveLaborCompanyId,
@@ -87,10 +88,12 @@ function sanitizePlanSummary(summary: unknown): unknown {
 
 function buildPlanInput(body: Record<string, unknown>): LaborPlanInput {
     const settings = settingsFromBody(getLaborBodyValue(body, ['settings']));
+    const operatingWeekdays = weekdaysFromBody(getLaborBodyValue(body, ['operatingWeekdays', 'operating_weekdays']));
     return {
         monthlySalesTarget: numberFromBody(getLaborBodyValue(body, ['monthlySalesTarget', 'monthly_sales_target']), 30_000_000),
         targetLaborRatio: numberFromBody(getLaborBodyValue(body, ['targetLaborRatio', 'target_labor_ratio']), 20),
-        operatingWeekdays: weekdaysFromBody(getLaborBodyValue(body, ['operatingWeekdays', 'operating_weekdays'])),
+        operatingWeekdays,
+        partTimeWeekdays: partTimeWeekdaysFromBody(getLaborBodyValue(body, ['partTimeWeekdays', 'part_time_weekdays']), operatingWeekdays),
         openTime: cleanLaborString(getLaborBodyValue(body, ['openTime', 'open_time'])) || '10:00',
         closeTime: cleanLaborString(getLaborBodyValue(body, ['closeTime', 'close_time'])) || '22:00',
         ownerWorks: getLaborBodyValue(body, ['ownerWorks', 'owner_works']) === true,

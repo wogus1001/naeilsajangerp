@@ -8,15 +8,24 @@ export type SidebarSectionKey =
     | 'customers'
     | 'businessCards'
     | 'contracts';
-export type SidebarLinkIcon = 'target' | 'mapPin' | 'store' | 'users' | 'list' | 'fileSignature';
+export type SidebarLinkIcon =
+    | 'target'
+    | 'mapPin'
+    | 'store'
+    | 'users'
+    | 'list'
+    | 'fileSignature'
+    | 'clipboardCheck'
+    | 'calculator';
 
 export type SidebarMenuItem = {
     readonly title: string;
-    readonly url: string;
+    readonly url?: string;
     readonly category: string;
     readonly featureKey: CompanyMenuFeatureKey;
     readonly icon?: SidebarLinkIcon;
     readonly depth?: 0 | 1;
+    readonly group?: boolean;
 };
 
 export type SidebarMenuSection = {
@@ -43,12 +52,18 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         collapsedTitle: '프랜차이즈',
         items: [
             { title: '모객 DB', url: '/dashboard/franchise-leads', category: '프랜차이즈', featureKey: 'franchiseLeads', icon: 'target' },
-            { title: '출점 후보지', url: '/dashboard/franchise-leads/market-insights', category: '프랜차이즈', featureKey: 'marketInsights', icon: 'mapPin' },
-            { title: '가맹 운영', url: '/dashboard/franchise-operations', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store' },
-            { title: '물건지 지도', url: '/dashboard/franchise-locations', category: '가맹 운영', featureKey: 'franchiseLocations', icon: 'mapPin' },
-            { title: '전자계약', url: '/contracts/electronic', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature' },
-            { title: '업체 관리', url: '/dashboard/franchise-vendors', category: '프랜차이즈', featureKey: 'vendorManagement', icon: 'users' },
-            { title: '업체 계약함', url: '/contracts/vendor', category: '프랜차이즈', featureKey: 'vendorContracts', icon: 'fileSignature' }
+            { title: '출점 후보지', category: '프랜차이즈', featureKey: 'marketInsights', icon: 'mapPin', group: true },
+            { title: '후보지 목록', url: '/dashboard/franchise-leads/market-insights', category: '출점 후보지', featureKey: 'marketInsights', icon: 'list', depth: 1 },
+            { title: '인력 세팅', url: '/dashboard/franchise-leads/labor-planning', category: '출점 후보지', featureKey: 'marketInsights', icon: 'calculator', depth: 1 },
+            { title: '물건지 지도', url: '/dashboard/franchise-locations', category: '출점 후보지', featureKey: 'franchiseLocations', icon: 'mapPin', depth: 1 },
+            { title: '가맹 운영', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store', group: true },
+            { title: '가맹점 목록', url: '/dashboard/franchise-operations', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'list', depth: 1 },
+            { title: '슈퍼바이징', url: '/dashboard/franchise-supervision', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'clipboardCheck', depth: 1 },
+            { title: '점주 소통', url: '/dashboard/franchise-operations/owner-portal', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'users', depth: 1 },
+            { title: '계약·업체 관리', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature', group: true },
+            { title: '전자계약', url: '/contracts/electronic', category: '계약·업체 관리', featureKey: 'electronicPremiumContracts', icon: 'fileSignature', depth: 1 },
+            { title: '업체 관리', url: '/dashboard/franchise-vendors', category: '계약·업체 관리', featureKey: 'vendorManagement', icon: 'users', depth: 1 },
+            { title: '업체 계약함', url: '/contracts/vendor', category: '계약·업체 관리', featureKey: 'vendorContracts', icon: 'fileSignature', depth: 1 }
         ]
     },
     {

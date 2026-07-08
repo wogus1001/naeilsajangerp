@@ -126,8 +126,6 @@ export function LaborWeeklySchedule({ result }: { readonly result: LaborPlanResu
                         </div>
                         {weeklySchedule.map(day => {
                             const parsedShifts = day.shifts.map(parseShiftText).filter(shift => shift !== null);
-                            const firstShift = parsedShifts[0];
-                            const lastShift = parsedShifts[parsedShifts.length - 1];
                             return (
                                 <div key={day.weekday} className={styles.scheduleRow}>
                                     <div className={styles.scheduleDayCell}>
@@ -138,21 +136,17 @@ export function LaborWeeklySchedule({ result }: { readonly result: LaborPlanResu
                                     <div className={styles.scheduleTrack}>
                                         {parsedShifts.length > 0 ? (
                                             <>
-                                                <div className={styles.scheduleRowTop}>
-                                                    <strong>운영 배치</strong>
-                                                    <span>{firstShift?.range.split('-')[0]}-{lastShift?.range.split('-')[1]}</span>
-                                                </div>
                                                 <div className={styles.scheduleBars}>
                                                     {parsedShifts.map(shift => (
-                                                        <div key={`${day.weekday}-${shift.raw}`} className={shiftClassName(shift.label)} style={shiftGridStyle(shift)}>
+                                                        <div
+                                                            key={`${day.weekday}-${shift.raw}`}
+                                                            className={shiftClassName(shift.label)}
+                                                            style={shiftGridStyle(shift)}
+                                                            aria-label={`${shift.label} ${shift.range}`}
+                                                        >
                                                             <strong>{shift.label}</strong>
                                                             <span>{shift.range}</span>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                                <div className={styles.scheduleShiftList}>
-                                                    {parsedShifts.map(shift => (
-                                                        <span key={`${day.weekday}-${shift.raw}-chip`}>{shift.label} {shift.range}</span>
                                                     ))}
                                                 </div>
                                             </>

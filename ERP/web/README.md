@@ -427,3 +427,18 @@ NVIDIA_FORCE_JSON=false
 `NVIDIA_FORCE_JSON=false` is the default because some NVIDIA preview models do not support structured output mode. The prompt still requests JSON only, and the server parser falls back to a local report draft when the provider response cannot be parsed or the model call fails. The synchronous report button should use a fast model (`nvidia/nemotron-3-nano-30b-a3b`) first and a short fallback (`meta/llama-3.1-8b-instruct`) second; slower high-quality models such as Mistral Medium should be reserved for a future async re-summary job.
 
 The AI result is not applied directly. Operators review the summary, special notes, item-level verdicts, memos, and source evidence first, can exclude or edit individual checklist items, and see quality warnings for conversational wording, short action notes, missing follow-up, or missing evidence before applying the draft. No SQL is required for this integration.
+
+## Franchise Owner Portal Setup
+
+Run `supabase_franchise_owner_portal_migration.sql` before enabling the separated owner portal in production. **SQL 등록 필요**.
+
+The owner portal does not use the headquarters `/login` route or the `profiles` employee role table. Headquarters staff create per-store owner accounts from `가맹 운영 > 점주 연동`, then owners sign in through `/owner/login` and work in `/owner/dashboard` with a dedicated HttpOnly owner session.
+
+Owner accounts are scoped to one `franchise_locations.id`. Passwords are stored with Node `crypto.scrypt`, and session tokens are stored only as hashes in `franchise_owner_sessions`. Owner APIs do not accept `requesterId`; they resolve access from the owner session cookie.
+
+The 1차 workflow supports:
+
+- Headquarters issuing, suspending, activating, and resetting owner accounts.
+- Store owners submitting basic store information into `franchise_locations.data.ownerProvidedBasics`.
+- Store owners reading notices, requesting opening checklist completion, and filing facility/general requests.
+- Headquarters reviewing owner submissions from `가맹 운영 > 점주 연동`; opening checklist approvals update the linked opening project task only after headquarters approval.

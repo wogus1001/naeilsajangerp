@@ -1,7 +1,22 @@
 import Link from 'next/link';
-import { Briefcase, ChevronDown, ChevronRight, Contact, FileSignature, FileText, LayoutDashboard, ListChecks, MapPin, Store, Target, Users } from 'lucide-react';
+import {
+    Briefcase,
+    Calculator,
+    ChevronDown,
+    ChevronRight,
+    ClipboardCheck,
+    Contact,
+    FileSignature,
+    FileText,
+    LayoutDashboard,
+    ListChecks,
+    MapPin,
+    Store,
+    Target,
+    Users
+} from 'lucide-react';
 import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
-import type { SidebarLinkIcon, SidebarMenuSection, SidebarSectionKey } from './SidebarMenuConfig';
+import type { SidebarLinkIcon, SidebarMenuItem, SidebarMenuSection, SidebarSectionKey } from './SidebarMenuConfig';
 import styles from './Sidebar.module.css';
 
 type SidebarNavSectionProps = {
@@ -47,9 +62,36 @@ function renderLinkIcon(icon: SidebarLinkIcon | undefined) {
             return <ListChecks size={14} />;
         case 'fileSignature':
             return <FileSignature size={14} />;
+        case 'clipboardCheck':
+            return <ClipboardCheck size={14} />;
+        case 'calculator':
+            return <Calculator size={14} />;
         default:
             return null;
     }
+}
+
+function isItemPathMatch(item: SidebarMenuItem, pathname: string): boolean {
+    return Boolean(item.url && (pathname === item.url || pathname.startsWith(`${item.url}/`)));
+}
+
+function isItemActive(item: SidebarMenuItem, pathname: string, items: readonly SidebarMenuItem[]): boolean {
+    if (!isItemPathMatch(item, pathname)) return false;
+    const itemUrlLength = item.url?.length ?? 0;
+    return !items.some(candidate => {
+        const candidateUrlLength = candidate.url?.length ?? 0;
+        return candidateUrlLength > itemUrlLength && isItemPathMatch(candidate, pathname);
+    });
+}
+
+function getGroupChildren(items: readonly SidebarMenuItem[], groupIndex: number): readonly SidebarMenuItem[] {
+    const children: SidebarMenuItem[] = [];
+    for (let index = groupIndex + 1; index < items.length; index += 1) {
+        const item = items[index];
+        if (!item || item.depth !== 1) break;
+        children.push(item);
+    }
+    return children;
 }
 
 export function SidebarNavSection({
@@ -63,16 +105,22 @@ export function SidebarNavSection({
 }: SidebarNavSectionProps) {
     if (!isVisible) return null;
 
-    const visibleItems = section.items.filter(item => isFeatureEnabled(item.featureKey));
+    const visibleItems = section.items.filter((item, index, items) => {
+        if (item.group) {
+            return getGroupChildren(items, index).some(child => isFeatureEnabled(child.featureKey));
+        }
+        return isFeatureEnabled(item.featureKey);
+    });
     if (visibleItems.length === 0) return null;
 
     if (section.direct) {
         const item = visibleItems[0];
+        if (!item?.url) return null;
         return (
             <div className={styles.navGroup}>
                 <Link
                     href={item.url}
-                    className={`${styles.navGroupTitle} ${pathname === item.url ? styles.active : ''}`}
+                    className={`${styles.navGroupTitle} ${isItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
                     title={!isSidebarOpen ? section.collapsedTitle : undefined}
                 >
                     <div className={styles.navGroupLabel}>
@@ -100,13 +148,29 @@ export function SidebarNavSection({
 
             {isExpanded && (
                 <div className={styles.navSubMenu}>
-                    {visibleItems.map(item => {
+                    {visibleItems.map((item, index) => {
                         const icon = renderLinkIcon(item.icon);
+                        if (item.group || !item.url) {
+                            const isActiveGroup = getGroupChildren(visibleItems, index).some(child => isItemActive(child, pathname, visibleItems));
+                            return (
+                                <div
+                                    key={`group-${item.title}`}
+                                    className={`${styles.navSubGroupLabel} ${isActiveGroup ? styles.navSubGroupActive : ''}`}
+                                >
+                                    {icon ? (
+                                        <span className={styles.navSubLinkContent}>
+                                            {icon}
+                                            {item.title}
+                                        </span>
+                                    ) : item.title}
+                                </div>
+                            );
+                        }
                         return (
                             <Link
                                 key={item.url}
                                 href={item.url}
-                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${pathname === item.url ? styles.active : ''}`}
+                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${isItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
                             >
                                 {icon ? (
                                     <span className={styles.navSubLinkContent}>

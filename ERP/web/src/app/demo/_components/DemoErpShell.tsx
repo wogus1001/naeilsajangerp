@@ -321,6 +321,7 @@ function buildDemoSidebarItems(section: (typeof SIDEBAR_SECTIONS)[number], scena
     }
 
     return section.items.flatMap(item => {
+        if (!item.url) return [];
         const screen = DEMO_PATH_TO_SCREEN[item.url];
         if (!screen || !scenario.navItems.some(nav => nav.id === screen)) return [];
         return [{ label: item.title, screen, icon: item.icon }];

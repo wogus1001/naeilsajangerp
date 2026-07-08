@@ -13,6 +13,7 @@ type FranchiseLocationListProps = {
     readonly updatingStatusId: string;
     readonly deletingLocationId: string;
     readonly onEdit: (location: FranchiseLocation) => void;
+    readonly onOpenOwnerPortal?: (location: FranchiseLocation) => void;
     readonly onDelete: (location: FranchiseLocation) => void;
     readonly onStatusChange: (location: FranchiseLocation, status: FranchiseLocation['status']) => void;
 };
@@ -22,6 +23,7 @@ export function FranchiseLocationList({
     updatingStatusId,
     deletingLocationId,
     onEdit,
+    onOpenOwnerPortal,
     onDelete,
     onStatusChange
 }: FranchiseLocationListProps) {
@@ -107,6 +109,9 @@ export function FranchiseLocationList({
                                         >
                                             {FRANCHISE_LOCATION_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
                                         </select>
+                                        {onOpenOwnerPortal ? (
+                                            <button onClick={() => onOpenOwnerPortal(location)}>점주 계정</button>
+                                        ) : null}
                                         <button onClick={() => onEdit(location)}>수정</button>
                                         <button
                                             className={styles.locationDeleteButton}

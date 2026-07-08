@@ -76,6 +76,12 @@ export function weekdaysFromBody(value: unknown): readonly LaborWeekday[] {
     return weekdays;
 }
 
+export function partTimeWeekdaysFromBody(value: unknown, operatingWeekdays: readonly LaborWeekday[]): readonly LaborWeekday[] {
+    if (value === undefined || value === null) return operatingWeekdays;
+    const operatingSet = new Set(operatingWeekdays);
+    return weekdaysFromBody(value).filter(day => operatingSet.has(day));
+}
+
 export function canUseLaborPlanning(requester: RequesterProfile): boolean {
     return requester.role !== 'partner_vendor';
 }

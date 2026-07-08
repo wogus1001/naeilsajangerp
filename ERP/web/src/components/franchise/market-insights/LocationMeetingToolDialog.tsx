@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { X } from 'lucide-react';
+import Link from 'next/link';
+import { Calculator, X } from 'lucide-react';
 import {
     addMeetingToolCustomCostRow,
     calculateMeetingToolSummary,
@@ -98,6 +99,11 @@ export function LocationMeetingToolDialog({
     if (!open || !location) return null;
 
     const summary = calculateMeetingToolSummary(draft);
+    const laborPlanningParams = new URLSearchParams({
+        locationId,
+        monthlySalesManwon: String(Math.max(0, Math.round(draft.targetSales || 0)))
+    });
+    const laborPlanningHref = `/dashboard/franchise-leads/labor-planning?${laborPlanningParams.toString()}`;
 
     const updateAmount = (key: MeetingToolCostKey, value: string) => {
         setRatioInputValues(prev => removeRatioInputValue(prev, key));
@@ -194,11 +200,14 @@ export function LocationMeetingToolDialog({
                     <LocationMeetingToolSummaryCards location={location} />
 
                     <section className={styles.meetingToolCalculator}>
-                        <div className={styles.meetingToolSectionHeader}>
+                        <div className={`${styles.meetingToolSectionHeader} ${styles.meetingToolSectionHeaderWithAction}`}>
                             <div>
                                 <h4>간단 수익분석표</h4>
                                 <p>목표매출 변화에 따라 비용 비율과 세전수익을 비교합니다.</p>
                             </div>
+                            <Link href={laborPlanningHref} className={styles.meetingToolInlineAction}>
+                                <Calculator size={15} /> 인력 세팅 열기
+                            </Link>
                         </div>
                         <LocationMeetingToolPresetPanel
                             presets={presetState.presets}
@@ -266,6 +275,7 @@ export function LocationMeetingToolDialog({
                     onSave={saveReport}
                     onOpenPdf={() => openMeetingToolReport(location, draft, managerName, 'pdf', reportMapPosition)}
                     onPrint={() => openMeetingToolReport(location, draft, managerName, 'print', reportMapPosition)}
+                    laborPlanningHref={laborPlanningHref}
                 />
             </section>
         </div>

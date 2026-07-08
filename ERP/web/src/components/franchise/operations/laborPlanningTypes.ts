@@ -10,6 +10,7 @@ export type LaborPlanForm = {
     readonly monthlySalesManwon: number;
     readonly targetLaborRatio: number;
     readonly operatingWeekdays: readonly LaborWeekday[];
+    readonly partTimeWeekdays: readonly LaborWeekday[];
     readonly openTime: string;
     readonly closeTime: string;
     readonly ownerWorks: boolean;

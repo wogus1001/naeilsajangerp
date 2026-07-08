@@ -168,6 +168,7 @@ export function useFranchiseOperationsController() {
         isSaving,
         deletingLocationId,
         updatingStatusId,
+        locations,
         operationalLocations,
         counts,
         fetchLocations,

@@ -328,6 +328,24 @@
     padding: 0;
 }
 
+.weekdaySelectorBox {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #fbfcfe;
+    padding: 10px;
+}
+
+.weekdaySelectorBox p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
 .actions {
     justify-content: flex-end;
 }
@@ -386,7 +404,8 @@
 }
 
 .primaryButton:disabled,
-.dangerButton:disabled {
+.dangerButton:disabled,
+.weekday:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -806,27 +825,6 @@
     background-size: calc(100% / 16) 100%;
 }
 
-.scheduleRowTop {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 7px;
-}
-
-.scheduleRowTop strong {
-    color: #333d4b;
-    font-size: 11px;
-    font-weight: 900;
-}
-
-.scheduleRowTop span {
-    color: #8b95a1;
-    font-size: 10px;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
-}
-
 .scheduleBars {
     gap: 5px 0;
 }
@@ -848,8 +846,7 @@
     line-height: 1.2;
 }
 
-.scheduleBar strong,
-.scheduleBar span {
+.scheduleBar strong {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -858,23 +855,9 @@
 .scheduleBar span {
     flex: 0 0 auto;
     color: #4e5968;
-}
-
-.scheduleShiftList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 7px;
-}
-
-.scheduleShiftList span {
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.82);
-    padding: 4px 7px;
-    color: #4e5968;
     font-size: 10px;
     font-weight: 900;
-    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .scheduleBarManager {
@@ -1066,6 +1049,14 @@
     .primaryButton,
     .secondaryButton {
         flex: 1 1 160px;
+    }
+
+    .sectionHeader .primaryButton,
+    .sectionHeader .secondaryButton,
+    .subSectionHeader .primaryButton,
+    .subSectionHeader .secondaryButton {
+        width: 100%;
+        flex: 0 0 auto;
     }
 
     .savedPlanRow {

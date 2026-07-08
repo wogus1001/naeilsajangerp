@@ -25,6 +25,7 @@ export type LaborPlanInput = {
     readonly monthlySalesTarget: number;
     readonly targetLaborRatio: number;
     readonly operatingWeekdays: readonly LaborWeekday[];
+    readonly partTimeWeekdays: readonly LaborWeekday[];
     readonly openTime: string;
     readonly closeTime: string;
     readonly ownerWorks: boolean;
@@ -65,6 +66,7 @@ export type LaborPlanResult = {
     readonly useBreakTime: boolean;
     readonly breakStartTime: string;
     readonly breakEndTime: string;
+    readonly partTimeWeekdays: readonly LaborWeekday[];
     readonly roles: readonly LaborRoleRecommendation[];
     readonly weeklySchedule: readonly LaborDaySchedule[];
     readonly memo: string;
@@ -134,6 +136,16 @@ function calculateEffectiveDailyHours(input: LaborPlanInput): number {
     const breakHours = calculateDailyOperatingHours(input.breakStartTime, input.breakEndTime);
     return Math.max(1, dailyHours - Math.min(dailyHours - 1, breakHours));
 }
+
+function activeWeekdays(input: LaborPlanInput): readonly LaborWeekday[] {
+    return input.operatingWeekdays.length > 0 ? input.operatingWeekdays : LABOR_WEEKDAYS.map(day => day.key);
+}
+
+function activePartTimeWeekdays(input: LaborPlanInput): readonly LaborWeekday[] {
+    const operatingDays = new Set(activeWeekdays(input));
+    return input.partTimeWeekdays.filter(day => operatingDays.has(day));
+}
+
 function roleMonthlyCost(input: {
     readonly monthlySalary?: number;
     readonly hourlyWage?: number;
@@ -153,7 +165,8 @@ function roleMonthlyCost(input: {
 function buildRoleRecommendations(input: LaborPlanInput): readonly LaborRoleRecommendation[] {
     const sales = positiveNumber(input.monthlySalesTarget, 30_000_000);
     const dailyHours = calculateEffectiveDailyHours(input);
-    const weeklyDays = Math.max(1, input.operatingWeekdays.length || 6);
+    const weeklyDays = Math.max(1, activeWeekdays(input).length);
+    const partTimeWeeklyDays = activePartTimeWeekdays(input).length;
     const managerSalary = positiveNumber(input.managerMonthlySalary, 3_000_000);
     const staffSalary = positiveNumber(input.staffMonthlySalary, 2_600_000);
     const partTimeWage = Math.max(
@@ -164,10 +177,11 @@ function buildRoleRecommendations(input: LaborPlanInput): readonly LaborRoleReco
     const baseManagerHeadcount = sales >= 90_000_000 ? 2 : 1;
     const managerHeadcount = input.ownerWorks ? Math.max(0, baseManagerHeadcount - 1) : baseManagerHeadcount;
     const fullTimeHeadcount = sales >= 100_000_000 ? 2 : sales >= 55_000_000 ? 1 : 0;
-    const partTimeHeadcount = sales >= 100_000_000 ? 4 : sales >= 55_000_000 ? 3 : 2;
+    const basePartTimeHeadcount = sales >= 100_000_000 ? 4 : sales >= 55_000_000 ? 3 : 2;
+    const partTimeHeadcount = partTimeWeeklyDays > 0 ? basePartTimeHeadcount : 0;
     const managerWeeklyHours = Math.min(52, weeklyDays * Math.min(dailyHours, 9));
     const fullTimeWeeklyHours = fullTimeHeadcount > 0 ? Math.min(45, weeklyDays * 7.5) : 0;
-    const partTimeWeeklyHours = Math.min(22, weeklyDays * Math.min(4.5, dailyHours / 2));
+    const partTimeWeeklyHours = Math.min(22, partTimeWeeklyDays * Math.min(4.5, dailyHours / 2));
 
     return [
         {
@@ -199,26 +213,39 @@ function buildRoleRecommendations(input: LaborPlanInput): readonly LaborRoleReco
 
 function buildWeeklySchedule(input: LaborPlanInput, roles: readonly LaborRoleRecommendation[]): readonly LaborDaySchedule[] {
     const dailyHours = calculateDailyOperatingHours(input.openTime, input.closeTime);
-    const activeDays = new Set(input.operatingWeekdays.length > 0 ? input.operatingWeekdays : LABOR_WEEKDAYS.map(day => day.key));
+    const activeDays = new Set(activeWeekdays(input));
+    const partTimeDays = new Set(activePartTimeWeekdays(input));
     const partTimer = roles.find(role => role.roleType === 'part_time');
-    const dailyBaseCost = roles.reduce((sum, role) => sum + role.monthlyCost, 0) / Math.max(1, activeDays.size * WEEKS_PER_MONTH);
+    const dailyRoleCost = (role: LaborRoleRecommendation, isPartTimeDay: boolean): number => {
+        if (role.roleType === 'part_time') {
+            return isPartTimeDay ? role.monthlyCost / Math.max(1, partTimeDays.size * WEEKS_PER_MONTH) : 0;
+        }
+        return role.monthlyCost / Math.max(1, activeDays.size * WEEKS_PER_MONTH);
+    };
+    const dailyRoleHours = (role: LaborRoleRecommendation, isPartTimeDay: boolean): number => {
+        if (role.roleType === 'part_time') {
+            return isPartTimeDay ? role.weeklyHours * role.headcount / Math.max(1, partTimeDays.size) : 0;
+        }
+        return role.weeklyHours * role.headcount / Math.max(1, activeDays.size);
+    };
 
     return LABOR_WEEKDAYS.map(day => {
         if (!activeDays.has(day.key)) {
             return { weekday: day.key, label: day.label, shifts: ['휴무'], totalHours: 0, dailyCost: 0 };
         }
+        const isPartTimeDay = partTimeDays.has(day.key);
         const shifts = [
             input.ownerWorks ? `본인 ${input.openTime}-${input.closeTime}` : `점장 ${input.openTime}-${input.closeTime}`,
             input.useBreakTime ? `브레이크 ${input.breakStartTime}-${input.breakEndTime}` : '',
             dailyHours > 9 ? `직원 ${input.openTime}-${addHours(input.openTime, 8)}` : '',
-            partTimer && partTimer.headcount > 0 ? `알바 ${addHours(input.closeTime, -5)}-${input.closeTime}` : ''
+            partTimer && partTimer.headcount > 0 && isPartTimeDay ? `알바 ${addHours(input.closeTime, -5)}-${input.closeTime}` : ''
         ].filter(Boolean);
         return {
             weekday: day.key,
             label: day.label,
             shifts,
-            totalHours: rounded(roles.reduce((sum, role) => sum + role.weeklyHours * role.headcount / Math.max(1, activeDays.size), 0)),
-            dailyCost: rounded(dailyBaseCost)
+            totalHours: rounded(roles.reduce((sum, role) => sum + dailyRoleHours(role, isPartTimeDay), 0)),
+            dailyCost: rounded(roles.reduce((sum, role) => sum + dailyRoleCost(role, isPartTimeDay), 0))
         };
     });
 }
@@ -246,6 +273,7 @@ export function calculateLaborPlan(input: LaborPlanInput): LaborPlanResult {
         useBreakTime: input.useBreakTime,
         breakStartTime: input.breakStartTime,
         breakEndTime: input.breakEndTime,
+        partTimeWeekdays: activePartTimeWeekdays(input),
         roles,
         weeklySchedule: buildWeeklySchedule(input, roles),
         memo: '운영 예산 산정용 참고값입니다. 실제 급여, 보험, 세무, 노무 판단은 회사 기준과 전문가 검토를 함께 확인해주세요.'

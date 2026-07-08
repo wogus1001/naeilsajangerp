@@ -1128,3 +1128,12 @@
 - 출력 보정: `결과·근무표` 탭에 `보고서 저장/인쇄` 버튼을 추가하고, A4 출력용 `인력 세팅 근무표 보고서`를 새 창으로 열어 브라우저 인쇄 또는 PDF 저장이 가능하게 했다. 보고서에는 운영점, 세팅안, 목표매출, 본인 근무 여부, 추천 인력 구성, 주간 근무표, 운영 예산 참고 안내가 포함된다. Playwright로 `내일 / admin / 1234` 로그인 후 출력 창 본문, 1280px/390px 가로 overflow 0, 콘솔 오류 0을 확인했다.
 - 연결 보정: `노무 서식함`의 `전자계약 관리` 링크가 존재하지 않는 `/dashboard/electronic-contracts`로 이동하던 문제를 `/contracts/electronic?mode=templates` 진입으로 수정했다. 전자계약 화면은 URL의 `mode=templates`를 읽어 템플릿 관리 탭을 바로 활성화한다. Playwright로 `내일 / admin / 1234` 로그인 후 `인력 세팅 > 부속 도구 > 노무 서식함 > 전자계약 관리` 클릭 시 전자계약 템플릿 관리 화면이 열리는 것을 확인했다. 이번 보강은 SQL 변경이 없다.
 - 남은 live QA: SQL 적용 후 실계정으로 월 매출 3,000만/6,000만/1억 이상 샘플 계산, 저장 후 새로고침 persistence, 저장안 불러오기, 부속 계산기 기준값 일치 여부를 확인한다.
+
+## 2026-07-08 점주 포털 분리 로그인 MVP QA
+
+- 범위: 점주 화면을 기존 본사 `/login`/`profiles` 권한 체계와 분리해 `/owner/login`, `/owner/dashboard`로 추가했다. 점주 API는 `requesterId`를 받지 않고 `fc_owner_session` HttpOnly 쿠키로만 인증한다.
+- 본사 연동: `가맹 운영 > 점주 연동`에서 운영점별 점주 계정 생성, 임시 비밀번호 재발급, 활성/중지, 공지 발행, 제출 큐 승인/반려/보관 처리를 제공한다. 가맹점 목록 행에는 `점주 계정` 진입 버튼을 추가했다.
+- 점주 기능: 내 매장 기본 정보 제출, 공지 읽음 처리, 오픈 체크리스트 완료 요청, 시설/고장 문의, 최근 제출 이력을 제공한다. 체크리스트 완료 요청은 본사 승인 전에는 오픈 준비 프로젝트 task를 완료로 바꾸지 않는다.
+- 신규 SQL: `supabase_franchise_owner_portal_migration.sql`을 추가했다. 점주 계정, 점주 세션, 공지/읽음, 제출 이력, 업로드 파일 메타 테이블과 RLS 정책을 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts` 7건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Production build를 `next start -p 3142`로 띄워 `/owner/login`, `/owner/dashboard`가 200으로 렌더링되는 것을 확인했다.
+- 남은 live QA: SQL 적용 후 `내일 / admin / 1234`로 본사 로그인, 가맹점 목록의 `점주 계정` 또는 `점주 연동` 탭에서 계정 생성, `/owner/login` 점주 로그인, 공지 읽음, 매장 정보 제출, 체크리스트 완료 요청, 시설 문의 등록, 본사 큐 처리 persistence를 확인한다.

@@ -15,6 +15,7 @@ type Props = {
     readonly isSaving: boolean;
     readonly onUpdateForm: (patch: Partial<LaborPlanForm>) => void;
     readonly onToggleWeekday: (weekday: LaborWeekday) => void;
+    readonly onTogglePartTimeWeekday: (weekday: LaborWeekday) => void;
     readonly onCalculate: () => void;
     readonly onSave: () => void;
 };
@@ -31,6 +32,7 @@ export function LaborPlanningInputSection({
     isSaving,
     onUpdateForm,
     onToggleWeekday,
+    onTogglePartTimeWeekday,
     onCalculate,
     onSave
 }: Props) {
@@ -121,6 +123,29 @@ export function LaborPlanningInputSection({
                                 <span>알바 시급</span>
                                 <input type="number" value={form.partTimeHourlyWage} onChange={event => onUpdateForm({ partTimeHourlyWage: Number(event.target.value) || 0 })} />
                             </label>
+                            <div className={styles.fieldWide}>
+                                <span>알바 근무 요일</span>
+                                <div className={styles.weekdaySelectorBox}>
+                                    <p>운영일 중 알바가 필요한 요일만 선택합니다.</p>
+                                    <div className={styles.weekdayRowInline}>
+                                        {LABOR_WEEKDAYS.map(day => {
+                                            const isOperatingDay = form.operatingWeekdays.includes(day.key);
+                                            const isActive = form.partTimeWeekdays.includes(day.key) && isOperatingDay;
+                                            return (
+                                                <button
+                                                    key={day.key}
+                                                    type="button"
+                                                    className={isActive ? styles.weekdayActive : styles.weekday}
+                                                    disabled={!isOperatingDay}
+                                                    onClick={() => onTogglePartTimeWeekday(day.key)}
+                                                >
+                                                    {day.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
                             <label className={styles.fieldWide}>
                                 <span>메모</span>
                                 <textarea value={form.memo} onChange={event => onUpdateForm({ memo: event.target.value })} placeholder="오픈 준비, 피크타임, 점주 요청사항 등" />

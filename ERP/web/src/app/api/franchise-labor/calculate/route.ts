@@ -2,6 +2,7 @@ import { fail, ok } from '@/lib/api-response';
 import {
     getLaborBodyValue,
     numberFromBody,
+    partTimeWeekdaysFromBody,
     readLaborJsonBody,
     resolveLaborAuth,
     settingsFromBody,
@@ -18,10 +19,12 @@ export async function POST(request: Request) {
         const body = await readLaborJsonBody(request);
         const settings = settingsFromBody(getLaborBodyValue(body, ['settings']));
 
+        const operatingWeekdays = weekdaysFromBody(getLaborBodyValue(body, ['operatingWeekdays', 'operating_weekdays']));
         const result = calculateLaborPlan({
             monthlySalesTarget: numberFromBody(getLaborBodyValue(body, ['monthlySalesTarget', 'monthly_sales_target']), 30_000_000),
             targetLaborRatio: numberFromBody(getLaborBodyValue(body, ['targetLaborRatio', 'target_labor_ratio']), 20),
-            operatingWeekdays: weekdaysFromBody(getLaborBodyValue(body, ['operatingWeekdays', 'operating_weekdays'])),
+            operatingWeekdays,
+            partTimeWeekdays: partTimeWeekdaysFromBody(getLaborBodyValue(body, ['partTimeWeekdays', 'part_time_weekdays']), operatingWeekdays),
             openTime: String(getLaborBodyValue(body, ['openTime', 'open_time']) || '10:00'),
             closeTime: String(getLaborBodyValue(body, ['closeTime', 'close_time']) || '22:00'),
             ownerWorks: getLaborBodyValue(body, ['ownerWorks', 'owner_works']) === true,
