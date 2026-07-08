@@ -5039,7 +5039,7 @@
 
 .ownerPortalViewTabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     min-width: 0;
 }
@@ -5084,6 +5084,37 @@
 .ownerPortalViewTabActive small {
     background: #ffffff;
     color: #1b64da;
+}
+
+.ownerPortalChecklistTaskRow {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.ownerPortalChecklistTaskRow > span {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.ownerPortalChecklistTaskFields {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
 }
 
 .ownerPortalGrid {

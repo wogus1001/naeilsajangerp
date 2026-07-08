@@ -2,22 +2,45 @@
 
 import React from 'react';
 import styles from '../owner.module.css';
-import { OwnerPortalFrame, readOwnerApiData, type OwnerTask } from './ownerPortalShared';
+import {
+    getOwnerTaskId,
+    getRequestedOwnerTaskIds,
+    OwnerPortalFrame,
+    readOwnerApiData,
+    type OwnerSubmission,
+    type OwnerTask
+} from './ownerPortalShared';
 
 export function OwnerOpeningTasksPage() {
     return (
         <OwnerPortalFrame activeKey="tasks">
-            {(data, reload) => <OwnerOpeningTasksContent tasks={data.openingProject.tasks} reload={reload} />}
+            {(data, reload) => (
+                <OwnerOpeningTasksContent
+                    tasks={data.openingProject.tasks}
+                    submissions={data.submissions}
+                    reload={reload}
+                />
+            )}
         </OwnerPortalFrame>
     );
 }
 
-function OwnerOpeningTasksContent({ tasks, reload }: { readonly tasks: readonly OwnerTask[]; readonly reload: () => Promise<void> }) {
+function OwnerOpeningTasksContent({
+    tasks,
+    submissions,
+    reload
+}: {
+    readonly tasks: readonly OwnerTask[];
+    readonly submissions: readonly OwnerSubmission[];
+    readonly reload: () => Promise<void>;
+}) {
     const [message, setMessage] = React.useState('');
     const [error, setError] = React.useState('');
+    const requestedTaskIds = React.useMemo(() => getRequestedOwnerTaskIds(submissions), [submissions]);
 
     const requestTaskCompletion = async (task: OwnerTask) => {
-        const taskId = task.id || task.title || task.label || '';
+        const taskId = getOwnerTaskId(task);
+        if (!taskId || requestedTaskIds.has(taskId)) return;
         setMessage('');
         setError('');
         try {
@@ -37,8 +60,8 @@ function OwnerOpeningTasksContent({ tasks, reload }: { readonly tasks: readonly 
         <section className={styles.panel}>
             <div className={styles.panelHeader}>
                 <div>
-                    <h1>오픈 체크리스트</h1>
-                    <p>완료한 항목은 본사 승인 요청으로 전달됩니다.</p>
+                    <h1>운영 체크리스트</h1>
+                    <p>운영 중 확인한 항목은 본사 승인 요청으로 전달됩니다.</p>
                 </div>
                 <span className={styles.badge}>{tasks.length}개 항목</span>
             </div>
@@ -47,18 +70,29 @@ function OwnerOpeningTasksContent({ tasks, reload }: { readonly tasks: readonly 
                 {error ? <div className={styles.error}>{error}</div> : null}
                 {tasks.length === 0 ? <div className={styles.emptyState}>진행 중인 체크리스트가 없습니다.</div> : null}
                 <div className={styles.taskGrid}>
-                    {tasks.map((task, index) => (
-                        <article className={styles.listItem} key={task.id || `${task.title}-${index}`}>
-                            <div className={styles.listItemHeader}>
-                                <strong>{task.title || task.label || `항목 ${index + 1}`}</strong>
-                                <span className={styles.badgeMuted}>{task.status || '상태 미지정'}</span>
-                            </div>
-                            <p>{task.memo || '메모 없음'}</p>
-                            <button className={styles.secondaryButton} type="button" onClick={() => void requestTaskCompletion(task)}>
-                                완료 요청
-                            </button>
-                        </article>
-                    ))}
+                    {tasks.map((task, index) => {
+                        const taskId = getOwnerTaskId(task);
+                        const isRequested = Boolean(taskId) && requestedTaskIds.has(taskId);
+                        return (
+                            <article className={styles.listItem} key={task.id || `${task.title}-${index}`}>
+                                <div className={styles.listItemHeader}>
+                                    <strong>{task.title || task.label || `항목 ${index + 1}`}</strong>
+                                    <span className={isRequested ? styles.badge : styles.badgeMuted}>
+                                        {isRequested ? '요청됨' : '확인 필요'}
+                                    </span>
+                                </div>
+                                <p>{task.memo || '메모 없음'}</p>
+                                <button
+                                    className={styles.secondaryButton}
+                                    type="button"
+                                    disabled={isRequested}
+                                    onClick={() => void requestTaskCompletion(task)}
+                                >
+                                    {isRequested ? '요청 완료' : '완료 요청'}
+                                </button>
+                            </article>
+                        );
+                    })}
                 </div>
             </div>
         </section>

@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildDefaultOpeningProjectTasks } from './franchise-opening-projects.js';
 import {
-    applyOwnerOpeningTaskDecision,
     buildOwnerSubmissionTitle,
     canReviewOwnerSubmission,
+    DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
     getOwnerSubmissionReviewMode,
     mergeOwnerProvidedBasicsIntoLocationData,
+    mergeOwnerPortalChecklistTasksIntoLocationData,
     normalizeOwnerProvidedBasics,
+    normalizeOwnerPortalChecklistTasks,
+    readOwnerPortalChecklistTasksFromLocationData,
     readOwnerProvidedBasicsFromLocationData,
     toOwnerSubmissionStatus,
     toOwnerSubmissionType
@@ -49,6 +51,7 @@ void test('Given owner submission values When normalizing Then unsupported value
     assert.equal(canReviewOwnerSubmission('submitted'), true);
     assert.equal(canReviewOwnerSubmission('approved'), false);
     assert.equal(buildOwnerSubmissionTitle('store_info', ''), '매장 정보 입력');
+    assert.equal(buildOwnerSubmissionTitle('opening_task_completion', ''), '운영 체크리스트 완료 요청');
     assert.equal(buildOwnerSubmissionTitle('general_request', '문의'), '문의');
 });
 
@@ -61,15 +64,26 @@ void test('Given owner submission type and status When deciding review mode Then
     assert.equal(getOwnerSubmissionReviewMode('opening_task_completion', 'approved'), 'none');
 });
 
-void test('Given opening tasks When owner request is approved or rejected Then task status is updated by decision', () => {
-    const tasks = buildDefaultOpeningProjectTasks();
-    const targetTask = tasks[0];
-    assert.ok(targetTask);
+void test('Given owner checklist tasks When normalizing and merging Then invalid rows are ignored and existing location data is preserved', () => {
+    const tasks = normalizeOwnerPortalChecklistTasks([
+        { id: 'custom-1', title: ' 청결 확인 ', memo: ' 주방 포함 ' },
+        { id: '', title: '', memo: 'ignored' },
+        { title: '시설 이상 확인' }
+    ]);
+    const merged = mergeOwnerPortalChecklistTasksIntoLocationData({ source: 'hq' }, tasks);
+    const readBack = readOwnerPortalChecklistTasksFromLocationData(merged);
 
-    const approvedTasks = applyOwnerOpeningTaskDecision(tasks, targetTask.id, true);
-    const rejectedTasks = applyOwnerOpeningTaskDecision(tasks, targetTask.id, false);
+    assert.equal(merged.source, 'hq');
+    assert.equal(tasks.length, 2);
+    assert.equal(readBack[0]?.id, 'custom-1');
+    assert.equal(readBack[0]?.title, '청결 확인');
+    assert.equal(readBack[0]?.memo, '주방 포함');
+    assert.equal(readBack[1]?.id, 'owner-checklist-3');
+    assert.equal(DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS.length > 0, true);
+});
 
-    assert.equal(approvedTasks.find(task => task.id === targetTask.id)?.status, '완료');
-    assert.equal(rejectedTasks.find(task => task.id === targetTask.id)?.status, '진행중');
-    assert.match(rejectedTasks.find(task => task.id === targetTask.id)?.memo || '', /반려/);
+void test('Given no owner portal checklist in location data When reading Then no opening-project defaults are injected', () => {
+    const readBack = readOwnerPortalChecklistTasksFromLocationData({ source: 'hq' });
+
+    assert.deepEqual(readBack, []);
 });

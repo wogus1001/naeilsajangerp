@@ -5,6 +5,7 @@ import type {
     LeadContractChecklistSummary
 } from '@/lib/franchise-lead-contract-checklist';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 type UseLeadContractChecklistInput = {
     readonly leadId: string;
@@ -52,7 +53,10 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
         setErrorMessage('');
         try {
             const params = new URLSearchParams({ requesterId: userId, leadId });
-            const response = await fetch(`/api/franchise-lead-contract-checklist?${params.toString()}`, { cache: 'no-store' });
+            const response = await fetch(`/api/franchise-lead-contract-checklist?${params.toString()}`, {
+                cache: 'no-store',
+                headers: await getApiAuthHeaders()
+            });
             const payload = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
             const data = unwrapApiData<ChecklistResponse>(payload);
@@ -83,7 +87,7 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
         try {
             const response = await fetch('/api/franchise-lead-contract-checklist', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     requesterId: userId,
                     leadId,

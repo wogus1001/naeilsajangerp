@@ -1,6 +1,7 @@
 import { fail, ok } from '@/lib/api-response';
 import { getOwnerSessionContext } from '@/lib/franchise-owner-auth';
 import {
+    readOwnerPortalChecklistTasksFromLocationData,
     readOwnerProvidedBasicsFromLocationData,
     type OwnerFileRow,
     type OwnerNoticeRow,
@@ -9,12 +10,6 @@ import {
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-
-type OpeningProjectRow = {
-    readonly id: string;
-    readonly tasks: unknown;
-    readonly status: string | null;
-};
 
 export async function GET() {
     try {
@@ -44,16 +39,6 @@ export async function GET() {
             : { data: [], error: null };
         if (readResult.error) throw readResult.error;
         const readMap = new Map((readResult.data || []).map(read => [read.notice_id, read.read_at]));
-
-        const projectResult = await supabaseAdmin
-            .from('franchise_opening_projects')
-            .select('id, tasks, status')
-            .eq('company_id', context.account.company_id)
-            .eq('location_id', context.account.location_id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle<OpeningProjectRow>();
-        if (projectResult.error) throw projectResult.error;
 
         const submissionResult = await supabaseAdmin
             .from('franchise_owner_submissions')
@@ -107,9 +92,9 @@ export async function GET() {
                 readAt: readMap.get(notice.id) || null
             })),
             openingProject: {
-                id: projectResult.data?.id || '',
-                status: projectResult.data?.status || '',
-                tasks: Array.isArray(projectResult.data?.tasks) ? projectResult.data.tasks : []
+                id: context.location.id,
+                status: 'owner_portal_checklist',
+                tasks: readOwnerPortalChecklistTasksFromLocationData(context.location.data)
             },
             submissions: (submissionResult.data || []).map(submission => ({
                 ...submission,

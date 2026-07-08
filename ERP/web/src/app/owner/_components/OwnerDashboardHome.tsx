@@ -4,6 +4,8 @@ import Link from 'next/link';
 import styles from '../owner.module.css';
 import {
     formatOwnerDate,
+    getOwnerTaskId,
+    getRequestedOwnerTaskIds,
     OwnerPortalFrame,
     ownerStatusLabel,
     type OwnerDashboardData
@@ -19,7 +21,8 @@ export function OwnerDashboardHome() {
 
 function OwnerDashboardContent({ data }: { readonly data: OwnerDashboardData }) {
     const unreadNoticeCount = data.notices.filter(notice => !notice.readAt).length;
-    const pendingTaskCount = data.openingProject.tasks.filter(task => task.status !== '완료').length;
+    const requestedTaskIds = getRequestedOwnerTaskIds(data.submissions);
+    const pendingTaskCount = data.openingProject.tasks.filter(task => !requestedTaskIds.has(getOwnerTaskId(task))).length;
     const submittedCount = data.submissions.filter(submission => submission.status === 'submitted').length;
     const latestSubmissions = data.submissions.slice(0, 4);
 

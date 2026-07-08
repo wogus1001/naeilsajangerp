@@ -177,6 +177,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-08
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 점주 포털 회사별 로그인 및 운영 체크리스트 보정 커밋 예정
+  - 주요 기능: 점주 로그인 API를 `회사명 + 아이디 + 비밀번호` 기준으로 바꿔 회사별로 발급한 점주 계정만 조회한다. 본사 `점주 소통`은 공지/공문, 체크리스트, 제출 처리, 점주 계정 설정으로 분리하고, 점주용 운영 체크리스트는 `franchise_locations.data.ownerPortalChecklist`에 저장해 오픈 준비 프로젝트 체크리스트와 분리한다. 점주 화면은 이미 완료 요청한 체크리스트 항목을 다시 요청하지 못하게 막고, 구비서류 조회/저장 호출은 세션 인증 헤더로 `requesterId is required` 회귀를 방지한다.
+  - 신규 SQL: 기존 점주 포털 SQL 적용 DB에는 `supabase_franchise_owner_company_login_scope.sql` 추가 적용이 필요하다. 이 SQL은 전역 점주 로그인 ID unique 제약을 회사별 unique 제약으로 바꾼다. **SQL 등록 필요**.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts src/lib/franchise-lead-contract-checklist.test.mts` 20건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright로 로컬 `http://localhost:3137/owner/login` 모바일 390px와 `내일 / admin` 본사 세션의 `/dashboard/franchise-operations/owner-portal` 탭 구성을 확인했다.
+  - 남은 이슈: 운영 SQL 적용 후 회사별 같은 점주 ID 발급, 회사명 오입력 로그인 차단, 운영 체크리스트 저장/완료 요청/보관 persistence를 live QA한다.
 - 2026-07-07
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `cff58ee 수정 슈퍼바이징 보고서 이력 세션 분리`

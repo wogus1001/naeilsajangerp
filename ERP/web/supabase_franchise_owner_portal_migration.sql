@@ -15,7 +15,7 @@ create table if not exists public.franchise_owner_accounts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (company_id, location_id),
-  unique (login_id_normalized)
+  unique (company_id, login_id_normalized)
 );
 
 create table if not exists public.franchise_owner_sessions (

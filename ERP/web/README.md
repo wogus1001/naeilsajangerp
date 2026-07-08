@@ -432,13 +432,16 @@ The AI result is not applied directly. Operators review the summary, special not
 
 Run `supabase_franchise_owner_portal_migration.sql` before enabling the separated owner portal in production. **SQL 등록 필요**.
 
+Existing databases that already applied the first owner-portal migration also need `supabase_franchise_owner_company_login_scope.sql`. **SQL 등록 필요**. This follow-up drops the old global owner-login unique constraint and replaces it with a company-scoped `(company_id, login_id_normalized)` unique constraint so different companies can issue the same owner login ID without cross-company collision.
+
 The owner portal does not use the headquarters `/login` route or the `profiles` employee role table. Headquarters staff create per-store owner accounts from `가맹 운영 > 점주 연동`, then owners sign in through `/owner/login` and work in `/owner/dashboard` with a dedicated HttpOnly owner session.
 
-Owner accounts are scoped to one `franchise_locations.id`. Passwords are stored with Node `crypto.scrypt`, and session tokens are stored only as hashes in `franchise_owner_sessions`. Owner APIs do not accept `requesterId`; they resolve access from the owner session cookie.
+Owner accounts are scoped to one `franchise_locations.id` and one company. Owners sign in with `회사명 + 아이디 + 비밀번호`; the login API resolves the company first and only checks owner accounts inside that company. Passwords are stored with Node `crypto.scrypt`, and session tokens are stored only as hashes in `franchise_owner_sessions`. Owner APIs do not accept `requesterId`; they resolve access from the owner session cookie.
 
 The 1차 workflow supports:
 
 - Headquarters issuing, suspending, activating, and resetting owner accounts.
 - Store owners submitting basic store information into `franchise_locations.data.ownerProvidedBasics`.
-- Store owners reading notices, requesting opening checklist completion, and filing facility/general requests.
-- Headquarters reviewing owner submissions from `가맹 운영 > 점주 연동`; opening checklist approvals update the linked opening project task only after headquarters approval.
+- Store owners reading notices, requesting owner-portal operation checklist completion, and filing facility/general requests.
+- Headquarters managing owner notices, owner-portal operation checklists, owner submissions, and owner-account settings from `가맹 운영 > 점주 소통`.
+- Owner-portal operation checklists are stored on `franchise_locations.data.ownerPortalChecklist`; they are separate from the pre-opening project checklist and do not mutate `franchise_opening_projects.tasks`.

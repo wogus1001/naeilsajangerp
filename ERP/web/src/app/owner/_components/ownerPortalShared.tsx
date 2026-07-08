@@ -102,7 +102,7 @@ const NAV_ITEMS: readonly {
     { key: 'dashboard', label: '홈', href: '/owner/dashboard', icon: Home },
     { key: 'store', label: '내 매장', href: '/owner/store', icon: Store },
     { key: 'notices', label: '공지/공문', href: '/owner/notices', icon: Bell },
-    { key: 'tasks', label: '오픈 체크리스트', href: '/owner/opening-tasks', icon: ClipboardCheck },
+    { key: 'tasks', label: '운영 체크리스트', href: '/owner/opening-tasks', icon: ClipboardCheck },
     { key: 'requests', label: '시설 문의', href: '/owner/requests', icon: Wrench },
     { key: 'submissions', label: '제출 이력', href: '/owner/submissions', icon: Send }
 ];
@@ -139,7 +139,7 @@ export function formatOwnerDate(value: string | null): string {
 
 export function ownerSubmissionTypeLabel(value: string): string {
     if (value === 'store_info') return '매장 정보';
-    if (value === 'opening_task_completion') return '체크리스트';
+    if (value === 'opening_task_completion') return '운영 체크리스트';
     if (value === 'facility_request') return '시설 문의';
     return '일반 요청';
 }
@@ -149,6 +149,27 @@ export function ownerStatusLabel(value: string): string {
     if (value === 'rejected') return '반려';
     if (value === 'resolved') return '처리 완료';
     return '제출';
+}
+
+export function getOwnerTaskId(task: OwnerTask): string {
+    return (task.id || task.title || task.label || '').trim();
+}
+
+export function getRequestedOwnerTaskIds(submissions: readonly OwnerSubmission[]): ReadonlySet<string> {
+    const requestedTaskIds = submissions
+        .map(submission => {
+            if (
+                submission.submission_type !== 'opening_task_completion'
+                || submission.status === 'rejected'
+                || !isRecord(submission.payload)
+            ) {
+                return '';
+            }
+            const taskId = submission.payload.taskId;
+            return typeof taskId === 'string' ? taskId.trim() : '';
+        })
+        .filter(taskId => taskId.length > 0);
+    return new Set(requestedTaskIds);
 }
 
 export function OwnerPortalFrame({ activeKey, children }: OwnerPortalFrameProps) {

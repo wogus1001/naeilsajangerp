@@ -1137,3 +1137,12 @@
 - 신규 SQL: `supabase_franchise_owner_portal_migration.sql`을 추가했다. 점주 계정, 점주 세션, 공지/읽음, 제출 이력, 업로드 파일 메타 테이블과 RLS 정책을 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts` 7건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Production build를 `next start -p 3142`로 띄워 `/owner/login`, `/owner/dashboard`가 200으로 렌더링되는 것을 확인했다.
 - 남은 live QA: SQL 적용 후 `내일 / admin / 1234`로 본사 로그인, 가맹점 목록의 `점주 계정` 또는 `점주 연동` 탭에서 계정 생성, `/owner/login` 점주 로그인, 공지 읽음, 매장 정보 제출, 체크리스트 완료 요청, 시설 문의 등록, 본사 큐 처리 persistence를 확인한다.
+
+## 2026-07-08 점주 포털 회사별 로그인 및 운영 체크리스트 리뷰 QA
+
+- 범위: 전체 코드리뷰 후 점주 포털 로그인과 본사 점주 소통 흐름을 보정했다. 점주 로그인은 `회사명 + 아이디 + 비밀번호`로 회사를 먼저 확정한 뒤 해당 회사의 점주 계정만 조회한다. 기존 전역 `login_id_normalized` unique 제약은 회사 범위 unique 제약으로 전환한다.
+- 체크리스트: 점주용 체크리스트는 오픈 준비 프로젝트가 아니라 `franchise_locations.data.ownerPortalChecklist`에 저장하는 운영 체크리스트로 분리했다. 본사 `점주 소통`에는 공지/공문, 체크리스트, 제출 처리, 점주 계정 설정을 분리해 노출하고, 점주 화면에서는 이미 완료 요청한 체크리스트 항목을 다시 요청하지 못하게 막는다.
+- 구비서류 회귀: 계약 완료 구비서류 목록과 상세 저장/조회 호출에 세션 인증 헤더를 붙여 `requesterId is required` 오류가 재발하지 않게 했다.
+- 신규 SQL: 기존 점주 포털 SQL 적용 DB에는 `supabase_franchise_owner_company_login_scope.sql`을 추가 적용해야 한다. 이 SQL은 기존 전역 점주 로그인 ID unique 제약을 제거하고 회사별 unique 제약을 추가한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts src/lib/franchise-lead-contract-checklist.test.mts` 20건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright로 `http://localhost:3137/owner/login` 모바일 390px에서 회사명/아이디/비밀번호 입력 구조와 console error 0건을 확인했고, `내일 / admin` 본사 세션으로 `/dashboard/franchise-operations/owner-portal`에서 `공지/공문`, `체크리스트`, `제출 처리`, `점주 계정 설정` 탭 노출을 확인했다.
+- 남은 live QA: 운영 SQL 적용 후 서로 다른 회사에서 같은 점주 아이디를 발급할 수 있는지, `/owner/login`에서 회사명을 잘못 입력하면 다른 회사 점주 계정으로 로그인되지 않는지, 운영 체크리스트 저장/완료 요청/보관 처리가 새로고침 후 유지되는지 확인한다.
