@@ -20,6 +20,7 @@ const DEFAULT_CENTER: LocationMapPosition = { lat: 37.5665, lng: 126.9780 };
 const EARTH_RADIUS_METERS = 6371000;
 const KOREA_LATITUDE_RANGE = { min: 32, max: 39.5 };
 const KOREA_LONGITUDE_RANGE = { min: 123, max: 132.5 };
+const MAX_COMPARISON_RADIUS_POINTS = 12;
 
 export const LOCATION_MAP_STATUS_COLORS: Readonly<Record<FranchiseLocationStatus, string>> = {
     운영중: '#03b26c',
@@ -219,10 +220,22 @@ export function buildRadiusAnalysisFromPosition(
 
 export function buildComparisonRadiusPoints(
     radiusAnalysis: LocationRadiusAnalysis,
-    radiusBaseMode: LocationMapRadiusBaseMode
+    radiusBaseMode: LocationMapRadiusBaseMode,
+    activePoint: LocationMapPoint | null = null,
+    points: readonly LocationMapPoint[] = []
 ): readonly LocationMapPoint[] {
     if (radiusBaseMode !== 'selected') return [];
-    return radiusAnalysis.nearbyPoints.map(item => item.point);
+    if (!activePoint) return radiusAnalysis.nearbyPoints.map(item => item.point);
+
+    return points
+        .filter(point => point.location.id !== activePoint.location.id)
+        .map(point => ({
+            point,
+            distanceMeters: getLocationDistanceMeters(activePoint.position, point.position)
+        }))
+        .sort((left, right) => left.distanceMeters - right.distanceMeters)
+        .slice(0, MAX_COMPARISON_RADIUS_POINTS)
+        .map(item => item.point);
 }
 
 function buildRadiusSummary(

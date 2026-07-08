@@ -216,7 +216,7 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
     const radiusAnalysis = radiusBaseMode === 'manual'
         ? buildRadiusAnalysisFromPosition(manualRadiusCenter, points, radiusMeters)
         : buildRadiusAnalysis(activePoint, points, radiusMeters);
-    const comparisonRadiusPoints = buildComparisonRadiusPoints(radiusAnalysis, radiusBaseMode);
+    const comparisonRadiusPoints = buildComparisonRadiusPoints(radiusAnalysis, radiusBaseMode, activePoint, points);
     const measurementDistanceMeters = getLocationPathDistanceMeters(measurementPoints);
     const measurementAreaSquareMeters = measurementMode === 'area'
         ? getLocationPolygonAreaSquareMeters(measurementPoints)

@@ -188,7 +188,7 @@ test('Given no active point When building radius analysis Then an empty analysis
     assert.equal(analysis.statusCounts.운영중, 0);
 });
 
-test('Given selected radius analysis When building comparison radius points Then nearby map points are returned', () => {
+test('Given selected radius analysis When building comparison radius points Then visible map points are returned by distance', () => {
     const activePoint = makePoint({ id: 'active', name: '선택 물건지', latitude: 37.55, longitude: 127.08 });
     const nearbyPoint = makePoint({
         id: 'nearby',
@@ -196,11 +196,18 @@ test('Given selected radius analysis When building comparison radius points Then
         latitude: 37.551,
         longitude: 127.081
     });
-    const analysis = buildRadiusAnalysis(activePoint, [activePoint, nearbyPoint], 500);
+    const outsidePoint = makePoint({
+        id: 'outside',
+        name: '반경 밖 표시 물건지',
+        latitude: 37.557,
+        longitude: 127.087
+    });
+    const analysis = buildRadiusAnalysis(activePoint, [activePoint, nearbyPoint, outsidePoint], 500);
 
     assert.deepEqual(
-        buildComparisonRadiusPoints(analysis, 'selected').map(point => point.location.id),
-        ['nearby']
+        buildComparisonRadiusPoints(analysis, 'selected', activePoint, [outsidePoint, activePoint, nearbyPoint])
+            .map(point => point.location.id),
+        ['nearby', 'outside']
     );
 });
 

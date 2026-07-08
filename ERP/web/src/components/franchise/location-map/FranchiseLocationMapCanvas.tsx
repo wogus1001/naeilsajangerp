@@ -172,9 +172,9 @@ export function FranchiseLocationMapCanvas({
                         center={point.position}
                         radius={radiusMeters}
                         fillColor={LOCATION_MAP_STATUS_COLORS[point.location.status]}
-                        fillOpacity={0.035}
+                        fillOpacity={0.055}
                         strokeColor={LOCATION_MAP_STATUS_COLORS[point.location.status]}
-                        strokeOpacity={0.38}
+                        strokeOpacity={0.52}
                         strokeWeight={1}
                         zIndex={0}
                     />
@@ -184,9 +184,9 @@ export function FranchiseLocationMapCanvas({
                         center={radiusCenter}
                         radius={radiusMeters}
                         fillColor="#3182f6"
-                        fillOpacity={0.08}
+                        fillOpacity={0.11}
                         strokeColor="#3182f6"
-                        strokeOpacity={0.72}
+                        strokeOpacity={0.84}
                         strokeWeight={2}
                         zIndex={1}
                     />
