@@ -10,6 +10,7 @@ import type {
     LocationMapMode,
     LocationMapPoint,
     LocationMapPosition,
+    LocationMapRadiusBaseMode,
     LocationMapRadiusMeters,
     LocationRadiusAnalysis,
     LocationRadiusNearbyPoint
@@ -214,6 +215,14 @@ export function buildRadiusAnalysisFromPosition(
         ? buildNearbyRadiusPoints(center, points, radiusMeters, '')
         : [];
     return buildRadiusSummary(radiusMeters, nearbyPoints);
+}
+
+export function buildComparisonRadiusPoints(
+    radiusAnalysis: LocationRadiusAnalysis,
+    radiusBaseMode: LocationMapRadiusBaseMode
+): readonly LocationMapPoint[] {
+    if (radiusBaseMode !== 'selected') return [];
+    return radiusAnalysis.nearbyPoints.map(item => item.point);
 }
 
 function buildRadiusSummary(

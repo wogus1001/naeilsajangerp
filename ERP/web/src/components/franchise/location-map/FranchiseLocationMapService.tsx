@@ -41,6 +41,7 @@ export function FranchiseLocationMapService() {
                         focusRequestId={controller.focusRequestId}
                         focusedPoint={controller.focusedPoint}
                         isBusy={isBusy}
+                        comparisonRadiusPoints={controller.comparisonRadiusPoints}
                         isManualRadius={controller.radiusBaseMode === 'manual'}
                         isRadiusPicking={controller.isRadiusPicking}
                         measurementMode={controller.measurementMode}
