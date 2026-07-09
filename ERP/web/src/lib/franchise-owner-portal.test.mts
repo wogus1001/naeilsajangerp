@@ -6,6 +6,7 @@ import {
     canReviewOwnerSubmission,
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
     getOwnerSubmissionReviewMode,
+    isOwnerChecklistCompletionSubmission,
     mergeOwnerProvidedBasicsIntoLocationData,
     mergeOwnerPortalChecklistTasksIntoLocationData,
     normalizeOwnerProvidedBasics,
@@ -67,13 +68,20 @@ void test('Given owner submission values When normalizing Then unsupported value
     assert.equal(buildOwnerSubmissionTitle('general_request', '문의'), '문의');
 });
 
-void test('Given owner submission type and status When deciding review mode Then only checklist completion needs approval', () => {
-    assert.equal(getOwnerSubmissionReviewMode('opening_task_completion', 'submitted'), 'approval');
+void test('Given owner submission type and status When deciding review mode Then checklist completion is tracked without approval', () => {
+    assert.equal(getOwnerSubmissionReviewMode('opening_task_completion', 'submitted'), 'none');
     assert.equal(getOwnerSubmissionReviewMode('facility_request', 'submitted'), 'resolution');
     assert.equal(getOwnerSubmissionReviewMode('general_request', 'submitted'), 'resolution');
     assert.equal(getOwnerSubmissionReviewMode('store_info', 'submitted'), 'acknowledge');
     assert.equal(getOwnerSubmissionReviewMode('store_info', 'resolved'), 'none');
     assert.equal(getOwnerSubmissionReviewMode('opening_task_completion', 'approved'), 'none');
+});
+
+void test('Given owner submission type When checking checklist completion Then only operating checklist requests match', () => {
+    assert.equal(isOwnerChecklistCompletionSubmission('opening_task_completion'), true);
+    assert.equal(isOwnerChecklistCompletionSubmission('facility_request'), false);
+    assert.equal(isOwnerChecklistCompletionSubmission('store_info'), false);
+    assert.equal(isOwnerChecklistCompletionSubmission('unknown'), false);
 });
 
 void test('Given owner checklist tasks When normalizing and merging Then invalid rows are ignored and existing location data is preserved', () => {

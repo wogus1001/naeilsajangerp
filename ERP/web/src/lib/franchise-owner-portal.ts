@@ -188,7 +188,11 @@ export function canReviewOwnerSubmission(status: string): boolean {
 export function getOwnerSubmissionReviewMode(type: string, status: string): OwnerSubmissionReviewMode {
     if (!canReviewOwnerSubmission(status)) return 'none';
     const normalizedType = toOwnerSubmissionType(type);
-    if (normalizedType === 'opening_task_completion') return 'approval';
+    if (normalizedType === 'opening_task_completion') return 'none';
     if (normalizedType === 'store_info') return 'acknowledge';
     return 'resolution';
+}
+
+export function isOwnerChecklistCompletionSubmission(type: string): boolean {
+    return toOwnerSubmissionType(type) === 'opening_task_completion';
 }

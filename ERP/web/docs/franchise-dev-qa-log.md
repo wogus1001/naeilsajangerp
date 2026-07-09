@@ -1162,3 +1162,11 @@
 - 신규 SQL: 없음. 기존 점주 포털 SQL과 회사별 로그인 ID scope SQL을 사용한다.
 - 검증: 기능 브랜치와 release worktree에서 `git diff --check`, `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/owner/login/92924bd6-b2a1-49bb-844b-05eabcc51bbf`와 `curl -I -L https://www.fcerp.co.kr/login`는 200 응답이었다.
 - 남은 live QA: 운영 실계정으로 `점주 계정 설정` 링크 복사, 전용 링크 로그인, 운영 체크리스트 전체/복수 운영점 저장과 점주 화면 완료 요청까지 확인한다.
+
+## 2026-07-09 점주 포털 운영 체크리스트 발송형 전환 QA
+
+- 범위: 본사 `가맹 운영 > 점주 소통 > 체크리스트`를 운영점별 기존 세팅 수정 목록이 아니라 공지/공문처럼 발송하는 흐름으로 전환했다.
+- 본사 연동: `체크리스트 발송`에서 전체 가맹점 또는 선택 운영점에 항목을 발행하고, `발송 현황`에서 발송 건별 완료/미완료 운영점과 항목 상세를 확인한다. 점주의 체크리스트 완료 요청은 일반 `제출 처리` 승인/반려 대상에서 제외하고 체크리스트 발송 현황에 집계한다.
+- 신규 SQL: 없음. 기존 `franchise_locations.data.ownerPortalChecklist`와 점주 제출 이력을 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 기존 dev 서버 `127.0.0.1:3000`에서 `내일 / admin / 1234`로 로그인해 `/dashboard/franchise-operations/owner-portal`의 `체크리스트` 탭을 확인했다. `체크리스트 발송`, 전체/개별 가맹점 선택, `발송 현황`, 완료/미완료 표시가 노출되고 console error 0건이었다.
+- 남은 live QA: 운영 실계정으로 체크리스트 전체/개별 발송, 점주 포털 완료 요청, 본사 발송 현황의 완료/미완료 운영점 집계 persistence를 확인한다.

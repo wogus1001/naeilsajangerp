@@ -5157,6 +5157,16 @@
     padding: 14px;
 }
 
+.ownerPortalChecklistRequests {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid #e5e8eb;
+}
+
+.ownerPortalChecklistRequests .ownerPortalFilterBar {
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 190px);
+}
+
 .ownerPortalChecklistScope,
 .ownerPortalChecklistEditor,
 .ownerPortalChecklistManager {
@@ -5503,6 +5513,43 @@
     font-weight: 800;
 }
 
+.ownerPortalMutedAction {
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.ownerPortalSuccessPill,
+.ownerPortalWarningPill {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.ownerPortalSuccessPill {
+    background: #dcfce7;
+    color: #047857;
+}
+
+.ownerPortalWarningPill {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
 .ownerPortalTextarea {
     min-height: 104px;
     width: 100%;
@@ -5743,6 +5790,50 @@
     color: #333d4b;
     font-size: 12px;
     font-weight: 850;
+}
+
+.ownerPortalChecklistStoreGrid {
+    display: grid;
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 10px;
+}
+
+.ownerPortalChecklistStoreStatus {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px 12px;
+}
+
+.ownerPortalChecklistStoreStatus div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalChecklistStoreStatus strong,
+.ownerPortalChecklistStoreStatus span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistStoreStatus strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.ownerPortalChecklistStoreStatus span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 750;
 }
 
 .ownerPortalSubmissionDetailGrid {

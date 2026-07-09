@@ -6,6 +6,7 @@ import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
     getOwnerSubmissionReviewMode,
+    isOwnerChecklistCompletionSubmission,
     normalizeOwnerPortalChecklistTasks,
     type OwnerPortalChecklistTask
 } from '@/lib/franchise-owner-portal';
@@ -13,6 +14,7 @@ import type { FranchiseLocation } from './types';
 
 const OWNER_PORTAL_NOTICE_PAGE_SIZE = 5;
 const OWNER_PORTAL_SUBMISSION_PAGE_SIZE = 5;
+const OWNER_PORTAL_CHECKLIST_STATUS_PAGE_SIZE = 5;
 
 export type OwnerAccount = {
     readonly id: string;
@@ -504,6 +506,7 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
 type ChecklistSectionProps = {
     readonly locations: readonly FranchiseLocation[];
     readonly checklists: readonly OwnerChecklistSetting[];
+    readonly submissions: readonly OwnerSubmission[];
     readonly isBusy: boolean;
     readonly onSaveChecklists: (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]) => void;
 };
@@ -519,22 +522,111 @@ function getSavedChecklistTasksForLocation(
     return checklists.find(checklist => checklist.locationId === locationId)?.tasks || [];
 }
 
-function getChecklistTasksForEditing(
-    checklists: readonly OwnerChecklistSetting[],
-    locationId: string
-): readonly OwnerPortalChecklistTask[] {
-    const savedTasks = getSavedChecklistTasksForLocation(checklists, locationId);
-    return savedTasks.length > 0 ? savedTasks : DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS;
+type ChecklistLocationStatus = {
+    readonly location: FranchiseLocation;
+    readonly completedCount: number;
+    readonly totalCount: number;
+    readonly isComplete: boolean;
+};
+
+type ChecklistIssueGroup = {
+    readonly key: string;
+    readonly title: string;
+    readonly tasks: readonly OwnerPortalChecklistTask[];
+    readonly locations: readonly ChecklistLocationStatus[];
+    readonly completedCount: number;
+    readonly pendingCount: number;
+};
+
+function getChecklistSubmissionTaskId(submission: OwnerSubmission): string {
+    if (!isRecord(submission.payload)) return '';
+    return readTextField(submission.payload, 'taskId');
 }
 
-export function OwnerPortalChecklistSection({ locations, checklists, isBusy, onSaveChecklists }: ChecklistSectionProps) {
+function isChecklistCompletionAccepted(submission: OwnerSubmission): boolean {
+    return isOwnerChecklistCompletionSubmission(submission.submission_type) && submission.status !== 'rejected';
+}
+
+function buildCompletedChecklistTaskIdsByLocation(submissions: readonly OwnerSubmission[]): ReadonlyMap<string, ReadonlySet<string>> {
+    const completed = new Map<string, Set<string>>();
+    submissions.filter(isChecklistCompletionAccepted).forEach(submission => {
+        const taskId = getChecklistSubmissionTaskId(submission);
+        if (!taskId) return;
+        const current = completed.get(submission.location_id) || new Set<string>();
+        current.add(taskId);
+        completed.set(submission.location_id, current);
+    });
+    return completed;
+}
+
+function buildChecklistIssueKey(tasks: readonly OwnerPortalChecklistTask[]): string {
+    return JSON.stringify(tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        memo: task.memo
+    })));
+}
+
+function buildChecklistIssueTitle(tasks: readonly OwnerPortalChecklistTask[]): string {
+    if (tasks.length === 0) return '체크리스트';
+    if (tasks.length === 1) return tasks[0]?.title || '체크리스트';
+    return `${tasks[0]?.title || '체크리스트'} 외 ${tasks.length - 1}개`;
+}
+
+function buildChecklistIssueGroups(
+    locations: readonly FranchiseLocation[],
+    checklists: readonly OwnerChecklistSetting[],
+    submissions: readonly OwnerSubmission[]
+): readonly ChecklistIssueGroup[] {
+    const completedTaskIdsByLocation = buildCompletedChecklistTaskIdsByLocation(submissions);
+    const locationsById = new Map(locations.map(location => [location.id, location]));
+    const groups = new Map<string, {
+        readonly tasks: readonly OwnerPortalChecklistTask[];
+        readonly locations: ChecklistLocationStatus[];
+    }>();
+
+    checklists.forEach(checklist => {
+        const location = locationsById.get(checklist.locationId);
+        if (!location || checklist.tasks.length === 0) return;
+        const key = buildChecklistIssueKey(checklist.tasks);
+        const completedTaskIds = completedTaskIdsByLocation.get(checklist.locationId) || new Set<string>();
+        const completedCount = checklist.tasks.filter(task => completedTaskIds.has(task.id)).length;
+        const current = groups.get(key) || { tasks: checklist.tasks, locations: [] };
+        current.locations.push({
+            location,
+            completedCount,
+            totalCount: checklist.tasks.length,
+            isComplete: checklist.tasks.length > 0 && completedCount >= checklist.tasks.length
+        });
+        groups.set(key, current);
+    });
+
+    return Array.from(groups.entries()).map(([key, group]) => {
+        const completedCount = group.locations.filter(location => location.isComplete).length;
+        return {
+            key,
+            title: buildChecklistIssueTitle(group.tasks),
+            tasks: group.tasks,
+            locations: group.locations,
+            completedCount,
+            pendingCount: group.locations.length - completedCount
+        };
+    });
+}
+
+export function OwnerPortalChecklistSection({ locations, checklists, submissions, isBusy, onSaveChecklists }: ChecklistSectionProps) {
+    const [checklistView, setChecklistView] = React.useState<'issue' | 'status'>('issue');
     const [targetMode, setTargetMode] = React.useState<'all' | 'selected'>('all');
     const [locationPickerId, setLocationPickerId] = React.useState(locations[0]?.id || '');
     const [selectedLocationIds, setSelectedLocationIds] = React.useState<readonly string[]>([]);
     const [draftTasks, setDraftTasks] = React.useState<readonly OwnerPortalChecklistTask[]>(DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS);
+    const [statusSearch, setStatusSearch] = React.useState('');
+    const [statusFilter, setStatusFilter] = React.useState('all');
+    const [statusPage, setStatusPage] = React.useState(1);
     const savedChecklistCount = checklists.filter(checklist => checklist.tasks.length > 0).length;
     const selectedLocations = locations.filter(location => selectedLocationIds.includes(location.id));
     const selectableLocations = locations.filter(location => !selectedLocationIds.includes(location.id));
+    const issueGroups = buildChecklistIssueGroups(locations, checklists, submissions);
     const effectiveLocationPickerId = selectableLocations.some(location => location.id === locationPickerId)
         ? locationPickerId
         : selectableLocations[0]?.id || '';
@@ -592,194 +684,279 @@ export function OwnerPortalChecklistSection({ locations, checklists, isBusy, onS
         setSelectedLocationIds(currentIds => currentIds.filter(currentId => currentId !== locationId));
     };
 
-    const loadLocationChecklist = (locationId: string) => {
-        setTargetMode('selected');
-        setSelectedLocationIds(currentIds => currentIds.includes(locationId) ? currentIds : [locationId]);
-        setDraftTasks(getChecklistTasksForEditing(checklists, locationId));
-    };
-
     const targetLocationIds = targetMode === 'all'
         ? locations.map(location => location.id)
         : selectedLocationIds;
     const normalizedDraftTasks = normalizeOwnerPortalChecklistTasks(draftTasks);
+    const totalIssuedLocations = issueGroups.reduce((sum, group) => sum + group.locations.length, 0);
+    const normalizedStatusSearch = statusSearch.trim().toLowerCase();
+    const filteredIssueGroups = issueGroups.filter(group => {
+        const statusMatches = statusFilter === 'all'
+            || (statusFilter === 'complete' && group.pendingCount === 0)
+            || (statusFilter === 'incomplete' && group.pendingCount > 0);
+        const textMatches = !normalizedStatusSearch || [
+            group.title,
+            ...group.tasks.map(task => `${task.title} ${task.memo}`),
+            ...group.locations.map(locationStatus => locationStatus.location.name)
+        ].some(value => value.toLowerCase().includes(normalizedStatusSearch));
+        return statusMatches && textMatches;
+    });
+    const statusPageCount = Math.max(1, Math.ceil(filteredIssueGroups.length / OWNER_PORTAL_CHECKLIST_STATUS_PAGE_SIZE));
+    const safeStatusPage = Math.min(statusPage, statusPageCount);
+    const visibleIssueGroups = filteredIssueGroups.slice(
+        (safeStatusPage - 1) * OWNER_PORTAL_CHECKLIST_STATUS_PAGE_SIZE,
+        safeStatusPage * OWNER_PORTAL_CHECKLIST_STATUS_PAGE_SIZE
+    );
+
+    React.useEffect(() => {
+        setStatusPage(1);
+    }, [statusSearch, statusFilter]);
+
+    React.useEffect(() => {
+        setStatusPage(currentPage => Math.min(currentPage, Math.max(1, Math.ceil(filteredIssueGroups.length / OWNER_PORTAL_CHECKLIST_STATUS_PAGE_SIZE))));
+    }, [filteredIssueGroups.length]);
 
     return (
         <section className={styles.ownerPortalPanel}>
             <div className={styles.locationMasterHeader}>
                 <div>
                     <h3>체크리스트</h3>
-                    <p>점주가 포털에서 확인하고 완료 요청할 운영 체크리스트를 세팅합니다.</p>
+                    <p>공지처럼 대상 운영점에 운영 체크리스트를 발송하고 완료 현황을 확인합니다.</p>
                 </div>
             </div>
-            <div className={styles.ownerPortalChecklistSummary}>
-                <div>
-                    <span>적용 대상</span>
-                    <strong>{targetMode === 'all' ? '전체 가맹점' : selectedLocationSummary}</strong>
-                </div>
-                <div>
-                    <span>작성 항목</span>
-                    <strong>{normalizedDraftTasks.length}개</strong>
-                </div>
-                <div>
-                    <span>저장 완료</span>
-                    <strong>{savedChecklistCount}/{locations.length}</strong>
-                </div>
+            <div className={styles.ownerPortalInlineTabs} role="tablist" aria-label="운영 체크리스트 관리">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={checklistView === 'issue'}
+                    className={checklistView === 'issue' ? styles.ownerPortalInlineTabActive : styles.ownerPortalInlineTab}
+                    onClick={() => setChecklistView('issue')}
+                >
+                    체크리스트 발송 <span>{normalizedDraftTasks.length}개 항목</span>
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={checklistView === 'status'}
+                    className={checklistView === 'status' ? styles.ownerPortalInlineTabActive : styles.ownerPortalInlineTab}
+                    onClick={() => setChecklistView('status')}
+                >
+                    발송 현황 <span>{issueGroups.length}건</span>
+                </button>
             </div>
-            <div className={styles.ownerPortalChecklistWorkspace}>
-                <div className={styles.ownerPortalChecklistScope}>
-                    <div className={styles.ownerPortalSubHeader}>
-                        <strong>1. 적용 대상 선택</strong>
-                        <span>공통 세팅을 먼저 만들고, 필요한 운영점만 개별 수정하세요.</span>
-                    </div>
-                    <div className={styles.ownerPortalChecklistScopeBody}>
-                        <div className={styles.ownerPortalTargetControl} role="radiogroup" aria-label="체크리스트 적용 대상">
-                            <button
-                                type="button"
-                                className={targetMode === 'all' ? styles.ownerPortalTargetActive : styles.ownerPortalTargetButton}
-                                onClick={() => changeTargetMode('all')}
-                            >
-                                전체 가맹점
-                            </button>
-                            <button
-                                type="button"
-                                className={targetMode === 'selected' ? styles.ownerPortalTargetActive : styles.ownerPortalTargetButton}
-                                onClick={() => changeTargetMode('selected')}
-                            >
-                                개별 가맹점
-                            </button>
+            {checklistView === 'issue' ? (
+                <>
+                    <div className={styles.ownerPortalChecklistSummary}>
+                        <div>
+                            <span>발송 대상</span>
+                            <strong>{targetMode === 'all' ? '전체 가맹점' : selectedLocationSummary}</strong>
                         </div>
-                        {targetMode === 'selected' ? (
-                            <div className={styles.ownerPortalChecklistPicker}>
-                                <label className={styles.locationSortControl}>
-                                    운영점
-                                    <select value={effectiveLocationPickerId} onChange={event => setLocationPickerId(event.currentTarget.value)}>
-                                        {selectableLocations.map(location => (
-                                            <option key={location.id} value={location.id}>{location.name}</option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <button
-                                    type="button"
-                                    className={styles.secondaryButton}
-                                    disabled={!effectiveLocationPickerId || selectableLocations.length === 0}
-                                    onClick={addSelectedLocation}
-                                >
-                                    운영점 추가
-                                </button>
-                            </div>
-                        ) : (
-                            <div className={styles.ownerPortalChecklistHint}>
-                                현재 항목을 {locations.length}개 운영점에 동일하게 저장합니다.
-                            </div>
-                        )}
+                        <div>
+                            <span>발송 항목</span>
+                            <strong>{normalizedDraftTasks.length}개</strong>
+                        </div>
+                        <div>
+                            <span>현재 발송 현황</span>
+                            <strong>{savedChecklistCount}/{locations.length}</strong>
+                        </div>
                     </div>
-                    {targetMode === 'selected' ? (
-                        <div className={styles.ownerPortalChecklistStatus}>
+                    <div className={styles.ownerPortalChecklistWorkspace}>
+                        <div className={styles.ownerPortalChecklistScope}>
                             <div className={styles.ownerPortalSubHeader}>
-                                <strong>저장 대상 운영점</strong>
-                                <span>추가한 운영점에 현재 항목을 한 번에 저장합니다.</span>
+                                <strong>1. 발송 대상 선택</strong>
+                                <span>공지처럼 전체 가맹점 또는 선택한 운영점에 한 번에 전달합니다.</span>
                             </div>
-                            <div className={styles.ownerPortalChecklistSelectedList}>
-                                {selectedLocations.length > 0 ? selectedLocations.map(location => {
-                                    const tasks = getSavedChecklistTasksForLocation(checklists, location.id);
-                                    return (
-                                        <div className={styles.ownerPortalChecklistSelectedItem} key={location.id}>
-                                            <div>
-                                                <strong>{location.name}</strong>
-                                                <span>{tasks.length > 0 ? `기존 ${tasks.length}개 항목` : '저장된 항목 없음'}</span>
-                                            </div>
-                                            <button type="button" onClick={() => removeSelectedLocation(location.id)}>
-                                                제외
-                                            </button>
-                                        </div>
-                                    );
-                                }) : (
+                            <div className={styles.ownerPortalChecklistScopeBody}>
+                                <div className={styles.ownerPortalTargetControl} role="radiogroup" aria-label="체크리스트 적용 대상">
+                                    <button
+                                        type="button"
+                                        className={targetMode === 'all' ? styles.ownerPortalTargetActive : styles.ownerPortalTargetButton}
+                                        onClick={() => changeTargetMode('all')}
+                                    >
+                                        전체 가맹점
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={targetMode === 'selected' ? styles.ownerPortalTargetActive : styles.ownerPortalTargetButton}
+                                        onClick={() => changeTargetMode('selected')}
+                                    >
+                                        개별 가맹점
+                                    </button>
+                                </div>
+                                {targetMode === 'selected' ? (
+                                    <div className={styles.ownerPortalChecklistPicker}>
+                                        <label className={styles.locationSortControl}>
+                                            운영점
+                                            <select value={effectiveLocationPickerId} onChange={event => setLocationPickerId(event.currentTarget.value)}>
+                                                {selectableLocations.map(location => (
+                                                    <option key={location.id} value={location.id}>{location.name}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className={styles.secondaryButton}
+                                            disabled={!effectiveLocationPickerId || selectableLocations.length === 0}
+                                            onClick={addSelectedLocation}
+                                        >
+                                            운영점 추가
+                                        </button>
+                                    </div>
+                                ) : (
                                     <div className={styles.ownerPortalChecklistHint}>
-                                        운영점을 추가하면 이 목록에 쌓이고, 저장 버튼 한 번으로 모두 반영됩니다.
+                                        현재 항목을 {locations.length}개 운영점 점주 포털에 발송합니다.
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    ) : null}
-                    {targetMode === 'all' ? (
-                        <div className={styles.ownerPortalChecklistStatus}>
-                            <div className={styles.ownerPortalSubHeader}>
-                                <strong>운영점별 세팅 현황</strong>
-                                <span>저장된 항목 수를 확인하고 바로 개별 수정할 수 있습니다.</span>
-                            </div>
-                            <div className={`${styles.locationList} ${styles.ownerPortalSectionList}`}>
-                                {locations.map(location => {
-                                    const tasks = getSavedChecklistTasksForLocation(checklists, location.id);
-                                    const taskSummary = tasks.length > 0 ? tasks.map(task => task.title).join(', ') : '저장된 체크리스트 없음';
-                                    return (
-                                        <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={location.id}>
-                                            <div className={styles.locationItemMain}>
-                                                <strong>{location.name}</strong>
-                                                <span>{tasks.length}개 항목</span>
-                                                <small>{taskSummary}</small>
+                            {targetMode === 'selected' ? (
+                                <div className={styles.ownerPortalChecklistStatus}>
+                                    <div className={styles.ownerPortalSubHeader}>
+                                        <strong>발송 대상 운영점</strong>
+                                        <span>추가한 운영점에 현재 체크리스트를 한 번에 발송합니다.</span>
+                                    </div>
+                                    <div className={styles.ownerPortalChecklistSelectedList}>
+                                        {selectedLocations.length > 0 ? selectedLocations.map(location => {
+                                            const tasks = getSavedChecklistTasksForLocation(checklists, location.id);
+                                            return (
+                                                <div className={styles.ownerPortalChecklistSelectedItem} key={location.id}>
+                                                    <div>
+                                                        <strong>{location.name}</strong>
+                                                        <span>{tasks.length > 0 ? `기존 ${tasks.length}개 항목` : '저장된 항목 없음'}</span>
+                                                    </div>
+                                                    <button type="button" onClick={() => removeSelectedLocation(location.id)}>
+                                                        제외
+                                                    </button>
+                                                </div>
+                                            );
+                                        }) : (
+                                            <div className={styles.ownerPortalChecklistHint}>
+                                                운영점을 추가하면 이 목록에 쌓이고, 발송 버튼 한 번으로 모두 반영됩니다.
                                             </div>
-                                            <div className={styles.locationItemActions}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => loadLocationChecklist(location.id)}
-                                                >
-                                                    수정
-                                                </button>
-                                            </div>
-                                        </article>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ) : null}
-                </div>
-                <div className={styles.ownerPortalChecklistEditor}>
-                    <div className={styles.ownerPortalSubHeader}>
-                        <strong>2. 항목 편집</strong>
-                        <span>점주 포털에 표시될 제목과 안내 문구를 정리합니다.</span>
-                    </div>
-                    <div className={styles.ownerPortalChecklistList}>
-                        {draftTasks.map((task, index) => (
-                            <div className={styles.ownerPortalChecklistTaskRow} key={task.id}>
-                                <span>{String(index + 1).padStart(2, '0')}</span>
-                                <div className={styles.ownerPortalChecklistTaskFields}>
-                                    <input
-                                        className={styles.locationListSearch}
-                                        value={task.title}
-                                        placeholder="체크리스트 항목명"
-                                        onChange={event => updateTask(task.id, { title: event.currentTarget.value })}
-                                    />
-                                    <textarea
-                                        className={styles.ownerPortalTextarea}
-                                        value={task.memo}
-                                        placeholder="점주에게 보여줄 안내 문구"
-                                        onChange={event => updateTask(task.id, { memo: event.currentTarget.value })}
-                                    />
+                                        )}
+                                    </div>
                                 </div>
-                                <button type="button" className={styles.dangerOutlineButton} onClick={() => removeTask(task.id)}>
-                                    삭제
+                            ) : null}
+                        </div>
+                        <div className={styles.ownerPortalChecklistEditor}>
+                            <div className={styles.ownerPortalSubHeader}>
+                                <strong>2. 발송할 항목 작성</strong>
+                                <span>점주 포털에 표시될 체크 항목과 안내 문구를 정리합니다.</span>
+                            </div>
+                            <div className={styles.ownerPortalChecklistList}>
+                                {draftTasks.map((task, index) => (
+                                    <div className={styles.ownerPortalChecklistTaskRow} key={task.id}>
+                                        <span>{String(index + 1).padStart(2, '0')}</span>
+                                        <div className={styles.ownerPortalChecklistTaskFields}>
+                                            <input
+                                                className={styles.locationListSearch}
+                                                value={task.title}
+                                                placeholder="체크리스트 항목명"
+                                                onChange={event => updateTask(task.id, { title: event.currentTarget.value })}
+                                            />
+                                            <textarea
+                                                className={styles.ownerPortalTextarea}
+                                                value={task.memo}
+                                                placeholder="점주에게 보여줄 안내 문구"
+                                                onChange={event => updateTask(task.id, { memo: event.currentTarget.value })}
+                                            />
+                                        </div>
+                                        <button type="button" className={styles.dangerOutlineButton} onClick={() => removeTask(task.id)}>
+                                            삭제
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className={styles.ownerPortalChecklistActions}>
+                                <button type="button" className={styles.secondaryButton} onClick={() => setDraftTasks(DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS)}>
+                                    기본 항목 불러오기
+                                </button>
+                                <button type="button" className={styles.secondaryButton} onClick={addTask}>
+                                    항목 추가
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.primarySmallButton}
+                                    disabled={isBusy || targetLocationIds.length === 0 || normalizedDraftTasks.length === 0}
+                                    onClick={() => onSaveChecklists(targetLocationIds, normalizedDraftTasks)}
+                                >
+                                    {targetMode === 'all' ? '전체 가맹점 발송' : `${targetLocationIds.length}개 운영점 발송`}
                                 </button>
                             </div>
-                        ))}
+                        </div>
                     </div>
-                    <div className={styles.ownerPortalChecklistActions}>
-                        <button type="button" className={styles.secondaryButton} onClick={() => setDraftTasks(DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS)}>
-                            기본 항목 불러오기
-                        </button>
-                        <button type="button" className={styles.secondaryButton} onClick={addTask}>
-                            항목 추가
-                        </button>
-                        <button
-                            type="button"
-                            className={styles.primarySmallButton}
-                            disabled={isBusy || targetLocationIds.length === 0 || normalizedDraftTasks.length === 0}
-                            onClick={() => onSaveChecklists(targetLocationIds, normalizedDraftTasks)}
-                        >
-                            {targetMode === 'all' ? '전체 저장' : `${targetLocationIds.length}개 운영점 저장`}
-                        </button>
+                </>
+            ) : null}
+            {checklistView === 'status' ? (
+                <div className={styles.ownerPortalChecklistRequests}>
+                    <div className={styles.ownerPortalFilterBar}>
+                        <input
+                            className={styles.locationListSearch}
+                            value={statusSearch}
+                            placeholder="체크리스트명, 운영점, 항목 검색"
+                            onChange={event => setStatusSearch(event.currentTarget.value)}
+                        />
+                        <select value={statusFilter} onChange={event => setStatusFilter(event.currentTarget.value)}>
+                            <option value="all">전체 현황</option>
+                            <option value="incomplete">미완료 있음</option>
+                            <option value="complete">전체 완료</option>
+                        </select>
+                    </div>
+                    <div className={`${styles.locationList} ${styles.ownerPortalSectionList}`}>
+                        {visibleIssueGroups.length === 0 ? (
+                            <div className={styles.locationEmpty}>발송된 체크리스트가 없습니다.</div>
+                        ) : null}
+                        {visibleIssueGroups.map(group => {
+                            return (
+                                <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={group.key}>
+                                    <div className={styles.locationItemMain}>
+                                        <strong>{group.title}</strong>
+                                        <span>대상 {group.locations.length}개 · 완료 {group.completedCount}개 · 미완료 {group.pendingCount}개</span>
+                                        <details className={styles.ownerPortalSubmissionDetails}>
+                                            <summary>완료/미완료 가맹점 보기</summary>
+                                            <div className={styles.ownerPortalChecklistStoreGrid}>
+                                                {group.locations.map(locationStatus => (
+                                                    <div className={styles.ownerPortalChecklistStoreStatus} key={`${group.key}-${locationStatus.location.id}`}>
+                                                        <div>
+                                                            <strong>{locationStatus.location.name}</strong>
+                                                            <span>{locationStatus.completedCount}/{locationStatus.totalCount} 완료 요청</span>
+                                                        </div>
+                                                        <small className={locationStatus.isComplete ? styles.ownerPortalSuccessPill : styles.ownerPortalWarningPill}>
+                                                            {locationStatus.isComplete ? '완료' : '미완료'}
+                                                        </small>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className={styles.ownerPortalSubmissionDetailGrid}>
+                                                {group.tasks.map((task, index) => (
+                                                    <div className={styles.ownerPortalSubmissionDetailItem} key={`${group.key}-${task.id}`}>
+                                                        <strong>{String(index + 1).padStart(2, '0')} {task.title}</strong>
+                                                        <span>{task.memo || '안내 문구 없음'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    </div>
+                                    <div className={styles.locationItemActions}>
+                                        <span className={group.pendingCount > 0 ? styles.ownerPortalMutedAction : styles.ownerPortalSuccessPill}>
+                                            {group.pendingCount > 0 ? '진행 중' : '전체 완료'}
+                                        </span>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                        {filteredIssueGroups.length > 0 ? (
+                            <div className={styles.ownerPortalPagination}>
+                                <span>총 {filteredIssueGroups.length}건 · 발송 운영점 {totalIssuedLocations}개</span>
+                                <div>
+                                    <button type="button" disabled={safeStatusPage <= 1} onClick={() => setStatusPage(page => Math.max(1, page - 1))}>이전</button>
+                                    <strong>{safeStatusPage} / {statusPageCount}</strong>
+                                    <button type="button" disabled={safeStatusPage >= statusPageCount} onClick={() => setStatusPage(page => Math.min(statusPageCount, page + 1))}>다음</button>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
-            </div>
+            ) : null}
         </section>
     );
 }
@@ -802,8 +979,11 @@ export function OwnerPortalSubmissionsSection({
     const [submissionStatusFilter, setSubmissionStatusFilter] = React.useState('all');
     const [submissionSearch, setSubmissionSearch] = React.useState('');
     const [submissionPage, setSubmissionPage] = React.useState(1);
-    const pendingSubmissions = submissions.filter(isPendingOwnerSubmission);
-    const completedSubmissions = submissions.filter(submission => !isPendingOwnerSubmission(submission));
+    const generalSubmissions = submissions.filter(submission => (
+        !isOwnerChecklistCompletionSubmission(submission.submission_type)
+    ));
+    const pendingSubmissions = generalSubmissions.filter(isPendingOwnerSubmission);
+    const completedSubmissions = generalSubmissions.filter(submission => !isPendingOwnerSubmission(submission));
     const baseSubmissions = submissionView === 'pending' ? pendingSubmissions : completedSubmissions;
     const normalizedSearch = submissionSearch.trim().toLowerCase();
     const filteredSubmissions = baseSubmissions.filter(submission => {
@@ -837,7 +1017,7 @@ export function OwnerPortalSubmissionsSection({
             <div className={styles.locationMasterHeader}>
                 <div>
                     <h3>점주 제출 처리</h3>
-                    <p>점주가 남긴 매장 정보, 체크리스트 완료 요청, 시설 문의 내역을 확인하고 처리합니다.</p>
+                    <p>점주가 남긴 매장 정보, 시설 문의, 일반 문의 내역을 확인하고 처리합니다.</p>
                 </div>
             </div>
             <div className={styles.ownerPortalInlineTabs} role="tablist" aria-label="점주 제출 처리 상태">
@@ -870,7 +1050,6 @@ export function OwnerPortalSubmissionsSection({
                 <select value={submissionTypeFilter} onChange={event => setSubmissionTypeFilter(event.currentTarget.value)}>
                     <option value="all">전체 유형</option>
                     <option value="store_info">매장 정보</option>
-                    <option value="opening_task_completion">운영 체크리스트</option>
                     <option value="facility_request">시설/고장 문의</option>
                     <option value="general_request">일반 문의</option>
                 </select>

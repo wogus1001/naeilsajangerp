@@ -444,4 +444,5 @@ The 1차 workflow supports:
 - Store owners submitting basic store information into `franchise_locations.data.ownerProvidedBasics`.
 - Store owners reading notices, requesting owner-portal operation checklist completion, and filing facility/general requests.
 - Headquarters managing owner notices, owner-portal operation checklists, owner submissions, and owner-account settings from `가맹 운영 > 점주 소통`.
+- Owner-portal operation checklists are issued like notices from `가맹 운영 > 점주 소통 > 체크리스트`. Headquarters can send the same checklist to all stores or selected stores, then review each issued checklist's completed/incomplete store status. Store completion requests are tracked in checklist status and do not require approve/reject handling in the general submissions flow.
 - Owner-portal operation checklists are stored on `franchise_locations.data.ownerPortalChecklist`; they are separate from the pre-opening project checklist and do not mutate `franchise_opening_projects.tasks`.

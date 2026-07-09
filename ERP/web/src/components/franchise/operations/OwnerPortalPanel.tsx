@@ -4,7 +4,11 @@ import React from 'react';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
-import { buildOwnerPortalLoginPath, type OwnerPortalChecklistTask } from '@/lib/franchise-owner-portal';
+import {
+    buildOwnerPortalLoginPath,
+    isOwnerChecklistCompletionSubmission,
+    type OwnerPortalChecklistTask
+} from '@/lib/franchise-owner-portal';
 import type { FranchiseLocation } from './types';
 import {
     OwnerPortalAccountsSection,
@@ -62,6 +66,10 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
         companyId: locations.find(location => location.companyId)?.companyId || null,
         companyName
     }), [companyName, locations]);
+    const generalSubmissionsCount = submissions.filter(submission => (
+        !isOwnerChecklistCompletionSubmission(submission.submission_type)
+    )).length;
+    const issuedChecklistLocationCount = checklists.filter(checklist => checklist.tasks.length > 0).length;
 
     const load = React.useCallback(async () => {
         if (!userId) return;
@@ -235,9 +243,9 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
             <OwnerPortalViewTabs
                 activeView={activeView}
                 accountsCount={accounts.length}
-                checklistsCount={checklists.length}
+                checklistsCount={issuedChecklistLocationCount}
                 noticesCount={notices.length}
-                submissionsCount={submissions.length}
+                submissionsCount={generalSubmissionsCount}
                 onChange={setActiveView}
             />
             <OwnerPortalStatusMessages message={message} error={error} />
@@ -282,6 +290,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                 <OwnerPortalChecklistSection
                     locations={locations}
                     checklists={checklists}
+                    submissions={submissions}
                     isBusy={isBusy}
                     onSaveChecklists={(locationIds, tasks) => void saveChecklists(locationIds, tasks)}
                 />
