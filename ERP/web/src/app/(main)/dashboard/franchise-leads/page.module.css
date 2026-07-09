@@ -5672,6 +5672,120 @@
     white-space: nowrap;
 }
 
+.ownerPortalAttachmentBox {
+    display: grid;
+    gap: 10px;
+    border: 1px dashed #b8d6ff;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 12px;
+}
+
+.ownerPortalAttachmentHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ownerPortalAttachmentHeader div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalAttachmentHeader strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalAttachmentHeader span,
+.ownerPortalAttachmentBox p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.ownerPortalAttachmentHeader button {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1d4ed8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalHiddenFileInput {
+    display: none;
+}
+
+.ownerPortalAttachmentList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ownerPortalAttachmentItem {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 8px;
+}
+
+.ownerPortalAttachmentItem div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalAttachmentItem strong,
+.ownerPortalAttachmentItem span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalAttachmentItem strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalAttachmentItem span {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPortalAttachmentItem button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fecdd3;
+    border-radius: 7px;
+    background: #fff1f2;
+    color: #e42939;
+    cursor: pointer;
+}
+
 .ownerPortalNoticeList {
     display: grid;
     gap: 10px;

@@ -1,6 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Download } from 'lucide-react';
+import { formatFranchiseFileSize } from '@/lib/franchise-file-attachments';
 import styles from '../owner.module.css';
 import { formatOwnerDate, OwnerPortalFrame, readOwnerApiData, type OwnerNotice } from './ownerPortalShared';
 
@@ -64,6 +66,24 @@ function OwnerNoticesContent({ notices, reload }: { readonly notices: readonly O
                             </div>
                             <span className={styles.itemMeta}>{formatOwnerDate(notice.createdAt)}</span>
                             <p>{notice.body}</p>
+                            {notice.attachments && notice.attachments.length > 0 ? (
+                                <div className={styles.attachmentList}>
+                                    {notice.attachments.map(attachment => (
+                                        <a
+                                            className={styles.attachmentLink}
+                                            href={attachment.publicUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            download={attachment.name}
+                                            key={`${attachment.storagePath}-${attachment.name}`}
+                                        >
+                                            <Download size={14} />
+                                            <span>{attachment.name}</span>
+                                            <small>{formatFranchiseFileSize(attachment.size)}</small>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : null}
                             {!notice.readAt ? (
                                 <button className={styles.secondaryButton} type="button" onClick={() => void markNoticeRead(notice.id)}>
                                     읽음 처리

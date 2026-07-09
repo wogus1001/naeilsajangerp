@@ -32,6 +32,9 @@
 - 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `git diff --check`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`를 통과했다.
 - 로컬 확인: `http://localhost:3000/owner/login/92924bd6-b2a1-49bb-844b-05eabcc51bbf`가 200 응답을 반환하고, 렌더 HTML의 로그인 폼에는 `점주 포털`, `아이디`, `비밀번호`만 노출되며 `회사명` 필드가 보이지 않는 것을 확인했다.
 - 이번 점주 포털 단축 링크/체크리스트 UI 보강 범위의 신규 SQL은 없다.
+- 점주 공지/공문에 첨부 파일 발행과 점주 다운로드 링크를 추가했다. 본사는 이미지/PDF/문서 파일을 최대 5개, 파일당 10MB까지 선택해 공지와 함께 발행하고, 본사 읽음 현황과 점주 `/owner/notices`에서 파일명·용량·다운로드 링크를 확인한다.
+- 공지 첨부 메타데이터는 신규 `franchise_owner_notices.attachments` JSON 컬럼에 저장한다. 기존 DB에 해당 컬럼이 없으면 본사 공지 목록과 점주 포털 대시보드는 첨부 없이 기존 조회로 fallback하고, 첨부 업로드는 `supabase_franchise_owner_notice_attachments_migration.sql` 적용 안내로 막는다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 브라우저 QA는 로컬 production 서버 `http://localhost:3137`에서 본사 공지 첨부 선택, 발행 확인 모달, 발행 완료 알럿, 본사 읽음 현황 첨부 링크, 점주 모바일 `/owner/notices` 다운로드 링크를 확인했다. 같은 QA에서 `attachments`가 없는 기존 응답 기준 본사 공지 목록과 점주 `/owner/opening-tasks`가 로딩 오류 없이 렌더되는 것도 확인했다. 추가로 공지 삭제 확인 모달, 삭제 완료 알럿, 본사 목록 제거를 확인했다.
 
 ### 2026-07-07
 

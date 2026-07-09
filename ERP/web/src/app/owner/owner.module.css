@@ -391,6 +391,42 @@
     white-space: pre-wrap;
 }
 
+.attachmentList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.attachmentLink {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 34px;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #333d4b;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.attachmentLink span {
+    overflow: hidden;
+    max-width: min(360px, 58vw);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachmentLink small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .noticeBanner {
     display: flex;
     flex-wrap: wrap;

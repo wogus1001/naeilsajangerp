@@ -36,6 +36,27 @@ export type OwnerPortalChecklistIssue = {
     readonly tasks: readonly OwnerPortalChecklistTask[];
 };
 
+export const OWNER_NOTICE_ATTACHMENT_POLICY = {
+    maxFiles: 5,
+    maxFileSizeBytes: 10 * 1024 * 1024,
+    acceptedExtensions: [
+        '.pdf',
+        '.doc',
+        '.docx',
+        '.xls',
+        '.xlsx',
+        '.ppt',
+        '.pptx',
+        '.hwp',
+        '.hwpx',
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.webp'
+    ],
+    accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf'
+} as const;
+
 export const DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS: readonly OwnerPortalChecklistTask[] = [
     { id: 'store-basic-info', title: '매장 기본 정보 확인', memo: '사업자 정보, 연락처, 보증금/월세/관리비 등 운영 기본 정보를 점검합니다.' },
     { id: 'operation-hours', title: '영업시간 및 휴무일 확인', memo: '실제 영업시간, 휴무일, 브레이크타임이 본사 기록과 일치하는지 확인합니다.' },
@@ -72,6 +93,15 @@ export type OwnerFileRow = {
     readonly created_at: string | null;
 };
 
+export type OwnerNoticeAttachment = {
+    readonly name: string;
+    readonly mimeType: string;
+    readonly size: number;
+    readonly storageBucket: string;
+    readonly storagePath: string;
+    readonly publicUrl: string;
+};
+
 export type OwnerNoticeRow = {
     readonly id: string;
     readonly company_id: string;
@@ -80,6 +110,7 @@ export type OwnerNoticeRow = {
     readonly body: string;
     readonly status: string | null;
     readonly created_at: string | null;
+    readonly attachments?: unknown;
 };
 
 export type OwnerNoticeRecipient = {
@@ -100,6 +131,49 @@ export type OwnerNoticeWithReadStatus = OwnerNoticeRow & {
 
 export function cleanOwnerText(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
+}
+
+function cleanOwnerString(value: unknown): string {
+    return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function readOwnerFileSize(value: unknown): number {
+    if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value));
+    const parsed = Number(cleanOwnerString(value).replace(/,/g, ''));
+    return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
+}
+
+function getOwnerNoticeAttachmentExtension(fileName: string): string {
+    const dotIndex = fileName.lastIndexOf('.');
+    return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
+}
+
+export function isAcceptedOwnerNoticeAttachmentFileName(fileName: string): boolean {
+    const extension = getOwnerNoticeAttachmentExtension(fileName);
+    return OWNER_NOTICE_ATTACHMENT_POLICY.acceptedExtensions.some(acceptedExtension => acceptedExtension === extension);
+}
+
+function normalizeOwnerNoticeAttachment(value: unknown): OwnerNoticeAttachment | null {
+    if (!isOwnerRecord(value)) return null;
+    const name = cleanOwnerString(value.name);
+    const publicUrl = cleanOwnerString(value.publicUrl);
+    if (!name || !publicUrl) return null;
+    return {
+        name,
+        mimeType: cleanOwnerString(value.mimeType) || 'application/octet-stream',
+        size: readOwnerFileSize(value.size),
+        storageBucket: cleanOwnerString(value.storageBucket),
+        storagePath: cleanOwnerString(value.storagePath),
+        publicUrl
+    };
+}
+
+export function normalizeOwnerNoticeAttachments(value: unknown): readonly OwnerNoticeAttachment[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map(normalizeOwnerNoticeAttachment)
+        .filter((attachment): attachment is OwnerNoticeAttachment => attachment !== null)
+        .slice(0, OWNER_NOTICE_ATTACHMENT_POLICY.maxFiles);
 }
 
 export function buildOwnerPortalLoginPath(input: {

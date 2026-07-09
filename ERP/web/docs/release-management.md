@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-09
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 점주 공지 첨부와 점주 포털 목록 보강 커밋 예정
+  - 주요 기능: 본사 `가맹 운영 > 점주 소통 > 공지/공문`에서 이미지, PDF, 문서 파일을 첨부해 발행하고, 점주 `/owner/notices`에서 파일명과 용량을 확인한 뒤 다운로드할 수 있게 했다. 공지 삭제 시 점주 포털 목록에서도 사라지고, 첨부 Storage 파일과 읽음 기록도 함께 정리한다. 점주 포털의 운영 체크리스트와 제출 이력은 기본 목록을 간소화하고, 상세 확인이 필요한 내용은 펼쳐서 확인하는 흐름으로 정리했다.
+  - 신규 SQL: 기존 점주 포털 SQL 적용 DB에는 `supabase_franchise_owner_notice_attachments_migration.sql` 추가 적용이 필요하다. 이 SQL은 `franchise_owner_notices.attachments` JSON 컬럼을 추가한다. **SQL 등록 필요**.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` / `https://fcerp.co.kr` 확인 예정
+  - 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 production 서버 `http://localhost:3137`에서 본사 공지 첨부 선택, 발행 확인 모달, 발행 완료 알럿, 본사 읽음 현황 첨부 링크, 점주 모바일 `/owner/notices` 다운로드 링크, 공지 삭제 확인 모달과 삭제 완료 알럿을 확인했다. `attachments` 컬럼이 없는 기존 응답 기준 본사 공지 목록과 점주 `/owner/opening-tasks` fallback 렌더도 확인했다.
+  - 남은 이슈: 운영 SQL 적용 후 실계정으로 공지 첨부 업로드, 점주 다운로드, 공지 삭제 시 점주 포털 미노출과 Storage 정리를 live QA한다.
+- 2026-07-09
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `032151c feat(franchise): 점주 체크리스트 공지형 목록화`
   - 주요 기능: 점주 포털 `운영 체크리스트` 기본 화면을 공지/공문처럼 발송 1건 목록 카드와 `총 1건` 페이지 바 형태로 재구성했다. 6개 세부 항목은 기본 화면에 바로 나열하지 않고 `항목별 완료 요청 보기`를 펼쳤을 때만 표시한다. 본사 `점주 소통 > 체크리스트`에서는 `체크리스트 발송 6개 항목`과 `발송 항목 6개` 노출을 제거하고, `발송 현황` 상세에서 가맹점별 완료 요청 상태를 한 줄에 여러 가맹점이 표시되는 그리드로 보정했다. 상태 배지는 `.locationItem` 공용 텍스트 규칙에 밀리지 않도록 세로 중앙 정렬을 고정했다.
   - 신규 SQL: 없음.

@@ -1,15 +1,20 @@
 import { fail, ok } from '@/lib/api-response';
 import { getOwnerSessionContext } from '@/lib/franchise-owner-auth';
 import {
+    readOwnerPortalChecklistIssuesFromLocationData,
     readOwnerPortalChecklistTasksFromLocationData,
     readOwnerProvidedBasicsFromLocationData,
+    normalizeOwnerNoticeAttachments,
     type OwnerFileRow,
     type OwnerNoticeRow,
     type OwnerSubmissionRow
 } from '@/lib/franchise-owner-portal';
+import { isMissingOwnerNoticeAttachmentsColumnError } from '@/lib/franchise-owner-portal-api';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
+
+type OwnerNoticeLegacyRow = Omit<OwnerNoticeRow, 'attachments'>;
 
 export async function GET() {
     try {
@@ -17,18 +22,36 @@ export async function GET() {
         const context = await getOwnerSessionContext(supabaseAdmin);
         if (!context) return fail(401, 'AUTH_REQUIRED', '점주 로그인이 필요합니다.');
 
-        const noticeResult = await supabaseAdmin
+        const noticeResultWithAttachments = await supabaseAdmin
             .from('franchise_owner_notices')
-            .select('id, company_id, location_id, title, body, status, created_at')
+            .select('id, company_id, location_id, title, body, status, created_at, attachments')
             .eq('company_id', context.account.company_id)
             .eq('status', 'published')
             .or(`location_id.is.null,location_id.eq.${context.account.location_id}`)
             .order('created_at', { ascending: false })
             .limit(20)
             .returns<OwnerNoticeRow[]>();
-        if (noticeResult.error) throw noticeResult.error;
+        let noticeRows: readonly OwnerNoticeRow[] = [];
+        if (noticeResultWithAttachments.error) {
+            if (!isMissingOwnerNoticeAttachmentsColumnError(noticeResultWithAttachments.error)) {
+                throw noticeResultWithAttachments.error;
+            }
+            const fallbackNoticeResult = await supabaseAdmin
+                .from('franchise_owner_notices')
+                .select('id, company_id, location_id, title, body, status, created_at')
+                .eq('company_id', context.account.company_id)
+                .eq('status', 'published')
+                .or(`location_id.is.null,location_id.eq.${context.account.location_id}`)
+                .order('created_at', { ascending: false })
+                .limit(20)
+                .returns<OwnerNoticeLegacyRow[]>();
+            if (fallbackNoticeResult.error) throw fallbackNoticeResult.error;
+            noticeRows = (fallbackNoticeResult.data || []).map(notice => ({ ...notice, attachments: [] }));
+        } else {
+            noticeRows = noticeResultWithAttachments.data || [];
+        }
 
-        const noticeIds = (noticeResult.data || []).map(notice => notice.id);
+        const noticeIds = noticeRows.map(notice => notice.id);
         const readResult = noticeIds.length > 0
             ? await supabaseAdmin
                 .from('franchise_owner_notice_reads')
@@ -84,17 +107,19 @@ export async function GET() {
                 address: context.location.address || '',
                 basics: readOwnerProvidedBasicsFromLocationData(context.location.data)
             },
-            notices: (noticeResult.data || []).map(notice => ({
+            notices: noticeRows.map(notice => ({
                 id: notice.id,
                 title: notice.title,
                 body: notice.body,
                 createdAt: notice.created_at,
-                readAt: readMap.get(notice.id) || null
+                readAt: readMap.get(notice.id) || null,
+                attachments: normalizeOwnerNoticeAttachments(notice.attachments)
             })),
             openingProject: {
                 id: context.location.id,
                 status: 'owner_portal_checklist',
-                tasks: readOwnerPortalChecklistTasksFromLocationData(context.location.data)
+                tasks: readOwnerPortalChecklistTasksFromLocationData(context.location.data),
+                issues: readOwnerPortalChecklistIssuesFromLocationData(context.location.data)
             },
             submissions: (submissionResult.data || []).map(submission => ({
                 ...submission,

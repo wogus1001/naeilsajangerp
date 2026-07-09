@@ -33,6 +33,7 @@ create table if not exists public.franchise_owner_notices (
   location_id uuid references public.franchise_locations(id) on delete cascade,
   title text not null,
   body text not null,
+  attachments jsonb not null default '[]'::jsonb,
   status text not null default 'published',
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),

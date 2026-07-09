@@ -6,9 +6,11 @@ import {
     canReviewOwnerSubmission,
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
     getOwnerSubmissionReviewMode,
+    isAcceptedOwnerNoticeAttachmentFileName,
     isOwnerChecklistCompletionSubmission,
     mergeOwnerProvidedBasicsIntoLocationData,
     mergeOwnerPortalChecklistTasksIntoLocationData,
+    normalizeOwnerNoticeAttachments,
     normalizeOwnerPortalChecklistIssues,
     normalizeOwnerProvidedBasics,
     normalizeOwnerPortalChecklistTasks,
@@ -18,6 +20,10 @@ import {
     toOwnerSubmissionStatus,
     toOwnerSubmissionType
 } from './franchise-owner-portal.js';
+import {
+    isMissingOwnerNoticeAttachmentsColumnError,
+    isMissingOwnerPortalSchemaError
+} from './franchise-owner-portal-api.js';
 
 void test('Given company context When building owner portal login path Then a path-based company link is returned', () => {
     const path = buildOwnerPortalLoginPath({ companyId: 'company-123', companyName: '내일' });
@@ -84,6 +90,44 @@ void test('Given owner submission type When checking checklist completion Then o
     assert.equal(isOwnerChecklistCompletionSubmission('facility_request'), false);
     assert.equal(isOwnerChecklistCompletionSubmission('store_info'), false);
     assert.equal(isOwnerChecklistCompletionSubmission('unknown'), false);
+});
+
+void test('Given notice attachment payloads When normalizing Then downloadable file metadata is kept safely', () => {
+    const attachments = normalizeOwnerNoticeAttachments([
+        {
+            name: ' 공문.pdf ',
+            mimeType: ' application/pdf ',
+            size: '1,024',
+            storageBucket: 'property-documents',
+            storagePath: 'franchise-owner-notices/company/notice.pdf',
+            publicUrl: ' https://example.test/notice.pdf '
+        },
+        { name: '원본 없음.png', publicUrl: '' },
+        'invalid'
+    ]);
+
+    assert.equal(attachments.length, 1);
+    assert.equal(attachments[0]?.name, '공문.pdf');
+    assert.equal(attachments[0]?.mimeType, 'application/pdf');
+    assert.equal(attachments[0]?.size, 1024);
+    assert.equal(attachments[0]?.storageBucket, 'property-documents');
+    assert.equal(attachments[0]?.storagePath, 'franchise-owner-notices/company/notice.pdf');
+    assert.equal(attachments[0]?.publicUrl, 'https://example.test/notice.pdf');
+});
+
+void test('Given notice attachment filenames When checking extension Then images and documents are accepted', () => {
+    assert.equal(isAcceptedOwnerNoticeAttachmentFileName('안내문.pdf'), true);
+    assert.equal(isAcceptedOwnerNoticeAttachmentFileName('현장사진.webp'), true);
+    assert.equal(isAcceptedOwnerNoticeAttachmentFileName('공문.hwpx'), true);
+    assert.equal(isAcceptedOwnerNoticeAttachmentFileName('실행파일.exe'), false);
+});
+
+void test('Given Supabase schema errors When checking owner portal schema readiness Then plain objects are detected', () => {
+    assert.equal(isMissingOwnerPortalSchemaError({ message: 'Could not find the franchise_owner_notices table in the schema cache' }), true);
+    assert.equal(isMissingOwnerNoticeAttachmentsColumnError({
+        message: "Could not find the 'attachments' column of 'franchise_owner_notices' in the schema cache"
+    }), true);
+    assert.equal(isMissingOwnerNoticeAttachmentsColumnError({ message: 'franchise_owner_notices table does not exist' }), false);
 });
 
 void test('Given owner checklist tasks When normalizing and merging Then invalid rows are ignored and existing location data is preserved', () => {

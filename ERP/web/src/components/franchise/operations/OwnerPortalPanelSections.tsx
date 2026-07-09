@@ -1,15 +1,19 @@
 "use client";
 
 import React from 'react';
-import { Copy, KeyRound, Send, UserRound } from 'lucide-react';
+import { Copy, Download, KeyRound, Paperclip, Send, Trash2, UserRound, X } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { formatFranchiseFileSize } from '@/lib/franchise-file-attachments';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
     getOwnerSubmissionReviewMode,
     isOwnerChecklistCompletionSubmission,
+    isAcceptedOwnerNoticeAttachmentFileName,
     normalizeOwnerPortalChecklistTasks,
+    OWNER_NOTICE_ATTACHMENT_POLICY,
+    type OwnerNoticeAttachment,
     type OwnerPortalChecklistIssue,
     type OwnerPortalChecklistTask
 } from '@/lib/franchise-owner-portal';
@@ -66,6 +70,7 @@ export type OwnerNotice = {
     readonly body: string;
     readonly status: string | null;
     readonly created_at: string | null;
+    readonly attachments?: readonly OwnerNoticeAttachment[];
     readonly targetCount: number;
     readonly readCount: number;
     readonly unreadCount: number;
@@ -350,6 +355,7 @@ type NoticeSectionProps = {
     readonly selectedLocationIds: readonly string[];
     readonly noticeTitle: string;
     readonly noticeBody: string;
+    readonly noticeFiles: readonly File[];
     readonly isBusy: boolean;
     readonly onNoticeTargetChange: (target: 'all' | 'single') => void;
     readonly onNoticeLocationToggle: (locationId: string) => void;
@@ -357,20 +363,32 @@ type NoticeSectionProps = {
     readonly onNoticeLocationClear: () => void;
     readonly onNoticeTitleChange: (value: string) => void;
     readonly onNoticeBodyChange: (value: string) => void;
+    readonly onNoticeFilesChange: (files: readonly File[]) => void;
     readonly onPublishNotice: () => Promise<boolean>;
+    readonly onDeleteNotice: (noticeId: string) => Promise<boolean>;
 };
 
 type NoticePublishRequest = {
     readonly title: string;
     readonly targetLabel: string;
     readonly targetCount: number;
+    readonly attachmentCount: number;
+};
+
+type NoticeDeleteRequest = {
+    readonly id: string;
+    readonly title: string;
 };
 
 export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
     const [noticeView, setNoticeView] = React.useState<'publish' | 'reads'>('publish');
     const [noticePage, setNoticePage] = React.useState(1);
     const [noticePublishRequest, setNoticePublishRequest] = React.useState<NoticePublishRequest | null>(null);
+    const [noticeDeleteRequest, setNoticeDeleteRequest] = React.useState<NoticeDeleteRequest | null>(null);
+    const [fileSelectionError, setFileSelectionError] = React.useState('');
+    const [successAlertTitle, setSuccessAlertTitle] = React.useState('');
     const [successAlertMessage, setSuccessAlertMessage] = React.useState('');
+    const noticeFileInputRef = React.useRef<HTMLInputElement | null>(null);
     const noticePageCount = Math.max(1, Math.ceil(props.notices.length / OWNER_PORTAL_NOTICE_PAGE_SIZE));
     const safeNoticePage = Math.min(noticePage, noticePageCount);
     const pagedNotices = props.notices.slice((safeNoticePage - 1) * OWNER_PORTAL_NOTICE_PAGE_SIZE, safeNoticePage * OWNER_PORTAL_NOTICE_PAGE_SIZE);
@@ -388,8 +406,36 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
         setNoticePublishRequest({
             title: props.noticeTitle,
             targetLabel: publishTargetLabel,
-            targetCount: publishTargetCount
+            targetCount: publishTargetCount,
+            attachmentCount: props.noticeFiles.length
         });
+    };
+
+    const addNoticeFiles = (fileList: FileList | null) => {
+        const incomingFiles = Array.from(fileList || []);
+        if (incomingFiles.length === 0) return;
+        const remainingCount = OWNER_NOTICE_ATTACHMENT_POLICY.maxFiles - props.noticeFiles.length;
+        if (remainingCount <= 0) {
+            setFileSelectionError(`첨부 파일은 최대 ${OWNER_NOTICE_ATTACHMENT_POLICY.maxFiles}개까지 등록할 수 있습니다.`);
+            return;
+        }
+        const validFiles = incomingFiles
+            .filter(file => (
+                isAcceptedOwnerNoticeAttachmentFileName(file.name)
+                && file.size <= OWNER_NOTICE_ATTACHMENT_POLICY.maxFileSizeBytes
+            ))
+            .slice(0, remainingCount);
+        setFileSelectionError(validFiles.length === incomingFiles.length
+            ? ''
+            : `첨부는 이미지/PDF/문서 파일만, 파일당 ${formatFranchiseFileSize(OWNER_NOTICE_ATTACHMENT_POLICY.maxFileSizeBytes)} 이하로 등록해주세요.`
+        );
+        props.onNoticeFilesChange([...props.noticeFiles, ...validFiles]);
+        if (noticeFileInputRef.current) noticeFileInputRef.current.value = '';
+    };
+
+    const removeNoticeFile = (index: number) => {
+        props.onNoticeFilesChange(props.noticeFiles.filter((_, fileIndex) => fileIndex !== index));
+        if (noticeFileInputRef.current) noticeFileInputRef.current.value = '';
     };
 
     const confirmNoticePublish = async () => {
@@ -400,7 +446,16 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
             ? `${noticePublishRequest.targetLabel}에`
             : `${noticePublishRequest.targetLabel} 대상으로`;
         setNoticeView('reads');
-        setSuccessAlertMessage(`점주 공지를 ${targetLabel} 발행했습니다.\n읽음 현황에서 점주별 확인 상태를 볼 수 있습니다.`);
+        setSuccessAlertTitle('공지 발행 완료');
+        setSuccessAlertMessage(`점주 공지를 ${targetLabel} 발행했습니다.${noticePublishRequest.attachmentCount > 0 ? `\n첨부 파일 ${noticePublishRequest.attachmentCount}개도 함께 전달됐습니다.` : ''}\n읽음 현황에서 점주별 확인 상태를 볼 수 있습니다.`);
+    };
+
+    const confirmNoticeDelete = async () => {
+        if (!noticeDeleteRequest) return;
+        const deleted = await props.onDeleteNotice(noticeDeleteRequest.id);
+        if (!deleted) return;
+        setSuccessAlertTitle('공지 삭제 완료');
+        setSuccessAlertMessage('점주 공지를 삭제했습니다.\n점주 포털 공지 목록에서도 더 이상 보이지 않습니다.');
     };
 
     return (
@@ -475,6 +530,42 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                         ) : null}
                         <input className={styles.locationListSearch} value={props.noticeTitle} placeholder="공지 제목" onChange={event => props.onNoticeTitleChange(event.currentTarget.value)} />
                         <textarea className={styles.ownerPortalTextarea} value={props.noticeBody} placeholder="공지 내용" onChange={event => props.onNoticeBodyChange(event.currentTarget.value)} />
+                        <div className={styles.ownerPortalAttachmentBox}>
+                            <div className={styles.ownerPortalAttachmentHeader}>
+                                <div>
+                                    <strong>첨부 파일</strong>
+                                    <span>이미지, PDF, 문서 파일을 점주 포털 공지에 함께 표시합니다.</span>
+                                </div>
+                                <button type="button" onClick={() => noticeFileInputRef.current?.click()} disabled={props.isBusy}>
+                                    <Paperclip size={14} /> 파일 선택
+                                </button>
+                            </div>
+                            <input
+                                ref={noticeFileInputRef}
+                                className={styles.ownerPortalHiddenFileInput}
+                                type="file"
+                                accept={OWNER_NOTICE_ATTACHMENT_POLICY.accept}
+                                multiple
+                                onChange={event => addNoticeFiles(event.currentTarget.files)}
+                            />
+                            <p>파일당 {formatFranchiseFileSize(OWNER_NOTICE_ATTACHMENT_POLICY.maxFileSizeBytes)} · 최대 {OWNER_NOTICE_ATTACHMENT_POLICY.maxFiles}개</p>
+                            {fileSelectionError ? <div className={styles.ownerPortalError}>{fileSelectionError}</div> : null}
+                            {props.noticeFiles.length > 0 ? (
+                                <div className={styles.ownerPortalAttachmentList}>
+                                    {props.noticeFiles.map((file, index) => (
+                                        <div className={styles.ownerPortalAttachmentItem} key={`${file.name}-${file.size}-${file.lastModified}-${index}`}>
+                                            <div>
+                                                <strong>{file.name}</strong>
+                                                <span>{formatFranchiseFileSize(file.size)}</span>
+                                            </div>
+                                            <button type="button" aria-label={`${file.name} 제거`} onClick={() => removeNoticeFile(index)} disabled={props.isBusy}>
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
                         <button
                             className={styles.primarySmallButton}
                             type="button"
@@ -497,6 +588,24 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                                     <strong>{notice.title}</strong>
                                     <span>{notice.location_id ? getLocationName(props.locations, notice.location_id) : '전체 가맹점'} · {formatDate(notice.created_at)}</span>
                                     <small>{notice.body}</small>
+                                    {notice.attachments && notice.attachments.length > 0 ? (
+                                        <div className={styles.ownerPortalFileStrip}>
+                                            {notice.attachments.map(attachment => (
+                                                <a
+                                                    className={styles.ownerPortalFileLink}
+                                                    href={attachment.publicUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    download={attachment.name}
+                                                    key={`${attachment.storagePath}-${attachment.name}`}
+                                                >
+                                                    <Download size={13} />
+                                                    <span>{attachment.name}</span>
+                                                    <small>{formatFranchiseFileSize(attachment.size)}</small>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    ) : null}
                                     <div className={styles.ownerPortalReadMeter}>
                                         <span>읽음 {notice.readCount}/{notice.targetCount}</span>
                                         <span>{notice.unreadCount}명 미확인</span>
@@ -522,6 +631,16 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                                         )}
                                     </details>
                                 </div>
+                                <div className={styles.locationItemActions}>
+                                    <button
+                                        type="button"
+                                        className={styles.locationDeleteButton}
+                                        disabled={props.isBusy}
+                                        onClick={() => setNoticeDeleteRequest({ id: notice.id, title: notice.title })}
+                                    >
+                                        <Trash2 size={13} /> 삭제
+                                    </button>
+                                </div>
                             </article>
                         ))}
                         {props.notices.length > 0 ? (
@@ -541,7 +660,7 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                 isOpen={noticePublishRequest !== null}
                 title="점주 공지를 발행할까요?"
                 message={noticePublishRequest
-                    ? `${noticePublishRequest.targetLabel}에 공지를 발행합니다.\n제목: ${noticePublishRequest.title}`
+                    ? `${noticePublishRequest.targetLabel}에 공지를 발행합니다.\n제목: ${noticePublishRequest.title}${noticePublishRequest.attachmentCount > 0 ? `\n첨부: ${noticePublishRequest.attachmentCount}개` : ''}`
                     : ''}
                 confirmText="발행하기"
                 cancelText="취소"
@@ -550,13 +669,30 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                     void confirmNoticePublish();
                 }}
             />
+            <ConfirmModal
+                isOpen={noticeDeleteRequest !== null}
+                title="점주 공지를 삭제할까요?"
+                message={noticeDeleteRequest
+                    ? `삭제하면 본사 읽음 현황과 점주 포털 공지 목록에서 함께 사라집니다.\n제목: ${noticeDeleteRequest.title}`
+                    : ''}
+                confirmText="삭제하기"
+                cancelText="취소"
+                isDanger
+                onClose={() => setNoticeDeleteRequest(null)}
+                onConfirm={() => {
+                    void confirmNoticeDelete();
+                }}
+            />
             <AlertModal
                 isOpen={successAlertMessage.length > 0}
                 type="success"
-                title="공지 발행 완료"
+                title={successAlertTitle || '공지 처리 완료'}
                 message={successAlertMessage}
                 buttonText="확인"
-                onClose={() => setSuccessAlertMessage('')}
+                onClose={() => {
+                    setSuccessAlertTitle('');
+                    setSuccessAlertMessage('');
+                }}
             />
         </>
     );
@@ -1041,8 +1177,8 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
                                                 <span>완료 {group.completedCount}/{group.locations.length}</span>
                                                 <span>{group.pendingCount}개 미완료</span>
                                             </div>
-                                            <div className={styles.ownerPortalSubmissionDetails}>
-                                                <div className={styles.ownerPortalSubmissionDetailsTitle}>가맹점별 현황</div>
+                                            <details className={styles.ownerPortalSubmissionDetails}>
+                                                <summary>가맹점별 현황 보기</summary>
                                                 <div className={styles.ownerPortalChecklistStoreGrid}>
                                                     {group.locations.map(locationStatus => (
                                                         <div className={styles.ownerPortalChecklistStoreStatus} key={`${group.key}-${locationStatus.location.id}`}>
@@ -1056,7 +1192,7 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
+                                            </details>
                                         </div>
                                         <div className={styles.locationItemActions}>
                                             <span className={group.pendingCount > 0 ? styles.ownerPortalMutedAction : styles.ownerPortalSuccessPill}>
