@@ -1170,3 +1170,18 @@
 - 신규 SQL: 없음. 기존 `franchise_locations.data.ownerPortalChecklist`와 점주 제출 이력을 사용한다.
 - 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 기존 dev 서버 `127.0.0.1:3000`에서 `내일 / admin / 1234`로 로그인해 `/dashboard/franchise-operations/owner-portal`의 `체크리스트` 탭을 확인했다. `체크리스트 발송`, 전체/개별 가맹점 선택, `발송 현황`, 완료/미완료 표시가 노출되고 console error 0건이었다.
 - 남은 live QA: 운영 실계정으로 체크리스트 전체/개별 발송, 점주 포털 완료 요청, 본사 발송 현황의 완료/미완료 운영점 집계 persistence를 확인한다.
+
+## 2026-07-09 점주 체크리스트 목록화 및 상태 배지 QA
+
+- 범위: 점주 포털 `운영 체크리스트` 항목을 카드 그리드에서 공지처럼 세로 목록형 행으로 정리했다. 본사 `체크리스트 발송` 탭의 `6개 항목` 노출과 요약 카드의 `발송 항목` 카운트를 제거했다.
+- 본사 현황: `발송 현황`은 발송 건을 목록처럼 보여주고, 상세의 가맹점별 완료 요청 상태는 `auto-fit` 그리드로 한 줄에 여러 가맹점이 표시되게 보정했다. `완료`, `미완료`, `진행 중` 상태 배지는 `.locationItem` 공용 텍스트 규칙에 덮이지 않도록 중앙 정렬을 고정했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3155` production build에서 Playwright mock 세션으로 `/owner/opening-tasks` 1280px/390px, `/dashboard/franchise-operations/owner-portal` 1440px/768px/390px를 확인했다. 본사 현황 상세는 데스크톱에서 가맹점 카드 9개가 5열 그리드로 표시되고, `체크리스트 발송 6개 항목`/`발송 항목 6개` 문구는 미노출이며, 상태 배지 계산 스타일은 `display:flex`, `centerOffset:0`, console error 0건이었다. QA 증거: `/tmp/fcerp-owner-checklist-qa-20260709-pass/result.json`.
+
+## 2026-07-09 점주 체크리스트 공지형 발송 목록 재보정 QA
+
+- 범위: 점주 포털 `운영 체크리스트` 기본 화면을 공지/공문처럼 `운영 체크리스트` 발송 1건 목록 카드와 `총 1건` 하단 바 형태로 재구성했다. 6개 세부 항목은 기본 화면에 바로 나열하지 않고 `항목별 완료 요청 보기`를 펼쳤을 때만 완료 요청 행으로 표시한다.
+- 문구: 점주 완료 요청은 승인/반려 흐름이 아니므로 `본사 승인 요청` 표현을 `본사 진행 현황`으로 정리했다.
+- 코드리뷰 보정: 점주 목록 카드 안 진행률 영역이 별도 중첩 카드처럼 보이지 않도록 진행률 박스의 테두리/배경을 제거하고, 발송 현황 상태 배지의 세로 정렬을 computed style 기준으로 재확인했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. `next start -p 3160` production build에서 Playwright mock 세션으로 `/owner/opening-tasks`와 `/dashboard/franchise-operations/owner-portal`을 확인했다. 접힌 기본 화면은 `총 1건`, `1 / 1`, `총 6개 항목 · 6/6 완료 요청`, `항목별 완료 요청 보기`를 표시하고 세부 항목은 숨김 상태였으며, 펼친 뒤에는 6개 완료 요청 행이 표시됐다. 본사 `발송 현황` 상세는 가맹점 카드 9개가 데스크톱 5열로 줄바꿈되고, 상태 배지는 `display:flex`, `align-items:center`, `height:30px`로 중앙 정렬되며, desktop horizontal overflow 0건과 console error 0건이었다. QA 증거: `/tmp/fcerp-owner-checklist-release-qa-20260709/result.json`.

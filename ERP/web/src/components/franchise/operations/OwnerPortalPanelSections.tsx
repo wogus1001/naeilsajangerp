@@ -732,7 +732,7 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
                     className={checklistView === 'issue' ? styles.ownerPortalInlineTabActive : styles.ownerPortalInlineTab}
                     onClick={() => setChecklistView('issue')}
                 >
-                    체크리스트 발송 <span>{normalizedDraftTasks.length}개 항목</span>
+                    체크리스트 발송
                 </button>
                 <button
                     type="button"
@@ -750,10 +750,6 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
                         <div>
                             <span>발송 대상</span>
                             <strong>{targetMode === 'all' ? '전체 가맹점' : selectedLocationSummary}</strong>
-                        </div>
-                        <div>
-                            <span>발송 항목</span>
-                            <strong>{normalizedDraftTasks.length}개</strong>
                         </div>
                         <div>
                             <span>현재 발송 현황</span>
@@ -888,6 +884,10 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
             ) : null}
             {checklistView === 'status' ? (
                 <div className={styles.ownerPortalChecklistRequests}>
+                    <div className={styles.ownerPortalSubHeader}>
+                        <strong>체크리스트별 발송 현황</strong>
+                        <span>공지처럼 발송 건을 목록으로 확인하고, 각 가맹점의 완료 요청 상태를 비교합니다.</span>
+                    </div>
                     <div className={styles.ownerPortalFilterBar}>
                         <input
                             className={styles.locationListSearch}
@@ -910,9 +910,14 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
                                 <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={group.key}>
                                     <div className={styles.locationItemMain}>
                                         <strong>{group.title}</strong>
-                                        <span>대상 {group.locations.length}개 · 완료 {group.completedCount}개 · 미완료 {group.pendingCount}개</span>
+                                        <span>대상 {group.locations.length}개 운영점 · 항목 {group.tasks.length}개</span>
+                                        <small>{group.tasks.map(task => task.title).join(', ')}</small>
+                                        <div className={styles.ownerPortalReadMeter}>
+                                            <span>완료 {group.completedCount}/{group.locations.length}</span>
+                                            <span>{group.pendingCount}개 미완료</span>
+                                        </div>
                                         <details className={styles.ownerPortalSubmissionDetails}>
-                                            <summary>완료/미완료 가맹점 보기</summary>
+                                            <summary>가맹점별 현황 보기</summary>
                                             <div className={styles.ownerPortalChecklistStoreGrid}>
                                                 {group.locations.map(locationStatus => (
                                                     <div className={styles.ownerPortalChecklistStoreStatus} key={`${group.key}-${locationStatus.location.id}`}>

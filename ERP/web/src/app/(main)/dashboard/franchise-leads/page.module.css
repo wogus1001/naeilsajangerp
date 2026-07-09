@@ -5119,7 +5119,7 @@
 
 .ownerPortalChecklistSummary {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
     border-bottom: 1px solid #e5e8eb;
     padding: 14px;
@@ -5515,7 +5515,8 @@
 
 .ownerPortalMutedAction {
     display: inline-flex;
-    min-height: 30px;
+    box-sizing: border-box;
+    height: 30px;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
@@ -5524,19 +5525,22 @@
     padding: 0 10px;
     font-size: 12px;
     font-weight: 850;
+    line-height: 1;
     white-space: nowrap;
 }
 
 .ownerPortalSuccessPill,
 .ownerPortalWarningPill {
     display: inline-flex;
-    min-height: 26px;
+    box-sizing: border-box;
+    height: 28px;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
     padding: 0 9px;
     font-size: 12px;
     font-weight: 850;
+    line-height: 1;
     white-space: nowrap;
 }
 
@@ -5547,6 +5551,37 @@
 
 .ownerPortalWarningPill {
     background: #fff7ed;
+    color: #c2410c;
+}
+
+.locationItem .ownerPortalMutedAction,
+.locationItem .ownerPortalSuccessPill,
+.locationItem .ownerPortalWarningPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.locationItem .ownerPortalMutedAction {
+    height: 30px;
+    color: #6b7684;
+}
+
+.locationItem .ownerPortalSuccessPill,
+.locationItem .ownerPortalWarningPill {
+    height: 28px;
+}
+
+.locationItem .ownerPortalSuccessPill {
+    color: #047857;
+}
+
+.locationItem .ownerPortalWarningPill {
     color: #c2410c;
 }
 
@@ -5794,6 +5829,7 @@
 
 .ownerPortalChecklistStoreGrid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
     border-top: 1px solid #e5e8eb;
     padding: 10px;
@@ -5804,11 +5840,11 @@
     min-width: 0;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     border: 1px solid #e5e8eb;
     border-radius: 8px;
     background: #ffffff;
-    padding: 10px 12px;
+    padding: 9px 10px;
 }
 
 .ownerPortalChecklistStoreStatus div {
@@ -5826,13 +5862,13 @@
 
 .ownerPortalChecklistStoreStatus strong {
     color: #191f28;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 850;
 }
 
 .ownerPortalChecklistStoreStatus span {
     color: #6b7684;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 750;
 }
 
