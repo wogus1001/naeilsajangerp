@@ -434,9 +434,9 @@ Run `supabase_franchise_owner_portal_migration.sql` before enabling the separate
 
 Existing databases that already applied the first owner-portal migration also need `supabase_franchise_owner_company_login_scope.sql`. **SQL 등록 필요**. This follow-up drops the old global owner-login unique constraint and replaces it with a company-scoped `(company_id, login_id_normalized)` unique constraint so different companies can issue the same owner login ID without cross-company collision.
 
-The owner portal does not use the headquarters `/login` route or the `profiles` employee role table. Headquarters staff create per-store owner accounts from `가맹 운영 > 점주 연동`, then owners sign in through `/owner/login` and work in `/owner/dashboard` with a dedicated HttpOnly owner session.
+The owner portal does not use the headquarters `/login` route or the `profiles` employee role table. Headquarters staff create per-store owner accounts from `가맹 운영 > 점주 소통`, then share the company-scoped short link shown in `점주 계정 설정`. Owners sign in through `/owner/login/{companyId}` with only their owner ID and password, then work in `/owner/dashboard` with a dedicated HttpOnly owner session. Legacy `/owner/login?companyId=...` links remain accepted for compatibility.
 
-Owner accounts are scoped to one `franchise_locations.id` and one company. Owners sign in with `회사명 + 아이디 + 비밀번호`; the login API resolves the company first and only checks owner accounts inside that company. Passwords are stored with Node `crypto.scrypt`, and session tokens are stored only as hashes in `franchise_owner_sessions`. Owner APIs do not accept `requesterId`; they resolve access from the owner session cookie.
+Owner accounts are scoped to one `franchise_locations.id` and one company. The company is resolved from the dedicated owner portal link, so the login UI does not expose an editable company-name field. Passwords are stored with Node `crypto.scrypt`, and session tokens are stored only as hashes in `franchise_owner_sessions`. Owner APIs do not accept `requesterId`; they resolve access from the owner session cookie.
 
 The 1차 workflow supports:
 

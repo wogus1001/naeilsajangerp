@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    buildOwnerPortalLoginPath,
     buildOwnerSubmissionTitle,
     canReviewOwnerSubmission,
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
@@ -14,6 +15,17 @@ import {
     toOwnerSubmissionStatus,
     toOwnerSubmissionType
 } from './franchise-owner-portal.js';
+
+void test('Given company context When building owner portal login path Then a path-based company link is returned', () => {
+    const path = buildOwnerPortalLoginPath({ companyId: 'company-123', companyName: '내일' });
+
+    assert.equal(path, '/owner/login/company-123');
+    assert.equal(path.includes('company='), false);
+});
+
+void test('Given no company context When building owner portal login path Then base login path is returned', () => {
+    assert.equal(buildOwnerPortalLoginPath({ companyId: '', companyName: ' ' }), '/owner/login');
+});
 
 void test('Given owner basics payload When normalizing Then only trimmed string fields are kept', () => {
     const basics = normalizeOwnerProvidedBasics({

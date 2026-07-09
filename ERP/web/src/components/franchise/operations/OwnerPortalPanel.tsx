@@ -4,7 +4,7 @@ import React from 'react';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
-import type { OwnerPortalChecklistTask } from '@/lib/franchise-owner-portal';
+import { buildOwnerPortalLoginPath, type OwnerPortalChecklistTask } from '@/lib/franchise-owner-portal';
 import type { FranchiseLocation } from './types';
 import {
     OwnerPortalAccountsSection,
@@ -58,6 +58,10 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
     const [message, setMessage] = React.useState('');
     const [error, setError] = React.useState('');
     const [isBusy, setIsBusy] = React.useState(false);
+    const ownerPortalLoginPath = React.useMemo(() => buildOwnerPortalLoginPath({
+        companyId: locations.find(location => location.companyId)?.companyId || null,
+        companyName
+    }), [companyName, locations]);
 
     const load = React.useCallback(async () => {
         if (!userId) return;
@@ -241,6 +245,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                 <OwnerPortalAccountsSection
                     locations={locations}
                     accounts={accounts}
+                    ownerPortalLoginPath={ownerPortalLoginPath}
                     locationId={locationId}
                     loginId={loginId}
                     ownerName={ownerName}

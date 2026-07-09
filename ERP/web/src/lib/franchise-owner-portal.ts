@@ -96,6 +96,14 @@ export function cleanOwnerText(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+export function buildOwnerPortalLoginPath(input: {
+    readonly companyId?: string | null;
+    readonly companyName?: string | null;
+}): string {
+    const companyId = cleanOwnerText(input.companyId);
+    return companyId ? `/owner/login/${encodeURIComponent(companyId)}` : '/owner/login';
+}
+
 export function isOwnerRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
