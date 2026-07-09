@@ -1140,11 +1140,11 @@
 ## 2026-07-08 점주 포털 분리 로그인 MVP QA
 
 - 범위: 점주 화면을 기존 본사 `/login`/`profiles` 권한 체계와 분리해 `/owner/login`, `/owner/dashboard`로 추가했다. 점주 API는 `requesterId`를 받지 않고 `fc_owner_session` HttpOnly 쿠키로만 인증한다.
-- 본사 연동: `가맹 운영 > 점주 연동`에서 운영점별 점주 계정 생성, 임시 비밀번호 재발급, 활성/중지, 공지 발행, 제출 큐 승인/반려/보관 처리를 제공한다. 가맹점 목록 행에는 `점주 계정` 진입 버튼을 추가했다.
+- 본사 연동: `가맹 운영 > 점주 소통`에서 운영점별 점주 계정 생성, 임시 비밀번호 재발급, 활성/중지, 공지 발행, 제출 처리/보관을 제공한다. 가맹점 목록 행에는 `점주 계정 설정` 진입 버튼을 추가했다.
 - 점주 기능: 내 매장 기본 정보 제출, 공지 읽음 처리, 오픈 체크리스트 완료 요청, 시설/고장 문의, 최근 제출 이력을 제공한다. 체크리스트 완료 요청은 본사 승인 전에는 오픈 준비 프로젝트 task를 완료로 바꾸지 않는다.
 - 신규 SQL: `supabase_franchise_owner_portal_migration.sql`을 추가했다. 점주 계정, 점주 세션, 공지/읽음, 제출 이력, 업로드 파일 메타 테이블과 RLS 정책을 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts` 7건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Production build를 `next start -p 3142`로 띄워 `/owner/login`, `/owner/dashboard`가 200으로 렌더링되는 것을 확인했다.
-- 남은 live QA: SQL 적용 후 `내일 / admin / 1234`로 본사 로그인, 가맹점 목록의 `점주 계정` 또는 `점주 연동` 탭에서 계정 생성, `/owner/login` 점주 로그인, 공지 읽음, 매장 정보 제출, 체크리스트 완료 요청, 시설 문의 등록, 본사 큐 처리 persistence를 확인한다.
+- 남은 live QA: SQL 적용 후 `내일 / admin / 1234`로 본사 로그인, 가맹점 목록의 `점주 계정 설정` 또는 `점주 소통` 탭에서 계정 생성, `/owner/login/{companyId}` 점주 로그인, 공지 읽음, 매장 정보 제출, 체크리스트 완료 요청, 시설 문의 등록, 본사 제출 처리 persistence를 확인한다.
 
 ## 2026-07-08 점주 포털 회사별 로그인 및 운영 체크리스트 리뷰 QA
 
@@ -1154,3 +1154,11 @@
 - 신규 SQL: 기존 점주 포털 SQL 적용 DB에는 `supabase_franchise_owner_company_login_scope.sql`을 추가 적용해야 한다. 이 SQL은 기존 전역 점주 로그인 ID unique 제약을 제거하고 회사별 unique 제약을 추가한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts src/lib/franchise-lead-contract-checklist.test.mts` 20건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright로 `http://localhost:3137/owner/login` 모바일 390px에서 회사명/아이디/비밀번호 입력 구조와 console error 0건을 확인했고, `내일 / admin` 본사 세션으로 `/dashboard/franchise-operations/owner-portal`에서 `공지/공문`, `체크리스트`, `제출 처리`, `점주 계정 설정` 탭 노출을 확인했다.
 - 남은 live QA: 운영 SQL 적용 후 서로 다른 회사에서 같은 점주 아이디를 발급할 수 있는지, `/owner/login`에서 회사명을 잘못 입력하면 다른 회사 점주 계정으로 로그인되지 않는지, 운영 체크리스트 저장/완료 요청/보관 처리가 새로고침 후 유지되는지 확인한다.
+
+## 2026-07-09 점주 포털 단축 링크 및 체크리스트 배포 QA
+
+- 범위: 점주 포털 회사별 로그인 링크를 `/owner/login/{companyId}` 단축 경로로 추가하고, 전용 링크로 접근한 점주 로그인 화면에서는 회사명 입력 필드를 숨겼다. 기존 `/owner/login?companyId=...` 쿼리 링크는 호환용으로 유지한다.
+- 본사 연동: `가맹 운영 > 점주 소통 > 점주 계정 설정`에서 회사별 점주 포털 링크를 복사할 수 있다. 운영 체크리스트는 전체 가맹점 또는 선택한 복수 운영점에 한 번에 저장할 수 있게 정리했다.
+- 신규 SQL: 없음. 기존 점주 포털 SQL과 회사별 로그인 ID scope SQL을 사용한다.
+- 검증: 기능 브랜치와 release worktree에서 `git diff --check`, `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/owner/login/92924bd6-b2a1-49bb-844b-05eabcc51bbf`와 `curl -I -L https://www.fcerp.co.kr/login`는 200 응답이었다.
+- 남은 live QA: 운영 실계정으로 `점주 계정 설정` 링크 복사, 전용 링크 로그인, 운영 체크리스트 전체/복수 운영점 저장과 점주 화면 완료 요청까지 확인한다.
