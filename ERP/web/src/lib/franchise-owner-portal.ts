@@ -30,6 +30,12 @@ export type OwnerPortalChecklistTask = {
     readonly memo: string;
 };
 
+export type OwnerPortalChecklistIssue = {
+    readonly id: string;
+    readonly issuedAt: string | null;
+    readonly tasks: readonly OwnerPortalChecklistTask[];
+};
+
 export const DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS: readonly OwnerPortalChecklistTask[] = [
     { id: 'store-basic-info', title: '매장 기본 정보 확인', memo: '사업자 정보, 연락처, 보증금/월세/관리비 등 운영 기본 정보를 점검합니다.' },
     { id: 'operation-hours', title: '영업시간 및 휴무일 확인', memo: '실제 영업시간, 휴무일, 브레이크타임이 본사 기록과 일치하는지 확인합니다.' },
@@ -161,17 +167,51 @@ export function normalizeOwnerPortalChecklistTasks(value: unknown): readonly Own
         .filter((task): task is OwnerPortalChecklistTask => task !== null);
 }
 
+function normalizeOwnerChecklistIssue(value: unknown, index: number): OwnerPortalChecklistIssue | null {
+    if (!isOwnerRecord(value)) return null;
+    const tasks = normalizeOwnerPortalChecklistTasks(value.tasks);
+    if (tasks.length === 0) return null;
+    return {
+        id: cleanOwnerText(value.id) || `owner-checklist-issue-${index + 1}`,
+        issuedAt: cleanOwnerText(value.issuedAt) || null,
+        tasks
+    };
+}
+
+export function normalizeOwnerPortalChecklistIssues(value: unknown): readonly OwnerPortalChecklistIssue[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item, index) => normalizeOwnerChecklistIssue(item, index))
+        .filter((issue): issue is OwnerPortalChecklistIssue => issue !== null)
+        .slice(0, 50);
+}
+
 export function readOwnerPortalChecklistTasksFromLocationData(value: unknown): readonly OwnerPortalChecklistTask[] {
     const record = isOwnerRecord(value) ? value : {};
     return normalizeOwnerPortalChecklistTasks(record.ownerPortalChecklist);
 }
 
+export function readOwnerPortalChecklistIssuesFromLocationData(value: unknown): readonly OwnerPortalChecklistIssue[] {
+    const record = isOwnerRecord(value) ? value : {};
+    return normalizeOwnerPortalChecklistIssues(record.ownerPortalChecklistIssues);
+}
+
 export function mergeOwnerPortalChecklistTasksIntoLocationData(
     locationData: unknown,
-    tasks: readonly OwnerPortalChecklistTask[]
+    tasks: readonly OwnerPortalChecklistTask[],
+    issue?: OwnerPortalChecklistIssue
 ): Record<string, unknown> {
     const current = isOwnerRecord(locationData) ? locationData : {};
-    return { ...current, ownerPortalChecklist: normalizeOwnerPortalChecklistTasks(tasks) };
+    const normalizedTasks = normalizeOwnerPortalChecklistTasks(tasks);
+    const currentIssues = readOwnerPortalChecklistIssuesFromLocationData(current);
+    const nextIssue = normalizeOwnerChecklistIssue(issue, 0);
+    const nextData: Record<string, unknown> = { ...current, ownerPortalChecklist: normalizedTasks };
+    if (nextIssue || current.ownerPortalChecklistIssues !== undefined) {
+        nextData.ownerPortalChecklistIssues = nextIssue
+            ? [nextIssue, ...currentIssues.filter(currentIssue => currentIssue.id !== nextIssue.id)].slice(0, 50)
+            : currentIssues;
+    }
+    return nextData;
 }
 
 export function buildOwnerSubmissionTitle(type: OwnerSubmissionType, fallback: string): string {

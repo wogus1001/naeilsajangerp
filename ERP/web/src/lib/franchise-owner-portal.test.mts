@@ -9,8 +9,10 @@ import {
     isOwnerChecklistCompletionSubmission,
     mergeOwnerProvidedBasicsIntoLocationData,
     mergeOwnerPortalChecklistTasksIntoLocationData,
+    normalizeOwnerPortalChecklistIssues,
     normalizeOwnerProvidedBasics,
     normalizeOwnerPortalChecklistTasks,
+    readOwnerPortalChecklistIssuesFromLocationData,
     readOwnerPortalChecklistTasksFromLocationData,
     readOwnerProvidedBasicsFromLocationData,
     toOwnerSubmissionStatus,
@@ -100,6 +102,40 @@ void test('Given owner checklist tasks When normalizing and merging Then invalid
     assert.equal(readBack[0]?.memo, '주방 포함');
     assert.equal(readBack[1]?.id, 'owner-checklist-3');
     assert.equal(DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS.length > 0, true);
+});
+
+void test('Given owner checklist issue When merging Then current tasks and sent issue history are both readable', () => {
+    const tasks = normalizeOwnerPortalChecklistTasks([
+        { id: 'task-1', title: '매장 정보 확인', memo: '계약 정보와 비교' }
+    ]);
+    const merged = mergeOwnerPortalChecklistTasksIntoLocationData(
+        { source: 'hq' },
+        tasks,
+        { id: 'issue-1', issuedAt: '2026-07-09T01:00:00.000Z', tasks }
+    );
+    const readTasks = readOwnerPortalChecklistTasksFromLocationData(merged);
+    const readIssues = readOwnerPortalChecklistIssuesFromLocationData(merged);
+
+    assert.equal(merged.source, 'hq');
+    assert.equal(readTasks[0]?.id, 'task-1');
+    assert.equal(readIssues.length, 1);
+    assert.equal(readIssues[0]?.id, 'issue-1');
+    assert.equal(readIssues[0]?.issuedAt, '2026-07-09T01:00:00.000Z');
+    assert.equal(readIssues[0]?.tasks[0]?.title, '매장 정보 확인');
+});
+
+void test('Given owner checklist issue history When normalizing Then invalid issues are ignored and latest entries are kept', () => {
+    const issues = normalizeOwnerPortalChecklistIssues([
+        { id: 'issue-1', issuedAt: '2026-07-09T01:00:00.000Z', tasks: [{ id: 'task-1', title: ' 확인 ', memo: ' 메모 ' }] },
+        { id: 'empty', tasks: [] },
+        { id: '', issuedAt: '', tasks: [{ title: '추가 확인' }] }
+    ]);
+
+    assert.equal(issues.length, 2);
+    assert.equal(issues[0]?.id, 'issue-1');
+    assert.equal(issues[0]?.tasks[0]?.title, '확인');
+    assert.equal(issues[1]?.id, 'owner-checklist-issue-3');
+    assert.equal(issues[1]?.issuedAt, null);
 });
 
 void test('Given no owner portal checklist in location data When reading Then no opening-project defaults are injected', () => {

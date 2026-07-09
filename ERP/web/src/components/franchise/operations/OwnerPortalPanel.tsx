@@ -37,12 +37,35 @@ type JsonRequestInit = {
     readonly headers?: Record<string, string>;
 };
 
+type ChecklistSaveResult = {
+    readonly ok: boolean;
+    readonly issueKey?: string;
+};
+
 async function requestJson<T>(url: string, init?: JsonRequestInit): Promise<T> {
     const headers = await getApiAuthHeaders(init?.headers);
     const response = await fetch(url, { ...init, headers, cache: 'no-store' });
     const payload: unknown = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<T>(payload);
+}
+
+function countChecklistIssues(checklists: readonly OwnerChecklistSetting[]): number {
+    const keys = new Set<string>();
+    checklists.forEach(checklist => {
+        if (checklist.issues && checklist.issues.length > 0) {
+            checklist.issues.forEach(issue => keys.add(issue.id));
+            return;
+        }
+        if (checklist.tasks.length > 0) {
+            keys.add(JSON.stringify(checklist.tasks.map(task => ({
+                id: task.id,
+                title: task.title,
+                memo: task.memo
+            }))));
+        }
+    });
+    return keys.size;
 }
 
 export function OwnerPortalPanel({ userId, companyName, locations, selectedLocationId }: OwnerPortalPanelProps) {
@@ -69,7 +92,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
     const generalSubmissionsCount = submissions.filter(submission => (
         !isOwnerChecklistCompletionSubmission(submission.submission_type)
     )).length;
-    const issuedChecklistLocationCount = checklists.filter(checklist => checklist.tasks.length > 0).length;
+    const issuedChecklistCount = countChecklistIssues(checklists);
 
     const load = React.useCallback(async () => {
         if (!userId) return;
@@ -162,7 +185,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
         }
     };
 
-    const publishNotice = async () => {
+    const publishNotice = async (): Promise<boolean> => {
         setIsBusy(true);
         setError('');
         setMessage('');
@@ -185,14 +208,16 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
             setNoticeBody('');
             setMessage(noticeTarget === 'single' ? `선택한 운영점 ${targetLocationIds.length}곳에 점주 공지가 발행됐습니다.` : '전체 가맹점에 점주 공지가 발행됐습니다.');
             await load();
+            return true;
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : '공지 발행에 실패했습니다.');
+            return false;
         } finally {
             setIsBusy(false);
         }
     };
 
-    const saveChecklists = async (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]) => {
+    const saveChecklists = async (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]): Promise<ChecklistSaveResult> => {
         setIsBusy(true);
         setError('');
         setMessage('');
@@ -208,12 +233,14 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                 return Array.from(nextByLocationId.values());
             });
             setMessage(locationIds.length > 1
-                ? `운영 체크리스트를 ${locationIds.length}개 운영점에 저장했습니다.`
-                : '운영점 체크리스트를 저장했습니다.'
+                ? `운영 체크리스트를 ${locationIds.length}개 운영점에 발송했습니다.`
+                : '운영점에 운영 체크리스트를 발송했습니다.'
             );
             await load();
+            return { ok: true, issueKey: data.checklists.find(checklist => checklist.issues?.[0]?.id)?.issues?.[0]?.id };
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : '운영 체크리스트를 저장하지 못했습니다.');
+            setError(caught instanceof Error ? caught.message : '운영 체크리스트를 발송하지 못했습니다.');
+            return { ok: false };
         } finally {
             setIsBusy(false);
         }
@@ -243,7 +270,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
             <OwnerPortalViewTabs
                 activeView={activeView}
                 accountsCount={accounts.length}
-                checklistsCount={issuedChecklistLocationCount}
+                checklistsCount={issuedChecklistCount}
                 noticesCount={notices.length}
                 submissionsCount={generalSubmissionsCount}
                 onChange={setActiveView}
@@ -283,7 +310,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                     onNoticeLocationClear={() => setNoticeLocationIds([])}
                     onNoticeTitleChange={setNoticeTitle}
                     onNoticeBodyChange={setNoticeBody}
-                    onPublishNotice={() => void publishNotice()}
+                    onPublishNotice={publishNotice}
                 />
             ) : null}
             {activeView === 'checklists' ? (
@@ -292,7 +319,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                     checklists={checklists}
                     submissions={submissions}
                     isBusy={isBusy}
-                    onSaveChecklists={(locationIds, tasks) => void saveChecklists(locationIds, tasks)}
+                    onSaveChecklists={saveChecklists}
                 />
             ) : null}
             {activeView === 'submissions' ? (

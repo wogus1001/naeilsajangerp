@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { fail, ok } from '@/lib/api-response';
 import {
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
@@ -5,7 +6,9 @@ import {
     isOwnerRecord,
     mergeOwnerPortalChecklistTasksIntoLocationData,
     normalizeOwnerPortalChecklistTasks,
+    readOwnerPortalChecklistIssuesFromLocationData,
     readOwnerPortalChecklistTasksFromLocationData,
+    type OwnerPortalChecklistIssue,
     type OwnerPortalChecklistTask
 } from '@/lib/franchise-owner-portal';
 import {
@@ -34,6 +37,7 @@ type LocationChecklistPayload = {
     readonly address: string;
     readonly status: string;
     readonly tasks: readonly OwnerPortalChecklistTask[];
+    readonly issues: readonly OwnerPortalChecklistIssue[];
 };
 
 function toChecklistPayload(location: LocationChecklistRow): LocationChecklistPayload {
@@ -42,8 +46,19 @@ function toChecklistPayload(location: LocationChecklistRow): LocationChecklistPa
         locationName: location.name || '운영점',
         address: location.address || location.region || '',
         status: location.status || '',
-        tasks: readOwnerPortalChecklistTasksFromLocationData(location.data)
+        tasks: readOwnerPortalChecklistTasksFromLocationData(location.data),
+        issues: readOwnerPortalChecklistIssuesFromLocationData(location.data)
     };
+}
+
+function buildIssuedChecklistTasks(
+    issueId: string,
+    tasks: readonly OwnerPortalChecklistTask[]
+): readonly OwnerPortalChecklistTask[] {
+    return tasks.map((task, index) => ({
+        ...task,
+        id: `${issueId}:${task.id || `task-${index + 1}`}`
+    }));
 }
 
 function readLocationIds(value: unknown): readonly string[] {
@@ -125,20 +140,31 @@ export async function PUT(request: Request) {
             return fail(404, 'NOT_FOUND', '선택한 운영점 중 확인할 수 없는 항목이 있습니다.');
         }
 
+        const issuedAt = new Date().toISOString();
+        const issueId = `owner-checklist-issue-${randomUUID()}`;
+        const issuedTasks = buildIssuedChecklistTasks(issueId, nextTasks);
+        const issue: OwnerPortalChecklistIssue = {
+            id: issueId,
+            issuedAt,
+            tasks: issuedTasks
+        };
+        const savedChecklists: LocationChecklistPayload[] = [];
         for (const location of locations) {
+            const nextData = mergeOwnerPortalChecklistTasksIntoLocationData(location.data, issuedTasks, issue);
             const { error } = await authResult.auth.supabaseAdmin
                 .from('franchise_locations')
                 .update({
-                    data: mergeOwnerPortalChecklistTasksIntoLocationData(location.data, nextTasks),
-                    updated_at: new Date().toISOString()
+                    data: nextData,
+                    updated_at: issuedAt
                 })
                 .eq('id', location.id)
                 .eq('company_id', companyScope.scope.companyId);
             if (error) throw error;
+            savedChecklists.push(toChecklistPayload({ ...location, data: nextData }));
         }
-        return ok({ checklists: locations.map(location => ({ ...toChecklistPayload(location), tasks: nextTasks })) });
+        return ok({ checklists: savedChecklists });
     } catch (error) {
         console.error('Owner portal checklists PUT error:', error);
-        return fail(500, 'INTERNAL_ERROR', '점주 체크리스트를 저장하지 못했습니다.');
+        return fail(500, 'INTERNAL_ERROR', '점주 체크리스트를 발송하지 못했습니다.');
     }
 }
