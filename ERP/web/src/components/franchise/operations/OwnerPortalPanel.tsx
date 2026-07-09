@@ -267,6 +267,21 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
         }
     };
 
+    const openNoticeAttachment = async (attachment: OwnerNoticeAttachment): Promise<void> => {
+        setError('');
+        try {
+            const params = new URLSearchParams({
+                requesterId: userId,
+                storagePath: attachment.storagePath
+            });
+            if (companyName) params.set('company', companyName);
+            const data = await requestJson<{ readonly url: string }>(`/api/franchise-owner-portal/notices/attachments?${params.toString()}`);
+            window.open(data.url, '_blank', 'noopener,noreferrer');
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : '첨부 파일을 열지 못했습니다.');
+        }
+    };
+
     const saveChecklists = async (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]): Promise<ChecklistSaveResult> => {
         setIsBusy(true);
         setError('');
@@ -364,6 +379,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                     onNoticeFilesChange={setNoticeFiles}
                     onPublishNotice={publishNotice}
                     onDeleteNotice={deleteNotice}
+                    onOpenNoticeAttachment={openNoticeAttachment}
                 />
             ) : null}
             {activeView === 'checklists' ? (

@@ -366,6 +366,7 @@ type NoticeSectionProps = {
     readonly onNoticeFilesChange: (files: readonly File[]) => void;
     readonly onPublishNotice: () => Promise<boolean>;
     readonly onDeleteNotice: (noticeId: string) => Promise<boolean>;
+    readonly onOpenNoticeAttachment: (attachment: OwnerNoticeAttachment) => Promise<void>;
 };
 
 type NoticePublishRequest = {
@@ -591,18 +592,18 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
                                     {notice.attachments && notice.attachments.length > 0 ? (
                                         <div className={styles.ownerPortalFileStrip}>
                                             {notice.attachments.map(attachment => (
-                                                <a
+                                                <button
                                                     className={styles.ownerPortalFileLink}
-                                                    href={attachment.publicUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    download={attachment.name}
+                                                    type="button"
                                                     key={`${attachment.storagePath}-${attachment.name}`}
+                                                    onClick={() => {
+                                                        void props.onOpenNoticeAttachment(attachment);
+                                                    }}
                                                 >
                                                     <Download size={13} />
                                                     <span>{attachment.name}</span>
                                                     <small>{formatFranchiseFileSize(attachment.size)}</small>
-                                                </a>
+                                                </button>
                                             ))}
                                         </div>
                                     ) : null}

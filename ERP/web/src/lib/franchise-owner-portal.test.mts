@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    buildOwnerNoticeAttachmentDownloadUrl,
+    buildOwnerPortalNoticeAttachmentDownloadUrl,
     buildOwnerPortalLoginPath,
     buildOwnerSubmissionTitle,
     canReviewOwnerSubmission,
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
     getOwnerSubmissionReviewMode,
+    isAcceptedOwnerNoticeAttachmentBytes,
     isAcceptedOwnerNoticeAttachmentFileName,
+    isAcceptedOwnerNoticeAttachmentMime,
     isOwnerChecklistCompletionSubmission,
     mergeOwnerProvidedBasicsIntoLocationData,
     mergeOwnerPortalChecklistTasksIntoLocationData,
@@ -14,6 +18,8 @@ import {
     normalizeOwnerPortalChecklistIssues,
     normalizeOwnerProvidedBasics,
     normalizeOwnerPortalChecklistTasks,
+    resolveOwnerNoticeAttachmentsForCompany,
+    selectOwnerNoticeAttachmentsForCompany,
     readOwnerPortalChecklistIssuesFromLocationData,
     readOwnerPortalChecklistTasksFromLocationData,
     readOwnerProvidedBasicsFromLocationData,
@@ -102,7 +108,12 @@ void test('Given notice attachment payloads When normalizing Then downloadable f
             storagePath: 'franchise-owner-notices/company/notice.pdf',
             publicUrl: ' https://example.test/notice.pdf '
         },
-        { name: '원본 없음.png', publicUrl: '' },
+        { name: '원본 없음.png', publicUrl: 'https://example.test/raw.png' },
+        {
+            name: '실행파일.exe',
+            storageBucket: 'property-documents',
+            storagePath: 'franchise-owner-notices/company/bad.exe'
+        },
         'invalid'
     ]);
 
@@ -112,7 +123,7 @@ void test('Given notice attachment payloads When normalizing Then downloadable f
     assert.equal(attachments[0]?.size, 1024);
     assert.equal(attachments[0]?.storageBucket, 'property-documents');
     assert.equal(attachments[0]?.storagePath, 'franchise-owner-notices/company/notice.pdf');
-    assert.equal(attachments[0]?.publicUrl, 'https://example.test/notice.pdf');
+    assert.equal(attachments[0]?.downloadUrl, undefined);
 });
 
 void test('Given notice attachment filenames When checking extension Then images and documents are accepted', () => {
@@ -120,6 +131,72 @@ void test('Given notice attachment filenames When checking extension Then images
     assert.equal(isAcceptedOwnerNoticeAttachmentFileName('현장사진.webp'), true);
     assert.equal(isAcceptedOwnerNoticeAttachmentFileName('공문.hwpx'), true);
     assert.equal(isAcceptedOwnerNoticeAttachmentFileName('실행파일.exe'), false);
+});
+
+void test('Given notice attachment mime and bytes When checking file type Then extension spoofing is rejected', () => {
+    assert.equal(isAcceptedOwnerNoticeAttachmentMime('안내문.pdf', 'application/pdf'), true);
+    assert.equal(isAcceptedOwnerNoticeAttachmentMime('안내문.pdf', 'application/x-msdownload'), false);
+    assert.equal(isAcceptedOwnerNoticeAttachmentBytes('안내문.pdf', new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])), true);
+    assert.equal(isAcceptedOwnerNoticeAttachmentBytes('안내문.pdf', new Uint8Array([0x4d, 0x5a, 0x90, 0x00])), false);
+    assert.equal(isAcceptedOwnerNoticeAttachmentBytes('공문.hwpx', new Uint8Array([0x50, 0x4b, 0x03, 0x04])), true);
+});
+
+void test('Given notice attachment metadata When resolving for company Then only company storage paths are exposed', () => {
+    const attachments = resolveOwnerNoticeAttachmentsForCompany({
+        companyId: 'company-1',
+        attachments: [
+            {
+                name: '공지.pdf',
+                mimeType: 'application/pdf',
+                size: 1234,
+                storageBucket: 'property-documents',
+                storagePath: 'franchise-owner-notices/company-1/notice.pdf',
+                publicUrl: 'https://untrusted.example/notice.pdf'
+            },
+            {
+                name: '다른 회사.pdf',
+                mimeType: 'application/pdf',
+                size: 1234,
+                storageBucket: 'property-documents',
+                storagePath: 'franchise-owner-notices/company-2/notice.pdf',
+                publicUrl: 'https://untrusted.example/other.pdf'
+            }
+        ],
+        getDownloadUrl: (bucket, storagePath) => `https://app.example/download?bucket=${bucket}&path=${storagePath}`
+    });
+
+    assert.equal(attachments.length, 1);
+    assert.equal(attachments[0]?.downloadUrl, 'https://app.example/download?bucket=property-documents&path=franchise-owner-notices/company-1/notice.pdf');
+});
+
+void test('Given notice attachment metadata When selecting for storage Then generated download URLs are not stored', () => {
+    const attachments = selectOwnerNoticeAttachmentsForCompany({
+        companyId: 'company-1',
+        attachments: [{
+            name: '공지.pdf',
+            mimeType: 'application/pdf',
+            size: 1234,
+            storageBucket: 'property-documents',
+            storagePath: 'franchise-owner-notices/company-1/notice.pdf',
+            publicUrl: 'https://untrusted.example/notice.pdf',
+            downloadUrl: 'https://untrusted.example/download'
+        }]
+    });
+
+    assert.equal(attachments.length, 1);
+    assert.equal(attachments[0]?.downloadUrl, undefined);
+});
+
+void test('Given notice attachment storage path When building download URLs Then app routes are encoded', () => {
+    const storagePath = 'franchise-owner-notices/company-1/공지 문서.pdf';
+    assert.equal(
+        buildOwnerNoticeAttachmentDownloadUrl(storagePath),
+        '/api/owner/notices/attachments?storagePath=franchise-owner-notices%2Fcompany-1%2F%EA%B3%B5%EC%A7%80%20%EB%AC%B8%EC%84%9C.pdf'
+    );
+    assert.equal(
+        buildOwnerPortalNoticeAttachmentDownloadUrl(storagePath),
+        '/api/franchise-owner-portal/notices/attachments?storagePath=franchise-owner-notices%2Fcompany-1%2F%EA%B3%B5%EC%A7%80%20%EB%AC%B8%EC%84%9C.pdf'
+    );
 });
 
 void test('Given Supabase schema errors When checking owner portal schema readiness Then plain objects are detected', () => {

@@ -1,10 +1,11 @@
 import { fail, ok } from '@/lib/api-response';
 import { getOwnerSessionContext } from '@/lib/franchise-owner-auth';
 import {
+    buildOwnerNoticeAttachmentDownloadUrl,
     readOwnerPortalChecklistIssuesFromLocationData,
     readOwnerPortalChecklistTasksFromLocationData,
     readOwnerProvidedBasicsFromLocationData,
-    normalizeOwnerNoticeAttachments,
+    resolveOwnerNoticeAttachmentsForCompany,
     type OwnerFileRow,
     type OwnerNoticeRow,
     type OwnerSubmissionRow
@@ -113,7 +114,11 @@ export async function GET() {
                 body: notice.body,
                 createdAt: notice.created_at,
                 readAt: readMap.get(notice.id) || null,
-                attachments: normalizeOwnerNoticeAttachments(notice.attachments)
+                attachments: resolveOwnerNoticeAttachmentsForCompany({
+                    companyId: context.account.company_id,
+                    attachments: notice.attachments,
+                    getDownloadUrl: (_bucket, storagePath) => buildOwnerNoticeAttachmentDownloadUrl(storagePath)
+                })
             })),
             openingProject: {
                 id: context.location.id,

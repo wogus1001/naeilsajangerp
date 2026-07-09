@@ -66,22 +66,25 @@ function OwnerNoticesContent({ notices, reload }: { readonly notices: readonly O
                             </div>
                             <span className={styles.itemMeta}>{formatOwnerDate(notice.createdAt)}</span>
                             <p>{notice.body}</p>
-                            {notice.attachments && notice.attachments.length > 0 ? (
+                            {notice.attachments && notice.attachments.some(attachment => attachment.downloadUrl) ? (
                                 <div className={styles.attachmentList}>
-                                    {notice.attachments.map(attachment => (
-                                        <a
-                                            className={styles.attachmentLink}
-                                            href={attachment.publicUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            download={attachment.name}
-                                            key={`${attachment.storagePath}-${attachment.name}`}
-                                        >
-                                            <Download size={14} />
-                                            <span>{attachment.name}</span>
-                                            <small>{formatFranchiseFileSize(attachment.size)}</small>
-                                        </a>
-                                    ))}
+                                    {notice.attachments.flatMap(attachment => {
+                                        if (!attachment.downloadUrl) return [];
+                                        return [(
+                                            <a
+                                                className={styles.attachmentLink}
+                                                href={attachment.downloadUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                download={attachment.name}
+                                                key={`${attachment.storagePath}-${attachment.name}`}
+                                            >
+                                                <Download size={14} />
+                                                <span>{attachment.name}</span>
+                                                <small>{formatFranchiseFileSize(attachment.size)}</small>
+                                            </a>
+                                        )];
+                                    })}
                                 </div>
                             ) : null}
                             {!notice.readAt ? (

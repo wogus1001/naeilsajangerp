@@ -1,8 +1,11 @@
 import { fail, ok } from '@/lib/api-response';
 import {
     cleanOwnerText,
+    isAcceptedOwnerNoticeAttachmentBytes,
     isAcceptedOwnerNoticeAttachmentFileName,
+    isAcceptedOwnerNoticeAttachmentMime,
     OWNER_NOTICE_ATTACHMENT_POLICY,
+    OWNER_NOTICE_ATTACHMENT_STORAGE,
     type OwnerNoticeAttachment
 } from '@/lib/franchise-owner-portal';
 import {
@@ -14,9 +17,6 @@ import {
 } from '@/lib/franchise-owner-portal-api';
 
 export const dynamic = 'force-dynamic';
-
-const NOTICE_ATTACHMENT_BUCKET = 'property-documents';
-const NOTICE_ATTACHMENT_PREFIX = 'franchise-owner-notices';
 
 function buildSafeFileName(name: string): string {
     const trimmed = name.trim();
@@ -39,6 +39,10 @@ function buildSafeFileName(name: string): string {
 
 function getNoticeUploadContentType(file: File): string {
     return cleanOwnerText(file.type) || 'application/octet-stream';
+}
+
+async function readNoticeUploadSignature(file: File): Promise<Uint8Array> {
+    return new Uint8Array(await file.slice(0, 16).arrayBuffer());
 }
 
 export async function GET(request: Request) {
@@ -78,8 +82,17 @@ export async function POST(request: Request) {
         if (!isAcceptedOwnerNoticeAttachmentFileName(file.name)) {
             return fail(400, 'VALIDATION_ERROR', '이미지, PDF, 문서 파일만 첨부할 수 있습니다.');
         }
+        if (file.size <= 0) return fail(400, 'VALIDATION_ERROR', '빈 파일은 첨부할 수 없습니다.');
         if (file.size > OWNER_NOTICE_ATTACHMENT_POLICY.maxFileSizeBytes) {
             return fail(400, 'VALIDATION_ERROR', '첨부 파일은 10MB 이하로 업로드해주세요.');
+        }
+        const contentType = getNoticeUploadContentType(file);
+        if (!isAcceptedOwnerNoticeAttachmentMime(file.name, contentType)) {
+            return fail(400, 'VALIDATION_ERROR', '첨부 파일 형식이 확장자와 일치하지 않습니다.');
+        }
+        const signature = await readNoticeUploadSignature(file);
+        if (!isAcceptedOwnerNoticeAttachmentBytes(file.name, signature)) {
+            return fail(400, 'VALIDATION_ERROR', '첨부 파일 내용을 확인할 수 없습니다. 파일을 다시 선택해주세요.');
         }
 
         const companyScope = await resolveOwnerPortalCompanyScope(
@@ -102,26 +115,21 @@ export async function POST(request: Request) {
         }
 
         const storagePath = [
-            NOTICE_ATTACHMENT_PREFIX,
+            OWNER_NOTICE_ATTACHMENT_STORAGE.prefix,
             companyScope.scope.companyId,
             `${Date.now()}-${crypto.randomUUID()}-${buildSafeFileName(file.name)}`
         ].join('/');
-        const contentType = getNoticeUploadContentType(file);
         const { error: uploadError } = await authResult.auth.supabaseAdmin.storage
-            .from(NOTICE_ATTACHMENT_BUCKET)
+            .from(OWNER_NOTICE_ATTACHMENT_STORAGE.bucket)
             .upload(storagePath, file, { contentType, upsert: false });
         if (uploadError) throw uploadError;
 
-        const { data: publicData } = authResult.auth.supabaseAdmin.storage
-            .from(NOTICE_ATTACHMENT_BUCKET)
-            .getPublicUrl(storagePath);
         const attachment: OwnerNoticeAttachment = {
             name: file.name,
             mimeType: contentType,
             size: file.size,
-            storageBucket: NOTICE_ATTACHMENT_BUCKET,
-            storagePath,
-            publicUrl: publicData.publicUrl
+            storageBucket: OWNER_NOTICE_ATTACHMENT_STORAGE.bucket,
+            storagePath
         };
 
         return ok({ attachment }, 201);

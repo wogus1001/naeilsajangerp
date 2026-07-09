@@ -1188,3 +1188,11 @@
 - 코드리뷰 보정: 점주 목록 카드 안 진행률 영역이 별도 중첩 카드처럼 보이지 않도록 진행률 박스의 테두리/배경을 제거하고, 발송 현황 상태 배지의 세로 정렬을 computed style 기준으로 재확인했다.
 - 신규 SQL: 없음.
 - 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. `next start -p 3160` production build에서 Playwright mock 세션으로 `/owner/opening-tasks`와 `/dashboard/franchise-operations/owner-portal`을 확인했다. 접힌 기본 화면은 `총 1건`, `1 / 1`, `총 6개 항목 · 6/6 완료 요청`, `항목별 완료 요청 보기`를 표시하고 세부 항목은 숨김 상태였으며, 펼친 뒤에는 6개 완료 요청 행이 표시됐다. 본사 `발송 현황` 상세는 가맹점 카드 9개가 데스크톱 5열로 줄바꿈되고, 상태 배지는 `display:flex`, `align-items:center`, `height:30px`로 중앙 정렬되며, desktop horizontal overflow 0건과 console error 0건이었다. QA 증거: `/tmp/fcerp-owner-checklist-release-qa-20260709/result.json`.
+
+## 2026-07-09 점주 포털 알림톡 3종 연동 QA
+
+- 범위: 검수 통과된 점주 포털 알림톡 템플릿 3종을 실제 이벤트에 연결했다. 본사 공지/공문 발행 시 점주에게 `공지/공문 안내`, 점주가 시설/고장 문의를 등록하거나 반려 건을 재제출하면 본사 담당자에게 `시설/고장 문의 접수 안내`, 본사가 점주 계정을 신규 발급하면 점주에게 `점주 포털 계정 발급 안내`를 발송 후보로 기록한다.
+- 보안/재시도: 점주 계정 발급 알림톡의 실제 발송 변수에는 임시 비밀번호가 포함되지만, `alimtalk_send_logs.variables`에는 임시 비밀번호를 `[마스킹]`으로 저장한다. 계정 발급 알림톡은 휴대폰 번호 수신자만 허용하고, 실패/차단 로그는 같은 이벤트 재시도를 막지 않도록 성공 또는 대체 SMS 로그만 중복 발송 방지 기준으로 사용한다. 같은 이벤트의 기존 성공 또는 대체 SMS 로그는 이후 차단/실패 재시도로 덮어쓰지 않는다.
+- 신규 SQL: `supabase_franchise_owner_portal_alimtalk_templates_migration.sql`을 추가했다. 기존 `supabase_franchise_alimtalk_operations_migration.sql` 적용 후 실행하는 seed이며, 사용자 확인 기준 SQL 등록은 완료했다. `/admin/alimtalk`에서 승인된 SOLAPI template ID와 Kakao channel ID를 저장해야 실제 발송된다. **SQL 등록 완료 확인**.
+- 검증: `npx tsx --test src/lib/alimtalk-send.test.mts src/lib/alimtalk-owner-portal-notifications.test.mts src/lib/alimtalk-send-support.test.mts src/lib/franchise-owner-portal.test.mts` 32건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3158` production build에서 비로그인 POST 스모크로 `/api/franchise-owner-portal/notices`, `/api/franchise-owner-portal/accounts`, `/api/owner/requests`가 각각 401 인증 차단되는 것을 확인했다.
+- 남은 live QA: `/admin/alimtalk` provider ID 저장 후 실계정으로 공지/공문 발행, 시설/고장 문의 등록/재제출, 점주 계정 신규 발급을 실행해 `alimtalk_send_logs`의 성공/차단/실패 상태, masked 임시 비밀번호 로그, 실제 카카오 메시지 변수 치환을 확인한다.

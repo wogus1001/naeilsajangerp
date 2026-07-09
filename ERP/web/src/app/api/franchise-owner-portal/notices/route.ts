@@ -1,8 +1,12 @@
 import { fail, ok } from '@/lib/api-response';
 import {
     cleanOwnerText,
+    buildOwnerPortalNoticeAttachmentDownloadUrl,
+    isOwnerNoticeAttachmentStoragePath,
     isOwnerRecord,
     normalizeOwnerNoticeAttachments,
+    resolveOwnerNoticeAttachmentsForCompany,
+    selectOwnerNoticeAttachmentsForCompany,
     type OwnerNoticeRecipient,
     type OwnerNoticeRow,
     type OwnerNoticeWithReadStatus
@@ -15,15 +19,10 @@ import {
     resolveOwnerPortalCompanyScope,
     resolveOwnerPortalStaffAuth
 } from '@/lib/franchise-owner-portal-api';
+import { notifyOwnerNoticePublished, safelyNotifyOwnerPortalAlimtalk } from '@/lib/alimtalk-owner-portal-notifications';
+import { insertOwnerNoticeWithAttachmentFallback, removeOwnerNoticeStoragePaths } from './routeSupport';
 
 export const dynamic = 'force-dynamic';
-
-const NOTICE_ATTACHMENT_BUCKET = 'property-documents';
-const NOTICE_ATTACHMENT_PREFIX = 'franchise-owner-notices';
-
-function isNoticeAttachmentStoragePath(companyId: string, bucket: string, storagePath: string): boolean {
-    return bucket === NOTICE_ATTACHMENT_BUCKET && storagePath.startsWith(`${NOTICE_ATTACHMENT_PREFIX}/${companyId}/`);
-}
 
 type OwnerAccountRecipientRow = {
     readonly id: string;
@@ -114,7 +113,11 @@ export async function GET(request: Request) {
             const readCount = recipients.filter(recipient => recipient.readAt).length;
             return {
                 ...notice,
-                attachments: normalizeOwnerNoticeAttachments(notice.attachments),
+                attachments: resolveOwnerNoticeAttachmentsForCompany({
+                    companyId: companyScope.scope.companyId,
+                    attachments: notice.attachments,
+                    getDownloadUrl: (_bucket, storagePath) => buildOwnerPortalNoticeAttachmentDownloadUrl(storagePath)
+                }),
                 targetCount: recipients.length,
                 readCount,
                 unreadCount: Math.max(recipients.length - readCount, 0),
@@ -142,8 +145,15 @@ export async function POST(request: Request) {
         const title = cleanOwnerText(body.title);
         const noticeBody = cleanOwnerText(body.body);
         const locationId = cleanOwnerText(body.locationId);
-        const attachments = normalizeOwnerNoticeAttachments(body.attachments);
+        const normalizedAttachments = normalizeOwnerNoticeAttachments(body.attachments);
+        const attachments = selectOwnerNoticeAttachmentsForCompany({
+            companyId: companyScope.scope.companyId,
+            attachments: body.attachments
+        });
         if (!title || !noticeBody) return fail(400, 'VALIDATION_ERROR', '공지 제목과 내용을 입력해주세요.');
+        if (normalizedAttachments.length !== attachments.length) {
+            return fail(400, 'VALIDATION_ERROR', '공지 첨부 파일 경로를 확인할 수 없습니다. 파일을 다시 선택해주세요.');
+        }
         if (locationId) {
             const location = await fetchOwnerPortalLocation(authResult.auth.supabaseAdmin, companyScope.scope.companyId, locationId);
             if (!location.ok) return location.response;
@@ -157,26 +167,20 @@ export async function POST(request: Request) {
             status: 'published',
             created_by: authResult.auth.requester.id
         };
-        const { error } = await authResult.auth.supabaseAdmin
-            .from('franchise_owner_notices')
-            .insert(insertPayload);
-        if (error) {
-            if (!isMissingOwnerNoticeAttachmentsColumnError(error)) throw error;
-            if (attachments.length > 0) {
-                return fail(424, 'VALIDATION_ERROR', '공지 첨부 SQL이 아직 적용되지 않았습니다. supabase_franchise_owner_notice_attachments_migration.sql을 등록해주세요.');
-            }
-            const { error: fallbackError } = await authResult.auth.supabaseAdmin
-                .from('franchise_owner_notices')
-                .insert({
-                    company_id: insertPayload.company_id,
-                    location_id: insertPayload.location_id,
-                    title: insertPayload.title,
-                    body: insertPayload.body,
-                    status: insertPayload.status,
-                    created_by: insertPayload.created_by
-                });
-            if (fallbackError) throw fallbackError;
-        }
+        const insertResult = await insertOwnerNoticeWithAttachmentFallback({
+            attachments,
+            payload: insertPayload,
+            supabaseAdmin: authResult.auth.supabaseAdmin
+        });
+        if (!insertResult.ok) return insertResult.response;
+        await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerNoticePublished({
+            companyId: companyScope.scope.companyId,
+            locationId: locationId || null,
+            noticeId: insertResult.notice.id,
+            noticeTitle: title,
+            publishedAt: insertResult.notice.created_at || new Date(),
+            supabaseAdmin: authResult.auth.supabaseAdmin
+        }), 'Owner notice published');
         return ok({ success: true }, 201);
     } catch (error) {
         if (isMissingOwnerPortalSchemaError(error)) {
@@ -223,30 +227,30 @@ export async function DELETE(request: Request) {
         const attachments = normalizeOwnerNoticeAttachments(notice.attachments);
         const storagePathsByBucket = new Map<string, string[]>();
         for (const attachment of attachments) {
-            if (!isNoticeAttachmentStoragePath(companyScope.scope.companyId, attachment.storageBucket, attachment.storagePath)) continue;
+            if (!isOwnerNoticeAttachmentStoragePath(companyScope.scope.companyId, attachment.storageBucket, attachment.storagePath)) continue;
             const paths = storagePathsByBucket.get(attachment.storageBucket) || [];
             paths.push(attachment.storagePath);
             storagePathsByBucket.set(attachment.storageBucket, paths);
         }
-        for (const [bucket, paths] of storagePathsByBucket) {
-            const { error: removeError } = await authResult.auth.supabaseAdmin.storage
-                .from(bucket)
-                .remove(paths);
-            if (removeError) throw removeError;
-        }
-
-        const { error: readDeleteError } = await authResult.auth.supabaseAdmin
-            .from('franchise_owner_notice_reads')
-            .delete()
-            .eq('notice_id', notice.id);
-        if (readDeleteError) throw readDeleteError;
-
         const { error: noticeDeleteError } = await authResult.auth.supabaseAdmin
             .from('franchise_owner_notices')
             .delete()
             .eq('id', notice.id)
             .eq('company_id', companyScope.scope.companyId);
         if (noticeDeleteError) throw noticeDeleteError;
+
+        const { error: readDeleteError } = await authResult.auth.supabaseAdmin
+            .from('franchise_owner_notice_reads')
+            .delete()
+            .eq('notice_id', notice.id);
+        if (readDeleteError) {
+            console.error('Owner portal notice read cleanup error:', readDeleteError);
+        }
+
+        await removeOwnerNoticeStoragePaths({
+            pathsByBucket: storagePathsByBucket,
+            supabaseAdmin: authResult.auth.supabaseAdmin
+        });
 
         return ok({ success: true });
     } catch (error) {

@@ -6,9 +6,18 @@ import {
     isOwnerRecord,
     toOwnerSubmissionType
 } from '@/lib/franchise-owner-portal';
+import {
+    notifyOwnerFacilityRequestCreated,
+    safelyNotifyOwnerPortalAlimtalk
+} from '@/lib/alimtalk-owner-portal-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
+
+type OwnerRequestInsertRow = {
+    readonly id: string;
+    readonly created_at: string | null;
+};
 
 export async function POST(request: Request) {
     try {
@@ -21,6 +30,7 @@ export async function POST(request: Request) {
         const title = cleanOwnerText(body.title);
         const message = cleanOwnerText(body.message);
         if (!title && !message) return fail(400, 'VALIDATION_ERROR', '문의 제목 또는 내용을 입력해주세요.');
+        const submissionTitle = buildOwnerSubmissionTitle(type, title);
 
         const { data, error } = await supabaseAdmin
             .from('franchise_owner_submissions')
@@ -29,14 +39,25 @@ export async function POST(request: Request) {
                 location_id: context.location.id,
                 owner_account_id: context.account.id,
                 submission_type: type,
-                title: buildOwnerSubmissionTitle(type, title),
+                title: submissionTitle,
                 body: message || null,
                 payload: { title },
                 status: 'submitted'
             })
-            .select('id')
-            .single<{ readonly id: string }>();
+            .select('id, created_at')
+            .single<OwnerRequestInsertRow>();
         if (error) throw error;
+        if (type === 'facility_request') {
+            await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerFacilityRequestCreated({
+                companyId: context.account.company_id,
+                locationName: context.location.name,
+                ownerName: context.account.owner_name,
+                requestTitle: title || submissionTitle,
+                sourceId: data.id,
+                submittedAt: data.created_at || new Date(),
+                supabaseAdmin
+            }), 'Owner facility request created');
+        }
         return ok({ submissionId: data.id }, 201);
     } catch (error) {
         console.error('Owner request error:', error);
@@ -56,6 +77,7 @@ export async function PATCH(request: Request) {
         const message = cleanOwnerText(body.message);
         if (!submissionId) return fail(400, 'VALIDATION_ERROR', '수정할 문의를 선택해주세요.');
         if (!title && !message) return fail(400, 'VALIDATION_ERROR', '문의 제목 또는 내용을 입력해주세요.');
+        const submissionTitle = buildOwnerSubmissionTitle('facility_request', title);
 
         const { data: submission, error: readError } = await supabaseAdmin
             .from('franchise_owner_submissions')
@@ -76,7 +98,7 @@ export async function PATCH(request: Request) {
         const { error } = await supabaseAdmin
             .from('franchise_owner_submissions')
             .update({
-                title: buildOwnerSubmissionTitle('facility_request', title),
+                title: submissionTitle,
                 body: message || null,
                 payload: { title },
                 status: 'submitted',
@@ -87,6 +109,16 @@ export async function PATCH(request: Request) {
             })
             .eq('id', submission.id);
         if (error) throw error;
+        await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerFacilityRequestCreated({
+            companyId: context.account.company_id,
+            locationName: context.location.name,
+            ownerName: context.account.owner_name,
+            requestTitle: title || submissionTitle,
+            sourceId: submission.id,
+            sourceType: 'owner-facility-request-resubmitted',
+            submittedAt: new Date(),
+            supabaseAdmin
+        }), 'Owner facility request resubmitted');
         return ok({ submissionId: submission.id });
     } catch (error) {
         console.error('Owner request update error:', error);
