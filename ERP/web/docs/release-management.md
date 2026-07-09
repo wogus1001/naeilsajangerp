@@ -177,6 +177,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-09
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `f8d3ee8 개선 점주포털 단축 링크와 체크리스트 구성`
+  - 주요 기능: 점주 포털 회사별 로그인 링크를 `/owner/login/{companyId}` 단축 경로로 바꾸고, 점주 로그인 화면에서 회사명 입력 필드를 숨겼다. 기존 `?companyId=`/`?company=` 쿼리 링크는 호환 유지한다. 본사 `점주 소통 > 점주 계정 설정`에서 회사별 점주 포털 링크를 복사할 수 있고, 점주 운영 체크리스트는 전체 가맹점 또는 선택한 복수 운영점에 한 번에 저장할 수 있게 정리했다.
+  - 신규 SQL: 없음.
+  - dev 반영: none
+  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
+  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - 검증: `git diff --check`, `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. 로컬 `http://localhost:3000/owner/login/92924bd6-b2a1-49bb-844b-05eabcc51bbf`가 200 응답하고 점주 로그인 폼에 회사명 입력 라벨이 노출되지 않는 것을 확인했다.
+  - 남은 이슈: 운영 배포 후 실서버에서 점주 계정 설정의 링크 복사, 전용 링크 로그인, 체크리스트 전체/복수 운영점 저장 흐름을 live QA한다.
 - 2026-07-08
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 점주 포털 회사별 로그인 및 운영 체크리스트 보정 커밋 예정
