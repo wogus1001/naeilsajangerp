@@ -30,6 +30,21 @@ export type OwnerProvidedBasics = {
     readonly memo: string;
 };
 
+export type OwnerPortalChecklistTask = {
+    readonly id: string;
+    readonly title: string;
+    readonly memo: string;
+};
+
+export const DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS: readonly OwnerPortalChecklistTask[] = [
+    { id: 'store-basic-info', title: '매장 기본 정보 확인', memo: '사업자 정보, 연락처, 보증금/월세/관리비 등 운영 기본 정보를 점검합니다.' },
+    { id: 'operation-hours', title: '영업시간 및 휴무일 확인', memo: '실제 영업시간, 휴무일, 브레이크타임이 본사 기록과 일치하는지 확인합니다.' },
+    { id: 'menu-price-board', title: '메뉴판/가격표 최신화', memo: '매장 메뉴, 가격, 프로모션 안내가 최신 상태인지 확인합니다.' },
+    { id: 'cleanliness', title: '위생·청결 상태 확인', memo: '홀, 주방, 창고, 화장실 등 주요 공간의 청결 상태를 점검합니다.' },
+    { id: 'equipment-issue', title: '시설·장비 이상 여부 확인', memo: '냉장고, 포스, 간판, 주방 장비 등 시설 이상 여부를 확인합니다.' },
+    { id: 'hq-support', title: '본사 지원 필요사항 확인', memo: '운영 중 본사 지원이나 후속 조치가 필요한 내용을 정리합니다.' }
+];
+
 export type OwnerSubmissionRow = {
     readonly id: string;
     readonly company_id: string;
@@ -133,9 +148,41 @@ export function mergeOwnerProvidedBasicsIntoLocationData(locationData: unknown, 
     return { ...current, ownerProvidedBasics: basics };
 }
 
+function normalizeOwnerChecklistTask(value: unknown, index: number): OwnerPortalChecklistTask | null {
+    if (!isOwnerRecord(value)) return null;
+    const title = cleanOwnerText(value.title);
+    if (!title) return null;
+    const fallbackId = `owner-checklist-${index + 1}`;
+    return {
+        id: cleanOwnerText(value.id) || fallbackId,
+        title,
+        memo: cleanOwnerText(value.memo)
+    };
+}
+
+export function normalizeOwnerPortalChecklistTasks(value: unknown): readonly OwnerPortalChecklistTask[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item, index) => normalizeOwnerChecklistTask(item, index))
+        .filter((task): task is OwnerPortalChecklistTask => task !== null);
+}
+
+export function readOwnerPortalChecklistTasksFromLocationData(value: unknown): readonly OwnerPortalChecklistTask[] {
+    const record = isOwnerRecord(value) ? value : {};
+    return normalizeOwnerPortalChecklistTasks(record.ownerPortalChecklist);
+}
+
+export function mergeOwnerPortalChecklistTasksIntoLocationData(
+    locationData: unknown,
+    tasks: readonly OwnerPortalChecklistTask[]
+): Record<string, unknown> {
+    const current = isOwnerRecord(locationData) ? locationData : {};
+    return { ...current, ownerPortalChecklist: normalizeOwnerPortalChecklistTasks(tasks) };
+}
+
 export function buildOwnerSubmissionTitle(type: OwnerSubmissionType, fallback: string): string {
     if (type === 'store_info') return '매장 정보 입력';
-    if (type === 'opening_task_completion') return '오픈 체크리스트 완료 요청';
+    if (type === 'opening_task_completion') return '운영 체크리스트 완료 요청';
     if (type === 'facility_request') return '시설/고장 문의';
     return fallback || '점주 요청';
 }
