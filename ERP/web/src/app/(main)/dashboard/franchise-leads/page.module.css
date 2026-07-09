@@ -5039,7 +5039,7 @@
 
 .ownerPortalViewTabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     min-width: 0;
 }
@@ -5084,6 +5084,210 @@
 .ownerPortalViewTabActive small {
     background: #ffffff;
     color: #1b64da;
+}
+
+.ownerPortalChecklistTaskRow {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.ownerPortalChecklistTaskRow > span {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.ownerPortalChecklistTaskFields {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ownerPortalChecklistSummary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    border-bottom: 1px solid #e5e8eb;
+    padding: 14px;
+}
+
+.ownerPortalChecklistSummary div {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.ownerPortalChecklistSummary span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.ownerPortalChecklistSummary strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistWorkspace {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+}
+
+.ownerPortalChecklistScope,
+.ownerPortalChecklistEditor,
+.ownerPortalChecklistManager {
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalChecklistScopeBody {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPortalChecklistHint {
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #4e5968;
+    padding: 11px 12px;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.5;
+}
+
+.ownerPortalChecklistPicker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+}
+
+.ownerPortalChecklistStatus {
+    border-top: 1px solid #e5e8eb;
+}
+
+.ownerPortalChecklistSelectedList {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px 12px;
+}
+
+.ownerPortalChecklistSelectedItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 10px 12px;
+}
+
+.ownerPortalChecklistSelectedItem div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.ownerPortalChecklistSelectedItem strong,
+.ownerPortalChecklistSelectedItem span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistSelectedItem strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.ownerPortalChecklistSelectedItem span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPortalChecklistSelectedItem button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalChecklistStatus .ownerPortalSectionList {
+    max-height: 420px;
+    overflow: auto;
+    padding: 10px 12px 12px;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem {
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem .locationItemMain {
+    gap: 4px;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem .locationItemMain small {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem .locationItemActions button {
+    min-height: 32px;
+    padding: 0 10px;
+}
+
+.ownerPortalChecklistList {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPortalChecklistActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 12px;
 }
 
 .ownerPortalGrid {
@@ -5138,6 +5342,71 @@
     display: grid;
     gap: 9px;
     padding: 12px;
+}
+
+.ownerPortalLinkCard {
+    display: grid;
+    gap: 10px;
+    margin: 12px 12px 0;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    padding: 12px;
+}
+
+.ownerPortalLinkCopy {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ownerPortalLinkCopy div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalLinkCopy strong {
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.ownerPortalLinkCopy span {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.ownerPortalLinkCopy button {
+    display: inline-flex;
+    min-height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1d4ed8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalLinkCard input {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 11px;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .ownerPortalTargetControl {
@@ -5328,6 +5597,28 @@
     padding: 12px;
 }
 
+.locationList.ownerPortalSectionList {
+    gap: 12px;
+    padding: 14px;
+}
+
+.locationItem.ownerPortalListItem {
+    gap: 16px;
+    padding: 16px;
+    border-color: #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalListItem .locationItemMain {
+    display: grid;
+    gap: 6px;
+}
+
+.ownerPortalListItem .locationItemActions {
+    padding-top: 2px;
+}
+
 .ownerPortalReadMeter {
     display: flex;
     flex-wrap: wrap;
@@ -5431,7 +5722,7 @@
 }
 
 .ownerPortalSubmissionDetails {
-    margin-top: 8px;
+    margin-top: 10px;
     border: 1px solid #e5e8eb;
     border-radius: 8px;
     background: #ffffff;
@@ -5591,7 +5882,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 10px;
 }
 
 .ownerPortalFileLink,
@@ -10801,7 +11092,9 @@
     }
 
     .ownerPortalViewTabs,
-    .ownerPortalSplit {
+    .ownerPortalSplit,
+    .ownerPortalChecklistSummary,
+    .ownerPortalChecklistWorkspace {
         grid-template-columns: 1fr;
     }
 
@@ -10836,6 +11129,40 @@
 
     .ownerPortalLocationOptions {
         grid-template-columns: 1fr;
+    }
+
+    .ownerPortalChecklistPicker {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPortalChecklistPicker button {
+        width: 100%;
+    }
+
+    .ownerPortalChecklistSelectedItem {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ownerPortalChecklistSelectedItem button {
+        width: 100%;
+    }
+
+    .ownerPortalChecklistActions {
+        justify-content: stretch;
+    }
+
+    .ownerPortalChecklistActions button {
+        flex: 1 1 100%;
+    }
+
+    .ownerPortalChecklistTaskRow {
+        grid-template-columns: 32px minmax(0, 1fr);
+    }
+
+    .ownerPortalChecklistTaskRow .dangerOutlineButton {
+        grid-column: 2;
+        width: 100%;
     }
 
     .ownerPortalPagination {

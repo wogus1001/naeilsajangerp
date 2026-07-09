@@ -4,14 +4,17 @@ import React from 'react';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { buildOwnerPortalLoginPath, type OwnerPortalChecklistTask } from '@/lib/franchise-owner-portal';
 import type { FranchiseLocation } from './types';
 import {
     OwnerPortalAccountsSection,
+    OwnerPortalChecklistSection,
     OwnerPortalNoticeSection,
     OwnerPortalStatusMessages,
     OwnerPortalSubmissionsSection,
     OwnerPortalViewTabs,
     type OwnerAccount,
+    type OwnerChecklistSetting,
     type OwnerNotice,
     type OwnerPortalView,
     type OwnerSubmission
@@ -43,6 +46,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
     const [accounts, setAccounts] = React.useState<OwnerAccount[]>([]);
     const [notices, setNotices] = React.useState<OwnerNotice[]>([]);
     const [submissions, setSubmissions] = React.useState<OwnerSubmission[]>([]);
+    const [checklists, setChecklists] = React.useState<OwnerChecklistSetting[]>([]);
     const [locationId, setLocationId] = React.useState(selectedLocationId || locations[0]?.id || '');
     const [noticeTarget, setNoticeTarget] = React.useState<'all' | 'single'>('all');
     const [noticeLocationIds, setNoticeLocationIds] = React.useState<readonly string[]>(selectedLocationId ? [selectedLocationId] : []);
@@ -54,18 +58,24 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
     const [message, setMessage] = React.useState('');
     const [error, setError] = React.useState('');
     const [isBusy, setIsBusy] = React.useState(false);
+    const ownerPortalLoginPath = React.useMemo(() => buildOwnerPortalLoginPath({
+        companyId: locations.find(location => location.companyId)?.companyId || null,
+        companyName
+    }), [companyName, locations]);
 
     const load = React.useCallback(async () => {
         if (!userId) return;
         const params = new URLSearchParams({ requesterId: userId });
         if (companyName) params.set('company', companyName);
-        const [accountData, noticeData, submissionData] = await Promise.all([
+        const [accountData, noticeData, checklistData, submissionData] = await Promise.all([
             requestJson<{ readonly accounts: readonly OwnerAccount[] }>(`/api/franchise-owner-portal/accounts?${params.toString()}`),
             requestJson<{ readonly notices: readonly OwnerNotice[] }>(`/api/franchise-owner-portal/notices?${params.toString()}`),
+            requestJson<{ readonly checklists: readonly OwnerChecklistSetting[] }>(`/api/franchise-owner-portal/checklists?${params.toString()}`),
             requestJson<{ readonly submissions: readonly OwnerSubmission[] }>(`/api/franchise-owner-portal/submissions?${params.toString()}`)
         ]);
         setAccounts([...accountData.accounts]);
         setNotices([...noticeData.notices]);
+        setChecklists([...checklistData.checklists]);
         setSubmissions([...submissionData.submissions]);
     }, [companyName, userId]);
 
@@ -174,6 +184,33 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
         }
     };
 
+    const saveChecklists = async (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]) => {
+        setIsBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            const data = await requestJson<{ readonly checklists: readonly OwnerChecklistSetting[] }>('/api/franchise-owner-portal/checklists', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requesterId: userId, companyName, locationIds, tasks })
+            });
+            setChecklists(current => {
+                const nextByLocationId = new Map(current.map(item => [item.locationId, item]));
+                data.checklists.forEach(item => nextByLocationId.set(item.locationId, item));
+                return Array.from(nextByLocationId.values());
+            });
+            setMessage(locationIds.length > 1
+                ? `운영 체크리스트를 ${locationIds.length}개 운영점에 저장했습니다.`
+                : '운영점 체크리스트를 저장했습니다.'
+            );
+            await load();
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : '운영 체크리스트를 저장하지 못했습니다.');
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
     const reviewSubmission = async (submissionId: string, action: 'approve' | 'reject' | 'resolve') => {
         setIsBusy(true);
         setError('');
@@ -198,6 +235,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
             <OwnerPortalViewTabs
                 activeView={activeView}
                 accountsCount={accounts.length}
+                checklistsCount={checklists.length}
                 noticesCount={notices.length}
                 submissionsCount={submissions.length}
                 onChange={setActiveView}
@@ -207,6 +245,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                 <OwnerPortalAccountsSection
                     locations={locations}
                     accounts={accounts}
+                    ownerPortalLoginPath={ownerPortalLoginPath}
                     locationId={locationId}
                     loginId={loginId}
                     ownerName={ownerName}
@@ -237,6 +276,14 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                     onNoticeTitleChange={setNoticeTitle}
                     onNoticeBodyChange={setNoticeBody}
                     onPublishNotice={() => void publishNotice()}
+                />
+            ) : null}
+            {activeView === 'checklists' ? (
+                <OwnerPortalChecklistSection
+                    locations={locations}
+                    checklists={checklists}
+                    isBusy={isBusy}
+                    onSaveChecklists={(locationIds, tasks) => void saveChecklists(locationIds, tasks)}
                 />
             ) : null}
             {activeView === 'submissions' ? (
