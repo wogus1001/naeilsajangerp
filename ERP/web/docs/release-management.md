@@ -179,13 +179,14 @@ YYYY-MM-DD
 
 - 2026-07-09
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
-  - 기능 커밋: 이번 점주 체크리스트 공지형 목록화 보정 커밋 예정
+  - 기능 커밋: `032151c feat(franchise): 점주 체크리스트 공지형 목록화`
   - 주요 기능: 점주 포털 `운영 체크리스트` 기본 화면을 공지/공문처럼 발송 1건 목록 카드와 `총 1건` 페이지 바 형태로 재구성했다. 6개 세부 항목은 기본 화면에 바로 나열하지 않고 `항목별 완료 요청 보기`를 펼쳤을 때만 표시한다. 본사 `점주 소통 > 체크리스트`에서는 `체크리스트 발송 6개 항목`과 `발송 항목 6개` 노출을 제거하고, `발송 현황` 상세에서 가맹점별 완료 요청 상태를 한 줄에 여러 가맹점이 표시되는 그리드로 보정했다. 상태 배지는 `.locationItem` 공용 텍스트 규칙에 밀리지 않도록 세로 중앙 정렬을 고정했다.
   - 신규 SQL: 없음.
   - dev 반영: none
-  - main 반영: 운영 배포 요청에 따라 Fast Release Runbook 기준으로 진행
-  - 배포 URL: 운영 배포 후 `https://www.fcerp.co.kr` 확인 예정
+  - main 반영: none
+  - 배포 URL: `https://www.fcerp.co.kr` / `https://fcerp.co.kr` (`dpl_3DPHWePbgCxnneVpWKbx1nV4DvBu`, READY; source `https://naeilsajang-cmgix9fwa-jaehyuns-projects-b4d20c6f.vercel.app`)
   - 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3160` production build에서 Playwright mock 세션으로 `/owner/opening-tasks`와 `/dashboard/franchise-operations/owner-portal`을 확인했다. 점주 화면은 접힌 기본 목록과 펼친 6개 완료 요청 행을 표시하고, 본사 발송 현황 상세는 가맹점 카드 9개가 데스크톱 5열로 줄바꿈되며, 상태 배지는 `display:flex`, `align-items:center`, `height:30px`로 중앙 정렬됐다. desktop horizontal overflow 0건, console error 0건. QA 증거: `/tmp/fcerp-owner-checklist-release-qa-20260709/result.json`.
+  - 배포 검증: `npx vercel deploy --dry --project naeilsajang --scope team_NcWNRifDHvr7GdFW0rcpR3ym --yes`에서 `framework=Next.js`, project `naeilsajang`, `.env.local`, `.omo`, `ERP/web/handoff.md`, `.next`, `node_modules` 제외를 확인했다. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/login`, `curl -I -L https://www.fcerp.co.kr/owner/opening-tasks`, `curl -I -L https://www.fcerp.co.kr/dashboard/franchise-operations/owner-portal`, `curl -I -L https://fcerp.co.kr/owner/opening-tasks`는 200 응답이었다.
   - 남은 이슈: 운영 배포 후 실계정으로 운영 체크리스트 전체/복수 운영점 발송, 점주 완료 요청, 본사 발송 현황의 완료/미완료 집계 persistence를 확인한다.
 - 2026-07-09
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
