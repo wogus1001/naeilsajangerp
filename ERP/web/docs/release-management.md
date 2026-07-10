@@ -179,6 +179,16 @@ YYYY-MM-DD
 
 - 2026-07-09
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: 이번 공통 일정/결재 기반 커밋 예정
+  - 주요 기능: 기존 `/schedule`의 점포개발 일정관리는 `점포개발 일정` 탭으로 유지하고, `전사 업무·결재` 탭을 추가해 오늘 처리, 승인 대기, 지연 업무, 이번주 일정 큐를 분리했다. 공통 workflow schedule 필드와 내부 보고/결재 테이블을 추가하고, `/api/schedules`의 source 기반 upsert/완료 처리, `/api/franchise-approvals/*` 템플릿/문서/액션 API, 슈퍼바이징 방문/점검보고서 일정·결재 동기화 기반을 연결했다. 결재 알림 URL(`/schedule?approvalDocumentId=...`)은 전사 업무·결재 탭으로 바로 진입해 관련 결재 일정을 강조한다. 코드리뷰 후 결재 source ID 서버 생성, 작성자/결재자 분리, 결재자/승인 권한 제한, `approval-document` 일정 직접 수정·삭제·완료 차단, source upsert unique 충돌 회복, workflow side-effect 격리, 결재 문서/이벤트 server-only RLS 보강을 반영했다.
+  - 신규 SQL: `supabase_franchise_approval_calendar_migration.sql` 적용이 필요하다. 이 SQL은 `schedules` workflow 컬럼을 확장하고 `approval_templates`, `approval_documents`, `approval_document_events`를 추가한다. **SQL 등록 필요**.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `/schedule` 실제 탭 클릭 QA는 인증 세션과 SQL 적용이 필요해 live QA로 남긴다.
+  - 남은 이슈: SQL 적용 후 인증 세션으로 `/schedule` 전사 업무·결재 탭, 결재 알림 딥링크, SV 보고서 제출/승인/반려 알림과 일정 동기화를 live QA한다.
+- 2026-07-09
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 점주 공지 첨부와 점주 포털 목록 보강 커밋 예정
   - 주요 기능: 본사 `가맹 운영 > 점주 소통 > 공지/공문`에서 이미지, PDF, 문서 파일을 첨부해 발행하고, 점주 `/owner/notices`에서 파일명과 용량을 확인한 뒤 다운로드할 수 있게 했다. 공지 삭제 시 점주 포털 목록에서도 사라지고, 첨부 Storage 파일과 읽음 기록도 함께 정리한다. 점주 포털의 운영 체크리스트와 제출 이력은 기본 목록을 간소화하고, 상세 확인이 필요한 내용은 펼쳐서 확인하는 흐름으로 정리했다.
   - 신규 SQL: 기존 점주 포털 SQL 적용 DB에는 `supabase_franchise_owner_notice_attachments_migration.sql` 추가 적용이 필요하다. 이 SQL은 `franchise_owner_notices.attachments` JSON 컬럼을 추가한다. **SQL 등록 필요**.

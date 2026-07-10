@@ -1,4 +1,5 @@
 import { fail, ok } from '@/lib/api-response';
+import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -20,11 +21,20 @@ import {
     readStatusEvent,
     readVisitLocationName,
     reportEventTypeFor,
+    syncSupervisionReportWorkflow,
     syncVisitStatus,
     type ReportRow
 } from './reportRouteSupport';
 
 export const dynamic = 'force-dynamic';
+
+async function runOptionalWorkflowSync(task: () => Promise<void>) {
+    try {
+        await task();
+    } catch (error) {
+        console.warn('Optional supervision workflow sync skipped:', error);
+    }
+}
 
 export async function POST(request: Request) {
     try {
@@ -100,6 +110,20 @@ export async function POST(request: Request) {
             supervisorProfileId: visit.supervisor_profile_id,
             supabaseAdmin: authResult.auth.supabaseAdmin
         });
+        await runOptionalWorkflowSync(() => syncSupervisionReportWorkflow({
+                actorProfileId: authResult.auth.requester.id,
+                companyId: visit.company_id,
+                eventType,
+                locationName: readVisitLocationName(visit),
+                reportId: data.id,
+                rejectReason: cleanString(getFirst(body, ['rejectReason', 'reject_reason'])) || null,
+                specialNote: cleanString(getFirst(body, ['specialNote', 'special_note'])) || null,
+                supervisorProfileId: visit.supervisor_profile_id,
+                supabaseAdmin: authResult.auth.supabaseAdmin,
+                templateId,
+                visitId: visit.id
+            })
+        );
         if (nextStatus === '제출') {
             await insertCorrectiveActions({
                 assigneeProfileId: visit.supervisor_profile_id,
@@ -119,6 +143,9 @@ export async function POST(request: Request) {
         }
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        if (isMissingWorkflowSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise supervision report POST error:', error);
         return fail(500, 'INTERNAL_ERROR', '점검 보고서를 저장하지 못했습니다.');
@@ -257,6 +284,20 @@ export async function PATCH(request: Request) {
             supervisorProfileId: existing.supervisor_profile_id,
             supabaseAdmin: authResult.auth.supabaseAdmin
         });
+        await runOptionalWorkflowSync(() => syncSupervisionReportWorkflow({
+                actorProfileId: authResult.auth.requester.id,
+                companyId: existing.company_id,
+                eventType,
+                locationName: readVisitLocationName(visit),
+                reportId: existing.id,
+                rejectReason: cleanString(getFirst(body, ['rejectReason', 'reject_reason'])) || null,
+                specialNote: cleanString(getFirst(body, ['specialNote', 'special_note'])) || null,
+                supervisorProfileId: existing.supervisor_profile_id,
+                supabaseAdmin: authResult.auth.supabaseAdmin,
+                templateId: nextTemplateId,
+                visitId: existing.visit_id
+            })
+        );
         if (nextStatus === '제출') {
             await insertCorrectiveActions({
                 assigneeProfileId: existing.supervisor_profile_id,
@@ -276,6 +317,9 @@ export async function PATCH(request: Request) {
         }
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        if (isMissingWorkflowSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise supervision report PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '점검 보고서를 수정하지 못했습니다.');

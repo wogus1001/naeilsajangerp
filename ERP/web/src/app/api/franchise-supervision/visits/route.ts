@@ -2,6 +2,8 @@ import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
+import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
+import { upsertWorkflowSchedule } from '@/lib/franchise-workflow-store';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -49,6 +51,14 @@ function readLocationName(location: VisitAccessRow['location']): string {
     return location?.name || '운영점';
 }
 
+async function runOptionalWorkflowSync(task: () => Promise<void>) {
+    try {
+        await task();
+    } catch (error) {
+        console.warn('Optional supervision visit workflow sync skipped:', error);
+    }
+}
+
 async function resolveAssignmentId(input: {
     readonly assignmentId: string;
     readonly companyId: string;
@@ -79,16 +89,22 @@ async function syncSchedule(input: {
     readonly supabaseAdmin: SupabaseClient;
 }) {
     if (!input.existing.schedule_id) return;
-    const { error } = await input.supabaseAdmin
-        .from('schedules')
-        .update({
-            date: input.nextVisitDate || input.existing.visit_date,
-            title: `${input.nextLocationName || readLocationName(input.existing.location)} ${input.nextPurpose}`,
-            status: input.nextStatus === '취소' ? 'cancelled' : 'scheduled',
-            user_id: input.nextSupervisorProfileId || input.existing.supervisor_profile_id
-        })
-        .eq('id', input.existing.schedule_id);
-    if (error) throw error;
+    const nextVisitDate = input.nextVisitDate || input.existing.visit_date || '';
+    await upsertWorkflowSchedule(input.supabaseAdmin, {
+        companyId: input.existing.company_id || '',
+        scheduleId: input.existing.schedule_id,
+        sourceType: 'supervision-visit',
+        sourceId: input.existing.id,
+        title: `${input.nextLocationName || readLocationName(input.existing.location)} ${input.nextPurpose}`,
+        date: nextVisitDate,
+        status: input.nextStatus === '취소' ? '취소' : '예정',
+        type: '슈퍼바이징',
+        details: '슈퍼바이징 방문 일정',
+        assigneeProfileId: input.nextSupervisorProfileId || input.existing.supervisor_profile_id || null,
+        userId: input.nextSupervisorProfileId || input.existing.supervisor_profile_id || null,
+        dueAt: nextVisitDate ? `${nextVisitDate}T00:00:00+09:00` : null,
+        metadata: { visitId: input.existing.id }
+    });
 }
 
 async function createSchedule(input: {
@@ -142,6 +158,34 @@ async function notifyVisitDue(input: {
     } catch (error) {
         console.warn('Supervision visit AlimTalk notification skipped:', error);
     }
+}
+
+async function attachVisitScheduleSource(input: {
+    readonly companyId: string;
+    readonly locationName: string;
+    readonly purpose: string;
+    readonly scheduleId: string | null;
+    readonly supervisorProfileId: string;
+    readonly supabaseAdmin: SupabaseClient;
+    readonly visitDate: string;
+    readonly visitId: string;
+}) {
+    if (!input.scheduleId) return;
+    await upsertWorkflowSchedule(input.supabaseAdmin, {
+        companyId: input.companyId,
+        scheduleId: input.scheduleId,
+        sourceType: 'supervision-visit',
+        sourceId: input.visitId,
+        title: `${input.locationName} ${input.purpose}`,
+        date: input.visitDate,
+        status: '예정',
+        type: '슈퍼바이징',
+        details: '슈퍼바이징 방문 일정',
+        assigneeProfileId: input.supervisorProfileId,
+        userId: input.supervisorProfileId,
+        dueAt: `${input.visitDate}T00:00:00+09:00`,
+        metadata: { visitId: input.visitId }
+    });
 }
 
 async function readMutationScope(request: Request) {
@@ -216,6 +260,17 @@ export async function POST(request: Request) {
             .select('id')
             .single<{ readonly id: string }>();
         if (error) throw error;
+        await runOptionalWorkflowSync(() => attachVisitScheduleSource({
+                companyId: scope.companyId,
+                locationName: location.location.name || '운영점',
+                purpose,
+                scheduleId,
+                supervisorProfileId: supervisor.profileId,
+                supabaseAdmin: scope.auth.supabaseAdmin,
+                visitDate,
+                visitId: data.id
+            })
+        );
         await notifyVisitDue({
             companyId: scope.companyId,
             locationName: location.location.name || '운영점',
@@ -232,6 +287,9 @@ export async function POST(request: Request) {
         }
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        if (isMissingWorkflowSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise supervision visit POST error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 저장하지 못했습니다.');
@@ -307,19 +365,23 @@ export async function PATCH(request: Request) {
             .update(updates)
             .eq('id', id);
         if (error) throw error;
-        await syncSchedule({
-            existing,
-            nextLocationName: nextLocation?.ok ? nextLocation.location.name || '운영점' : undefined,
-            nextPurpose,
-            nextStatus,
-            nextSupervisorProfileId: supervisorId?.ok ? supervisorId.profileId : null,
-            nextVisitDate: visitDate || null,
-            supabaseAdmin: scope.auth.supabaseAdmin
-        });
+        await runOptionalWorkflowSync(() => syncSchedule({
+                existing,
+                nextLocationName: nextLocation?.ok ? nextLocation.location.name || '운영점' : undefined,
+                nextPurpose,
+                nextStatus,
+                nextSupervisorProfileId: supervisorId?.ok ? supervisorId.profileId : null,
+                nextVisitDate: visitDate || null,
+                supabaseAdmin: scope.auth.supabaseAdmin
+            })
+        );
         return ok({ success: true });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        if (isMissingWorkflowSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise supervision visit PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 수정하지 못했습니다.');
@@ -355,18 +417,22 @@ export async function DELETE(request: Request) {
             .eq('id', id);
         if (error) throw error;
 
-        await syncSchedule({
-            existing,
-            nextPurpose: normalizeVisitPurpose(existing.purpose),
-            nextStatus: '취소',
-            nextSupervisorProfileId: null,
-            nextVisitDate: null,
-            supabaseAdmin: scope.auth.supabaseAdmin
-        });
+        await runOptionalWorkflowSync(() => syncSchedule({
+                existing,
+                nextPurpose: normalizeVisitPurpose(existing.purpose),
+                nextStatus: '취소',
+                nextSupervisorProfileId: null,
+                nextVisitDate: null,
+                supabaseAdmin: scope.auth.supabaseAdmin
+            })
+        );
         return ok({ success: true });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
+        }
+        if (isMissingWorkflowSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise supervision visit DELETE error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 삭제하지 못했습니다.');
