@@ -2,6 +2,7 @@ import { SolapiMessageService, type DetailGroupMessageResponse, type RequestSend
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSolapiNotificationConfig, normalizeSolapiPhone } from './solapi-notifications';
 import {
+    buildAlimtalkLogVariables,
     buildAlimtalkVariables,
     cleanString,
     isMissingAlimtalkSchemaError,
@@ -15,6 +16,11 @@ import {
     type AlimtalkSendStatus,
     type AlimtalkTemplateConfigRow
 } from './alimtalk-send-support';
+import {
+    createSupabaseAlimtalkSendLogRepository,
+    writeDuplicateSafeAlimtalkSendLog,
+    type AlimtalkSendLogRow
+} from './alimtalk-send-log';
 export {
     ALIMTALK_SCENARIO_KEYS,
     buildAlimtalkVariables,
@@ -114,13 +120,14 @@ async function hasExistingSendLog(
         .eq('source_type', input.sourceType)
         .eq('source_id', input.sourceId)
         .eq('recipient_phone', recipientPhone)
+        .in('status', ['success', 'fallback_sms'])
         .limit(1);
     if (error) throw error;
     return Boolean(data && data.length > 0);
 }
 
 async function writeSendLog(supabaseAdmin: SupabaseClient, log: SendLogInput): Promise<void> {
-    const { error } = await supabaseAdmin.from('alimtalk_send_logs').insert({
+    const logRow: AlimtalkSendLogRow = {
         company_id: log.input.companyId,
         scenario_key: log.input.scenarioKey,
         template_key: log.templateKey,
@@ -132,11 +139,11 @@ async function writeSendLog(supabaseAdmin: SupabaseClient, log: SendLogInput): P
         status: log.status,
         provider_message_id: log.providerMessageId || '',
         error_message: log.errorMessage || '',
-        variables: buildAlimtalkVariables(log.input.variables),
+        variables: buildAlimtalkLogVariables(log.input),
         sent_at: log.sentAt,
         created_at: log.sentAt
-    });
-    if (error && error.code !== '23505') throw error;
+    };
+    await writeDuplicateSafeAlimtalkSendLog(createSupabaseAlimtalkSendLogRepository(supabaseAdmin), logRow);
 }
 
 function getProviderMessageId(response: DetailGroupMessageResponse): string {
@@ -160,7 +167,8 @@ export async function sendAlimtalkNotification(
         companySetting: config.companySetting,
         monthlySendCount: config.monthlySendCount,
         recipientPhone,
-        providerEnabled: provider.enabled
+        providerEnabled: provider.enabled,
+        requiresMobileRecipient: input.requiresMobileRecipient
     });
     if (blockReason) {
         await writeSendLog(supabaseAdmin, {

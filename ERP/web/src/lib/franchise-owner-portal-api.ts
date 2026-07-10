@@ -22,10 +22,34 @@ export function isOwnerPortalManager(requester: RequesterProfile): boolean {
     return isAdmin(requester) || requester.role === 'manager' || requester.role === 'sub_manager';
 }
 
+function readOwnerPortalErrorText(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object') {
+        return ['message', 'details', 'hint', 'code']
+            .map(key => {
+                const value = (error as Record<string, unknown>)[key];
+                return typeof value === 'string' ? value : '';
+            })
+            .filter(Boolean)
+            .join(' ');
+    }
+    return '';
+}
+
 export function isMissingOwnerPortalSchemaError(error: unknown): boolean {
-    if (!(error instanceof Error)) return false;
-    const message = error.message.toLowerCase();
+    const message = readOwnerPortalErrorText(error).toLowerCase();
     return message.includes('franchise_owner_') || message.includes('does not exist') || message.includes('schema cache');
+}
+
+export function isMissingOwnerNoticeAttachmentsColumnError(error: unknown): boolean {
+    const message = readOwnerPortalErrorText(error).toLowerCase();
+    return message.includes('attachments') && (
+        message.includes('franchise_owner_notices')
+        || message.includes('schema cache')
+        || message.includes('does not exist')
+        || message.includes('column')
+    );
 }
 
 export async function resolveOwnerPortalStaffAuth(request: Request): Promise<

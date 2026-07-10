@@ -4,7 +4,12 @@ import React from 'react';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
-import { buildOwnerPortalLoginPath, type OwnerPortalChecklistTask } from '@/lib/franchise-owner-portal';
+import {
+    buildOwnerPortalLoginPath,
+    isOwnerChecklistCompletionSubmission,
+    type OwnerNoticeAttachment,
+    type OwnerPortalChecklistTask
+} from '@/lib/franchise-owner-portal';
 import type { FranchiseLocation } from './types';
 import {
     OwnerPortalAccountsSection,
@@ -28,9 +33,18 @@ type OwnerPortalPanelProps = {
 };
 
 type JsonRequestInit = {
-    readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+    readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     readonly body?: string;
     readonly headers?: Record<string, string>;
+};
+
+type ChecklistSaveResult = {
+    readonly ok: boolean;
+    readonly issueKey?: string;
+};
+
+type NoticeAttachmentUploadResponse = {
+    readonly attachment: OwnerNoticeAttachment;
 };
 
 async function requestJson<T>(url: string, init?: JsonRequestInit): Promise<T> {
@@ -39,6 +53,24 @@ async function requestJson<T>(url: string, init?: JsonRequestInit): Promise<T> {
     const payload: unknown = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<T>(payload);
+}
+
+function countChecklistIssues(checklists: readonly OwnerChecklistSetting[]): number {
+    const keys = new Set<string>();
+    checklists.forEach(checklist => {
+        if (checklist.issues && checklist.issues.length > 0) {
+            checklist.issues.forEach(issue => keys.add(issue.id));
+            return;
+        }
+        if (checklist.tasks.length > 0) {
+            keys.add(JSON.stringify(checklist.tasks.map(task => ({
+                id: task.id,
+                title: task.title,
+                memo: task.memo
+            }))));
+        }
+    });
+    return keys.size;
 }
 
 export function OwnerPortalPanel({ userId, companyName, locations, selectedLocationId }: OwnerPortalPanelProps) {
@@ -55,13 +87,19 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
     const [ownerPhone, setOwnerPhone] = React.useState('');
     const [noticeTitle, setNoticeTitle] = React.useState('');
     const [noticeBody, setNoticeBody] = React.useState('');
+    const [noticeFiles, setNoticeFiles] = React.useState<readonly File[]>([]);
     const [message, setMessage] = React.useState('');
     const [error, setError] = React.useState('');
     const [isBusy, setIsBusy] = React.useState(false);
+    const companyId = locations.find(location => location.companyId)?.companyId || '';
     const ownerPortalLoginPath = React.useMemo(() => buildOwnerPortalLoginPath({
-        companyId: locations.find(location => location.companyId)?.companyId || null,
+        companyId: companyId || null,
         companyName
-    }), [companyName, locations]);
+    }), [companyId, companyName]);
+    const generalSubmissionsCount = submissions.filter(submission => (
+        !isOwnerChecklistCompletionSubmission(submission.submission_type)
+    )).length;
+    const issuedChecklistCount = countChecklistIssues(checklists);
 
     const load = React.useCallback(async () => {
         if (!userId) return;
@@ -95,6 +133,23 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
         setNoticeLocationIds(current => current.includes(nextLocationId)
             ? current.filter(id => id !== nextLocationId)
             : [...current, nextLocationId]);
+    };
+
+    const uploadNoticeAttachment = async (file: File): Promise<OwnerNoticeAttachment> => {
+        const formData = new FormData();
+        formData.set('file', file);
+        formData.set('companyName', companyName);
+        if (companyId) formData.set('companyId', companyId);
+        const headers = await getApiAuthHeaders();
+        const response = await fetch('/api/franchise-owner-portal/files', {
+            method: 'POST',
+            headers,
+            body: formData,
+            cache: 'no-store'
+        });
+        const payload: unknown = await response.json();
+        if (!response.ok) throw new Error(readApiError(payload));
+        return unwrapApiData<NoticeAttachmentUploadResponse>(payload).attachment;
     };
 
     const createAccount = async () => {
@@ -154,13 +209,16 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
         }
     };
 
-    const publishNotice = async () => {
+    const publishNotice = async (): Promise<boolean> => {
         setIsBusy(true);
         setError('');
         setMessage('');
         try {
             const targetLocationIds = noticeTarget === 'single' ? noticeLocationIds : [''];
             for (const targetLocationId of targetLocationIds) {
+                const attachments = noticeFiles.length > 0
+                    ? await Promise.all(noticeFiles.map(file => uploadNoticeAttachment(file)))
+                    : [];
                 await requestJson('/api/franchise-owner-portal/notices', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -169,22 +227,62 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                         companyName,
                         locationId: targetLocationId,
                         title: noticeTitle,
-                        body: noticeBody
+                        body: noticeBody,
+                        attachments
                     })
                 });
             }
             setNoticeTitle('');
             setNoticeBody('');
+            setNoticeFiles([]);
             setMessage(noticeTarget === 'single' ? `선택한 운영점 ${targetLocationIds.length}곳에 점주 공지가 발행됐습니다.` : '전체 가맹점에 점주 공지가 발행됐습니다.');
             await load();
+            return true;
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : '공지 발행에 실패했습니다.');
+            return false;
         } finally {
             setIsBusy(false);
         }
     };
 
-    const saveChecklists = async (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]) => {
+    const deleteNotice = async (noticeId: string): Promise<boolean> => {
+        setIsBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            const params = new URLSearchParams({ id: noticeId, requesterId: userId });
+            if (companyName) params.set('company', companyName);
+            await requestJson(`/api/franchise-owner-portal/notices?${params.toString()}`, {
+                method: 'DELETE'
+            });
+            setMessage('점주 공지가 삭제됐습니다.');
+            await load();
+            return true;
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : '공지 삭제에 실패했습니다.');
+            return false;
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
+    const openNoticeAttachment = async (attachment: OwnerNoticeAttachment): Promise<void> => {
+        setError('');
+        try {
+            const params = new URLSearchParams({
+                requesterId: userId,
+                storagePath: attachment.storagePath
+            });
+            if (companyName) params.set('company', companyName);
+            const data = await requestJson<{ readonly url: string }>(`/api/franchise-owner-portal/notices/attachments?${params.toString()}`);
+            window.open(data.url, '_blank', 'noopener,noreferrer');
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : '첨부 파일을 열지 못했습니다.');
+        }
+    };
+
+    const saveChecklists = async (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]): Promise<ChecklistSaveResult> => {
         setIsBusy(true);
         setError('');
         setMessage('');
@@ -200,12 +298,14 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                 return Array.from(nextByLocationId.values());
             });
             setMessage(locationIds.length > 1
-                ? `운영 체크리스트를 ${locationIds.length}개 운영점에 저장했습니다.`
-                : '운영점 체크리스트를 저장했습니다.'
+                ? `운영 체크리스트를 ${locationIds.length}개 운영점에 발송했습니다.`
+                : '운영점에 운영 체크리스트를 발송했습니다.'
             );
             await load();
+            return { ok: true, issueKey: data.checklists.find(checklist => checklist.issues?.[0]?.id)?.issues?.[0]?.id };
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : '운영 체크리스트를 저장하지 못했습니다.');
+            setError(caught instanceof Error ? caught.message : '운영 체크리스트를 발송하지 못했습니다.');
+            return { ok: false };
         } finally {
             setIsBusy(false);
         }
@@ -235,9 +335,9 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
             <OwnerPortalViewTabs
                 activeView={activeView}
                 accountsCount={accounts.length}
-                checklistsCount={checklists.length}
+                checklistsCount={issuedChecklistCount}
                 noticesCount={notices.length}
-                submissionsCount={submissions.length}
+                submissionsCount={generalSubmissionsCount}
                 onChange={setActiveView}
             />
             <OwnerPortalStatusMessages message={message} error={error} />
@@ -275,15 +375,20 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                     onNoticeLocationClear={() => setNoticeLocationIds([])}
                     onNoticeTitleChange={setNoticeTitle}
                     onNoticeBodyChange={setNoticeBody}
-                    onPublishNotice={() => void publishNotice()}
+                    noticeFiles={noticeFiles}
+                    onNoticeFilesChange={setNoticeFiles}
+                    onPublishNotice={publishNotice}
+                    onDeleteNotice={deleteNotice}
+                    onOpenNoticeAttachment={openNoticeAttachment}
                 />
             ) : null}
             {activeView === 'checklists' ? (
                 <OwnerPortalChecklistSection
                     locations={locations}
                     checklists={checklists}
+                    submissions={submissions}
                     isBusy={isBusy}
-                    onSaveChecklists={(locationIds, tasks) => void saveChecklists(locationIds, tasks)}
+                    onSaveChecklists={saveChecklists}
                 />
             ) : null}
             {activeView === 'submissions' ? (

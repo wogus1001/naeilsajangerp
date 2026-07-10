@@ -1,15 +1,22 @@
 "use client";
 
 import { readApiJson } from '@/utils/apiResponse';
-// Force rebuild
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Plus, X, DollarSign } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, Clock, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+import {
+    buildScheduleDashboard,
+    isScheduleEventCanceled,
+    isScheduleEventDone,
+    scheduleEventDateKey,
+    sourceBadgeLabel,
+    type ScheduleEvent
+} from './schedule-dashboard';
 
 // Mock Data for Events
 const MOCK_EVENTS = [
@@ -85,6 +92,11 @@ const getEventColor = (scope: string, status: string, type?: string, title?: str
 
 const getStatusColor = (status: string) => {
     switch (status) {
+        case '예정': return '#868e96';
+        case '진행중': return '#339af0';
+        case '완료': return '#2f9e44';
+        case '지연': return '#f08c00';
+        case '취소': return '#868e96';
         case 'progress': return '#339af0'; // Blue
         case 'postponed': return '#7950f2'; // Violet
         case 'canceled': return '#fab005'; // Yellow
@@ -97,6 +109,11 @@ const getStatusColor = (status: string) => {
 
 const getStatusLabel = (status: string) => {
     switch (status) {
+        case '예정': return '예정';
+        case '진행중': return '진행중';
+        case '완료': return '완료';
+        case '지연': return '지연';
+        case '취소': return '취소';
         case 'progress': return '진행';
         case 'completed': return '완료';
         case 'postponed': return '연기';
@@ -110,7 +127,9 @@ const getStatusLabel = (status: string) => {
 export default function SchedulePage() {
     const router = useRouter();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [events, setEvents] = useState<any[]>([]);
+    const [events, setEvents] = useState<ScheduleEvent[]>([]);
+    const [activeScheduleTab, setActiveScheduleTab] = useState<'location' | 'workflow'>('location');
+    const [approvalDocumentId, setApprovalDocumentId] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -153,6 +172,11 @@ export default function SchedulePage() {
 
     useEffect(() => {
         fetchSchedules();
+        const linkedApprovalDocumentId = new URLSearchParams(window.location.search).get('approvalDocumentId') || '';
+        if (linkedApprovalDocumentId) {
+            setApprovalDocumentId(linkedApprovalDocumentId);
+            setActiveScheduleTab('workflow');
+        }
         // Set default date for form
         setFormData(prev => ({ ...prev, date: formatDate(new Date()) }));
     }, []);
@@ -172,8 +196,8 @@ export default function SchedulePage() {
 
             const res = await fetch(`/api/schedules${query}`);
             if (res.ok) {
-                const data = await readApiJson(res);
-                setEvents(data);
+                const data = await readApiJson<ScheduleEvent[]>(res);
+                setEvents(Array.isArray(data) ? data : []);
             }
         } catch (error) {
             console.error('Failed to fetch schedules:', error);
@@ -197,7 +221,7 @@ export default function SchedulePage() {
         setIsModalOpen(true);
     };
 
-    const handleEventClick = (event: any) => {
+    const handleEventClick = (event: ScheduleEvent) => {
         setSelectedScheduleId(event.id);
         setFormData({
             title: event.title,
@@ -246,6 +270,32 @@ export default function SchedulePage() {
             }
         } catch (error) {
             console.error('Error deleting schedule:', error);
+            showAlert('오류가 발생했습니다.', 'error');
+        }
+    };
+
+    const handleCompleteSchedule = async (event: ScheduleEvent) => {
+        try {
+            const currentUser = getStoredUser();
+            const requesterId = getRequesterId(currentUser);
+            const res = await fetch('/api/schedules', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: event.id,
+                    action: 'complete',
+                    requesterId,
+                    userId: requesterId
+                })
+            });
+            if (!res.ok) {
+                showAlert('완료 처리에 실패했습니다.', 'error');
+                return;
+            }
+            await fetchSchedules();
+            showAlert('일정을 완료 처리했습니다.', 'success');
+        } catch (error) {
+            console.error('Error completing schedule:', error);
             showAlert('오류가 발생했습니다.', 'error');
         }
     };
@@ -377,13 +427,13 @@ export default function SchedulePage() {
         }
     };
 
-    const isVisible = (event: any) => {
+    const isVisible = (event: ScheduleEvent) => {
         // 1. Check explicit scope first (Best)
         if (event.scope === 'public' || event.scope === 'work') return visibleScopes.work;
         if (event.scope === 'personal') return visibleScopes.personal;
 
         // 2. Fallback: Infer from type/title (Legacy/Mock)
-        const isWorkLegacy = ['work', 'price_change', 'new', 'exclusive', 'building', 'insurance'].includes(event.type) ||
+        const isWorkLegacy = ['work', 'price_change', 'new', 'exclusive', 'building', 'insurance'].includes(event.type || '') ||
             event.title.includes('[작업]') ||
             event.title.includes('[금액변동]');
 
@@ -391,7 +441,7 @@ export default function SchedulePage() {
         return visibleScopes.personal;
     };
 
-    const handleTaskClick = (event: any) => {
+    const handleTaskClick = (event: ScheduleEvent) => {
         if (event.propertyId) {
             router.push(`/properties/${event.propertyId}`);
         } else if (event.customerId) {
@@ -404,6 +454,27 @@ export default function SchedulePage() {
     // Filter for side panels based on Selected Date
     const selectedDateStr = formatDate(selectedDate);
     const selectedDateEvents = events.filter(e => e.date === selectedDateStr);
+    const eventColor = (event: ScheduleEvent) => event.color || '#868e96';
+    const isWorkPanelEvent = (event: ScheduleEvent) => ['work', 'price_change'].includes(event.type || '') ||
+        event.title.includes('[작업]') ||
+        event.title.includes('[금액변동]') ||
+        event.title.includes('[신규]') ||
+        event.title.includes('[계약]') ||
+        event.title.includes('[고객작업]') ||
+        event.title.includes('[추진등록]');
+    const dashboard = buildScheduleDashboard(events);
+    const isLinkedApprovalEvent = (event: ScheduleEvent) => {
+        return Boolean(approvalDocumentId) &&
+            event.sourceType === 'approval-document' &&
+            event.sourceId === approvalDocumentId;
+    };
+    const linkedApprovalEvent = events.find(isLinkedApprovalEvent);
+    const workflowCards = [
+        { key: 'today', title: '오늘 처리', count: dashboard.today.length, icon: Clock, items: dashboard.today },
+        { key: 'approval', title: '승인 대기', count: dashboard.approvalPending.length, icon: ClipboardCheck, items: dashboard.approvalPending },
+        { key: 'delayed', title: '지연 업무', count: dashboard.delayed.length, icon: AlertTriangle, items: dashboard.delayed },
+        { key: 'week', title: '이번주 일정', count: dashboard.week.length, icon: CheckCircle2, items: dashboard.week }
+    ];
     const parseEventTitle = (title: string) => {
         const match = title.match(/^(\[[^\]]+\])\s*(.*)$/);
         if (match) {
@@ -415,120 +486,229 @@ export default function SchedulePage() {
         return { prefix: '', content: title };
     };
 
+    const renderWorkflowItems = (items: readonly ScheduleEvent[], emptyText: string) => {
+        const focusedItem = items.find(isLinkedApprovalEvent);
+        const visibleItems = focusedItem && !items.slice(0, 5).some(event => event.id === focusedItem.id)
+            ? [focusedItem, ...items.filter(event => event.id !== focusedItem.id).slice(0, 4)]
+            : items.slice(0, 5);
+        if (visibleItems.length === 0) {
+            return <div className={styles.workflowEmpty}>{emptyText}</div>;
+        }
+        return (
+            <div className={styles.workflowList}>
+                {visibleItems.map(event => {
+                    const isFocused = isLinkedApprovalEvent(event);
+                    const canCompleteDirectly = event.sourceType !== 'approval-document';
+                    return (
+                        <div key={event.id} className={`${styles.workflowItem} ${isFocused ? styles.focusedWorkflowItem : ''}`}>
+                            <button
+                                className={styles.workflowItemMain}
+                                onClick={() => handleTaskClick(event)}
+                                aria-current={isFocused ? 'true' : undefined}
+                            >
+                                <span className={styles.sourceBadge}>{sourceBadgeLabel(event.sourceType)}</span>
+                                <span className={styles.workflowTitle}>{event.title}</span>
+                                <span className={styles.workflowMeta}>{scheduleEventDateKey(event) || event.date}</span>
+                            </button>
+                            {canCompleteDirectly && !isScheduleEventDone(event) && !isScheduleEventCanceled(event) && (
+                                <button className={styles.workflowDoneBtn} onClick={() => handleCompleteSchedule(event)}>
+                                    완료
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
     return (
         <div className={styles.container}>
             {/* Calendar Section */}
             <div className={styles.calendarSection}>
-                {/* Header */}
-                <div className={styles.header}>
-                    <div className={styles.monthNav}>
-                        <span className={styles.monthTitle}>
-                            {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-                        </span>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                            <button className={styles.navBtn} onClick={prevMonth}><ChevronLeft size={24} /></button>
-                            <button className={styles.navBtn} onClick={nextMonth}><ChevronRight size={24} /></button>
-                        </div>
-                        <button className={styles.todayBtn} onClick={goToday}>오늘</button>
-                    </div>
-
-                    <div className={styles.filterBar}>
-                        <button
-                            className={`${styles.filterBtn} ${visibleScopes.work && visibleScopes.personal ? styles.active : ''}`}
-                            style={{ backgroundColor: '#339af0' }}
-                            onClick={() => toggleScope('all')}
-                        >
-                            전체
-                        </button>
-                        <button
-                            className={`${styles.filterBtn} ${visibleScopes.work ? styles.active : ''}`}
-                            style={{ backgroundColor: '#7950f2' }}
-                            onClick={() => toggleScope('work')}
-                        >
-                            업무
-                        </button>
-                        <button
-                            className={`${styles.filterBtn} ${visibleScopes.personal ? styles.active : ''}`}
-                            style={{ backgroundColor: '#f06595' }}
-                            onClick={() => toggleScope('personal')}
-                        >
-                            개인
-                        </button>
-                        {/* Collapse Toggle Button */}
-                        <button
-                            className={styles.collapseBtn}
-                            onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
-                            title={isPanelCollapsed ? "패널 펼치기" : "패널 접기"}
-                        >
-                            {isPanelCollapsed ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-                        </button>
-                    </div>
+                <div className={styles.scheduleTabs}>
+                    <button
+                        className={`${styles.scheduleTab} ${activeScheduleTab === 'location' ? styles.activeScheduleTab : ''}`}
+                        onClick={() => setActiveScheduleTab('location')}
+                    >
+                        점포개발 일정
+                    </button>
+                    <button
+                        className={`${styles.scheduleTab} ${activeScheduleTab === 'workflow' ? styles.activeScheduleTab : ''}`}
+                        onClick={() => setActiveScheduleTab('workflow')}
+                    >
+                        전사 업무·결재
+                    </button>
                 </div>
-
-                {/* Grid */}
-                <div className={styles.calendarGrid}>
-                    <div className={styles.weekDays}>
-                        <div className={`${styles.weekDay} ${styles.sun}`}>일</div>
-                        <div className={styles.weekDay}>월</div>
-                        <div className={styles.weekDay}>화</div>
-                        <div className={styles.weekDay}>수</div>
-                        <div className={styles.weekDay}>목</div>
-                        <div className={styles.weekDay}>금</div>
-                        <div className={`${styles.weekDay} ${styles.sat}`}>토</div>
-                    </div>
-
-                    <div className={styles.daysGrid}>
-                        {days.map((dayObj, index) => {
-                            const dateStr = formatDate(dayObj.date);
-                            const dayEvents = events.filter(e => e.date === dateStr && isVisible(e));
-                            const isSun = dayObj.date.getDay() === 0;
-                            const isSat = dayObj.date.getDay() === 6;
-                            const isSelected = isSameDate(dayObj.date, selectedDate);
-                            const holidayName = HOLIDAYS[dateStr];
-                            const isHoliday = !!holidayName;
-
-                            return (
-                                <div
-                                    key={index}
-                                    className={`${styles.dayCell} ${!dayObj.isCurrentMonth ? styles.otherMonth : ''} ${isToday(dayObj.date) ? styles.today : ''} ${isSelected ? styles.selected : ''} ${isSun || isHoliday ? styles.sun : ''} ${isSat && !isHoliday ? styles.sat : ''} ${isHoliday ? styles.holiday : ''}`}
-                                    onClick={() => handleDateClick(dayObj.date)}
-                                    onDoubleClick={() => handleDateDoubleClick(dayObj.date)}
-                                >
-                                    <div className={styles.dayHeader}>
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <span className={styles.dateNum}>{dayObj.date.getDate()}</span>
-                                            {holidayName && <span className={styles.holidayName}>{holidayName}</span>}
-                                        </div>
-                                    </div>
-                                    <div className={styles.eventList}>
-                                        {dayEvents.map(event => {
-                                            const { prefix, content } = parseEventTitle(event.title);
-                                            return (
-                                                <div
-                                                    key={event.id}
-                                                    className={styles.eventItem}
-                                                    style={{ backgroundColor: event.color }}
-                                                    title={event.title}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEventClick(event);
-                                                    }}
-                                                >
-                                                    {prefix && <span style={{ fontSize: '0.8em', opacity: 0.9, fontWeight: 600 }}>{prefix}</span>}
-                                                    <span style={{ fontSize: '0.9em' }}>{content}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                {activeScheduleTab === 'workflow' ? (
+                    <div className={styles.workflowTabContent}>
+                        <div className={styles.workflowHub}>
+                            {approvalDocumentId && (
+                                <div className={styles.workflowDeepLinkNotice}>
+                                    <strong>결재 알림에서 이동했습니다.</strong>
+                                    <span>{linkedApprovalEvent ? linkedApprovalEvent.title : '결재 일정이 목록에 반영되면 이 탭에서 확인할 수 있습니다.'}</span>
                                 </div>
-                            );
-                        })}
+                            )}
+	                            <div className={styles.workflowSummary}>
+                                {workflowCards.map(card => {
+                                    const Icon = card.icon;
+                                    return (
+                                        <div key={card.key} className={styles.workflowKpi}>
+                                            <div className={styles.workflowKpiIcon}><Icon size={16} /></div>
+                                            <div>
+                                                <div className={styles.workflowKpiLabel}>{card.title}</div>
+                                                <div className={styles.workflowKpiValue}>{card.count}건</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className={styles.workflowQueues}>
+                                <section className={styles.workflowQueue}>
+                                    <div className={styles.workflowQueueHeader}>
+                                        <span>오늘 처리 큐</span>
+                                        <strong>{dashboard.today.length}</strong>
+                                    </div>
+                                    {renderWorkflowItems(dashboard.today, '오늘 처리할 일정이 없습니다.')}
+                                </section>
+                                <section className={styles.workflowQueue}>
+                                    <div className={styles.workflowQueueHeader}>
+                                        <span>승인 대기</span>
+                                        <strong>{dashboard.approvalPending.length}</strong>
+                                    </div>
+                                    {renderWorkflowItems(dashboard.approvalPending, '승인 대기 문서가 없습니다.')}
+                                </section>
+                                <section className={styles.workflowQueue}>
+                                    <div className={styles.workflowQueueHeader}>
+                                        <span>지연 업무</span>
+                                        <strong>{dashboard.delayed.length}</strong>
+                                    </div>
+                                    {renderWorkflowItems(dashboard.delayed, '지연된 업무가 없습니다.')}
+                                </section>
+                                <section className={styles.workflowQueue}>
+                                    <div className={styles.workflowQueueHeader}>
+                                        <span>이번주 일정</span>
+                                        <strong>{dashboard.week.length}</strong>
+                                    </div>
+                                    {renderWorkflowItems(dashboard.week, '이번주 일정이 없습니다.')}
+                                </section>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Header */}
+                        <div className={styles.header}>
+                            <div className={styles.monthNav}>
+                                <span className={styles.monthTitle}>
+                                    {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
+                                </span>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    <button className={styles.navBtn} onClick={prevMonth}><ChevronLeft size={24} /></button>
+                                    <button className={styles.navBtn} onClick={nextMonth}><ChevronRight size={24} /></button>
+                                </div>
+                                <button className={styles.todayBtn} onClick={goToday}>오늘</button>
+                            </div>
+
+                            <div className={styles.filterBar}>
+                                <button
+                                    className={`${styles.filterBtn} ${visibleScopes.work && visibleScopes.personal ? styles.active : ''}`}
+                                    style={{ backgroundColor: '#339af0' }}
+                                    onClick={() => toggleScope('all')}
+                                >
+                                    전체
+                                </button>
+                                <button
+                                    className={`${styles.filterBtn} ${visibleScopes.work ? styles.active : ''}`}
+                                    style={{ backgroundColor: '#7950f2' }}
+                                    onClick={() => toggleScope('work')}
+                                >
+                                    업무
+                                </button>
+                                <button
+                                    className={`${styles.filterBtn} ${visibleScopes.personal ? styles.active : ''}`}
+                                    style={{ backgroundColor: '#f06595' }}
+                                    onClick={() => toggleScope('personal')}
+                                >
+                                    개인
+                                </button>
+                                {/* Collapse Toggle Button */}
+                                <button
+                                    className={styles.collapseBtn}
+                                    onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
+                                    title={isPanelCollapsed ? "패널 펼치기" : "패널 접기"}
+                                >
+                                    {isPanelCollapsed ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Grid */}
+                        <div className={styles.calendarGrid}>
+                            <div className={styles.weekDays}>
+                                <div className={`${styles.weekDay} ${styles.sun}`}>일</div>
+                                <div className={styles.weekDay}>월</div>
+                                <div className={styles.weekDay}>화</div>
+                                <div className={styles.weekDay}>수</div>
+                                <div className={styles.weekDay}>목</div>
+                                <div className={styles.weekDay}>금</div>
+                                <div className={`${styles.weekDay} ${styles.sat}`}>토</div>
+                            </div>
+
+                            <div className={styles.daysGrid}>
+                                {days.map((dayObj, index) => {
+                                    const dateStr = formatDate(dayObj.date);
+                                    const dayEvents = events.filter(e => e.date === dateStr && isVisible(e));
+                                    const isSun = dayObj.date.getDay() === 0;
+                                    const isSat = dayObj.date.getDay() === 6;
+                                    const isSelected = isSameDate(dayObj.date, selectedDate);
+                                    const holidayName = HOLIDAYS[dateStr];
+                                    const isHoliday = !!holidayName;
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            className={`${styles.dayCell} ${!dayObj.isCurrentMonth ? styles.otherMonth : ''} ${isToday(dayObj.date) ? styles.today : ''} ${isSelected ? styles.selected : ''} ${isSun || isHoliday ? styles.sun : ''} ${isSat && !isHoliday ? styles.sat : ''} ${isHoliday ? styles.holiday : ''}`}
+                                            onClick={() => handleDateClick(dayObj.date)}
+                                            onDoubleClick={() => handleDateDoubleClick(dayObj.date)}
+                                        >
+                                            <div className={styles.dayHeader}>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    <span className={styles.dateNum}>{dayObj.date.getDate()}</span>
+                                                    {holidayName && <span className={styles.holidayName}>{holidayName}</span>}
+                                                </div>
+                                            </div>
+                                            <div className={styles.eventList}>
+                                                {dayEvents.map(event => {
+                                                    const { prefix, content } = parseEventTitle(event.title);
+                                                    return (
+                                                        <div
+                                                            key={event.id}
+                                                            className={styles.eventItem}
+                                                            style={{ backgroundColor: eventColor(event) }}
+                                                            title={event.title}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEventClick(event);
+                                                            }}
+                                                        >
+                                                            {prefix && <span style={{ fontSize: '0.8em', opacity: 0.9, fontWeight: 600 }}>{prefix}</span>}
+                                                            <span style={{ fontSize: '0.9em' }}>{content}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Side Panel */}
-            <div className={`${styles.sidePanel} ${isPanelCollapsed ? styles.collapsed : ''}`}>
+            {activeScheduleTab === 'location' && <div className={`${styles.sidePanel} ${isPanelCollapsed ? styles.collapsed : ''}`}>
                 {/* Top: Task List */}
                 <div className={styles.panelSection} style={{ flex: 1 }}>
                     <div className={styles.panelHeader}>
@@ -536,13 +716,13 @@ export default function SchedulePage() {
                     </div>
                     <div className={styles.panelContent}>
                         <div className={styles.taskList}>
-                            {selectedDateEvents.filter(e => ['work', 'price_change'].includes(e.type) || e.title.includes('[작업]') || e.title.includes('[금액변동]') || e.title.includes('[신규]') || e.title.includes('[계약]') || e.title.includes('[고객작업]') || e.title.includes('[추진등록]')).map(event => {
+                            {selectedDateEvents.filter(isWorkPanelEvent).map(event => {
                                 const { prefix, content } = parseEventTitle(event.title);
                                 return (
                                     <div
                                         key={event.id}
                                         className={styles.taskItem}
-                                        style={{ borderLeft: `4px solid ${event.color}`, cursor: 'pointer' }}
+                                        style={{ borderLeft: `4px solid ${eventColor(event)}`, cursor: 'pointer' }}
                                         onClick={() => handleTaskClick(event)}
                                     >
                                         <button
@@ -559,12 +739,12 @@ export default function SchedulePage() {
                                         </button>
                                         <div className={styles.taskHeader} style={{ marginBottom: 4 }}>
                                             {prefix ? (
-                                                <span className={styles.taskType} style={{ color: event.color, fontSize: '13px', fontWeight: 'bold' }}>
+                                                <span className={styles.taskType} style={{ color: eventColor(event), fontSize: '13px', fontWeight: 'bold' }}>
                                                     {prefix}
                                                 </span>
                                             ) : (
                                                 // Fallback for events without standard prefix
-                                                <span className={styles.taskType} style={{ color: event.color }}>
+                                                <span className={styles.taskType} style={{ color: eventColor(event) }}>
                                                     [일정]
                                                 </span>
                                             )}
@@ -594,17 +774,17 @@ export default function SchedulePage() {
                         </div>
                     </div>
                     <div className={styles.panelContent}>
-                        {selectedDateEvents.filter(e => !(['work', 'price_change'].includes(e.type) || e.title.includes('[작업]') || e.title.includes('[금액변동]') || e.title.includes('[신규]') || e.title.includes('[계약]') || e.title.includes('[고객작업]') || e.title.includes('[추진등록]'))).length === 0 ? (
+                        {selectedDateEvents.filter(event => !isWorkPanelEvent(event)).length === 0 ? (
                             <div style={{ padding: 12, textAlign: 'center', color: '#adb5bd', fontSize: 12 }}>
                                 등록된 일정이 없습니다.
                             </div>
                         ) : (
                             <div className={styles.taskList}>
-                                {selectedDateEvents.filter(e => !(['work', 'price_change'].includes(e.type) || e.title.includes('[작업]') || e.title.includes('[금액변동]') || e.title.includes('[신규]') || e.title.includes('[계약]') || e.title.includes('[고객작업]') || e.title.includes('[추진등록]'))).map(event => (
+                                {selectedDateEvents.filter(event => !isWorkPanelEvent(event)).map(event => (
                                     <div
                                         key={event.id}
                                         className={styles.taskItem}
-                                        style={{ borderLeft: `4px solid ${event.color}`, cursor: 'pointer' }}
+                                        style={{ borderLeft: `4px solid ${eventColor(event)}`, cursor: 'pointer' }}
                                         onClick={() => handleEventClick(event)}
                                     >
                                         <button
@@ -647,7 +827,7 @@ export default function SchedulePage() {
                         )}
                     </div>
                 </div>
-            </div>
+            </div>}
 
             {/* Add Schedule Modal */}
             {isModalOpen && (

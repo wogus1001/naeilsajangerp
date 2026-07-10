@@ -373,6 +373,12 @@
     gap: 12px;
 }
 
+.checklistIssueTitle {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+}
+
 .listItem strong {
     font-size: 14px;
 }
@@ -383,6 +389,42 @@
     font-size: 13px;
     line-height: 1.54;
     white-space: pre-wrap;
+}
+
+.attachmentList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.attachmentLink {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 34px;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #333d4b;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.attachmentLink span {
+    overflow: hidden;
+    max-width: min(360px, 58vw);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachmentLink small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
 .noticeBanner {
@@ -583,26 +625,34 @@
 
 .badge {
     display: inline-flex;
+    min-height: 28px;
     width: fit-content;
     align-items: center;
+    justify-content: center;
     border-radius: 999px;
     background: #e8f3ff;
     color: #1b64da;
     padding: 4px 8px;
     font-size: 12px;
     font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .badgeMuted {
     display: inline-flex;
+    min-height: 28px;
     width: fit-content;
     align-items: center;
+    justify-content: center;
     border-radius: 999px;
     background: #f2f4f6;
     color: #6b7684;
     padding: 4px 8px;
     font-size: 12px;
     font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .warning {
@@ -639,6 +689,11 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+}
+
+.taskList {
+    display: grid;
+    gap: 10px;
 }
 
 .taskProgressPanel {
@@ -690,6 +745,70 @@
     background: #3182f6;
 }
 
+.checklistMeter {
+    display: grid;
+    gap: 8px;
+    padding: 2px 0 4px;
+}
+
+.checklistMeterHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.checklistMeterHeader strong {
+    color: #1b64da;
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.checklistMeterHeader span {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.checklistDetails {
+    border-top: 1px solid #e5e8eb;
+    margin-top: 2px;
+}
+
+.checklistDetails summary {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.checklistDetails[open] summary {
+    border-bottom: 1px solid #f2f4f6;
+    margin-bottom: 2px;
+}
+
+.checklistDetails .taskList {
+    gap: 0;
+}
+
+.checklistDetails .taskListItem,
+.checklistDetails .taskListItemDone {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 12px 0;
+}
+
+.checklistDetails .taskListItem + .taskListItem,
+.checklistDetails .taskListItem + .taskListItemDone,
+.checklistDetails .taskListItemDone + .taskListItem,
+.checklistDetails .taskListItemDone + .taskListItemDone {
+    border-top: 1px solid #f2f4f6;
+}
+
 .taskCard,
 .taskCardDone {
     display: grid;
@@ -703,6 +822,78 @@
 
 .taskCardDone {
     background: #f8fbff;
+}
+
+.taskListItem,
+.taskListItemDone {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 116px;
+    gap: 12px;
+    min-width: 0;
+    align-items: center;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.taskListItemDone {
+    background: #f8fbff;
+}
+
+.taskListMain {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    min-width: 0;
+    align-items: start;
+}
+
+.taskIndex {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.taskListItemDone .taskIndex {
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.taskListMain div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.taskListMain strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.taskListMain small {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.taskListMain p {
+    margin: 2px 0 0;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+    overflow-wrap: anywhere;
 }
 
 .taskCardHeader {
@@ -802,6 +993,17 @@
     .pageGrid,
     .taskGrid {
         grid-template-columns: 1fr;
+    }
+
+    .taskListItem,
+    .taskListItemDone {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .taskListItem .secondaryButton,
+    .taskListItemDone .secondaryButton {
+        width: 100%;
     }
 
     .fileUploadHeader {

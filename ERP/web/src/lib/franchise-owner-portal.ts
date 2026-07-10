@@ -1,9 +1,3 @@
-import {
-    mergeOpeningProjectTasks,
-    normalizeOpeningProjectTaskStatus,
-    type OpeningProjectTask
-} from '@/lib/franchise-opening-projects';
-
 export const OWNER_SUBMISSION_TYPES = [
     'store_info',
     'opening_task_completion',
@@ -35,6 +29,15 @@ export type OwnerPortalChecklistTask = {
     readonly title: string;
     readonly memo: string;
 };
+
+export type OwnerPortalChecklistIssue = {
+    readonly id: string;
+    readonly issuedAt: string | null;
+    readonly tasks: readonly OwnerPortalChecklistTask[];
+};
+
+export { OWNER_NOTICE_ATTACHMENT_POLICY, OWNER_NOTICE_ATTACHMENT_STORAGE, buildOwnerNoticeAttachmentDownloadUrl, buildOwnerPortalNoticeAttachmentDownloadUrl, isAcceptedOwnerNoticeAttachmentBytes, isAcceptedOwnerNoticeAttachmentFileName, isAcceptedOwnerNoticeAttachmentMime, isOwnerNoticeAttachmentStoragePath, normalizeOwnerNoticeAttachments, resolveOwnerNoticeAttachmentsForCompany, selectOwnerNoticeAttachmentsForCompany } from './franchise-owner-portal-attachments';
+export type { OwnerNoticeAttachment } from './franchise-owner-portal-attachments';
 
 export const DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS: readonly OwnerPortalChecklistTask[] = [
     { id: 'store-basic-info', title: '매장 기본 정보 확인', memo: '사업자 정보, 연락처, 보증금/월세/관리비 등 운영 기본 정보를 점검합니다.' },
@@ -80,6 +83,7 @@ export type OwnerNoticeRow = {
     readonly body: string;
     readonly status: string | null;
     readonly created_at: string | null;
+    readonly attachments?: unknown;
 };
 
 export type OwnerNoticeRecipient = {
@@ -167,17 +171,51 @@ export function normalizeOwnerPortalChecklistTasks(value: unknown): readonly Own
         .filter((task): task is OwnerPortalChecklistTask => task !== null);
 }
 
+function normalizeOwnerChecklistIssue(value: unknown, index: number): OwnerPortalChecklistIssue | null {
+    if (!isOwnerRecord(value)) return null;
+    const tasks = normalizeOwnerPortalChecklistTasks(value.tasks);
+    if (tasks.length === 0) return null;
+    return {
+        id: cleanOwnerText(value.id) || `owner-checklist-issue-${index + 1}`,
+        issuedAt: cleanOwnerText(value.issuedAt) || null,
+        tasks
+    };
+}
+
+export function normalizeOwnerPortalChecklistIssues(value: unknown): readonly OwnerPortalChecklistIssue[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item, index) => normalizeOwnerChecklistIssue(item, index))
+        .filter((issue): issue is OwnerPortalChecklistIssue => issue !== null)
+        .slice(0, 50);
+}
+
 export function readOwnerPortalChecklistTasksFromLocationData(value: unknown): readonly OwnerPortalChecklistTask[] {
     const record = isOwnerRecord(value) ? value : {};
     return normalizeOwnerPortalChecklistTasks(record.ownerPortalChecklist);
 }
 
+export function readOwnerPortalChecklistIssuesFromLocationData(value: unknown): readonly OwnerPortalChecklistIssue[] {
+    const record = isOwnerRecord(value) ? value : {};
+    return normalizeOwnerPortalChecklistIssues(record.ownerPortalChecklistIssues);
+}
+
 export function mergeOwnerPortalChecklistTasksIntoLocationData(
     locationData: unknown,
-    tasks: readonly OwnerPortalChecklistTask[]
+    tasks: readonly OwnerPortalChecklistTask[],
+    issue?: OwnerPortalChecklistIssue
 ): Record<string, unknown> {
     const current = isOwnerRecord(locationData) ? locationData : {};
-    return { ...current, ownerPortalChecklist: normalizeOwnerPortalChecklistTasks(tasks) };
+    const normalizedTasks = normalizeOwnerPortalChecklistTasks(tasks);
+    const currentIssues = readOwnerPortalChecklistIssuesFromLocationData(current);
+    const nextIssue = normalizeOwnerChecklistIssue(issue, 0);
+    const nextData: Record<string, unknown> = { ...current, ownerPortalChecklist: normalizedTasks };
+    if (nextIssue || current.ownerPortalChecklistIssues !== undefined) {
+        nextData.ownerPortalChecklistIssues = nextIssue
+            ? [nextIssue, ...currentIssues.filter(currentIssue => currentIssue.id !== nextIssue.id)].slice(0, 50)
+            : currentIssues;
+    }
+    return nextData;
 }
 
 export function buildOwnerSubmissionTitle(type: OwnerSubmissionType, fallback: string): string {
@@ -194,23 +232,11 @@ export function canReviewOwnerSubmission(status: string): boolean {
 export function getOwnerSubmissionReviewMode(type: string, status: string): OwnerSubmissionReviewMode {
     if (!canReviewOwnerSubmission(status)) return 'none';
     const normalizedType = toOwnerSubmissionType(type);
-    if (normalizedType === 'opening_task_completion') return 'approval';
+    if (normalizedType === 'opening_task_completion') return 'none';
     if (normalizedType === 'store_info') return 'acknowledge';
     return 'resolution';
 }
 
-export function applyOwnerOpeningTaskDecision(
-    tasks: readonly OpeningProjectTask[],
-    taskId: string,
-    approved: boolean
-): readonly OpeningProjectTask[] {
-    return mergeOpeningProjectTasks(
-        tasks.map(task => task.id === taskId
-            ? {
-                ...task,
-                status: normalizeOpeningProjectTaskStatus(approved ? '완료' : '진행중'),
-                memo: approved ? `${task.memo || ''}`.trim() : `${task.memo || ''}\n점주 완료 요청 반려`.trim()
-            }
-            : task)
-    );
+export function isOwnerChecklistCompletionSubmission(type: string): boolean {
+    return toOwnerSubmissionType(type) === 'opening_task_completion';
 }

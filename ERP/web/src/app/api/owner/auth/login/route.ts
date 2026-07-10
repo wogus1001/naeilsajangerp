@@ -9,6 +9,7 @@ import {
     verifyOwnerPassword,
     type OwnerAccountRow
 } from '@/lib/franchise-owner-auth';
+import { resolveCompanyIdByName } from '@/lib/api-auth';
 import { cleanOwnerText, isOwnerRecord } from '@/lib/franchise-owner-portal';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -18,14 +19,21 @@ export async function POST(request: Request) {
     try {
         const body: unknown = await request.json();
         if (!isOwnerRecord(body)) return fail(400, 'VALIDATION_ERROR', '로그인 정보를 입력해주세요.');
+        const companyIdFromBody = cleanOwnerText(body.companyId);
+        const companyName = cleanOwnerText(body.companyName);
         const loginId = normalizeOwnerLoginId(cleanOwnerText(body.loginId));
         const password = cleanOwnerText(body.password);
+        if (!companyIdFromBody && !companyName) return fail(400, 'VALIDATION_ERROR', '회사명을 입력해주세요.');
         if (!loginId || !password) return fail(400, 'VALIDATION_ERROR', '아이디와 비밀번호를 입력해주세요.');
 
         const supabaseAdmin = getSupabaseAdmin();
+        const companyId = companyIdFromBody || await resolveCompanyIdByName(supabaseAdmin, companyName);
+        if (!companyId) return fail(401, 'AUTH_REQUIRED', '회사 또는 점주 계정을 확인할 수 없습니다.');
+
         const { data: account, error } = await supabaseAdmin
             .from('franchise_owner_accounts')
             .select('id, company_id, location_id, login_id, owner_name, owner_phone, password_hash, status, temporary_password')
+            .eq('company_id', companyId)
             .eq('login_id_normalized', loginId)
             .maybeSingle<OwnerAccountRow>();
         if (error) throw error;

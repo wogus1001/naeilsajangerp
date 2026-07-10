@@ -13,6 +13,10 @@ import {
     resolveOwnerPortalCompanyScope,
     resolveOwnerPortalStaffAuth
 } from '@/lib/franchise-owner-portal-api';
+import {
+    notifyOwnerAccountCreated,
+    safelyNotifyOwnerPortalAlimtalk
+} from '@/lib/alimtalk-owner-portal-notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +94,7 @@ export async function POST(request: Request) {
         const normalizedLoginId = normalizeOwnerLoginId(loginId);
         const temporaryPassword = generateTemporaryOwnerPassword();
         const passwordHash = await hashOwnerPassword(temporaryPassword);
+        const issuedAt = new Date().toISOString();
         const { data, error } = await authResult.auth.supabaseAdmin
             .from('franchise_owner_accounts')
             .upsert({
@@ -104,11 +109,21 @@ export async function POST(request: Request) {
                 temporary_password: true,
                 created_by: authResult.auth.requester.id,
                 updated_by: authResult.auth.requester.id,
-                updated_at: new Date().toISOString()
+                updated_at: issuedAt
             }, { onConflict: 'company_id,location_id' })
             .select('id, company_id, location_id, login_id, owner_name, owner_phone, password_hash, status, temporary_password')
             .single<OwnerAccountRow>();
         if (error) throw error;
+        await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerAccountCreated({
+            accountId: data.id,
+            companyId: data.company_id,
+            loginId: data.login_id,
+            ownerName: data.owner_name,
+            ownerPhone: data.owner_phone,
+            issuedAt,
+            supabaseAdmin: authResult.auth.supabaseAdmin,
+            temporaryPassword
+        }), 'Owner account created');
         return ok({ account: toOwnerAccountPayload(data), temporaryPassword }, 201);
     } catch (error) {
         if (isMissingOwnerPortalSchemaError(error)) {

@@ -1,6 +1,5 @@
 import { fail, ok } from '@/lib/api-response';
 import {
-    applyOwnerOpeningTaskDecision,
     canReviewOwnerSubmission,
     cleanOwnerText,
     getOwnerSubmissionReviewMode,
@@ -14,45 +13,10 @@ import {
     isMissingOwnerPortalSchemaError,
     isOwnerPortalManager,
     resolveOwnerPortalCompanyScope,
-    resolveOwnerPortalStaffAuth,
-    type OwnerPortalStaffAuth
+    resolveOwnerPortalStaffAuth
 } from '@/lib/franchise-owner-portal-api';
 
 export const dynamic = 'force-dynamic';
-
-type OpeningProjectRow = {
-    readonly id: string;
-    readonly tasks: unknown;
-};
-
-async function syncOpeningTaskDecision(
-    auth: OwnerPortalStaffAuth,
-    submission: OwnerSubmissionRow,
-    approved: boolean
-): Promise<void> {
-    if (submission.submission_type !== 'opening_task_completion' || !isOwnerRecord(submission.payload)) return;
-    const taskId = cleanOwnerText(submission.payload.taskId);
-    if (!taskId) return;
-    const { data: project, error: projectError } = await auth.supabaseAdmin
-        .from('franchise_opening_projects')
-        .select('id, tasks')
-        .eq('company_id', submission.company_id)
-        .eq('location_id', submission.location_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle<OpeningProjectRow>();
-    if (projectError) throw projectError;
-    if (!project || !Array.isArray(project.tasks)) return;
-    const { error } = await auth.supabaseAdmin
-        .from('franchise_opening_projects')
-        .update({
-            tasks: applyOwnerOpeningTaskDecision(project.tasks, taskId, approved),
-            updated_by: auth.requester.id,
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', project.id);
-    if (error) throw error;
-}
 
 export async function GET(request: Request) {
     try {
@@ -142,7 +106,6 @@ export async function PATCH(request: Request) {
             return fail(409, 'CONFLICT', '이미 처리된 제출 건입니다.');
         }
         const nextStatus = action === 'reject' ? 'rejected' : action === 'resolve' ? 'resolved' : 'approved';
-        await syncOpeningTaskDecision(authResult.auth, submission, nextStatus === 'approved');
         const { error } = await authResult.auth.supabaseAdmin
             .from('franchise_owner_submissions')
             .update({

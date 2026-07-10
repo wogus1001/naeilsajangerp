@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React from 'react';
+import type { OwnerNoticeAttachment, OwnerPortalChecklistIssue } from '@/lib/franchise-owner-portal';
 import {
     Bell,
     ClipboardCheck,
@@ -33,6 +34,7 @@ export type OwnerNotice = {
     readonly body: string;
     readonly createdAt: string | null;
     readonly readAt: string | null;
+    readonly attachments?: readonly OwnerNoticeAttachment[];
 };
 
 export type OwnerTask = {
@@ -42,6 +44,8 @@ export type OwnerTask = {
     readonly status?: string;
     readonly memo?: string;
 };
+
+export type OwnerChecklistIssue = OwnerPortalChecklistIssue;
 
 export type OwnerSubmission = {
     readonly id: string;
@@ -82,6 +86,7 @@ export type OwnerDashboardData = {
         readonly id: string;
         readonly status: string;
         readonly tasks: readonly OwnerTask[];
+        readonly issues?: readonly OwnerChecklistIssue[];
     };
     readonly submissions: readonly OwnerSubmission[];
 };
@@ -139,7 +144,7 @@ export function formatOwnerDate(value: string | null): string {
 
 export function ownerSubmissionTypeLabel(value: string): string {
     if (value === 'store_info') return '매장 정보';
-    if (value === 'opening_task_completion') return '체크리스트';
+    if (value === 'opening_task_completion') return '운영 체크리스트';
     if (value === 'facility_request') return '시설 문의';
     return '일반 요청';
 }

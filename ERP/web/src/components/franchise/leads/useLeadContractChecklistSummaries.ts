@@ -1,6 +1,7 @@
 import React from 'react';
 import type { LeadContractChecklistSummaryView } from '@/lib/franchise-lead-contract-checklist';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId } from '@/utils/userUtils';
 
 type UseLeadContractChecklistSummariesInput = {
@@ -46,6 +47,7 @@ export function useLeadContractChecklistSummaries({
                 const params = new URLSearchParams({ requesterId, leadIds: leadIdKey });
                 const response = await fetch(`/api/franchise-lead-contract-checklist/summaries?${params.toString()}`, {
                     cache: 'no-store',
+                    headers: await getApiAuthHeaders(),
                     signal: controller.signal
                 });
                 const payload = await response.json();

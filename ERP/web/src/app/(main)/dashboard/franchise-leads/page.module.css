@@ -5119,7 +5119,7 @@
 
 .ownerPortalChecklistSummary {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
     border-bottom: 1px solid #e5e8eb;
     padding: 14px;
@@ -5155,6 +5155,16 @@
     grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
     gap: 12px;
     padding: 14px;
+}
+
+.ownerPortalChecklistRequests {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid #e5e8eb;
+}
+
+.ownerPortalChecklistRequests .ownerPortalFilterBar {
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 190px);
 }
 
 .ownerPortalChecklistScope,
@@ -5503,6 +5513,78 @@
     font-weight: 800;
 }
 
+.ownerPortalMutedAction {
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ownerPortalSuccessPill,
+.ownerPortalWarningPill {
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ownerPortalSuccessPill {
+    background: #dcfce7;
+    color: #047857;
+}
+
+.ownerPortalWarningPill {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.locationItem .ownerPortalMutedAction,
+.locationItem .ownerPortalSuccessPill,
+.locationItem .ownerPortalWarningPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.locationItem .ownerPortalMutedAction {
+    height: 30px;
+    color: #6b7684;
+}
+
+.locationItem .ownerPortalSuccessPill,
+.locationItem .ownerPortalWarningPill {
+    height: 28px;
+}
+
+.locationItem .ownerPortalSuccessPill {
+    color: #047857;
+}
+
+.locationItem .ownerPortalWarningPill {
+    color: #c2410c;
+}
+
 .ownerPortalTextarea {
     min-height: 104px;
     width: 100%;
@@ -5588,6 +5670,120 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.ownerPortalAttachmentBox {
+    display: grid;
+    gap: 10px;
+    border: 1px dashed #b8d6ff;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 12px;
+}
+
+.ownerPortalAttachmentHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ownerPortalAttachmentHeader div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalAttachmentHeader strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalAttachmentHeader span,
+.ownerPortalAttachmentBox p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.ownerPortalAttachmentHeader button {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1d4ed8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalHiddenFileInput {
+    display: none;
+}
+
+.ownerPortalAttachmentList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ownerPortalAttachmentItem {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 8px;
+}
+
+.ownerPortalAttachmentItem div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalAttachmentItem strong,
+.ownerPortalAttachmentItem span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalAttachmentItem strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalAttachmentItem span {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPortalAttachmentItem button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fecdd3;
+    border-radius: 7px;
+    background: #fff1f2;
+    color: #e42939;
+    cursor: pointer;
 }
 
 .ownerPortalNoticeList {
@@ -5745,6 +5941,51 @@
     font-weight: 850;
 }
 
+.ownerPortalChecklistStoreGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 10px;
+}
+
+.ownerPortalChecklistStoreStatus {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 9px 10px;
+}
+
+.ownerPortalChecklistStoreStatus div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalChecklistStoreStatus strong,
+.ownerPortalChecklistStoreStatus span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistStoreStatus strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalChecklistStoreStatus span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 750;
+}
+
 .ownerPortalSubmissionDetailGrid {
     display: grid;
     gap: 8px;
@@ -5897,8 +6138,10 @@
     color: #333d4b;
     padding: 6px 8px;
     font-size: 12px;
+    font-family: inherit;
     font-weight: 800;
     text-decoration: none;
+    cursor: pointer;
 }
 
 .ownerPortalFileLink img {

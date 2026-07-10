@@ -1295,6 +1295,7 @@ export default function FranchiseLeadsPage() {
                 <LeadDbWorkspace
                     isLoading={isLoading}
                     workspaceVariant={workspaceTab === 'contractOwners' ? 'contractOwners' : 'default'}
+                    userId={userId}
                     leadDbLayer={leadDbLayer}
                     viewMode={viewMode}
                     rawIntakeCount={rawIntakeLeads.length}

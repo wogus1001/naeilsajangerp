@@ -8,7 +8,10 @@ export const ALIMTALK_SCENARIO_KEYS = [
     'supervision_visit_due',
     'supervision_report_missing',
     'supervision_report_reviewed',
-    'supervision_corrective_action_due'
+    'supervision_corrective_action_due',
+    'owner_notice_published',
+    'owner_facility_request_created',
+    'owner_account_created'
 ] as const;
 
 export type AlimtalkScenarioKey = typeof ALIMTALK_SCENARIO_KEYS[number];
@@ -24,8 +27,10 @@ export type AlimtalkSendInput = {
     readonly companyId: string | null;
     readonly recipient: AlimtalkRecipient;
     readonly variables: Readonly<Record<string, string>>;
+    readonly logVariables?: Readonly<Record<string, string>>;
     readonly sourceType: string;
     readonly sourceId: string;
+    readonly requiresMobileRecipient?: boolean;
     readonly now?: Date;
 };
 
@@ -91,11 +96,23 @@ export function buildAlimtalkVariables(input: Readonly<Record<string, string>>):
     );
 }
 
+export function buildAlimtalkLogVariables(input: AlimtalkSendInput): Record<string, string> {
+    return buildAlimtalkVariables(input.logVariables ?? input.variables);
+}
+
+export function isFinalAlimtalkSendStatus(status: string): boolean {
+    return status === 'success' || status === 'fallback_sms';
+}
+
 export function formatAlimtalkDate(value: string | Date | null | undefined): string {
     if (!value) return '-';
     const date = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+export function isKoreanMobileRecipientPhone(value: string): boolean {
+    return /^(010\d{8}|01[1-9]\d{7,8})$/.test(value);
 }
 
 export function resolveAlimtalkBlockReason(input: {
@@ -105,9 +122,11 @@ export function resolveAlimtalkBlockReason(input: {
     readonly monthlySendCount: number;
     readonly recipientPhone: string;
     readonly providerEnabled: boolean;
+    readonly requiresMobileRecipient?: boolean;
 }): string | null {
     if (!input.providerEnabled) return 'Solapi provider is disabled or missing config';
     if (input.recipientPhone.length < MIN_PHONE_LENGTH) return 'recipient phone is missing';
+    if (input.requiresMobileRecipient && !isKoreanMobileRecipientPhone(input.recipientPhone)) return 'recipient phone must be a mobile number';
     if (!input.scenario.enabled) return 'scenario is disabled';
     if (input.template.status !== 'approved') return 'template is not approved';
     if (!input.template.enabled) return 'template is disabled';

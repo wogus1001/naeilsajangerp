@@ -4,7 +4,8 @@ export const FRANCHISE_NOTIFICATION_SEVERITIES = ['info', 'warning', 'danger', '
 export const FRANCHISE_NOTIFICATION_SOURCE_TYPES = [
     'disclosure-missing', 'disclosure-failed', 'disclosure-unconfirmed', 'disclosure-due', 'disclosure-eligible',
     'contact-overdue', 'contact-today', 'hot-lead-followup',
-    'vendor-contract-due'
+    'vendor-contract-due',
+    'workflow-schedule', 'workflow-approval', 'supervision-visit', 'supervision-report'
 ] as const;
 
 export type FranchiseNotificationSeverity = typeof FRANCHISE_NOTIFICATION_SEVERITIES[number];

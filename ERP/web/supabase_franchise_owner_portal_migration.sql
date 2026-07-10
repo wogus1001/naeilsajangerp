@@ -15,7 +15,7 @@ create table if not exists public.franchise_owner_accounts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (company_id, location_id),
-  unique (login_id_normalized)
+  unique (company_id, login_id_normalized)
 );
 
 create table if not exists public.franchise_owner_sessions (
@@ -33,6 +33,7 @@ create table if not exists public.franchise_owner_notices (
   location_id uuid references public.franchise_locations(id) on delete cascade,
   title text not null,
   body text not null,
+  attachments jsonb not null default '[]'::jsonb,
   status text not null default 'published',
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),

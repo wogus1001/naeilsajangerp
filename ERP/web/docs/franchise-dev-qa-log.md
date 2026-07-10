@@ -32,6 +32,9 @@
 - 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `git diff --check`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`를 통과했다.
 - 로컬 확인: `http://localhost:3000/owner/login/92924bd6-b2a1-49bb-844b-05eabcc51bbf`가 200 응답을 반환하고, 렌더 HTML의 로그인 폼에는 `점주 포털`, `아이디`, `비밀번호`만 노출되며 `회사명` 필드가 보이지 않는 것을 확인했다.
 - 이번 점주 포털 단축 링크/체크리스트 UI 보강 범위의 신규 SQL은 없다.
+- 점주 공지/공문에 첨부 파일 발행과 점주 다운로드 링크를 추가했다. 본사는 이미지/PDF/문서 파일을 최대 5개, 파일당 10MB까지 선택해 공지와 함께 발행하고, 본사 읽음 현황과 점주 `/owner/notices`에서 파일명·용량·다운로드 링크를 확인한다.
+- 공지 첨부 메타데이터는 신규 `franchise_owner_notices.attachments` JSON 컬럼에 저장한다. 기존 DB에 해당 컬럼이 없으면 본사 공지 목록과 점주 포털 대시보드는 첨부 없이 기존 조회로 fallback하고, 첨부 업로드는 `supabase_franchise_owner_notice_attachments_migration.sql` 적용 안내로 막는다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 브라우저 QA는 로컬 production 서버 `http://localhost:3137`에서 본사 공지 첨부 선택, 발행 확인 모달, 발행 완료 알럿, 본사 읽음 현황 첨부 링크, 점주 모바일 `/owner/notices` 다운로드 링크를 확인했다. 같은 QA에서 `attachments`가 없는 기존 응답 기준 본사 공지 목록과 점주 `/owner/opening-tasks`가 로딩 오류 없이 렌더되는 것도 확인했다. 추가로 공지 삭제 확인 모달, 삭제 완료 알럿, 본사 목록 제거를 확인했다.
 
 ### 2026-07-07
 
@@ -1140,8 +1143,67 @@
 ## 2026-07-08 점주 포털 분리 로그인 MVP QA
 
 - 범위: 점주 화면을 기존 본사 `/login`/`profiles` 권한 체계와 분리해 `/owner/login`, `/owner/dashboard`로 추가했다. 점주 API는 `requesterId`를 받지 않고 `fc_owner_session` HttpOnly 쿠키로만 인증한다.
-- 본사 연동: `가맹 운영 > 점주 연동`에서 운영점별 점주 계정 생성, 임시 비밀번호 재발급, 활성/중지, 공지 발행, 제출 큐 승인/반려/보관 처리를 제공한다. 가맹점 목록 행에는 `점주 계정` 진입 버튼을 추가했다.
+- 본사 연동: `가맹 운영 > 점주 소통`에서 운영점별 점주 계정 생성, 임시 비밀번호 재발급, 활성/중지, 공지 발행, 제출 처리/보관을 제공한다. 가맹점 목록 행에는 `점주 계정 설정` 진입 버튼을 추가했다.
 - 점주 기능: 내 매장 기본 정보 제출, 공지 읽음 처리, 오픈 체크리스트 완료 요청, 시설/고장 문의, 최근 제출 이력을 제공한다. 체크리스트 완료 요청은 본사 승인 전에는 오픈 준비 프로젝트 task를 완료로 바꾸지 않는다.
 - 신규 SQL: `supabase_franchise_owner_portal_migration.sql`을 추가했다. 점주 계정, 점주 세션, 공지/읽음, 제출 이력, 업로드 파일 메타 테이블과 RLS 정책을 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts` 7건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Production build를 `next start -p 3142`로 띄워 `/owner/login`, `/owner/dashboard`가 200으로 렌더링되는 것을 확인했다.
-- 남은 live QA: SQL 적용 후 `내일 / admin / 1234`로 본사 로그인, 가맹점 목록의 `점주 계정` 또는 `점주 연동` 탭에서 계정 생성, `/owner/login` 점주 로그인, 공지 읽음, 매장 정보 제출, 체크리스트 완료 요청, 시설 문의 등록, 본사 큐 처리 persistence를 확인한다.
+- 남은 live QA: SQL 적용 후 `내일 / admin / 1234`로 본사 로그인, 가맹점 목록의 `점주 계정 설정` 또는 `점주 소통` 탭에서 계정 생성, `/owner/login/{companyId}` 점주 로그인, 공지 읽음, 매장 정보 제출, 체크리스트 완료 요청, 시설 문의 등록, 본사 제출 처리 persistence를 확인한다.
+
+## 2026-07-08 점주 포털 회사별 로그인 및 운영 체크리스트 리뷰 QA
+
+- 범위: 전체 코드리뷰 후 점주 포털 로그인과 본사 점주 소통 흐름을 보정했다. 점주 로그인은 `회사명 + 아이디 + 비밀번호`로 회사를 먼저 확정한 뒤 해당 회사의 점주 계정만 조회한다. 기존 전역 `login_id_normalized` unique 제약은 회사 범위 unique 제약으로 전환한다.
+- 체크리스트: 점주용 체크리스트는 오픈 준비 프로젝트가 아니라 `franchise_locations.data.ownerPortalChecklist`에 저장하는 운영 체크리스트로 분리했다. 본사 `점주 소통`에는 공지/공문, 체크리스트, 제출 처리, 점주 계정 설정을 분리해 노출하고, 점주 화면에서는 이미 완료 요청한 체크리스트 항목을 다시 요청하지 못하게 막는다.
+- 구비서류 회귀: 계약 완료 구비서류 목록과 상세 저장/조회 호출에 세션 인증 헤더를 붙여 `requesterId is required` 오류가 재발하지 않게 했다.
+- 신규 SQL: 기존 점주 포털 SQL 적용 DB에는 `supabase_franchise_owner_company_login_scope.sql`을 추가 적용해야 한다. 이 SQL은 기존 전역 점주 로그인 ID unique 제약을 제거하고 회사별 unique 제약을 추가한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-owner-auth.test.mts src/lib/franchise-owner-portal.test.mts src/lib/franchise-lead-contract-checklist.test.mts` 20건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright로 `http://localhost:3137/owner/login` 모바일 390px에서 회사명/아이디/비밀번호 입력 구조와 console error 0건을 확인했고, `내일 / admin` 본사 세션으로 `/dashboard/franchise-operations/owner-portal`에서 `공지/공문`, `체크리스트`, `제출 처리`, `점주 계정 설정` 탭 노출을 확인했다.
+- 남은 live QA: 운영 SQL 적용 후 서로 다른 회사에서 같은 점주 아이디를 발급할 수 있는지, `/owner/login`에서 회사명을 잘못 입력하면 다른 회사 점주 계정으로 로그인되지 않는지, 운영 체크리스트 저장/완료 요청/보관 처리가 새로고침 후 유지되는지 확인한다.
+
+## 2026-07-09 점주 포털 단축 링크 및 체크리스트 배포 QA
+
+- 범위: 점주 포털 회사별 로그인 링크를 `/owner/login/{companyId}` 단축 경로로 추가하고, 전용 링크로 접근한 점주 로그인 화면에서는 회사명 입력 필드를 숨겼다. 기존 `/owner/login?companyId=...` 쿼리 링크는 호환용으로 유지한다.
+- 본사 연동: `가맹 운영 > 점주 소통 > 점주 계정 설정`에서 회사별 점주 포털 링크를 복사할 수 있다. 운영 체크리스트는 전체 가맹점 또는 선택한 복수 운영점에 한 번에 저장할 수 있게 정리했다.
+- 신규 SQL: 없음. 기존 점주 포털 SQL과 회사별 로그인 ID scope SQL을 사용한다.
+- 검증: 기능 브랜치와 release worktree에서 `git diff --check`, `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. 운영 배포 후 `npx vercel inspect https://www.fcerp.co.kr --scope team_NcWNRifDHvr7GdFW0rcpR3ym`에서 `name=naeilsajang`, `target=production`, `status=Ready`, aliases `https://www.fcerp.co.kr`, `https://fcerp.co.kr`를 확인했다. `curl -I -L https://www.fcerp.co.kr/owner/login/92924bd6-b2a1-49bb-844b-05eabcc51bbf`와 `curl -I -L https://www.fcerp.co.kr/login`는 200 응답이었다.
+- 남은 live QA: 운영 실계정으로 `점주 계정 설정` 링크 복사, 전용 링크 로그인, 운영 체크리스트 전체/복수 운영점 저장과 점주 화면 완료 요청까지 확인한다.
+
+## 2026-07-09 점주 포털 운영 체크리스트 발송형 전환 QA
+
+- 범위: 본사 `가맹 운영 > 점주 소통 > 체크리스트`를 운영점별 기존 세팅 수정 목록이 아니라 공지/공문처럼 발송하는 흐름으로 전환했다.
+- 본사 연동: `체크리스트 발송`에서 전체 가맹점 또는 선택 운영점에 항목을 발행하고, `발송 현황`에서 발송 건별 완료/미완료 운영점과 항목 상세를 확인한다. 점주의 체크리스트 완료 요청은 일반 `제출 처리` 승인/반려 대상에서 제외하고 체크리스트 발송 현황에 집계한다.
+- 신규 SQL: 없음. 기존 `franchise_locations.data.ownerPortalChecklist`와 점주 제출 이력을 사용한다.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 로컬 기존 dev 서버 `127.0.0.1:3000`에서 `내일 / admin / 1234`로 로그인해 `/dashboard/franchise-operations/owner-portal`의 `체크리스트` 탭을 확인했다. `체크리스트 발송`, 전체/개별 가맹점 선택, `발송 현황`, 완료/미완료 표시가 노출되고 console error 0건이었다.
+- 남은 live QA: 운영 실계정으로 체크리스트 전체/개별 발송, 점주 포털 완료 요청, 본사 발송 현황의 완료/미완료 운영점 집계 persistence를 확인한다.
+
+## 2026-07-09 점주 체크리스트 목록화 및 상태 배지 QA
+
+- 범위: 점주 포털 `운영 체크리스트` 항목을 카드 그리드에서 공지처럼 세로 목록형 행으로 정리했다. 본사 `체크리스트 발송` 탭의 `6개 항목` 노출과 요약 카드의 `발송 항목` 카운트를 제거했다.
+- 본사 현황: `발송 현황`은 발송 건을 목록처럼 보여주고, 상세의 가맹점별 완료 요청 상태는 `auto-fit` 그리드로 한 줄에 여러 가맹점이 표시되게 보정했다. `완료`, `미완료`, `진행 중` 상태 배지는 `.locationItem` 공용 텍스트 규칙에 덮이지 않도록 중앙 정렬을 고정했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3155` production build에서 Playwright mock 세션으로 `/owner/opening-tasks` 1280px/390px, `/dashboard/franchise-operations/owner-portal` 1440px/768px/390px를 확인했다. 본사 현황 상세는 데스크톱에서 가맹점 카드 9개가 5열 그리드로 표시되고, `체크리스트 발송 6개 항목`/`발송 항목 6개` 문구는 미노출이며, 상태 배지 계산 스타일은 `display:flex`, `centerOffset:0`, console error 0건이었다. QA 증거: `/tmp/fcerp-owner-checklist-qa-20260709-pass/result.json`.
+
+## 2026-07-09 점주 체크리스트 공지형 발송 목록 재보정 QA
+
+- 범위: 점주 포털 `운영 체크리스트` 기본 화면을 공지/공문처럼 `운영 체크리스트` 발송 1건 목록 카드와 `총 1건` 하단 바 형태로 재구성했다. 6개 세부 항목은 기본 화면에 바로 나열하지 않고 `항목별 완료 요청 보기`를 펼쳤을 때만 완료 요청 행으로 표시한다.
+- 문구: 점주 완료 요청은 승인/반려 흐름이 아니므로 `본사 승인 요청` 표현을 `본사 진행 현황`으로 정리했다.
+- 코드리뷰 보정: 점주 목록 카드 안 진행률 영역이 별도 중첩 카드처럼 보이지 않도록 진행률 박스의 테두리/배경을 제거하고, 발송 현황 상태 배지의 세로 정렬을 computed style 기준으로 재확인했다.
+- 신규 SQL: 없음.
+- 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build` 통과. `next start -p 3160` production build에서 Playwright mock 세션으로 `/owner/opening-tasks`와 `/dashboard/franchise-operations/owner-portal`을 확인했다. 접힌 기본 화면은 `총 1건`, `1 / 1`, `총 6개 항목 · 6/6 완료 요청`, `항목별 완료 요청 보기`를 표시하고 세부 항목은 숨김 상태였으며, 펼친 뒤에는 6개 완료 요청 행이 표시됐다. 본사 `발송 현황` 상세는 가맹점 카드 9개가 데스크톱 5열로 줄바꿈되고, 상태 배지는 `display:flex`, `align-items:center`, `height:30px`로 중앙 정렬되며, desktop horizontal overflow 0건과 console error 0건이었다. QA 증거: `/tmp/fcerp-owner-checklist-release-qa-20260709/result.json`.
+
+## 2026-07-09 점주 포털 알림톡 3종 연동 QA
+
+- 범위: 검수 통과된 점주 포털 알림톡 템플릿 3종을 실제 이벤트에 연결했다. 본사 공지/공문 발행 시 점주에게 `공지/공문 안내`, 점주가 시설/고장 문의를 등록하거나 반려 건을 재제출하면 본사 담당자에게 `시설/고장 문의 접수 안내`, 본사가 점주 계정을 신규 발급하면 점주에게 `점주 포털 계정 발급 안내`를 발송 후보로 기록한다.
+- 보안/재시도: 점주 계정 발급 알림톡의 실제 발송 변수에는 임시 비밀번호가 포함되지만, `alimtalk_send_logs.variables`에는 임시 비밀번호를 `[마스킹]`으로 저장한다. 계정 발급 알림톡은 휴대폰 번호 수신자만 허용하고, 실패/차단 로그는 같은 이벤트 재시도를 막지 않도록 성공 또는 대체 SMS 로그만 중복 발송 방지 기준으로 사용한다. 같은 이벤트의 기존 성공 또는 대체 SMS 로그는 이후 차단/실패 재시도로 덮어쓰지 않는다.
+- 신규 SQL: `supabase_franchise_owner_portal_alimtalk_templates_migration.sql`을 추가했다. 기존 `supabase_franchise_alimtalk_operations_migration.sql` 적용 후 실행하는 seed이며, 사용자 확인 기준 SQL 등록은 완료했다. `/admin/alimtalk`에서 승인된 SOLAPI template ID와 Kakao channel ID를 저장해야 실제 발송된다. **SQL 등록 완료 확인**.
+- 검증: `npx tsx --test src/lib/alimtalk-send.test.mts src/lib/alimtalk-owner-portal-notifications.test.mts src/lib/alimtalk-send-support.test.mts src/lib/franchise-owner-portal.test.mts` 32건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3158` production build에서 비로그인 POST 스모크로 `/api/franchise-owner-portal/notices`, `/api/franchise-owner-portal/accounts`, `/api/owner/requests`가 각각 401 인증 차단되는 것을 확인했다.
+- 남은 live QA: `/admin/alimtalk` provider ID 저장 후 실계정으로 공지/공문 발행, 시설/고장 문의 등록/재제출, 점주 계정 신규 발급을 실행해 `alimtalk_send_logs`의 성공/차단/실패 상태, masked 임시 비밀번호 로그, 실제 카카오 메시지 변수 치환을 확인한다.
+
+## 2026-07-09 공통 일정/결재 MVP 및 슈퍼바이징 파일럿 QA
+
+- 범위: 보고·결재 통합과 전사 일정/알림 PRD의 1차 기반을 구현했다. `schedules`는 source 기반 업무 허브로 확장하고, 신규 `approval_templates`, `approval_documents`, `approval_document_events`로 공통 결재 문서와 이벤트를 저장한다. `/api/schedules`는 기존 CRUD를 유지하면서 source 필터, source 기반 upsert, 완료 처리 액션을 지원한다.
+- API: `/api/franchise-approvals/templates`, `/api/franchise-approvals/documents`, `/api/franchise-approvals/actions`를 추가했다. 결재 문서는 `임시저장`, `제출`, `승인`, `반려`, `완료처리` 상태 전이를 서버에서 검증하고, 반려 사유 누락을 차단한다. SQL 미적용 시 `supabase_franchise_approval_calendar_migration.sql` 적용 안내를 반환한다.
+- 슈퍼바이징 파일럿: SV 방문 일정은 기존 `schedule_id`를 유지하면서 `source_type=supervision-visit`로 확장한다. SV 점검 보고서 제출은 `supervision-report` 결재 문서와 `approval-document` 승인 대기 일정에 연결하고, 관리자에게 인앱 알림을 만든다. 승인/반려 시 작성자 인앱 알림을 만들고 승인 대기 일정을 완료 처리한다. 기존 알림톡 훅은 유지한다.
+- 화면: `/schedule`에 `점포개발 일정`과 `전사 업무·결재` 탭을 추가했다. 기존 월간 달력과 사이드 패널은 `점포개발 일정` 탭에 그대로 두고, 새 탭에 `오늘 처리`, `승인 대기`, `지연 업무`, `이번주 일정` KPI와 업무 큐를 표시한다. 일정 카드에는 source badge, 날짜, 완료 버튼을 표시한다.
+- 코드리뷰 보정: 결재 알림 딥링크(`/schedule?approvalDocumentId=...`)는 전사 업무·결재 탭을 자동으로 열고 해당 결재 일정을 강조한다. 결재 문서 API는 수동 문서 source ID를 서버에서 생성하고, 원천 연결 문서는 내부 연동 전용으로 막았다. 결재자 지정과 승인/반려는 관리자/팀장 권한으로 제한하고, 작성자와 결재자를 분리했다. `approval-document` 일정은 `/api/schedules` 직접 수정/삭제/완료로 숨길 수 없고, source-linked 일정의 일반 편집은 관리자/팀장으로 제한했다. workflow source upsert는 client schedule ID를 신뢰하지 않고 company/source 범위 unique 충돌 시 기존 row update로 회복하며, 슈퍼바이징 저장 API는 공통 일정/결재 SQL 미적용 또는 workflow side-effect 실패가 있어도 기존 보고서/방문 저장 흐름을 실패시키지 않는다. 신규 결재 테이블의 document/event write RLS는 서버 API 경유만 허용하도록 닫았다.
+- 신규 SQL: `supabase_franchise_approval_calendar_migration.sql`을 추가했다. 기존 `schedules` 확장, 결재 템플릿/문서/이벤트 테이블, source 중복 방지 인덱스, 회사 범위 RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
+- 검증: `npx tsx --test src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts` 19건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3168` production build에서 Playwright로 `/schedule` 미로그인 진입이 console error 0으로 조용히 처리되고, `/login` 1440px/390px 렌더링과 page-level horizontal overflow 0을 확인했다. `/schedule` 탭 클릭 QA는 Supabase 세션이 필요한 화면이라 SQL 적용 후 실계정 live QA에서 확인한다.
+- 남은 live QA: SQL 적용 후 실계정으로 `/schedule`의 기존 `점포개발 일정` 탭 보존, 새 `전사 업무·결재` 탭 KPI/업무 큐 표시, SV 방문 일정 source badge, SV 점검 보고서 제출 후 관리자 승인 대기 일정/인앱 알림 생성, 승인/반려 후 작성자 알림과 승인 대기 일정 완료 처리, source 기반 중복 방지를 확인한다.
