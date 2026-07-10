@@ -20,6 +20,7 @@
 - `ERP/web/handoff.md`, `.env*`, provider token, service-role key, 개인 인증 정보는 커밋하지 않는다.
 - 커밋 전에는 `git diff --check`, `git status --short`, 관련 검증 결과를 확인한다.
 - 사용자 설명 방식에 영향을 주는 기능은 `/landing`과 `/demo`의 프랜차이즈 데모 시나리오, 딤드 설명 단계, 샘플 데이터 갱신 여부도 함께 확인한다.
+- 직원용 보호 API를 호출하는 client 코드는 `requesterId`를 인증으로 간주하지 않고 `getApiAuthHeaders()`로 Supabase 세션 header를 붙인다. 새 보호 API를 추가하거나 인증 정책을 강화할 때는 기존 호출부를 전수 검색해 함께 점검한다.
 
 ## Update Flow
 
@@ -61,6 +62,7 @@ npm run build
 
 - 라이브러리/유틸 변경이 있으면 관련 `npx tsx --test ...`를 먼저 실행한다.
 - UI 변경이면 Playwright 또는 실제 브라우저로 해당 화면을 직접 열어 확인한다.
+- 보호 API 연동 변경이면 비로그인 401뿐 아니라 로그인 세션의 조회·저장·수정·삭제 중 변경된 경로를 최소 1회 확인한다. 실계정 QA가 불가능하면 mock session/browser QA와 남은 live QA를 구분해 기록한다.
 - 문서만 변경한 경우에는 `git diff --check`와 문서 diff 확인을 최소 검증으로 둔다.
 
 ### 3. 문서 갱신
@@ -220,14 +222,14 @@ YYYY-MM-DD
   - 주요 기능: 점주 소통 후속 고도화와 공통 일정·결재 MVP를 main에 통합했다. 점주 체크리스트는 발송 이력별 목록과 가맹점별 현황을 유지하고, 공지 첨부/삭제 및 알림톡 연동을 포함한다. `/schedule`은 기존 `점포개발 일정` 탭을 유지하면서 `전사 업무·결재` 탭을 추가한다.
   - SQL: `supabase_franchise_approval_calendar_migration.sql` 운영 DB 적용 완료 확인. dev/production Supabase가 분리된 환경은 각 환경 적용 여부를 별도 확인한다.
   - 직접 배포: `dpl_HZGEyoWQ6835zzpr9Y5CQbvytrVw`, `https://www.fcerp.co.kr` READY. main/dev 기준점 동기화 후 main 소스로 production을 재배포한다.
-  - 검증: 점주 포털·공통 workflow·슈퍼바이징·지도 유틸 51건, `tsc`, lint, build, staged diff check 통과. main/dev push와 최종 production inspect는 이어서 수행한다.
+  - 검증: 점주 포털·공통 workflow·슈퍼바이징·지도 유틸 51건, `tsc`, lint, build, staged diff check 통과. main/dev push와 최종 production inspect는 Fast Release Runbook의 동기화 완료 기준으로 확인한다.
   - 남은 이슈: 인증 세션으로 `/schedule`의 전사 업무·결재 탭과 SV 보고서 제출/승인/반려 데이터 persistence를 live QA한다.
 
 - 2026-07-09
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: 이번 공통 일정/결재 기반 커밋 예정
   - 주요 기능: 기존 `/schedule`의 점포개발 일정관리는 `점포개발 일정` 탭으로 유지하고, `전사 업무·결재` 탭을 추가해 오늘 처리, 승인 대기, 지연 업무, 이번주 일정 큐를 분리했다. 공통 workflow schedule 필드와 내부 보고/결재 테이블을 추가하고, `/api/schedules`의 source 기반 upsert/완료 처리, `/api/franchise-approvals/*` 템플릿/문서/액션 API, 슈퍼바이징 방문/점검보고서 일정·결재 동기화 기반을 연결했다. 결재 알림 URL(`/schedule?approvalDocumentId=...`)은 전사 업무·결재 탭으로 바로 진입해 관련 결재 일정을 강조한다. 코드리뷰 후 결재 source ID 서버 생성, 작성자/결재자 분리, 결재자/승인 권한 제한, `approval-document` 일정 직접 수정·삭제·완료 차단, source upsert unique 충돌 회복, workflow side-effect 격리, 결재 문서/이벤트 server-only RLS 보강을 반영했다.
-  - 신규 SQL: `supabase_franchise_approval_calendar_migration.sql` 적용이 필요하다. 이 SQL은 `schedules` workflow 컬럼을 확장하고 `approval_templates`, `approval_documents`, `approval_document_events`를 추가한다. **SQL 등록 필요**.
+  - 신규 SQL: `supabase_franchise_approval_calendar_migration.sql`은 `schedules` workflow 컬럼을 확장하고 `approval_templates`, `approval_documents`, `approval_document_events`를 추가한다. 이 릴리즈 기록 후 사용자 확인 기준 2026-07-10 운영 DB 적용을 완료했다. **SQL 등록 완료 확인**.
   - dev 반영: none
   - main 반영: none
   - 배포 URL: none

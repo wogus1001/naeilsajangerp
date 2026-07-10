@@ -288,7 +288,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
 
             await fetch('/api/schedules', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
         } catch (e) {
@@ -626,7 +626,7 @@ export default function BusinessCard({ id, onClose, onSuccess, isModal = false, 
 
             await fetch('/api/schedules', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(schedulePayload)
             });
 

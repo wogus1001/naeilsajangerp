@@ -31,6 +31,8 @@
 - main 병합 커밋: `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`.
 - 병합 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts src/components/franchise/location-map/mapUtils.test.mts` 51건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --cached --check`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
 - 브랜치 운영 규칙을 보강했다. 기능 브랜치에서 production을 직접 배포한 경우 같은 릴리즈에서 main 통합, main push, `main -> dev` 역병합, main 소스 재배포를 완료한다. dev에 운영 미검증 고유 커밋이 있으면 `dev -> main` 전체 병합을 금지한다.
+- 병렬 코드리뷰에서 `/schedule`과 고객·명함·물건지·계약 화면의 `/api/schedules` 호출이 보호 API 전환 후에도 세션 header를 누락한 문제를 확인했다. 모든 일정 API 호출에 `getApiAuthHeaders()`를 적용하고, 향후 보호 API 정책 변경 시 기존 호출부 전수 검색과 로그인 세션 CRUD QA를 릴리즈 규칙에 추가했다.
+- 점주 체크리스트 모바일 문장은 단어 중간에서 부자연스럽게 끊기지 않도록 `word-break: keep-all`과 긴 문자열 fallback을 적용했다. 구조 개선 후속으로 `franchise-workflow-store.ts`, `OwnerPortalPanelSections.tsx` 책임 분리, 공지 Office/HWPX 첨부의 컨테이너 검증, 회사 범위 route/RLS 통합 테스트 보강을 추적한다.
 - `supabase_franchise_approval_calendar_migration.sql`은 사용자 확인 기준 운영 DB 적용 완료다. **SQL 등록 완료 확인**.
 - 데모 영향: 이번 작업은 이미 검증된 기능을 main/dev 기준점에 동기화하는 릴리즈 작업이므로 `/landing`, `/demo` 콘텐츠 변경은 없다.
 
@@ -1213,6 +1215,6 @@
 - 슈퍼바이징 파일럿: SV 방문 일정은 기존 `schedule_id`를 유지하면서 `source_type=supervision-visit`로 확장한다. SV 점검 보고서 제출은 `supervision-report` 결재 문서와 `approval-document` 승인 대기 일정에 연결하고, 관리자에게 인앱 알림을 만든다. 승인/반려 시 작성자 인앱 알림을 만들고 승인 대기 일정을 완료 처리한다. 기존 알림톡 훅은 유지한다.
 - 화면: `/schedule`에 `점포개발 일정`과 `전사 업무·결재` 탭을 추가했다. 기존 월간 달력과 사이드 패널은 `점포개발 일정` 탭에 그대로 두고, 새 탭에 `오늘 처리`, `승인 대기`, `지연 업무`, `이번주 일정` KPI와 업무 큐를 표시한다. 일정 카드에는 source badge, 날짜, 완료 버튼을 표시한다.
 - 코드리뷰 보정: 결재 알림 딥링크(`/schedule?approvalDocumentId=...`)는 전사 업무·결재 탭을 자동으로 열고 해당 결재 일정을 강조한다. 결재 문서 API는 수동 문서 source ID를 서버에서 생성하고, 원천 연결 문서는 내부 연동 전용으로 막았다. 결재자 지정과 승인/반려는 관리자/팀장 권한으로 제한하고, 작성자와 결재자를 분리했다. `approval-document` 일정은 `/api/schedules` 직접 수정/삭제/완료로 숨길 수 없고, source-linked 일정의 일반 편집은 관리자/팀장으로 제한했다. workflow source upsert는 client schedule ID를 신뢰하지 않고 company/source 범위 unique 충돌 시 기존 row update로 회복하며, 슈퍼바이징 저장 API는 공통 일정/결재 SQL 미적용 또는 workflow side-effect 실패가 있어도 기존 보고서/방문 저장 흐름을 실패시키지 않는다. 신규 결재 테이블의 document/event write RLS는 서버 API 경유만 허용하도록 닫았다.
-- 신규 SQL: `supabase_franchise_approval_calendar_migration.sql`을 추가했다. 기존 `schedules` 확장, 결재 템플릿/문서/이벤트 테이블, source 중복 방지 인덱스, 회사 범위 RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
+- 신규 SQL: `supabase_franchise_approval_calendar_migration.sql`을 추가했다. 기존 `schedules` 확장, 결재 템플릿/문서/이벤트 테이블, source 중복 방지 인덱스, 회사 범위 RLS를 포함한다. 사용자 확인 기준 2026-07-10 운영 DB 적용을 완료했다. **SQL 등록 완료 확인**.
 - 검증: `npx tsx --test src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts` 19건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3168` production build에서 Playwright로 `/schedule` 미로그인 진입이 console error 0으로 조용히 처리되고, `/login` 1440px/390px 렌더링과 page-level horizontal overflow 0을 확인했다. `/schedule` 탭 클릭 QA는 Supabase 세션이 필요한 화면이라 SQL 적용 후 실계정 live QA에서 확인한다.
 - 남은 live QA: SQL 적용 후 실계정으로 `/schedule`의 기존 `점포개발 일정` 탭 보존, 새 `전사 업무·결재` 탭 KPI/업무 큐 표시, SV 방문 일정 source badge, SV 점검 보고서 제출 후 관리자 승인 대기 일정/인앱 알림 생성, 승인/반려 후 작성자 알림과 승인 대기 일정 완료 처리, source 기반 중복 방지를 확인한다.

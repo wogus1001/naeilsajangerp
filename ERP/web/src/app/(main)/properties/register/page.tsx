@@ -670,7 +670,7 @@ export default function RegisterPropertyPage() {
 
             await fetch('/api/schedules', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     title,
                     date,

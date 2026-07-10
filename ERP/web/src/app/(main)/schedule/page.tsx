@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 import {
     buildScheduleDashboard,
@@ -194,7 +195,9 @@ export default function SchedulePage() {
                 query = `?${params.toString()}`;
             }
 
-            const res = await fetch(`/api/schedules${query}`);
+            const res = await fetch(`/api/schedules${query}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const data = await readApiJson<ScheduleEvent[]>(res);
                 setEvents(Array.isArray(data) ? data : []);
@@ -258,7 +261,8 @@ export default function SchedulePage() {
             }
 
             const res = await fetch(`/api/schedules?${query.toString()}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: await getApiAuthHeaders()
             });
 
             if (res.ok) {
@@ -280,7 +284,7 @@ export default function SchedulePage() {
             const requesterId = getRequesterId(currentUser);
             const res = await fetch('/api/schedules', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     id: event.id,
                     action: 'complete',
@@ -327,14 +331,14 @@ export default function SchedulePage() {
                 // Update existing
                 res = await fetch('/api/schedules', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ id: selectedScheduleId, ...payload })
                 });
             } else {
                 // Create new
                 res = await fetch('/api/schedules', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(payload)
                 });
             }

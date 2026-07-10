@@ -339,6 +339,8 @@
     margin: 4px 0 0;
     color: #6b7684;
     font-size: 13px;
+    overflow-wrap: anywhere;
+    word-break: keep-all;
 }
 
 .panelBody {
@@ -388,7 +390,9 @@
     color: #4e5968;
     font-size: 13px;
     line-height: 1.54;
+    overflow-wrap: anywhere;
     white-space: pre-wrap;
+    word-break: keep-all;
 }
 
 .attachmentList {

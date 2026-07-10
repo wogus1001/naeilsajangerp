@@ -2267,7 +2267,7 @@ export default function PropertyCard({ property, onClose, onRefresh, onNavigate,
 
             await fetch('/api/schedules', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     title,
                     date,

@@ -299,7 +299,7 @@ export default function CreateProjectModal({ isOpen, onClose, onCreate }: Create
             try {
                 await fetch('/api/schedules', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(scheduleEvent)
                 });
             } catch (err) {
