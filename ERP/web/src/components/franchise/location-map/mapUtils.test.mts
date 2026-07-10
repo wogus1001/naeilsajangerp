@@ -5,6 +5,7 @@ import type {
     FranchiseLocationStatus
 } from '../operations/types.js';
 import {
+    buildComparisonRadiusPoints,
     buildRadiusAnalysisFromPosition,
     buildRadiusAnalysis,
     buildLocationMapCounts,
@@ -185,6 +186,36 @@ test('Given no active point When building radius analysis Then an empty analysis
     assert.equal(analysis.operationCount, 0);
     assert.equal(analysis.candidateCount, 0);
     assert.equal(analysis.statusCounts.운영중, 0);
+});
+
+test('Given selected radius analysis When building comparison radius points Then visible map points are returned by distance', () => {
+    const activePoint = makePoint({ id: 'active', name: '선택 물건지', latitude: 37.55, longitude: 127.08 });
+    const nearbyPoint = makePoint({
+        id: 'nearby',
+        name: '인접 물건지',
+        latitude: 37.551,
+        longitude: 127.081
+    });
+    const outsidePoint = makePoint({
+        id: 'outside',
+        name: '반경 밖 표시 물건지',
+        latitude: 37.557,
+        longitude: 127.087
+    });
+    const analysis = buildRadiusAnalysis(activePoint, [activePoint, nearbyPoint, outsidePoint], 500);
+
+    assert.deepEqual(
+        buildComparisonRadiusPoints(analysis, 'selected', activePoint, [outsidePoint, activePoint, nearbyPoint])
+            .map(point => point.location.id),
+        ['nearby', 'outside']
+    );
+});
+
+test('Given manual radius analysis When building comparison radius points Then no extra circles are returned', () => {
+    const nearbyPoint = makePoint({ id: 'nearby', name: '인접 물건지', latitude: 37.551, longitude: 127.081 });
+    const analysis = buildRadiusAnalysisFromPosition({ lat: 37.55, lng: 127.08 }, [nearbyPoint], 500);
+
+    assert.equal(buildComparisonRadiusPoints(analysis, 'manual').length, 0);
 });
 
 test('Given a manually picked center When building radius analysis Then nearby map points are included by distance', () => {

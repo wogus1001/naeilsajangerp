@@ -46,22 +46,6 @@
     line-height: 1.5;
 }
 
-.refreshButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    min-height: 36px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #333d4b;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
 .summaryLine {
     display: flex;
     flex-wrap: wrap;
@@ -78,6 +62,46 @@
     color: #4e5968;
     padding: 0 10px;
     font-size: 12px;
+    font-weight: 700;
+}
+
+.toolbar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(132px, 160px));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #8b95a1;
+}
+
+.searchBox input {
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    outline: 0;
+    color: #191f28;
+    font-size: 13px;
+}
+
+.control,
+.pageSize {
+    height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 10px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -145,6 +169,51 @@
     text-align: center;
 }
 
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.pageInfo {
+    color: #6b7684;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pageControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageButton {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pageButton:disabled {
+    color: #b0b8c1;
+    cursor: not-allowed;
+}
+
+.pageNumber {
+    min-width: 56px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+}
+
 @media (max-width: 768px) {
     .panel {
         padding: 16px;
@@ -153,5 +222,18 @@
     .header {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pageControls {
+        flex-wrap: wrap;
     }
 }

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Map, MapMarker, CustomOverlayMap, useKakaoLoader } from 'react-kakao-maps-sdk';
 import { X, Star } from 'lucide-react';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 import styles from './page.module.css';
 
@@ -68,7 +69,9 @@ export default function PropertyMapPage() {
                 if (requesterId) params.set('requesterId', requesterId);
                 const query = params.toString() ? `?${params.toString()}` : '';
 
-                const res = await fetch(`/api/properties${query}`);
+                const res = await fetch(`/api/properties${query}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     const data = await readApiJson(res);
                     setProperties(data);

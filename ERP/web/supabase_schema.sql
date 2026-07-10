@@ -1408,3 +1408,181 @@ create index if not exists idx_external_property_listings_requester_collected
 
 create index if not exists idx_external_property_listings_property
   on public.external_property_listings (property_id);
+
+create table if not exists public.alimtalk_templates (
+  id uuid default uuid_generate_v4() primary key,
+  template_key text not null unique,
+  name text not null,
+  template_id text default '' not null,
+  channel_id text default '' not null,
+  status text default 'submitted' not null,
+  enabled boolean default false not null,
+  content text default '' not null,
+  variables jsonb default '[]'::jsonb not null,
+  review_note text default '' not null,
+  button_label text default '' not null,
+  button_url text default '' not null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_templates_status_check check (status in ('draft', 'submitted', 'approved', 'rejected', 'paused'))
+);
+
+create table if not exists public.alimtalk_scenarios (
+  id uuid default uuid_generate_v4() primary key,
+  scenario_key text not null unique,
+  template_key text references public.alimtalk_templates(template_key) on delete restrict not null,
+  name text not null,
+  trigger_label text default '' not null,
+  recipient_label text default '' not null,
+  enabled boolean default false not null,
+  fallback_channel text default 'none' not null,
+  memo text default '' not null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_scenarios_fallback_check check (fallback_channel in ('none', 'sms'))
+);
+
+create table if not exists public.alimtalk_company_settings (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null unique,
+  enabled boolean default true not null,
+  monthly_limit integer,
+  warning_threshold integer,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_company_monthly_limit_check check (monthly_limit is null or monthly_limit >= 0),
+  constraint alimtalk_company_warning_threshold_check check (warning_threshold is null or warning_threshold >= 0)
+);
+
+create table if not exists public.alimtalk_send_logs (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete set null,
+  scenario_key text not null,
+  template_key text not null,
+  source_type text default '' not null,
+  source_id text default '' not null,
+  recipient_profile_id uuid references public.profiles(id) on delete set null,
+  recipient_name text default '' not null,
+  recipient_phone text default '' not null,
+  status text not null,
+  provider_message_id text default '' not null,
+  error_message text default '' not null,
+  variables jsonb default '{}'::jsonb not null,
+  sent_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint alimtalk_send_logs_status_check check (status in ('success', 'failed', 'blocked', 'fallback_sms'))
+);
+
+create index if not exists idx_alimtalk_send_logs_company_sent
+  on public.alimtalk_send_logs (company_id, sent_at desc);
+
+create index if not exists idx_alimtalk_send_logs_scenario_sent
+  on public.alimtalk_send_logs (scenario_key, sent_at desc);
+
+create unique index if not exists idx_alimtalk_send_logs_source_once
+  on public.alimtalk_send_logs (company_id, scenario_key, source_type, source_id, recipient_phone)
+  where source_type <> '' and source_id <> '' and recipient_phone <> '';
+
+create table if not exists public.franchise_supervisor_assignments (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  location_id uuid references public.franchise_locations(id) on delete cascade not null,
+  supervisor_profile_id uuid references public.profiles(id) on delete cascade not null,
+  region_scope text,
+  memo text,
+  active boolean default true not null,
+  assigned_at date default current_date,
+  ended_at date,
+  created_by uuid references public.profiles(id) on delete set null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.franchise_store_visits (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  location_id uuid references public.franchise_locations(id) on delete cascade not null,
+  supervisor_profile_id uuid references public.profiles(id) on delete cascade not null,
+  assignment_id uuid references public.franchise_supervisor_assignments(id) on delete set null,
+  schedule_id text references public.schedules(id) on delete set null,
+  visit_date date not null,
+  purpose text default '정기점검' not null,
+  status text default '예정' not null,
+  memo text,
+  data jsonb default '{}'::jsonb not null,
+  created_by uuid references public.profiles(id) on delete set null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint franchise_store_visits_purpose_check check (purpose in ('정기점검', '긴급방문', '오픈후점검', '교육/지원')),
+  constraint franchise_store_visits_status_check check (status in ('예정', '진행중', '보고서대기', '승인대기', '완료', '취소'))
+);
+
+create table if not exists public.franchise_inspection_reports (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  location_id uuid references public.franchise_locations(id) on delete cascade not null,
+  supervisor_profile_id uuid references public.profiles(id) on delete cascade not null,
+  visit_id uuid references public.franchise_store_visits(id) on delete set null,
+  status text default '임시저장' not null,
+  inspection_items jsonb default '[]'::jsonb not null,
+  photo_attachments jsonb default '[]'::jsonb not null,
+  special_note text,
+  reject_reason text,
+  submitted_at timestamp with time zone,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  reviewed_at timestamp with time zone,
+  data jsonb default '{}'::jsonb not null,
+  created_by uuid references public.profiles(id) on delete set null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint franchise_inspection_reports_status_check check (status in ('임시저장', '제출', '승인', '반려'))
+);
+
+create table if not exists public.franchise_corrective_actions (
+  id uuid default uuid_generate_v4() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  report_id uuid references public.franchise_inspection_reports(id) on delete cascade,
+  inspection_item_id text,
+  location_id uuid references public.franchise_locations(id) on delete cascade not null,
+  assignee_profile_id uuid references public.profiles(id) on delete set null,
+  status text default '요청' not null,
+  title text not null,
+  memo text,
+  due_date date,
+  completed_at timestamp with time zone,
+  data jsonb default '{}'::jsonb not null,
+  created_by uuid references public.profiles(id) on delete set null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint franchise_corrective_actions_status_check check (status in ('요청', '진행중', '완료', '보류'))
+);
+
+create unique index if not exists idx_franchise_supervisor_assignments_one_active
+  on public.franchise_supervisor_assignments (company_id, location_id)
+  where active = true;
+
+create index if not exists idx_franchise_supervisor_assignments_sv
+  on public.franchise_supervisor_assignments (company_id, supervisor_profile_id, active);
+
+create index if not exists idx_franchise_store_visits_company_date
+  on public.franchise_store_visits (company_id, visit_date, status);
+
+create index if not exists idx_franchise_store_visits_sv_date
+  on public.franchise_store_visits (supervisor_profile_id, visit_date);
+
+create index if not exists idx_franchise_inspection_reports_company_status
+  on public.franchise_inspection_reports (company_id, status, updated_at desc);
+
+create unique index if not exists idx_franchise_corrective_actions_report_item
+  on public.franchise_corrective_actions (report_id, inspection_item_id)
+  where report_id is not null and inspection_item_id is not null;
+
+create index if not exists idx_franchise_corrective_actions_assignee
+  on public.franchise_corrective_actions (assignee_profile_id, status, due_date);

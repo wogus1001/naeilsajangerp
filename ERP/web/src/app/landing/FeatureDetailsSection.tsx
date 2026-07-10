@@ -7,8 +7,8 @@ export function FeatureDetailsSection() {
         <section id="features" className={styles.section}>
             <div className={styles.inner}>
                 <div className={styles.sectionHeader}>
-                    <span className={styles.eyebrow}>기능</span>
-                    <h2>본사 직원이 매일 쓰는 업무 단위로 기능을 나눴습니다.</h2>
+                    <span className={styles.eyebrow}>제공 범위</span>
+                    <h2>고객이 보는 화면부터 본부가 쓰는 운영 시스템까지 한 구조로 만듭니다.</h2>
                 </div>
                 <div className={styles.featureGrid}>
                     {FEATURE_DETAILS.map(feature => {
@@ -25,7 +25,7 @@ export function FeatureDetailsSection() {
                                         {statusLabel ? (
                                             <>
                                                 {' '}
-                                                <span className={styles.eyebrow}>{statusLabel}</span>
+                                                <span className={styles.statusBadge}>{statusLabel}</span>
                                             </>
                                         ) : null}
                                     </h3>
@@ -45,7 +45,7 @@ export function FeatureDetailsSection() {
                 <div className={styles.teamScenePanel}>
                     <div className={styles.teamSceneHeader}>
                         <span className={styles.eyebrow}>팀별 사용 장면</span>
-                        <h3>같은 데이터가 다음 팀의 업무로 이어집니다.</h3>
+                        <h3>같은 운영 기준이 본사 각 팀의 실행으로 이어집니다.</h3>
                     </div>
                     <ol className={styles.teamSceneList}>
                         {TEAM_SCENES.map(scene => (

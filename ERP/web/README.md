@@ -70,11 +70,53 @@ supabase_electronic_contracts_platform_migration.sql
 supabase_company_contract_templates_migration.sql
 supabase_franchise_lead_documents_migration.sql
 supabase_franchise_contract_store_linkage_migration.sql
+supabase_franchise_location_meeting_tool_presets_migration.sql
+supabase_franchise_location_meeting_tool_versions_migration.sql
+supabase_franchise_vendor_contracts_migration.sql
+supabase_franchise_vendor_contract_events_migration.sql
+supabase_franchise_vendors_migration.sql
+supabase_franchise_alimtalk_operations_migration.sql
+supabase_franchise_supervision_migration.sql
+supabase_franchise_supervision_v2_migration.sql
+supabase_franchise_approval_calendar_migration.sql
+supabase_franchise_labor_planning_migration.sql
+supabase_franchise_owner_portal_migration.sql
+supabase_franchise_owner_company_login_scope.sql
+supabase_franchise_owner_notice_attachments_migration.sql
+supabase_franchise_owner_portal_alimtalk_templates_migration.sql
 supabase_meta_lead_ads_migration.sql
 supabase_realty_import_migration.sql
 ```
 
-`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, 또는 `electronic_contracts` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+`franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, `franchise_supervisor_assignments`, `approval_templates`, `approval_documents`, `approval_document_events`, `franchise_labor_settings`, `franchise_owner_accounts`, 또는 `franchise_owner_notices.attachments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. 점주 포털 알림톡 3종은 `supabase_franchise_alimtalk_operations_migration.sql` 적용 후 `supabase_franchise_owner_portal_alimtalk_templates_migration.sql`로 seed를 추가하고, `/admin/alimtalk`에서 승인 템플릿의 SOLAPI template/channel ID를 저장한다. 공통 일정/결재 MVP는 `supabase_franchise_approval_calendar_migration.sql`로 기존 `schedules` 확장과 결재 테이블을 추가한 뒤 확인한다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+## Franchise Supervision Setup
+
+Run `supabase_franchise_supervision_migration.sql` before enabling the `가맹 운영 > 슈퍼바이징` tab in production. The migration creates supervisor assignments, store visits, inspection reports, and corrective actions. The tab uses existing `franchise_locations`, `profiles`, and company-scoped access rules; `admin` and `manager` can manage company-wide supervision, while ordinary staff/SV users work around assigned stores and their own reports.
+
+After the MVP migration is applied, run `supabase_franchise_supervision_v2_migration.sql` for the second-phase features. **SQL 등록 필요**. The v2 migration adds company report templates, report submit/approve/reject events, corrective-action events, a report `template_id`, and draft AlimTalk templates/scenarios for internal SV operations.
+
+The MVP supports active SV assignment per operating store, visit scheduling with a lightweight `schedules` sync, inspection report draft/submission, manager approval/rejection, image metadata upload under `property-documents/franchise-supervision/<company_id>/<report_id>/...`, and corrective-action creation for `개선필요` inspection items. The v2 UI reorganizes the tab into `운영 리포트 / 배정 관리 / 방문 일정 / 점검 보고서 / 승인·시정요청`, makes KPI cards clickable filters, lets managers save the company inspection template, prints inspection reports, syncs visit changes back to `schedules`, and leaves report/action history for audit. The assignment tab removes the separate region field and provides store-based and supervisor-based list views with search, SV, and assignment-status filters; managers open an inline editor below the selected operating-store row, and the list is paginated to keep the assignment screen scannable. The operating report also exposes a computed `운영 우선순위` list for today/tomorrow visits, missing reports, pending approvals, and overdue corrective actions; this list uses existing supervision tables and does not require extra SQL. The report tab now includes a visit-based inspection report list that shows missing/submitted/approved states, improvement counts, photo counts, and the selected report editor in one workflow. The review tab uses table-style approval and corrective-action lists so managers can compare pending reports, rejection reasons, assignees, due dates, and status updates without scanning card stacks. Internal AlimTalk hooks are wired for visit creation, report approval/rejection, and corrective-action assignment when the v2 scenarios are approved and enabled. Report save/approval transitions, assignment/report company scope, event-table RLS, and supervision photo URL handling are hardened in the v2 route review pass.
+
+Run `supabase_franchise_approval_calendar_migration.sql` after the supervision migrations before enabling common workflow features. The production migration was confirmed applied on 2026-07-10. **SQL 등록 완료 확인**. The migration extends `schedules` with `source_type`, `source_id`, assignee/manager, due/remind/completed timestamps, and metadata, then adds `approval_templates`, `approval_documents`, and `approval_document_events`. The first integration links SV inspection reports to common approval documents, creates manager approval tasks on `/schedule`, and sends in-app notifications for submit/approve/reject without changing the existing external AlimTalk contract. Development and production Supabase projects must be checked separately when their environment configuration differs.
+
+## Franchise Labor Planning Setup
+
+Run `supabase_franchise_labor_planning_migration.sql` before enabling saved labor plans in `가맹 운영 > 인력 세팅`. **SQL 등록 필요**. The migration creates company labor settings, store-level staffing plans, and role-level staffing recommendations.
+
+The tab supports temporary calculation without SQL, but plan persistence and history require the migration. The calculator uses company/year labor settings for minimum hourly wage, employee/employer insurance rates, withholding rate, and overtime/night/holiday multipliers; saved plans store the settings snapshot used at calculation time. The first release includes monthly-sales-based staffing recommendations, weekly schedule cost projection, payroll/3.3%/day-wage calculators, and a labor document box that links into electronic contracts. Results are labelled as operational budget estimates, not legal or payroll filing advice.
+
+## Franchise Vendor Contract Vault Setup
+
+Run `supabase_franchise_vendors_migration.sql` before enabling direct vendor registration in `/dashboard/franchise-vendors`. Then run or re-run `supabase_franchise_vendor_contracts_migration.sql` before enabling `/contracts/vendor` so the vault has the `vendor_id` linkage column. Run `supabase_franchise_vendor_contract_events_migration.sql` before enabling vendor contract renewal/termination history.
+
+The vendor contract vault stores company-scoped contracts with logistics, food material, interior, marketing, lease, and other vendors. Contract files are uploaded to the existing `property-documents` bucket under `franchise-vendor-contracts/<company_id>/<contract_id>/...`; the API issues short-lived signed URLs for viewing instead of storing public document URLs.
+
+The vault can also link a completed or in-progress electronic contract from the same company. Vendor contract D-30 and D-7 expiration alerts are synced into the existing in-app franchise notification table for the contract owner and company team leads. If the SQL is not applied, the page shows a migration notice and the write API returns a migration-required error.
+
+The 2A renewal flow adds `/api/franchise-vendor-contracts/actions`. `renew` marks the old contract as `renewed`, creates a new active contract copy, and writes lifecycle events. `terminate` marks the contract as `terminated` with a reason. The UI shows an internal expiry work queue, selected contract detail panel, and newest-first lifecycle history.
+
+The vendor management view has an `업체 생성` button inside the vendor list and stores vendor master records in `franchise_vendors`. New vault contracts created from `업체 선택` store `vendor_id`, so vendor management merges contracts by master ID first; older direct-entry contracts still fall back to vendor-name matching for contract counts, renewal/expiration risk, latest memo, and a jump back to the filtered contract vault.
 
 ## Signup And Partner Vendor Setup
 
@@ -183,6 +225,8 @@ Franchise-specific intake uses separate protected routes:
 
 The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/matching-requests/promote` to create a first-ingress `franchise_leads` record from an 예비 창업자 등록 request. The hidden lead-registration route keeps `/api/admin/franchise-intake/leads/promote` available for future internal review flows. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target through the matching or property update endpoint. The staff edit modal supports the same file attachment metadata policy as the intake form, and promotion no longer creates an automatic 상담 이력 entry in the target lead; only explicit staff-entered 상담 이력 appears in lead detail.
 
+When `SOLAPI_SMS_ENABLED=true`, intake registration can send a Solapi SMS after the core DB write succeeds. Set `FRANCHISE_INTAKE_ALERT_PHONES` to comma-separated receiver numbers for 입점요청/예비 창업자 등록 alerts. If this env is empty, the route falls back to `SIGNUP_ADMIN_ALERT_PHONES`. Missing Solapi env or SMS failure is logged and does not block registration.
+
 Apply `supabase_franchise_lead_registration_requests_migration.sql` before enabling the lead-registration intake screen. Apply `supabase_franchise_property_promotion_migration.sql` so each company can promote the same source property only once through the `franchise_locations(company_id, source_property_id)` unique index.
 
 Admin user approval depends on UUID lookup through `/api/users`. Keep the full UUID regex format `8-4-4-4-12`; otherwise a valid profile UUID can be misread as a legacy short login id and approval fails with `User not found`.
@@ -258,8 +302,8 @@ If the three Gmail-specific variables are missing, the disclosure panel shows `�
 
 Google OAuth verification support URLs:
 
-- App home page URI: `https://naeilsajang.vercel.app/landing`
-- Privacy policy URI: `https://naeilsajang.vercel.app/privacy`
+- App home page URI: `https://www.fcerp.co.kr/landing`
+- Privacy policy URI: `https://www.fcerp.co.kr/privacy`
 - Local privacy page: `/privacy`
 - Public sample demo: `/demo`. It opens the franchise demo directly without a role selection step. Hidden role-specific URLs remain available for compatibility, but the public flow focuses on franchise screens (`대시보드`, `DB 관리`, `계약 완료`, `출점 후보지`, `가맹 운영`), uses sample data only, and blocks real ERP API calls.
 - Demo video: use an unlisted YouTube video that shows the Gmail OAuth consent flow and the information disclosure email send flow.
@@ -284,6 +328,16 @@ Run `supabase_franchise_notifications_migration.sql` before enabling in-app fran
 The header bell uses `/api/franchise-notifications` to create and read 담당자 alerts. V1 alerts are in-app only and are derived from franchise lead data: disclosure not sent, Gmail send failure, disclosure D-3/D-1, contract eligibility, overdue contact, today's contact, and HOT lead follow-up scheduling. Stale automatic alerts are dismissed during sync when their source condition no longer applies. Read alerts keep their `read_at` audit record in the database but are hidden from the header popover so the list only shows items that still require 담당자 확인. Future Kakao 알림톡 delivery can reuse `franchise_notifications.delivery_channel`, `kakao_template_key`, and `data`.
 
 The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
+
+## Franchise AlimTalk Operations Setup
+
+Run `supabase_franchise_alimtalk_operations_migration.sql` before enabling `/admin/alimtalk`.
+
+The admin AlimTalk operations page manages the six first-stage Kakao AlimTalk cases selected for review: signup approval request, signup approval completion, disclosure email sent notice, disclosure receipt confirmation, franchise contract eligibility, and vendor contract expiration reminders. The page tracks template review status and provider IDs, global send scenarios, company-level monthly limits, and send logs. Scenario management shows one combined send-flow board plus individual scenario cards for ON/OFF and fallback settings. It does not submit templates to Kakao/SOLAPI; operators record the approved `templateId` and `channelId` after provider review.
+
+Templates must be `승인완료` and enabled before send hooks can use them. Company settings can disable AlimTalk for a company or set monthly volume thresholds. If the migration is missing, the page shows a SQL-required notice instead of failing the admin shell.
+
+AlimTalk phase 2 connects approved templates to real business events. The current hooks cover signup approval request, signup approval completion, disclosure receipt confirmation, franchise contract eligibility, and vendor contract D-30/D-7 reminders. The disclosure email sent notice remains disabled until its Kakao template review is approved. Send hooks check scenario enabled state, template approval, company send settings, monthly limits, and fallback policy before sending; each result is recorded in `alimtalk_send_logs`. Missing provider env, disabled scenarios, pending templates, or missing template/channel IDs skip or block the external send without blocking the core ERP action. Phase 3 expands operations with usage dashboards, failure analytics, manual resend, provider status checks, calendar/vendor-expiry queues, and any billing or retry tables that later become necessary.
 
 ## Electronic Contract v2 Setup
 
@@ -363,3 +417,41 @@ The official Naver API MVP is used for blog/news/local search and DataLab trends
 - Current P0 is to prevent SearchAPI 429/monthly quota failures from overwriting previously successful Naver review/ad values and to split UI labels into quota exceeded, provider missing, and no result states.
 - Google Places enrichment intentionally uses Text Search rating/review counts only; Place Details review bodies are not requested by default.
 - Franchise list exports are available on 모객 DB, 출점 후보지, and 가맹 운영. Excel downloads use the current filters, sort, and visible table columns where applicable; PDF and print open the shared browser print view so operators can save as PDF from the print dialog. No extra SQL is required.
+
+## NVIDIA NIM AI Summary Setup
+
+The `가맹 운영 > 슈퍼바이징 > 점검 보고서` AI meeting summary panel calls NVIDIA NIM from the server only. Do not expose the API key to client code.
+
+```bash
+NVIDIA_API_KEY=
+NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
+NVIDIA_FALLBACK_MODEL=meta/llama-3.1-8b-instruct
+NVIDIA_REQUEST_TIMEOUT_MS=12000
+NVIDIA_FORCE_JSON=false
+```
+
+`NVIDIA_FORCE_JSON=false` is the default because some NVIDIA preview models do not support structured output mode. The prompt still requests JSON only, and the server parser falls back to a local report draft when the provider response cannot be parsed or the model call fails. The synchronous report button should use a fast model (`nvidia/nemotron-3-nano-30b-a3b`) first and a short fallback (`meta/llama-3.1-8b-instruct`) second; slower high-quality models such as Mistral Medium should be reserved for a future async re-summary job.
+
+The AI result is not applied directly. Operators review the summary, special notes, item-level verdicts, memos, and source evidence first, can exclude or edit individual checklist items, and see quality warnings for conversational wording, short action notes, missing follow-up, or missing evidence before applying the draft. No SQL is required for this integration.
+
+## Franchise Owner Portal Setup
+
+Run `supabase_franchise_owner_portal_migration.sql` before enabling the separated owner portal in production. **SQL 등록 필요**.
+
+Existing databases that already applied the first owner-portal migration also need `supabase_franchise_owner_company_login_scope.sql`. **SQL 등록 필요**. This follow-up drops the old global owner-login unique constraint and replaces it with a company-scoped `(company_id, login_id_normalized)` unique constraint so different companies can issue the same owner login ID without cross-company collision.
+
+Existing databases that already applied the owner-portal migration also need `supabase_franchise_owner_notice_attachments_migration.sql` before using 공지/공문 첨부. **SQL 등록 필요**. This follow-up adds `franchise_owner_notices.attachments` JSON metadata so headquarters can attach images/documents and owners can download them from `/owner/notices`.
+
+The owner portal does not use the headquarters `/login` route or the `profiles` employee role table. Headquarters staff create per-store owner accounts from `가맹 운영 > 점주 소통`, then share the company-scoped short link shown in `점주 계정 설정`. Owners sign in through `/owner/login/{companyId}` with only their owner ID and password, then work in `/owner/dashboard` with a dedicated HttpOnly owner session. Legacy `/owner/login?companyId=...` links remain accepted for compatibility.
+
+Owner accounts are scoped to one `franchise_locations.id` and one company. The company is resolved from the dedicated owner portal link, so the login UI does not expose an editable company-name field. Passwords are stored with Node `crypto.scrypt`, and session tokens are stored only as hashes in `franchise_owner_sessions`. Owner APIs do not accept `requesterId`; they resolve access from the owner session cookie.
+
+The 1차 workflow supports:
+
+- Headquarters issuing, suspending, activating, and resetting owner accounts.
+- Store owners submitting basic store information into `franchise_locations.data.ownerProvidedBasics`.
+- Store owners reading notices, requesting owner-portal operation checklist completion, and filing facility/general requests.
+- Headquarters managing owner notices, notice attachments, owner-portal operation checklists, owner submissions, and owner-account settings from `가맹 운영 > 점주 소통`.
+- Owner-portal operation checklists are issued like notices from `가맹 운영 > 점주 소통 > 체크리스트`. Headquarters can send the same checklist to all stores or selected stores, then review each issued checklist's completed/incomplete store status. Store completion requests are tracked in checklist status and do not require approve/reject handling in the general submissions flow.
+- Owner-portal operation checklists are stored on `franchise_locations.data.ownerPortalChecklist`; they are separate from the pre-opening project checklist and do not mutate `franchise_opening_projects.tasks`.

@@ -21,6 +21,11 @@ import {
     uCanSignPlatformClient,
     UcansignPlatformError
 } from '@/lib/ucansign/platform-client';
+import {
+    inferSignerDeliveryMethod,
+    signerContactPolicyMessage,
+    validateSignerContact
+} from '@/lib/electronic-contracts/signer-contact-policy';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +62,18 @@ function requireFields(input: PremiumRightsContractInput): string[] {
         ['totalPremiumAmount', input.totalPremiumAmount]
     ];
     return checks.filter(([, value]) => !value).map(([key]) => key);
+}
+
+function invalidSignerContacts(input: PremiumRightsContractInput): string[] {
+    return [
+        ['transferor.contact', input.transferor.contact],
+        ['transferee.contact', input.transferee.contact]
+    ].flatMap(([field, contact]) => {
+        const method = inferSignerDeliveryMethod(contact);
+        return validateSignerContact(method, contact)
+            ? []
+            : [`${field}: ${signerContactPolicyMessage(method)}`];
+    });
 }
 
 async function recordProviderDocument(
@@ -173,6 +190,10 @@ export async function POST(request: Request) {
         const missingFields = requireFields(input);
         if (missingFields.length > 0) {
             return fail(400, 'VALIDATION_ERROR', `Missing required fields: ${missingFields.join(', ')}`);
+        }
+        const invalidContacts = invalidSignerContacts(input);
+        if (invalidContacts.length > 0) {
+            return fail(400, 'VALIDATION_ERROR', `Invalid signer contact: ${invalidContacts.join(', ')}`);
         }
 
         const payload = buildPremiumRightsUcansignPayload(input, contractId);

@@ -1,7 +1,9 @@
 import { getAuthenticatedRequesterProfile, isAdmin, resolveCompanyIdByName } from '@/lib/api-auth';
+import { notifyAlimtalkFranchiseNotificationCandidates } from '@/lib/alimtalk-event-notifications';
 import { fail, ok } from '@/lib/api-response';
 import { isPartnerVendorRole } from '@/lib/franchise-location-access';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
+import { canDispatchFranchiseNotificationAlimtalk } from '@/lib/franchise-notification-alimtalk-scope';
 import {
     FRANCHISE_NOTIFICATION_SOURCE_TYPES,
     buildAutomaticFranchiseNotifications,
@@ -10,6 +12,11 @@ import {
     type FranchiseNotificationRow,
     type NotificationLead
 } from '@/lib/franchise-notifications';
+import {
+    buildVendorContractNotifications,
+    type VendorContractNotificationContract,
+    type VendorContractNotificationRecipient
+} from '@/lib/franchise-vendor-contract-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +39,23 @@ type NotificationUpdateBody = {
 };
 
 type ExistingNotificationRow = { readonly id: string; readonly source_id: string };
+type VendorContractNotificationRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly owner_profile_id: string | null;
+    readonly vendor_name: string | null;
+    readonly contract_title: string | null;
+    readonly contract_end_date: string | null;
+    readonly status: string | null;
+};
+type NotificationRecipientProfileRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+};
+type NotificationCronCompanyRow = {
+    readonly company_id: string | null;
+};
+const DUE_NOTIFICATION_SOURCE_TYPES = new Set(['disclosure-due', 'vendor-contract-due']);
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
@@ -48,6 +72,13 @@ function isMissingNotificationSchemaError(error: unknown): boolean {
     const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
     const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_notifications/i.test(message);
+}
+
+function isMissingVendorContractSchemaError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && /franchise_vendor_contracts/i.test(message);
 }
 
 function mapLeadRow(row: LeadNotificationRow): NotificationLead {
@@ -120,6 +151,90 @@ async function fetchNotificationLeads(
     return attachDisclosureSummariesToLeads(supabaseAdmin, leads);
 }
 
+async function fetchVendorContractsForNotifications(
+    companyId: string | null,
+    requesterIsAdmin: boolean
+): Promise<readonly VendorContractNotificationContract[]> {
+    const supabaseAdmin = getSupabaseAdmin();
+    let query = supabaseAdmin
+        .from('franchise_vendor_contracts')
+        .select('id, company_id, owner_profile_id, vendor_name, contract_title, contract_end_date, status')
+        .neq('status', 'archived')
+        .limit(500);
+
+    if (companyId) query = query.eq('company_id', companyId);
+    if (!companyId && !requesterIsAdmin) return [];
+
+    const { data, error } = await query.returns<VendorContractNotificationRow[]>();
+    if (error) {
+        if (isMissingVendorContractSchemaError(error)) return [];
+        throw error;
+    }
+
+    return (data || []).map(row => ({
+        companyId: row.company_id,
+        contractEndDate: row.contract_end_date,
+        contractTitle: row.contract_title || '업체 계약',
+        id: row.id,
+        ownerProfileId: row.owner_profile_id,
+        status: row.status || 'active',
+        vendorName: row.vendor_name || '업체'
+    }));
+}
+
+async function fetchVendorContractNotificationRecipients(
+    companyId: string | null,
+    requesterId: string,
+    requesterIsAdmin: boolean,
+    contracts: readonly VendorContractNotificationContract[]
+): Promise<readonly VendorContractNotificationRecipient[]> {
+    const supabaseAdmin = getSupabaseAdmin();
+    const ownerProfileIds = [...new Set(contracts.map(contract => cleanString(contract.ownerProfileId)).filter(Boolean))];
+    let query = supabaseAdmin
+        .from('profiles')
+        .select('id, company_id')
+        .in('role', ['manager'])
+        .eq('status', 'active')
+        .limit(500);
+
+    if (companyId) query = query.eq('company_id', companyId);
+    if (!companyId && !requesterIsAdmin) query = query.eq('id', requesterId);
+
+    const { data, error } = await query.returns<NotificationRecipientProfileRow[]>();
+    if (error) throw error;
+
+    const { data: owners, error: ownerError } = ownerProfileIds.length > 0
+        ? await supabaseAdmin
+            .from('profiles')
+            .select('id, company_id')
+            .in('id', ownerProfileIds)
+            .eq('status', 'active')
+            .returns<NotificationRecipientProfileRow[]>()
+        : { data: [], error: null };
+    if (ownerError) throw ownerError;
+
+    const managerRecipients = (data || [])
+        .filter(row => row.company_id)
+        .map(row => ({
+            companyId: row.company_id || '',
+            contractId: null,
+            profileId: row.id
+        }));
+    const ownerProfilesById = new Map((owners || []).map(row => [row.id, row]));
+    const ownerRecipients = contracts.flatMap(contract => {
+        const ownerProfileId = cleanString(contract.ownerProfileId);
+        const owner = ownerProfileId ? ownerProfilesById.get(ownerProfileId) : null;
+        if (!owner?.company_id || owner.company_id !== contract.companyId) return [];
+        return [{
+            companyId: owner.company_id,
+            contractId: contract.id,
+            profileId: owner.id
+        }];
+    });
+
+    return [...managerRecipients, ...ownerRecipients];
+}
+
 async function syncAutomaticNotifications(
     candidates: readonly FranchiseNotificationCandidate[],
     scope: { readonly companyId: string | null; readonly requesterId: string; readonly requesterIsAdmin: boolean }
@@ -141,7 +256,7 @@ async function syncAutomaticNotifications(
         .from('franchise_notifications')
         .select('id, source_id')
         .is('dismissed_at', null)
-        .in('source_type', [...FRANCHISE_NOTIFICATION_SOURCE_TYPES]);
+        .in('source_type', [...FRANCHISE_NOTIFICATION_SOURCE_TYPES].filter(sourceType => !DUE_NOTIFICATION_SOURCE_TYPES.has(sourceType)));
 
     if (scope.companyId) query = query.eq('company_id', scope.companyId);
     if (!scope.requesterIsAdmin) query = query.eq('recipient_profile_id', scope.requesterId);
@@ -164,25 +279,103 @@ async function syncAutomaticNotifications(
     if (updateError) throw updateError;
 }
 
+async function runScheduledNotificationGeneration(): Promise<{ readonly companyCount: number; readonly notificationCount: number }> {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('company_id')
+        .eq('role', 'manager')
+        .eq('status', 'active')
+        .not('company_id', 'is', null)
+        .returns<NotificationCronCompanyRow[]>();
+    if (error) throw error;
+
+    const companyIds = [...new Set((data || []).map(row => cleanString(row.company_id)).filter(Boolean))];
+    let notificationCount = 0;
+
+    for (const companyId of companyIds) {
+        const [leads, vendorContracts] = await Promise.all([
+            fetchNotificationLeads(companyId, '', true, 'admin'),
+            fetchVendorContractsForNotifications(companyId, true)
+        ]);
+        const vendorRecipients = await fetchVendorContractNotificationRecipients(companyId, '', true, vendorContracts);
+        const notificationCandidates = [
+            ...buildAutomaticFranchiseNotifications(leads),
+            ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
+        ];
+        await syncAutomaticNotifications(notificationCandidates, {
+            companyId,
+            requesterId: '',
+            requesterIsAdmin: true
+        });
+        if (canDispatchFranchiseNotificationAlimtalk({ companyId, requesterIsAdmin: true })) {
+            try {
+                await notifyAlimtalkFranchiseNotificationCandidates(supabaseAdmin, notificationCandidates);
+            } catch (error) {
+                console.error(
+                    'Scheduled franchise notification AlimTalk dispatch failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+        }
+        notificationCount += notificationCandidates.length;
+    }
+
+    return { companyCount: companyIds.length, notificationCount };
+}
+
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
+        const { searchParams } = new URL(request.url);
+        if (searchParams.get('cron') === '1') {
+            const secret = process.env.CRON_SECRET;
+            const authHeader = request.headers.get('authorization');
+            if (!secret || authHeader !== `Bearer ${secret}`) {
+                return fail(401, 'AUTH_REQUIRED', 'Invalid cron secret');
+            }
+            const result = await runScheduledNotificationGeneration();
+            return ok({ success: true, ...result });
+        }
+
         const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
 
-        const { searchParams } = new URL(request.url);
         const requestedCompanyName = cleanString(searchParams.get('company') || searchParams.get('companyName'));
         const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
         const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;
         const limit = parseLimit(searchParams.get('limit'));
 
         const requesterIsAdmin = isAdmin(requester);
-        const leads = await fetchNotificationLeads(companyId, requester.id, requesterIsAdmin, requester.role);
-        await syncAutomaticNotifications(buildAutomaticFranchiseNotifications(leads), {
+        const [leads, vendorContracts] = await Promise.all([
+            fetchNotificationLeads(companyId, requester.id, requesterIsAdmin, requester.role),
+            fetchVendorContractsForNotifications(companyId, requesterIsAdmin)
+        ]);
+        const vendorRecipients = await fetchVendorContractNotificationRecipients(
+            companyId,
+            requester.id,
+            requesterIsAdmin,
+            vendorContracts
+        );
+        const notificationCandidates = [
+            ...buildAutomaticFranchiseNotifications(leads),
+            ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
+        ];
+        await syncAutomaticNotifications(notificationCandidates, {
             companyId,
             requesterId: requester.id,
             requesterIsAdmin
         });
+        if (canDispatchFranchiseNotificationAlimtalk({ companyId, requesterIsAdmin })) {
+            try {
+                await notifyAlimtalkFranchiseNotificationCandidates(supabaseAdmin, notificationCandidates);
+            } catch (error) {
+                console.error(
+                    'Franchise notification AlimTalk dispatch failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+        }
 
         let query = supabaseAdmin
             .from('franchise_notifications')

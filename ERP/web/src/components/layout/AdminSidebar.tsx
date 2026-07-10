@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Settings, LogOut, Home } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Home, MessageSquareText } from 'lucide-react';
 import styles from './Sidebar.module.css'; // Reusing base sidebar styles for consistency but with admin tweaks if needed
 import adminStyles from './AdminSidebar.module.css';
 
@@ -15,6 +15,7 @@ interface AdminSidebarProps {
 const MENU_ITEMS = [
     { title: '대시보드', url: '/admin', icon: LayoutDashboard },
     { title: '회원 관리', url: '/admin/users', icon: Users },
+    { title: '알림톡 운영', url: '/admin/alimtalk', icon: MessageSquareText },
     { title: '시스템 설정', url: '/admin/settings', icon: Settings },
 ];
 

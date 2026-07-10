@@ -7,6 +7,7 @@ import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead-registration-table';
 import { DEFAULT_FRANCHISE_LEAD_STATUS, normalizeLeadPhone } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,13 +106,16 @@ export async function PUT(request: Request, context: RouteContext) {
         const targetTable = existing ? 'franchise_lead_registration_requests' : 'franchise_leads';
         const hasAccess = canAccessFranchiseLead(requester, row);
         if (!hasAccess) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company update denied');
+        if (!canManageWorkIntakeRecord(requester, row)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
+        }
 
         const managerValidation = await validateManager(body, row.company_id);
         if (managerValidation?.error) return managerValidation.error;
-        const updates = {
-            ...buildUpdates(body, row.data),
-            ...(managerValidation?.managerId ? { manager_id: managerValidation.managerId } : {})
-        };
+        if (managerValidation?.managerId && managerValidation.managerId !== row.manager_id) {
+            return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 작성자는 변경할 수 없습니다.');
+        }
+        const updates = buildUpdates(body, row.data);
 
         const { data: updated, error: updateError } = await supabaseAdmin
             .from(targetTable)

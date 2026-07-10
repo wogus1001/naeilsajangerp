@@ -183,13 +183,17 @@ export async function PUT(request: Request) {
         if (fetchError || !project) return fail(404, 'NOT_FOUND', 'Opening project not found');
         if (!await canAccessOpeningProject(supabaseAdmin, requester, project)) return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
 
-        const { data: updated, error } = await supabaseAdmin
+        const expectedUpdatedAt = cleanString(getFirst(body, ['updatedAt', 'updated_at']));
+        let updateQuery = supabaseAdmin
             .from('franchise_opening_projects')
             .update(buildOpeningProjectUpdates(body, project))
-            .eq('id', id)
+            .eq('id', id);
+        if (expectedUpdatedAt) updateQuery = updateQuery.eq('updated_at', expectedUpdatedAt);
+        const { data: updated, error } = await updateQuery
             .select()
-            .single();
+            .maybeSingle();
         if (error) throw error;
+        if (!updated) return fail(409, 'VALIDATION_ERROR', '이미 다른 사용자가 수정했습니다. 새로고침 후 다시 시도해주세요.');
         return ok({ project: transformOpeningProject(updated as OpeningProjectRow) });
     } catch (error) {
         return handleOpeningProjectError(error, 'UPDATE');

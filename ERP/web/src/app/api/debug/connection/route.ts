@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAdminRequester } from '@/lib/admin-route-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,8 @@ export async function GET(request: Request) {
         };
 
         const supabaseAdmin = await getSupabaseAdmin();
+        const adminGuard = await requireAdminRequester(supabaseAdmin, request);
+        if (!adminGuard.ok) return adminGuard.response;
 
         // 1. Fetch recent companies (Check ID and Manager_ID)
         const { data: recentCompanies, error: dbError } = await supabaseAdmin

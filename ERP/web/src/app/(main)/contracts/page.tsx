@@ -13,6 +13,7 @@ import CreateProjectModal from './_components/CreateProjectModal';
 import PointsModal from './_components/PointsModal';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -118,7 +119,9 @@ function ContractsPageContent() {
             if (!storedUser) return;
             const uid = JSON.parse(storedUser).id;
 
-            const res = await fetch(`/api/projects?userId=${uid}`);
+            const res = await fetch(`/api/projects?userId=${uid}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const { data } = await res.json();
                 // Map DB rows to UI model
@@ -164,7 +167,7 @@ function ContractsPageContent() {
 
             const res = await fetch('/api/embedding/sign-creating', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     userId: uid,
                     redirectUrl: window.location.origin + '/contracts'
@@ -196,7 +199,7 @@ function ContractsPageContent() {
 
             const res = await fetch(`/api/embedding/view/${documentId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     userId: uid,
                     documentId,
@@ -235,7 +238,9 @@ function ContractsPageContent() {
                 url += `&status=${statusFilter}`;
             }
 
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                headers: await getApiAuthHeaders()
+            });
 
             if (response.status === 401) {
                 const errorData = await response.json();
@@ -278,7 +283,9 @@ function ContractsPageContent() {
             const storedUser = localStorage.getItem('user');
             if (!storedUser) return;
             const uid = JSON.parse(storedUser).id;
-            const res = await fetch(`/api/points/balance?userId=${uid}`);
+            const res = await fetch(`/api/points/balance?userId=${uid}`, {
+                headers: await getApiAuthHeaders()
+            });
             const data = await res.json();
             if (data.balance !== undefined) setPointsBalance(data.balance);
         } catch (e) {
@@ -311,7 +318,9 @@ function ContractsPageContent() {
 
             if (!uid) return;
 
-            const res = await fetch(`/api/contracts/${contractId}?userId=${uid}`);
+            const res = await fetch(`/api/contracts/${contractId}?userId=${uid}`, {
+                headers: await getApiAuthHeaders()
+            });
             const data = await res.json();
 
             if (res.ok) {
@@ -343,7 +352,7 @@ function ContractsPageContent() {
 
                 const res = await fetch(`/api/contracts/actions?userId=${uid}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ action, contractId })
                 });
 
@@ -390,7 +399,9 @@ function ContractsPageContent() {
                 return;
             }
 
-            const res = await fetch(`/api/contracts/download?userId=${uid}&contractId=${contractId}`);
+            const res = await fetch(`/api/contracts/download?userId=${uid}&contractId=${contractId}`, {
+                headers: await getApiAuthHeaders()
+            });
             const data = await res.json();
 
             if (data.url) {
@@ -404,6 +415,20 @@ function ContractsPageContent() {
             console.error(e);
             if (newWindow) newWindow.close();
             showAlert('다운로드 처리 중 오류가 발생했습니다.');
+        }
+    };
+
+    const startUcansignAuth = async () => {
+        if (!userId) return;
+        try {
+            const response = await fetch(`/api/ucansign/auth?userId=${userId}&redirect=/contracts?tab=signatures&response=json`, {
+                headers: await getApiAuthHeaders()
+            });
+            const data = await response.json();
+            if (!response.ok || !data.url) throw new Error(data.error || '유캔싸인 연동을 시작하지 못했습니다.');
+            window.location.href = data.url;
+        } catch (error: any) {
+            showAlert(error.message || '유캔싸인 연동을 시작하지 못했습니다.');
         }
     };
 
@@ -433,12 +458,15 @@ function ContractsPageContent() {
 
                 showAlert('다운로드를 준비 중입니다. 잠시만 기다려주세요...');
 
+                const authHeaders = await getApiAuthHeaders();
                 const promises = selectedIds.map(async (id) => {
                     const contract = savedProjects.find(p => p.id === id) || contracts.find(c => c.id === id);
                     const name = contract ? (contract.title || contract.documentName || id) : id;
 
                     try {
-                        const res = await fetch(`/api/contracts/download?userId=${uid}&contractId=${id}`);
+                        const res = await fetch(`/api/contracts/download?userId=${uid}&contractId=${id}`, {
+                            headers: authHeaders
+                        });
                         const data = await res.json();
 
                         if (data.url) {
@@ -474,8 +502,12 @@ function ContractsPageContent() {
                 const uid = JSON.parse(storedUser).id;
 
                 // Bulk delete via multiple API calls (or could add a bulk endpoint, but this is simple)
+                const authHeaders = await getApiAuthHeaders();
                 const promises = selectedIds.map(id =>
-                    fetch(`/api/projects/${id}?userId=${uid}`, { method: 'DELETE' })
+                    fetch(`/api/projects/${id}?userId=${uid}`, {
+                        method: 'DELETE',
+                        headers: authHeaders
+                    })
                 );
 
                 await Promise.all(promises);
@@ -739,7 +771,7 @@ function ContractsPageContent() {
                             <div style={{ padding: '40px', background: 'white', borderRadius: '8px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                                 <AlertCircle size={48} style={{ color: '#f59e0b', marginBottom: '16px' }} />
                                 <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>서비스 연동 필요</h2>
-                                <button onClick={() => window.location.href = `/api/ucansign/auth?userId=${userId}&redirect=/contracts?tab=signatures`} style={{ padding: '10px 20px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                <button onClick={startUcansignAuth} style={{ padding: '10px 20px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                                     유캔싸인 연동하기
                                 </button>
                             </div>

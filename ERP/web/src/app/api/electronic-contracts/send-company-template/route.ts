@@ -53,6 +53,10 @@ type LeadRow = {
     readonly created_by: string | null;
 };
 
+type ContractEventDocumentRow = {
+    readonly ucansign_document_id: string | null;
+};
+
 function recordValues(value: unknown): Record<string, string> {
     if (!isRecord(value)) return {};
     return Object.fromEntries(
@@ -102,6 +106,42 @@ async function recordProviderDocument(
         payload: isRecord(response) ? response : { value: response },
         created_at: new Date().toISOString()
     });
+    if (error) throw error;
+}
+
+async function latestRecordedProviderDocument(
+    supabaseAdmin: SupabaseClient,
+    contractId: string
+): Promise<string> {
+    const { data, error } = await supabaseAdmin
+        .from('contract_events')
+        .select('ucansign_document_id')
+        .eq('electronic_contract_id', contractId)
+        .eq('event_type', 'ucansign_document_created')
+        .not('ucansign_document_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<ContractEventDocumentRow>();
+
+    if (error) throw error;
+    return data?.ucansign_document_id || '';
+}
+
+async function markCompanyTemplateContractSent(
+    supabaseAdmin: SupabaseClient,
+    contractId: string,
+    ucansignDocumentId: string
+): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin
+        .from('electronic_contracts')
+        .update({
+            status: 'sent',
+            ucansign_document_id: ucansignDocumentId,
+            sent_at: now,
+            updated_at: now
+        })
+        .eq('id', contractId);
     if (error) throw error;
 }
 
@@ -289,16 +329,7 @@ export async function POST(request: Request) {
         }
         await recordProviderDocument(supabaseAdmin, contractId, ucansignDocumentId, response);
 
-        const { error: updateError } = await supabaseAdmin
-            .from('electronic_contracts')
-            .update({
-                status: 'sent',
-                ucansign_document_id: ucansignDocumentId,
-                sent_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', contractId);
-        if (updateError) throw updateError;
+        await markCompanyTemplateContractSent(supabaseAdmin, contractId, ucansignDocumentId);
 
         let documentLinkWarning = '';
         if (requestedLeadId) {
@@ -326,14 +357,19 @@ export async function POST(request: Request) {
         }, 201);
     } catch (error) {
         console.error('Company template electronic contract send error:', error);
-        await supabaseAdmin
-            .from('electronic_contracts')
-            .update({
-                status: 'send_failed',
-                send_error: error instanceof Error ? error.message : 'Unknown error',
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', contractId);
+        const recordedDocumentId = await latestRecordedProviderDocument(supabaseAdmin, contractId).catch(() => '');
+        if (recordedDocumentId) {
+            await markCompanyTemplateContractSent(supabaseAdmin, contractId, recordedDocumentId).catch(() => null);
+        } else {
+            await supabaseAdmin
+                .from('electronic_contracts')
+                .update({
+                    status: 'send_failed',
+                    send_error: error instanceof Error ? error.message : 'Unknown error',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', contractId);
+        }
         const message = error instanceof UcansignPlatformError ? error.message : '회사 템플릿 전자계약 발송에 실패했습니다.';
         return fail(500, 'INTERNAL_ERROR', message);
     }

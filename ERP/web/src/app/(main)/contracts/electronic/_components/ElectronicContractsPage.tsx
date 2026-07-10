@@ -23,6 +23,13 @@ type DocumentNotice = {
     readonly text: string;
 };
 
+function readPageModeFromUrl(): PageMode {
+    if (typeof window === 'undefined') return 'documents';
+    return new URLSearchParams(window.location.search).get('mode') === 'templates'
+        ? 'templates'
+        : 'documents';
+}
+
 export default function ElectronicContractsPage() {
     const [mode, setMode] = React.useState<PageMode>('documents');
     const [scope, setScope] = React.useState<ContractScope>('mine');
@@ -41,10 +48,15 @@ export default function ElectronicContractsPage() {
         const user = getStoredUser();
         setRequesterId(getRequesterId(user));
         setIsAdmin(isAdminStoredUser(user));
+        setMode(readPageModeFromUrl());
     }, []);
 
     React.useEffect(() => {
         if (!requesterId) return;
+        if (mode !== 'documents') {
+            setLoading(false);
+            return;
+        }
         const controller = new AbortController();
         async function loadContracts() {
             setLoading(true);
@@ -67,7 +79,7 @@ export default function ElectronicContractsPage() {
         }
         loadContracts();
         return () => controller.abort();
-    }, [requesterId, scope]);
+    }, [requesterId, scope, mode]);
 
     React.useEffect(() => {
         if (!notice) return undefined;
@@ -109,6 +121,19 @@ export default function ElectronicContractsPage() {
         }
     }
 
+    function selectMode(nextMode: PageMode) {
+        setMode(nextMode);
+        if (typeof window === 'undefined') return;
+        const url = new URL(window.location.href);
+        if (nextMode === 'templates') {
+            url.searchParams.set('mode', 'templates');
+        } else {
+            url.searchParams.delete('mode');
+            url.searchParams.delete('laborDocument');
+        }
+        window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+    }
+
     return (
         <main className={styles.container}>
             <section className={`${styles.panel} ${styles.header}`}>
@@ -120,8 +145,8 @@ export default function ElectronicContractsPage() {
             <section className={styles.panel}>
                 <div className={styles.statusLine}>
                     <div className={styles.tabs}>
-                        <button className={mode === 'documents' ? styles.tabActive : styles.tab} onClick={() => setMode('documents')}>문서함</button>
-                        <button className={mode === 'templates' ? styles.tabActive : styles.tab} onClick={() => setMode('templates')}>템플릿 관리</button>
+                        <button className={mode === 'documents' ? styles.tabActive : styles.tab} onClick={() => selectMode('documents')}>문서함</button>
+                        <button className={mode === 'templates' ? styles.tabActive : styles.tab} onClick={() => selectMode('templates')}>템플릿 관리</button>
                     </div>
                     {mode === 'documents' && <span>{loading ? '불러오는 중' : `${contracts.length.toLocaleString('ko-KR')}건`}</span>}
                 </div>

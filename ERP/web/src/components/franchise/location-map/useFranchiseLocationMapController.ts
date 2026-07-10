@@ -11,6 +11,7 @@ import {
     readStoredUser
 } from '@/components/franchise/operations/requests';
 import {
+    buildComparisonRadiusPoints,
     buildLocationMapCounts,
     buildRadiusAnalysis,
     buildRadiusAnalysisFromPosition,
@@ -215,6 +216,7 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
     const radiusAnalysis = radiusBaseMode === 'manual'
         ? buildRadiusAnalysisFromPosition(manualRadiusCenter, points, radiusMeters)
         : buildRadiusAnalysis(activePoint, points, radiusMeters);
+    const comparisonRadiusPoints = buildComparisonRadiusPoints(radiusAnalysis, radiusBaseMode, activePoint, points);
     const measurementDistanceMeters = getLocationPathDistanceMeters(measurementPoints);
     const measurementAreaSquareMeters = measurementMode === 'area'
         ? getLocationPolygonAreaSquareMeters(measurementPoints)
@@ -257,6 +259,7 @@ export function useFranchiseLocationMapController(kakaoReady: boolean) {
         measurementMode,
         measurementPoints,
         points,
+        comparisonRadiusPoints,
         radiusAnalysis,
         radiusBaseMode,
         radiusCenter,

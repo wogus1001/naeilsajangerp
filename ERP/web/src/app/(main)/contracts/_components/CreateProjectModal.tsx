@@ -8,6 +8,7 @@ import {
     Search, User, MapPin, FileText, Loader2, Download
 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { CATEGORY_PRESETS, getPresetByCategory } from '@/lib/templates/presets';
 import { ContractTemplate, ContractProject, ContractDocument } from '@/types/contract-core';
 import PropertySelectorModal from '@/components/properties/PropertySelectorModal';
@@ -218,7 +219,7 @@ export default function CreateProjectModal({ isOpen, onClose, onCreate }: Create
 
             const res = await fetch(`/api/projects?userId=${uid}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(newProjectPayload)
             });
 
@@ -298,7 +299,7 @@ export default function CreateProjectModal({ isOpen, onClose, onCreate }: Create
             try {
                 await fetch('/api/schedules', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(scheduleEvent)
                 });
             } catch (err) {

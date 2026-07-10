@@ -1,0 +1,23 @@
+.error,
+.message,
+.notice {
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.error {
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.message {
+    background: #e8f3ff;
+    color: #1c64d1;
+}
+
+.notice {
+    background: #fff7e6;
+    color: #b75f00;
+}

@@ -9,6 +9,7 @@ import PropertySelector from './PropertySelector';
 import PropertyCard from '../properties/PropertyCard';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
 // Mock Data Removed
@@ -155,10 +156,12 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
                             company: companyName
                         });
                         if (requesterId) query.set('requesterId', requesterId);
-                        const res = await fetch(`/api/users?${query.toString()}`);
+                        const res = await fetch(`/api/users?${query.toString()}`, {
+                            headers: await getApiAuthHeaders()
+                        });
                         if (res.ok) {
                             const data = await readApiJson(res);
-                            setManagers(data);
+                            setManagers(Array.isArray(data) ? data : []);
                         }
                     } else {
                         setManagers([user]);
@@ -177,7 +180,9 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
                 const requesterId = getRequesterId();
                 const query = new URLSearchParams({ id });
                 if (requesterId) query.set('requesterId', requesterId);
-                const res = await fetch(`/api/customers?${query.toString()}`);
+                const res = await fetch(`/api/customers?${query.toString()}`, {
+                    headers: await getApiAuthHeaders()
+                });
                 if (!res.ok) return;
                 const data = await readApiJson(res);
                 if (data) setFormData({ ...INITIAL_DATA, ...data });
@@ -289,7 +294,7 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
 
             const res = await fetch('/api/customers', {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
 
@@ -336,7 +341,7 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
 
             await fetch('/api/schedules', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
         } catch (e) {
@@ -576,7 +581,7 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
 
             await fetch('/api/schedules', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(schedulePayload)
             });
 
@@ -714,7 +719,8 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
                 const params = new URLSearchParams({ id });
                 if (requesterId) params.set('requesterId', requesterId);
                 const res = await fetch(`/api/customers?${params.toString()}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: await getApiAuthHeaders()
                 });
 
                 if (res.ok) {

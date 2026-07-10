@@ -17,6 +17,8 @@ export type CompanyMenuFeatureKey =
     | 'businessCardRegister'
     | 'contracts'
     | 'electronicPremiumContracts'
+    | 'vendorContracts'
+    | 'vendorManagement'
     | 'contractCreate'
     | 'contractBuilder'
     | 'companyStaff';
@@ -90,11 +92,11 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         category: '프랜차이즈',
         title: '출점 후보지',
         description: '후보지, 외부 상가, 상권 검토 데이터를 관리합니다.',
-        routePrefixes: ['/dashboard/franchise-leads/market-insights']
+        routePrefixes: ['/dashboard/franchise-leads/market-insights', '/dashboard/franchise-leads/labor-planning']
     },
     {
         key: 'franchiseLocations',
-        category: '가맹 운영',
+        category: '출점 후보지',
         title: '물건지 지도',
         description: '가맹 운영점과 출점 후보지를 지도에서 함께 확인합니다.',
         routePrefixes: ['/dashboard/franchise-locations']
@@ -104,7 +106,7 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
         category: '프랜차이즈',
         title: '가맹 운영',
         description: '오픈 준비와 운영 전환 업무를 확인합니다.',
-        routePrefixes: ['/dashboard/franchise-operations']
+        routePrefixes: ['/dashboard/franchise-operations', '/dashboard/franchise-supervision']
     },
     {
         key: 'properties',
@@ -171,10 +173,24 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     },
     {
         key: 'electronicPremiumContracts',
-        category: '프랜차이즈',
+        category: '계약·업체 관리',
         title: '전자계약',
         description: '공통 템플릿과 회사 템플릿으로 전자계약 문서를 작성하고 발송합니다.',
         routePrefixes: ['/contracts/electronic']
+    },
+    {
+        key: 'vendorContracts',
+        category: '계약·업체 관리',
+        title: '업체 계약함',
+        description: '외부 업체 계약과 만료 알림을 회사 단위로 관리합니다.',
+        routePrefixes: ['/contracts/vendor']
+    },
+    {
+        key: 'vendorManagement',
+        category: '계약·업체 관리',
+        title: '업체 관리',
+        description: '계약 데이터를 업체별로 묶어 거래처 현황과 만료 리스크를 확인합니다.',
+        routePrefixes: ['/dashboard/franchise-vendors']
     },
     {
         key: 'contractCreate',
@@ -219,6 +235,8 @@ export function getDefaultCompanyMenuFlags(): CompanyMenuFlagMap {
         businessCardRegister: true,
         contracts: true,
         electronicPremiumContracts: true,
+        vendorContracts: true,
+        vendorManagement: true,
         contractCreate: true,
         contractBuilder: true,
         companyStaff: true

@@ -1,0 +1,264 @@
+.boardWrap {
+    display: grid;
+    gap: 12px;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.card {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f9fafb 0, #ffffff 52px);
+    padding: 16px;
+}
+
+.card:nth-child(4n + 2) {
+    background: linear-gradient(180deg, #e8f3ff 0, #ffffff 52px);
+}
+
+.card:nth-child(4n + 3) {
+    background: linear-gradient(180deg, #e6fcf5 0, #ffffff 52px);
+}
+
+.card:nth-child(4n + 4) {
+    background: linear-gradient(180deg, #f2f4f6 0, #ffffff 52px);
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.header h3 {
+    margin: 4px 0 0;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.key {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.flow {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.node {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    min-width: 0;
+    flex: 1 1 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.node svg {
+    color: #3182f6;
+}
+
+.node span {
+    margin-top: 6px;
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.node strong {
+    margin-top: 4px;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+    overflow-wrap: break-word;
+    word-break: keep-all;
+}
+
+.nodeButton {
+    appearance: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+.nodeButton:hover {
+    border-color: #3182f6;
+    background: #f7fbff;
+}
+
+.nodeButton:focus-visible {
+    outline: 2px solid #3182f6;
+    outline-offset: 2px;
+}
+
+.arrow {
+    flex: 0 0 auto;
+    align-self: center;
+    color: #b0b8c1;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: minmax(180px, 220px) auto;
+    gap: 8px;
+    align-items: end;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e8eb;
+}
+
+.selectLabel {
+    display: grid;
+    gap: 6px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.templateDetail {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.templateDetailHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.templateDetailHeader svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: #3182f6;
+}
+
+.templateDetailHeader div {
+    display: grid;
+    gap: 2px;
+}
+
+.templateDetailHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.templateDetailHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.messagePreview {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.messagePreviewCanvas {
+    width: min(100%, 420px);
+    border-radius: 8px;
+    background: #d5e3ee;
+    padding: 18px 16px;
+}
+
+.messageChannel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.messageChannel span {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #ffffff;
+}
+
+.messageChannel strong {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.messageBubble {
+    width: min(100%, 280px);
+    margin-left: 36px;
+    overflow: hidden;
+    border-radius: 0 8px 8px;
+    background: #ffffff;
+}
+
+.messageBubbleHeader {
+    background: #ffe812;
+    color: #191f28;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.messageBubble pre {
+    margin: 0;
+    color: #191f28;
+    padding: 12px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: keep-all;
+}
+
+.templateVariables {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.templateVariables span {
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1c64d1;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .board {
+        grid-template-columns: 1fr;
+    }
+
+    .flow {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .arrow {
+        justify-self: center;
+        transform: rotate(90deg);
+    }
+
+    .controls {
+        grid-template-columns: 1fr;
+    }
+}

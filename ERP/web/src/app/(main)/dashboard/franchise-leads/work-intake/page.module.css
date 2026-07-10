@@ -139,10 +139,19 @@
     background: #f2f4f6;
 }
 
+.actionGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
 .actionButton,
+.deleteButton,
 .secondaryButton,
 .primaryButton {
     display: inline-flex;
+    gap: 4px;
     align-items: center;
     justify-content: center;
     min-height: 36px;
@@ -159,6 +168,12 @@
     background: #ffffff;
 }
 
+.deleteButton {
+    border: 1px solid #fecdd3;
+    color: #e42939;
+    background: #fff1f2;
+}
+
 .secondaryButton {
     border: 1px solid #e5e8eb;
     color: #333d4b;
@@ -171,6 +186,7 @@
     background: #3182f6;
 }
 
+.deleteButton:disabled,
 .secondaryButton:disabled,
 .primaryButton:disabled {
     opacity: 0.55;

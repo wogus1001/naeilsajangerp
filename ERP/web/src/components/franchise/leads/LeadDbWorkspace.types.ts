@@ -23,6 +23,7 @@ type TaskQueueOption = {
 export type LeadDbWorkspaceProps = {
     readonly isLoading: boolean;
     readonly workspaceVariant?: 'default' | 'contractOwners';
+    readonly userId?: string;
     readonly leadDbLayer: LeadDbLayer;
     readonly viewMode: LeadViewMode;
     readonly rawIntakeCount: number;

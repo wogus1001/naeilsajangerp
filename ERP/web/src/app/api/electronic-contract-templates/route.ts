@@ -10,6 +10,7 @@ import {
     fetchTemplateVersions,
     isRecord,
     latestVersionForTemplate,
+    signedTemplateSourceUrl,
     textValue,
     type ContractTemplateRow
 } from './templateApi';
@@ -88,8 +89,11 @@ export async function GET(request: Request) {
             (creators || []).map(profile => [profile.id, profile.name || profile.email || '-'])
         );
 
-        const views: readonly TemplateView[] = templates.map(template => {
+        const views: readonly TemplateView[] = await Promise.all(templates.map(async template => {
             const latestVersion = latestVersionForTemplate(versions, template.id);
+            const sourceFileUrl = latestVersion
+                ? await signedTemplateSourceUrl(supabaseAdmin, latestVersion)
+                : '';
             return {
                 id: template.id,
                 companyId: template.company_id,
@@ -105,13 +109,13 @@ export async function GET(request: Request) {
                     versionNumber: latestVersion.version_number || 1,
                     status: latestVersion.status || 'draft',
                     sourceFileName: latestVersion.source_file_name || '',
-                    sourceFileUrl: latestVersion.source_file_url || '',
+                    sourceFileUrl,
                     sourceFileSize: latestVersion.source_file_size || 0,
                     pageCount: latestVersion.page_count || 1,
                     ucansignTemplateId: latestVersion.ucansign_template_id || ''
                 } : null
             };
-        });
+        }));
 
         return ok({ templates: views });
     } catch (error) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canAccessCompanyScope, getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: Request) {
@@ -6,12 +7,19 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const companyId = searchParams.get('companyId');
         const type = searchParams.get('type') || 'industry_detail';
+        const supabaseAdmin = getSupabaseAdmin();
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+        }
 
         if (!companyId) {
             return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
         }
+        if (!canAccessCompanyScope(requester, companyId)) {
+            return NextResponse.json({ error: 'Forbidden company scope' }, { status: 403 });
+        }
 
-        const supabaseAdmin = getSupabaseAdmin();
         const { data, error } = await supabaseAdmin
             .from('custom_categories')
             .select('*')
@@ -30,13 +38,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { companyId, categoryType, parentCategory, subCategory, name, createdBy } = body;
+        const { companyId, categoryType, parentCategory, subCategory, name } = body;
+        const supabaseAdmin = getSupabaseAdmin();
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+        }
 
         if (!companyId || !name) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
+        if (!canAccessCompanyScope(requester, companyId)) {
+            return NextResponse.json({ error: 'Forbidden company scope' }, { status: 403 });
+        }
 
-        const supabaseAdmin = getSupabaseAdmin();
         const { data, error } = await supabaseAdmin
             .from('custom_categories')
             .insert({
@@ -45,7 +60,7 @@ export async function POST(request: Request) {
                 parent_category: parentCategory,
                 sub_category: subCategory,
                 name: name.trim(),
-                created_by: createdBy
+                created_by: requester.id
             })
             .select()
             .single();
@@ -53,8 +68,8 @@ export async function POST(request: Request) {
         if (error) throw error;
 
         return NextResponse.json(data);
-    } catch (error: any) {
+    } catch (error) {
         console.error('Categories POST error:', error);
-        return NextResponse.json({ error: `Failed to create category: ${error.message || JSON.stringify(error)}` }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create category' }, { status: 500 });
     }
 }

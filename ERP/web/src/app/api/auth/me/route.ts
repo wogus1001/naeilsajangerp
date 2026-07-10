@@ -9,6 +9,7 @@ type ProfileRow = {
     company_id: string | null;
     status: string | null;
     email: string | null;
+    phone: string | null;
     login_id: string | null;
     company: { name: string | null; logo_url?: string | null } | null;
 };
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
         const supabaseAdmin = getSupabaseAdmin();
         const profileResult = await supabaseAdmin
             .from('profiles')
-            .select('id, name, role, company_id, status, email, login_id, company:companies!company_id(name, logo_url)')
+            .select('id, name, role, company_id, status, email, phone, login_id, company:companies!company_id(name, logo_url)')
             .eq('id', userData.user.id)
             .single<ProfileRow>();
 
@@ -67,10 +68,10 @@ export async function GET(request: Request) {
                 .from('profiles')
                 .select('id, name, role, company_id, status, email, company:companies!company_id(name)')
                 .eq('id', userData.user.id)
-                .single<Omit<ProfileRow, 'login_id'>>();
+                .single<Omit<ProfileRow, 'login_id' | 'phone'>>();
 
             profile = fallbackProfileResult.data
-                ? { ...fallbackProfileResult.data, login_id: null }
+                ? { ...fallbackProfileResult.data, login_id: null, phone: null }
                 : null;
             profileError = fallbackProfileResult.error;
         }
@@ -90,6 +91,7 @@ export async function GET(request: Request) {
             id: profile.login_id || toLegacyLoginId(profile.email || userData.user.email || null, userData.user.id),
             uid: userData.user.id,
             email: userData.user.email || profile.email || null,
+            phone: profile.phone || '',
             name: profile.name || '',
             role: profile.role || 'staff',
             companyName: profile.company?.name || '',

@@ -61,7 +61,7 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<typeof SIDEBAR_MENU_ITEMS>([]);
     const isEnabled = (key: CompanyMenuFeatureKey) => isCompanyMenuEnabled(menuFlags, key);
-    const visibleMenuItems = SIDEBAR_MENU_ITEMS.filter(item => isEnabled(item.featureKey));
+    const visibleMenuItems = SIDEBAR_MENU_ITEMS.filter(item => Boolean(item.url) && !item.group && isEnabled(item.featureKey));
     const displayCompanyName = companyName?.trim() || '부동산 ERP';
 
     const isSectionExpanded = (key: SidebarSectionKey) => {
@@ -167,7 +167,7 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
                         {searchTerm && (
                             <div className={styles.searchResults}>
                                 {searchResults.length > 0 ? (
-                                    searchResults.map((item, index) => (
+                                    searchResults.map((item, index) => item.url ? (
                                         <Link
                                             key={index}
                                             href={item.url}
@@ -177,7 +177,7 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
                                             <span className={styles.resultTitle}>{item.title}</span>
                                             <span className={styles.resultCategory}>{item.category}</span>
                                         </Link>
-                                    ))
+                                    ) : null)
                                 ) : (
                                     <div style={{ padding: '12px', fontSize: '13px', color: '#888', textAlign: 'center' }}>
                                         검색 결과가 없습니다.

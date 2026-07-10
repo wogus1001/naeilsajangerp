@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
-import { parseSearchTerms } from '@/utils/search';
+import { buildPostgrestIlikeOrFilter, parseSearchTerms } from '@/utils/search';
 import {
     canAccessCompanyResource,
     canAccessCompanyScope,
@@ -11,6 +11,8 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { notifyFranchiseIntakeRegistration } from '@/lib/solapi-notifications';
+import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
 const SHARED_TOP_LEVEL_BLOCKLIST = new Set([
@@ -43,6 +45,17 @@ const SHARED_DATA_BLOCKLIST = new Set([
     '소유주전화',
     '비공개메모'
 ]);
+const PROPERTY_DB_SEARCH_COLUMNS = [
+    'name',
+    'address',
+    'status',
+    'operation_type',
+    'data->>name',
+    'data->>brand',
+    'data->>address',
+    'data->>region',
+    'data->>memo'
+];
 
 async function getSharedPropertyIdByToken(supabaseAdmin: any, shareToken: string) {
     if (!shareToken) return null;
@@ -65,6 +78,14 @@ function canAccessProperty(
     property: { company_id: string | null; manager_id: string | null }
 ) {
     return canAccessCompanyResource(requester, property);
+}
+
+function isWorkIntakeProperty(property: { operation_type?: string | null }): boolean {
+    return property.operation_type === '물건등록';
+}
+
+function isFranchisePropertyRegistration(operationType: unknown, data: Record<string, unknown>): boolean {
+    return operationType === '물건등록' && data.sourceType === 'franchise_property_registration';
 }
 
 function requesterFallbackFromBody(body: unknown): string | null {
@@ -132,10 +153,23 @@ function matchesPropertySearch(property: unknown, terms: string[]) {
     return terms.some(term => searchable.includes(term));
 }
 
+function buildPropertyDbSearchFilter(terms: string[]) {
+    return buildPostgrestIlikeOrFilter(terms, PROPERTY_DB_SEARCH_COLUMNS);
+}
+
 function parsePositiveLimit(value: string | null) {
     if (!value || value === 'all') return null;
     const parsed = parseInt(value, 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+const PROPERTY_LIST_HARD_LIMIT = 5000;
+
+function parseRequestedPropertyLimit(value: string | null, hasSearch: boolean) {
+    const parsed = hasSearch || value === 'all'
+        ? PROPERTY_LIST_HARD_LIMIT
+        : parsePositiveLimit(value) || 500;
+    return Math.min(parsed, PROPERTY_LIST_HARD_LIMIT);
 }
 
 // GET
@@ -283,6 +317,9 @@ export async function GET(request: Request) {
             } else if (requesterProfile?.id) {
                 query = query.eq('manager_id', requesterProfile.id);
             }
+            if (dbSearchFilter) {
+                query = query.or(dbSearchFilter);
+            }
 
             return query;
         };
@@ -296,7 +333,8 @@ export async function GET(request: Request) {
         }
 
         const limitParam = searchParams.get('limit');
-        const requestedLimit = searchTerms.length > 0 ? null : parsePositiveLimit(limitParam);
+        const requestedLimit = parseRequestedPropertyLimit(limitParam, searchTerms.length > 0);
+        const dbSearchFilter = searchTerms.length > 0 ? buildPropertyDbSearchFilter(searchTerms) : null;
         const pageSize = 1000;
         let properties: any[] = [];
         let page = 0;
@@ -304,7 +342,7 @@ export async function GET(request: Request) {
 
         while (hasMore) {
             const from = page * pageSize;
-            const to = requestedLimit ? Math.min(from + pageSize - 1, requestedLimit - 1) : from + pageSize - 1;
+            const to = Math.min(from + pageSize - 1, requestedLimit - 1);
             const query = buildScopedQuery(from, to);
 
             if (!query) {
@@ -316,7 +354,7 @@ export async function GET(request: Request) {
 
             if (data && data.length > 0) {
                 properties = properties.concat(data);
-                hasMore = data.length === pageSize && (!requestedLimit || properties.length < requestedLimit);
+                hasMore = data.length === pageSize && properties.length < requestedLimit;
                 page++;
             } else {
                 hasMore = false;
@@ -405,6 +443,24 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
+        if (isFranchisePropertyRegistration(operationType, rest)) {
+            try {
+                await notifyFranchiseIntakeRegistration({
+                    kind: 'property',
+                    companyName: typeof companyName === 'string' ? companyName : null,
+                    title: typeof name === 'string' ? name : null,
+                    contact: null,
+                    region: typeof rest.propertyRegion === 'string' ? rest.propertyRegion : typeof address === 'string' ? address : null
+                });
+            } catch (notificationError) {
+                if (notificationError instanceof Error) {
+                    console.error('Franchise property intake SMS notification failed:', notificationError.message);
+                } else {
+                    console.error('Franchise property intake SMS notification failed:', String(notificationError));
+                }
+            }
+        }
+
         return ok(transformProperty(inserted), 201);
 
     } catch (error) {
@@ -428,8 +484,15 @@ export async function PUT(request: Request) {
         // 1. Fetch existing to merge JSONB
         const { data: existing, error: fetchError } = await supabaseAdmin.from('properties').select('*').eq('id', id).single();
         if (fetchError || !existing) return fail(404, 'NOT_FOUND', 'Property not found');
+        const existingIsWorkIntake = isWorkIntakeProperty(existing);
         if (!canAccessProperty(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+        if (existingIsWorkIntake && !canManageWorkIntakeRecord(requesterProfile, existing)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
+        }
+        if (!existingIsWorkIntake && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && existing.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: property update requires assigned manager or team lead');
         }
 
         // 2. Prepare updates
@@ -445,8 +508,13 @@ export async function PUT(request: Request) {
         if (companyName) {
             const companyId = await resolveCompanyIdByName(supabaseAdmin, companyName);
             if (!companyId) return fail(400, 'VALIDATION_ERROR', 'Invalid companyName');
-            updates.company_id = companyId;
-            targetCompanyId = companyId;
+            if (existingIsWorkIntake && companyId !== existing.company_id) {
+                return fail(403, 'FORBIDDEN', '진행현황 입점 요청의 회사는 변경할 수 없습니다.');
+            }
+            if (!existingIsWorkIntake) {
+                updates.company_id = companyId;
+                targetCompanyId = companyId;
+            }
         }
         updates.data = mergedData;
 
@@ -468,13 +536,22 @@ export async function PUT(request: Request) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: manager/company mismatch');
             }
 
-            updates.manager_id = mgrUuid;
-            mergedData.managerId = managerId;
+            if (existingIsWorkIntake && mgrUuid !== existing.manager_id) {
+                return fail(403, 'FORBIDDEN', '진행현황 입점 요청의 작성자는 변경할 수 없습니다.');
+            }
+
+            if (!existingIsWorkIntake) {
+                updates.manager_id = mgrUuid;
+                mergedData.managerId = managerId;
+            }
         }
 
         if (name !== undefined) updates.name = name;
         if (status !== undefined) updates.status = status;
-        if (operationType !== undefined) updates.operation_type = operationType;
+        if (operationType !== undefined && existingIsWorkIntake && operationType !== existing.operation_type) {
+            return fail(403, 'FORBIDDEN', '진행현황 입점 요청의 유형은 변경할 수 없습니다.');
+        }
+        if (operationType !== undefined && !existingIsWorkIntake) updates.operation_type = operationType;
         if (address !== undefined) updates.address = address;
         if (isFavorite !== undefined) updates.is_favorite = isFavorite;
 
@@ -511,7 +588,7 @@ export async function DELETE(request: Request) {
 
         const { data: targetProperty, error: targetError } = await supabaseAdmin
             .from('properties')
-            .select('id, company_id, manager_id')
+            .select('id, company_id, manager_id, operation_type')
             .eq('id', id)
             .single();
         if (targetError || !targetProperty) {
@@ -519,6 +596,12 @@ export async function DELETE(request: Request) {
         }
         if (!canAccessProperty(requesterProfile, targetProperty)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+        }
+        if (isWorkIntakeProperty(targetProperty) && !canManageWorkIntakeRecord(requesterProfile, targetProperty)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
+        }
+        if (!isWorkIntakeProperty(targetProperty) && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && targetProperty.manager_id !== requesterProfile.id) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: property delete requires assigned manager or team lead');
         }
 
         if (!isAdmin(requesterProfile) && company) {

@@ -7,6 +7,7 @@ import { FileText, Check, ShieldAlert, ArrowRight, ArrowLeft, Users } from 'luci
 import { Template } from '@/lib/ucansign/client';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 function ContractCreateContent() {
     const router = useRouter();
@@ -55,7 +56,9 @@ function ContractCreateContent() {
         setIsLoading(true);
         setNeedAuth(false);
         try {
-            const res = await fetch(`/api/contracts/templates?userId=${uid}`);
+            const res = await fetch(`/api/contracts/templates?userId=${uid}`, {
+                headers: await getApiAuthHeaders()
+            });
 
             if (res.status === 401) {
                 setNeedAuth(true);
@@ -80,7 +83,9 @@ function ContractCreateContent() {
         if (!selectedTemplate || !userId) return;
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/contracts/templates/${selectedTemplate.documentId}?userId=${userId}`);
+            const res = await fetch(`/api/contracts/templates/${selectedTemplate.documentId}?userId=${userId}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (!res.ok) throw new Error('유캔싸인 연동이 만료되었거나 정보를 불러올 수 없습니다. 다시 연동해주세요. \n우측상단 아이디 클릭 -> 개인정보수정에서 확인해주세요');
             const data = await res.json();
             setTemplateDetails(data);
@@ -132,7 +137,7 @@ function ContractCreateContent() {
 
             const res = await fetch(`/api/contracts/create?userId=${userId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
 
@@ -150,6 +155,20 @@ function ContractCreateContent() {
             showAlert(e.message);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const startUcansignAuth = async () => {
+        if (!userId) return;
+        try {
+            const res = await fetch(`/api/ucansign/auth?userId=${userId}&response=json`, {
+                headers: await getApiAuthHeaders()
+            });
+            const data = await res.json();
+            if (!res.ok || !data.url) throw new Error(data.error || '유캔싸인 연동을 시작하지 못했습니다.');
+            window.location.href = data.url;
+        } catch (e: any) {
+            showAlert(e.message || '유캔싸인 연동을 시작하지 못했습니다.');
         }
     };
 
@@ -208,7 +227,7 @@ function ContractCreateContent() {
                                 <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', color: '#333', wordBreak: 'keep-all', whiteSpace: 'nowrap' }}>서비스 연동이 필요합니다</h3>
                                 <p style={{ color: '#666', marginBottom: '24px' }}>전자 계약 템플릿을 불러오려면 유캔싸인 계정을 연동해주세요.</p>
                                 <button
-                                    onClick={() => window.location.href = `/api/ucansign/auth?userId=${userId}`}
+                                    onClick={startUcansignAuth}
                                     style={{
                                         padding: '10px 24px',
                                         backgroundColor: '#2563eb',

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireAdminRequester } from '@/lib/admin-route-auth';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 const SETTINGS_FILE = path.join(process.cwd(), 'src/data/system_settings.json');
 
@@ -33,6 +35,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const adminGuard = await requireAdminRequester(supabaseAdmin, request);
+        if (!adminGuard.ok) return adminGuard.response;
+
         const body = await request.json();
         // Validation could go here
 

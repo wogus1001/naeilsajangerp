@@ -183,7 +183,7 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
                     userCompanyName = user.companyName || 'Unknown';
                     managerIdVal = user.uid || user.id || '';
                 }
-                const uploadHeaders = await getApiAuthHeaders();
+                const uploadHeaders = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
 
                 // Vercel 요청 크기 제한(4.5MB) 방지: 100건씩 분할 전송
                 // 500건도 행당 데이터(월별매출현황 등 JSONB)가 크면 4.5MB 초과 가능
@@ -221,7 +221,7 @@ export default function PropertyUploadModal({ isOpen, onClose, onUploadSuccess }
 
                     const res = await fetch('/api/properties/batch', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: uploadHeaders,
                         body: JSON.stringify(payload)
                     });
 

@@ -27,6 +27,8 @@ import styles from './WorkIntakeEditModal.module.css';
 type PropertyWorkIntakeEditFieldsProps = {
     readonly value: PropertyRegistrationForm;
     readonly onChangeAction: (value: PropertyRegistrationForm) => void;
+    readonly pendingFiles?: readonly File[];
+    readonly onPendingFilesChangeAction?: (files: readonly File[]) => void;
 };
 
 function fieldClassName(field: PropertyRegistrationField): string {
@@ -72,6 +74,8 @@ function renderPropertyField(
     selectAddress: (result: KakaoAddressResult) => void,
     updatePrivateAreaUnit: (unit: PropertyAreaUnit) => void
 ) {
+    if (field.visibleWhen && value[field.visibleWhen.key] !== field.visibleWhen.value) return null;
+
     if (field.key === 'propertyAddress') {
         return (
             <KakaoAddressSearch
@@ -155,7 +159,12 @@ function renderPropertyField(
     return renderTextField(field, value, updateField);
 }
 
-export function PropertyWorkIntakeEditFields({ value, onChangeAction }: PropertyWorkIntakeEditFieldsProps) {
+export function PropertyWorkIntakeEditFields({
+    value,
+    onChangeAction,
+    pendingFiles = [],
+    onPendingFilesChangeAction
+}: PropertyWorkIntakeEditFieldsProps) {
     const [fileError, setFileError] = React.useState('');
     const optionGroups = useFranchiseIndustryOptionGroups();
     const industryOptions = React.useMemo(
@@ -207,7 +216,9 @@ export function PropertyWorkIntakeEditFields({ value, onChangeAction }: Property
                 <h3 className={styles.sectionTitle}>사진 및 자료</h3>
                 <PropertyRegistrationFileInput
                     attachments={value.fileAttachments}
+                    pendingFiles={pendingFiles}
                     onChange={updateAttachments}
+                    onPendingFilesChange={onPendingFilesChangeAction}
                     onError={setFileError}
                 />
                 {fileError && <p className={styles.fileError}>{fileError}</p>}

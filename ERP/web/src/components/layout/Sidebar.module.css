@@ -178,6 +178,22 @@
     transition: all 0.2s;
 }
 
+.navSubGroupLabel {
+    display: block;
+    margin-top: 6px;
+    padding: 10px 16px 10px 46px;
+    color: var(--text-sub);
+    font-size: 14px;
+    font-weight: 400;
+    border-radius: 8px;
+}
+
+.navSubGroupActive {
+    color: var(--text-main);
+    background: transparent;
+    font-weight: 700;
+}
+
 .navSubLinkChild {
     padding-left: 58px;
     font-size: 13px;

@@ -4,32 +4,32 @@ export function ProductPreview() {
     return (
         <section className={styles.preview} aria-label="제품 화면 미리보기">
             <div className={styles.previewTopbar}>
-                <strong>상태별 모객 파이프라인</strong>
-                <span>오늘 처리 기준</span>
+                <strong>본부 구축 운영 보드</strong>
+                <span>샘플 데이터</span>
             </div>
             <div className={styles.previewStats}>
-                <PreviewStat label="문의접수" value="128" />
-                <PreviewStat label="상담중" value="42" />
-                <PreviewStat label="계약예정" value="9" />
+                <PreviewStat label="채널 운영" value="6" />
+                <PreviewStat label="콘텐츠 제작" value="24" />
+                <PreviewStat label="상담 진행" value="42" />
             </div>
             <div className={styles.previewBody}>
                 <div className={styles.previewPanel}>
                     <div className={styles.panelTitle}>
-                        <strong>모객 상태 추적</strong>
-                        <span>병목 확인</span>
+                        <strong>제공 모듈</strong>
+                        <span>구축 현황</span>
                     </div>
-                    <PreviewRow name="문의접수" meta="광고·박람회 유입 DB" progress="100%" />
-                    <PreviewRow name="상담중" meta="담당자 후속 연락 관리" progress="72%" />
-                    <PreviewRow name="입지검토" meta="희망지역·후보지 연결" progress="48%" />
+                    <PreviewRow name="프랜차이즈 본부 ERP" meta="상담 · 출점 · 계약 · 운영 관리" progress="90%" status="백엔드" />
+                    <PreviewRow name="푸시·쇼츠 채널 운영" meta="푸시 발송과 숏폼 유입 운영 기준" progress="72%" status="채널" />
+                    <PreviewRow name="자사앱·랜딩" meta="CRM · 프로모션 자동화 · 고객 접점" progress="58%" status="프론트" />
                 </div>
                 <div className={styles.previewPanel}>
                     <div className={styles.panelTitle}>
-                        <strong>계약 전 체크</strong>
-                        <span>정보공개서 D-13</span>
+                        <strong>실행 지원</strong>
+                        <span>운영팀</span>
                     </div>
-                    <div className={styles.checkRow}><span />정보공개서 수령 확인</div>
-                    <div className={styles.checkRow}><span />계약 가능일 확인</div>
-                    <div className={styles.checkRow}><span />오픈 준비 전환</div>
+                    <div className={styles.checkRow}><span />영업대행과 상담 목록 관리</div>
+                    <div className={styles.checkRow}><span />콘텐츠 제작 요청</div>
+                    <div className={styles.checkRow}><span />가맹관리 매뉴얼 점검</div>
                 </div>
             </div>
         </section>
@@ -45,11 +45,21 @@ function PreviewStat({ label, value }: { readonly label: string; readonly value:
     );
 }
 
-function PreviewRow({ name, meta, progress }: { readonly name: string; readonly meta: string; readonly progress: string }) {
+function PreviewRow({
+    name,
+    meta,
+    progress,
+    status
+}: {
+    readonly name: string;
+    readonly meta: string;
+    readonly progress: string;
+    readonly status: string;
+}) {
     return (
         <div className={styles.previewRow}>
             <div>
-                <strong>{name}</strong>
+                <strong>{name}<em>{status}</em></strong>
                 <span>{meta}</span>
             </div>
             <i style={{ width: progress }} />

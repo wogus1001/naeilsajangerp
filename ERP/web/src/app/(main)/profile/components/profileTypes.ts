@@ -2,6 +2,8 @@ export type ProfileUser = {
     readonly id?: string;
     readonly uid?: string;
     readonly name?: string;
+    readonly email?: string | null;
+    readonly phone?: string | null;
     readonly role?: string;
     readonly companyName?: string;
     readonly companyId?: string;
@@ -11,6 +13,8 @@ export type ProfileUser = {
 export type ProfileFormData = {
     readonly id: string;
     readonly name: string;
+    readonly email: string;
+    readonly phone: string;
     readonly companyName: string;
     readonly oldPassword: string;
     readonly newPassword: string;

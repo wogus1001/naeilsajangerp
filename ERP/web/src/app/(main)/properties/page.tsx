@@ -14,6 +14,7 @@ import ViewModeSwitcher, { ViewMode } from '@/components/properties/ViewModeSwit
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { isExternalCollectedProperty } from '@/lib/property-external-status';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { parseSearchTerms } from '@/utils/search';
 import { getRequesterId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
 
@@ -355,7 +356,13 @@ function PropertiesPageContent() {
             }
         }
         if (query) {
-            fetch(`/api/users${query}`).then(readApiJson).then(data => setManagers(data)).catch(err => console.error(err));
+            void (async () => {
+                const res = await fetch(`/api/users${query}`, {
+                    headers: await getApiAuthHeaders()
+                });
+                const data = await readApiJson(res);
+                setManagers(Array.isArray(data) ? data : []);
+            })().catch(err => console.error(err));
         }
     }, []);
 
@@ -636,7 +643,10 @@ function PropertiesPageContent() {
 
     const fetchPropertyList = React.useCallback(async (requestedLimit: number | 'all', signal: AbortSignal, search?: string) => {
         const queryString = buildPropertyQueryString(requestedLimit, search);
-        const res = await fetch(`/api/properties${queryString}`, { signal });
+        const res = await fetch(`/api/properties${queryString}`, {
+            signal,
+            headers: await getApiAuthHeaders()
+        });
 
         if (!res.ok) {
             throw new Error(await res.text());
@@ -746,11 +756,15 @@ function PropertiesPageContent() {
                 const user = getStoredUser();
                 const userCompanyName = getStoredCompanyName(user);
                 const requesterId = getRequesterId(user);
+                const headers = await getApiAuthHeaders();
 
                 // Sequential delete as API likely doesn't support bulk yet
                 // Ideally: await fetch('/api/properties/bulk-delete', { ... })
                 const deletePromises = Array.from(selectedIds).map(id =>
-                    fetch(`/api/properties?id=${id}&company=${encodeURIComponent(userCompanyName)}&requesterId=${encodeURIComponent(requesterId)}`, { method: 'DELETE' })
+                    fetch(`/api/properties?id=${id}&company=${encodeURIComponent(userCompanyName)}&requesterId=${encodeURIComponent(requesterId)}`, {
+                        method: 'DELETE',
+                        headers
+                    })
                 );
 
                 await Promise.all(deletePromises);
@@ -1057,7 +1071,7 @@ function PropertiesPageContent() {
             const requesterId = currentUser?.uid || currentUser?.id || '';
             const res = await fetch(`/api/properties?id=${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ isFavorite: !current, requesterId })
             });
             if (res.ok) {

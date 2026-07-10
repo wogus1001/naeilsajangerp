@@ -10,6 +10,7 @@ import {
 import { fail, ok } from '@/lib/api-response';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
+    FRANCHISE_MATCHING_REQUEST_SOURCE,
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadGrade,
     normalizeLeadPhone,
@@ -20,12 +21,14 @@ import {
     canAccessFranchiseLead,
     shouldRestrictFranchiseLeadListToCreator
 } from '@/lib/franchise-lead-access';
+import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 import {
     canEnterContractStatus,
     getContractLockMessage,
     getDisclosureEligibility,
     isContractLockedLeadStatus
 } from '@/lib/franchise-disclosure-deliveries';
+import { notifyFranchiseIntakeRegistration } from '@/lib/solapi-notifications';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import { buildPostgrestIlikeOrFilter, normalizeSearchValue, parseSearchTerms, sanitizePostgrestSearchTerm } from '@/utils/search';
 
@@ -61,6 +64,7 @@ type LeadAccessTarget = {
     readonly company_id: string | null;
     readonly manager_id: string | null;
     readonly created_by?: string | null;
+    readonly source?: string | null;
 };
 type TransformedLead = NonNullable<ReturnType<typeof transformLead>>;
 
@@ -168,7 +172,7 @@ function parseNullableNumber(value: unknown): number | null {
 function parseNullableDate(value: unknown): string | null {
     if (value === null || value === undefined || value === '') return null;
     const parsed = new Date(String(value));
-    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function transformLead(row: FranchiseLeadRow | null | undefined) {
@@ -201,10 +205,13 @@ function transformLead(row: FranchiseLeadRow | null | undefined) {
     };
 }
 
+const FRANCHISE_LEAD_LIST_HARD_LIMIT = 5000;
+
 function parseRequestedLimit(limitParam: string | null, hasSearch: boolean) {
-    if (hasSearch || limitParam === 'all') return null;
+    if (hasSearch || limitParam === 'all') return FRANCHISE_LEAD_LIST_HARD_LIMIT;
     const parsed = parseInt(limitParam || '500', 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    return Math.min(requested, FRANCHISE_LEAD_LIST_HARD_LIMIT);
 }
 
 function splitFilter(value: string | null) {
@@ -230,6 +237,32 @@ function isTransformedLead(lead: TransformedLead | null): lead is TransformedLea
 
 function isPendingLeadRegistrationRequest(lead: TransformedLead): boolean {
     return lead.data.sourceType === 'franchise_lead_registration' && lead.data.adminIntakeStatus !== 'promoted';
+}
+
+function isMatchingRequestLead(lead: { readonly source?: string | null }): boolean {
+    return lead.source === FRANCHISE_MATCHING_REQUEST_SOURCE;
+}
+
+function isFranchiseMatchingRequestBody(body: Record<string, unknown>): boolean {
+    return body.source === FRANCHISE_MATCHING_REQUEST_SOURCE || body.sourceType === 'franchise_matching_request';
+}
+
+async function notifyMatchingRequestRegistration(body: Record<string, unknown>): Promise<void> {
+    try {
+        await notifyFranchiseIntakeRegistration({
+            kind: 'matchingRequest',
+            companyName: cleanString(body.companyName),
+            title: cleanString(body.name) || cleanString(body.desiredBrand) || cleanString(body.desiredCategory),
+            contact: cleanString(body.mobile),
+            region: cleanString(body.desiredRegion)
+        });
+    } catch (notificationError) {
+        if (notificationError instanceof Error) {
+            console.error('Franchise matching request SMS notification failed:', notificationError.message);
+        } else {
+            console.error('Franchise matching request SMS notification failed:', String(notificationError));
+        }
+    }
 }
 
 function matchesLeadSearch(lead: TransformedLead, terms: string[]) {
@@ -427,6 +460,17 @@ function buildUpdatePayload(body: Record<string, unknown>, existingData: Record<
     return updates;
 }
 
+function withoutMatchingRequestOwnershipFields(body: Record<string, unknown>): Record<string, unknown> {
+    const sanitized = { ...body };
+    delete sanitized.companyName;
+    delete sanitized.companyId;
+    delete sanitized.managerId;
+    delete sanitized.manager_id;
+    delete sanitized.source;
+    delete sanitized['유입경로'];
+    return sanitized;
+}
+
 function getErrorCode(error: unknown) {
     if (!error || typeof error !== 'object' || !('code' in error)) return '';
     return typeof error.code === 'string' ? error.code : '';
@@ -524,7 +568,7 @@ export async function GET(request: Request) {
 
         const limitParam = searchParams.get('limit');
         const maxLimit = parseRequestedLimit(limitParam, searchTerms.length > 0);
-        const needsFullData = includeSummary || maxLimit === null;
+        const needsFullData = includeSummary;
         const dbSearchFilter = searchTerms.length > 0 ? buildLeadDbSearchFilter(searchTerms) : null;
         const statusFilters = splitFilter(searchParams.get('status')).map(normalizeLeadStatus);
         const sourceFilters = splitFilter(searchParams.get('source'));
@@ -588,7 +632,7 @@ export async function GET(request: Request) {
                 hasMore = false;
             }
 
-            if (!needsFullData && maxLimit !== null && rows.length >= maxLimit) {
+            if (rows.length >= maxLimit && (!needsFullData || rows.length >= FRANCHISE_LEAD_LIST_HARD_LIMIT)) {
                 hasMore = false;
                 rows = rows.slice(0, maxLimit);
             }
@@ -602,11 +646,11 @@ export async function GET(request: Request) {
 
         const total = leads.length;
         const summary = buildSummary(leads);
-        if (maxLimit !== null && leads.length > maxLimit) {
+        if (leads.length > maxLimit) {
             leads = leads.slice(0, maxLimit);
         }
 
-        return ok({ leads, summary, total });
+        return ok({ leads, summary, total, truncated: total >= maxLimit });
     } catch (error) {
         if (!(error instanceof Error)) {
             logRouteError('Franchise leads GET error:', error);
@@ -662,6 +706,9 @@ export async function POST(request: Request) {
                     .single();
 
                 if (updateError) throw updateError;
+                if (isFranchiseMatchingRequestBody(body)) {
+                    await notifyMatchingRequestRegistration(body);
+                }
                 return ok({ lead: transformLead(updated), deduplicated: true });
             }
         }
@@ -673,6 +720,9 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+        if (isFranchiseMatchingRequestBody(body)) {
+            await notifyMatchingRequestRegistration(body);
+        }
         return ok({ lead: transformLead(inserted), deduplicated: false }, 201);
     } catch (error) {
         if (!(error instanceof Error)) {
@@ -713,19 +763,36 @@ export async function PUT(request: Request) {
             return fail(404, 'NOT_FOUND', 'Franchise lead not found');
         }
 
+        const existingIsMatchingRequest = isMatchingRequestLead(existing as FranchiseLeadRow);
         if (!canAccessFranchiseLead(requesterProfile, existing as FranchiseLeadRow)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
+        if (existingIsMatchingRequest && !canManageWorkIntakeRecord(requesterProfile, existing as FranchiseLeadRow)) {
+            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
+        }
 
-        const updates = buildUpdatePayload(body, existing.data || {});
+        if (existingIsMatchingRequest && hasAny(body, ['source', '유입경로'])) {
+            const requestedSource = cleanString(getFirst(body, ['source', '유입경로']));
+            if (requestedSource && requestedSource !== existing.source) {
+                return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 유형은 변경할 수 없습니다.');
+            }
+        }
+
+        const updateBody = existingIsMatchingRequest ? withoutMatchingRequestOwnershipFields(body) : body;
+        const updates = buildUpdatePayload(updateBody, existing.data || {});
         let targetCompanyId = existing.company_id;
 
         const companyName = cleanString(body.companyName);
         if (companyName) {
             const companyId = await resolveCompanyIdByName(supabaseAdmin, companyName);
             if (companyId) {
-                updates.company_id = companyId;
-                targetCompanyId = companyId;
+                if (existingIsMatchingRequest && companyId !== existing.company_id) {
+                    return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 회사는 변경할 수 없습니다.');
+                }
+                if (!existingIsMatchingRequest) {
+                    updates.company_id = companyId;
+                    targetCompanyId = companyId;
+                }
             }
         }
 
@@ -746,7 +813,11 @@ export async function PUT(request: Request) {
                 return fail(403, 'FORBIDDEN', 'Forbidden: manager/company mismatch');
             }
 
-            updates.manager_id = managerUuid;
+            if (existingIsMatchingRequest && managerUuid !== existing.manager_id) {
+                return fail(403, 'FORBIDDEN', '진행현황 예비 창업자 등록의 작성자는 변경할 수 없습니다.');
+            }
+
+            if (!existingIsMatchingRequest) updates.manager_id = managerUuid;
         }
 
         if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, targetCompanyId)) {
@@ -826,12 +897,15 @@ export async function DELETE(request: Request) {
 
         const { data: targets, error: targetError } = await supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id, created_by')
+            .select('id, company_id, manager_id, created_by, source')
             .in('id', ids);
 
         if (targetError) throw targetError;
 
-        const forbidden = (targets || []).some((target: LeadAccessTarget) => !canAccessFranchiseLead(requesterProfile, target));
+        const forbidden = (targets || []).some((target: LeadAccessTarget) => {
+            if (!canAccessFranchiseLead(requesterProfile, target)) return true;
+            return isMatchingRequestLead(target) && !canManageWorkIntakeRecord(requesterProfile, target);
+        });
         if (forbidden) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
         }

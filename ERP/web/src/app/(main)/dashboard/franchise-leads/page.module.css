@@ -49,7 +49,8 @@
 
 .primaryButton,
 .secondaryButton,
-.secondaryButtonSuccess {
+.secondaryButtonSuccess,
+.dangerOutlineButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -82,16 +83,24 @@
     color: #047857;
 }
 
+.dangerOutlineButton {
+    border: 1px solid #fecdd3;
+    background: #fff7f8;
+    color: #e42939;
+}
+
 .primaryButton:hover,
 .secondaryButton:hover,
-.secondaryButtonSuccess:hover {
+.secondaryButtonSuccess:hover,
+.dangerOutlineButton:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .primaryButton:disabled,
 .secondaryButton:disabled,
-.secondaryButtonSuccess:disabled {
+.secondaryButtonSuccess:disabled,
+.dangerOutlineButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
@@ -2942,6 +2951,23 @@
     white-space: nowrap;
 }
 
+.locationListSearch {
+    flex: 1 1 360px;
+    min-width: 220px;
+    height: 34px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 750;
+    padding: 0 11px;
+}
+
+.locationListSearch::placeholder {
+    color: #8b95a1;
+}
+
 .locationListControlBar .exportActions {
     margin-left: auto;
 }
@@ -5005,6 +5031,1136 @@
     cursor: not-allowed;
 }
 
+.ownerPortalShell {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ownerPortalViewTabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+.ownerPortalViewTab,
+.ownerPortalViewTabActive {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalViewTab small,
+.ownerPortalViewTabActive small {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.ownerPortalViewTabActive {
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.ownerPortalViewTabActive small {
+    background: #ffffff;
+    color: #1b64da;
+}
+
+.ownerPortalChecklistTaskRow {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.ownerPortalChecklistTaskRow > span {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.ownerPortalChecklistTaskFields {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ownerPortalChecklistSummary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    border-bottom: 1px solid #e5e8eb;
+    padding: 14px;
+}
+
+.ownerPortalChecklistSummary div {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.ownerPortalChecklistSummary span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.ownerPortalChecklistSummary strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 18px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistWorkspace {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+}
+
+.ownerPortalChecklistRequests {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid #e5e8eb;
+}
+
+.ownerPortalChecklistRequests .ownerPortalFilterBar {
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 190px);
+}
+
+.ownerPortalChecklistScope,
+.ownerPortalChecklistEditor,
+.ownerPortalChecklistManager {
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalChecklistScopeBody {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPortalChecklistHint {
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #4e5968;
+    padding: 11px 12px;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.5;
+}
+
+.ownerPortalChecklistPicker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+}
+
+.ownerPortalChecklistStatus {
+    border-top: 1px solid #e5e8eb;
+}
+
+.ownerPortalChecklistSelectedList {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px 12px;
+}
+
+.ownerPortalChecklistSelectedItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 10px 12px;
+}
+
+.ownerPortalChecklistSelectedItem div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.ownerPortalChecklistSelectedItem strong,
+.ownerPortalChecklistSelectedItem span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistSelectedItem strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.ownerPortalChecklistSelectedItem span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPortalChecklistSelectedItem button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalChecklistStatus .ownerPortalSectionList {
+    max-height: 420px;
+    overflow: auto;
+    padding: 10px 12px 12px;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem {
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem .locationItemMain {
+    gap: 4px;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem .locationItemMain small {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.ownerPortalChecklistStatus .ownerPortalListItem .locationItemActions button {
+    min-height: 32px;
+    padding: 0 10px;
+}
+
+.ownerPortalChecklistList {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPortalChecklistActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 12px;
+}
+
+.ownerPortalGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    min-width: 0;
+}
+
+.ownerPortalPanel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalSplit {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+    gap: 12px;
+    padding: 12px;
+}
+
+.ownerPortalSubPanel {
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalSubHeader {
+    display: grid;
+    gap: 3px;
+    border-bottom: 1px solid #e5e8eb;
+    padding: 12px;
+}
+
+.ownerPortalSubHeader strong {
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.ownerPortalSubHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPortalForm {
+    display: grid;
+    gap: 9px;
+    padding: 12px;
+}
+
+.ownerPortalLinkCard {
+    display: grid;
+    gap: 10px;
+    margin: 12px 12px 0;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    padding: 12px;
+}
+
+.ownerPortalLinkCopy {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ownerPortalLinkCopy div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalLinkCopy strong {
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.ownerPortalLinkCopy span {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.ownerPortalLinkCopy button {
+    display: inline-flex;
+    min-height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1d4ed8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalLinkCard input {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 11px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalTargetControl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: min(100%, 360px);
+    padding: 4px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.ownerPortalTargetButton,
+.ownerPortalTargetActive {
+    min-height: 34px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalTargetButton {
+    border: 0;
+    background: transparent;
+    color: #4e5968;
+}
+
+.ownerPortalTargetActive {
+    border: 1px solid #bfdbfe;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.ownerPortalInlineTabs {
+    display: inline-flex;
+    gap: 6px;
+    width: fit-content;
+    margin: 12px 12px 0;
+    padding: 4px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.ownerPortalInlineTab,
+.ownerPortalInlineTabActive {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    gap: 6px;
+    border-radius: 7px;
+    padding: 0 11px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalInlineTab {
+    border: 0;
+    background: transparent;
+    color: #4e5968;
+}
+
+.ownerPortalInlineTabActive {
+    border: 1px solid #bfdbfe;
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.ownerPortalInlineTab span,
+.ownerPortalInlineTabActive span {
+    color: inherit;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalFilterBar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 180px) minmax(150px, 180px);
+    gap: 8px;
+    padding: 12px;
+}
+
+.ownerPortalFilterBar select {
+    min-height: 40px;
+    width: 100%;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 11px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalMutedAction {
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ownerPortalSuccessPill,
+.ownerPortalWarningPill {
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ownerPortalSuccessPill {
+    background: #dcfce7;
+    color: #047857;
+}
+
+.ownerPortalWarningPill {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.locationItem .ownerPortalMutedAction,
+.locationItem .ownerPortalSuccessPill,
+.locationItem .ownerPortalWarningPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.locationItem .ownerPortalMutedAction {
+    height: 30px;
+    color: #6b7684;
+}
+
+.locationItem .ownerPortalSuccessPill,
+.locationItem .ownerPortalWarningPill {
+    height: 28px;
+}
+
+.locationItem .ownerPortalSuccessPill {
+    color: #047857;
+}
+
+.locationItem .ownerPortalWarningPill {
+    color: #c2410c;
+}
+
+.ownerPortalTextarea {
+    min-height: 104px;
+    width: 100%;
+    resize: vertical;
+    padding: 10px 11px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.ownerPortalTextarea::placeholder {
+    color: #8b95a1;
+}
+
+.ownerPortalLocationPicker {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.ownerPortalLocationPickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ownerPortalLocationPickerHeader strong {
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalLocationPickerHeader div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ownerPortalLocationPickerHeader button {
+    min-height: 28px;
+    border: 1px solid #e5e8eb;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #4e5968;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ownerPortalLocationOptions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    max-height: 188px;
+    overflow: auto;
+}
+
+.ownerPortalLocationOptions label {
+    display: flex;
+    min-width: 0;
+    min-height: 36px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 7px;
+    background: #f9fafb;
+    padding: 0 10px;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalLocationOptions span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalAttachmentBox {
+    display: grid;
+    gap: 10px;
+    border: 1px dashed #b8d6ff;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 12px;
+}
+
+.ownerPortalAttachmentHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ownerPortalAttachmentHeader div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalAttachmentHeader strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalAttachmentHeader span,
+.ownerPortalAttachmentBox p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.ownerPortalAttachmentHeader button {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1d4ed8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalHiddenFileInput {
+    display: none;
+}
+
+.ownerPortalAttachmentList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ownerPortalAttachmentItem {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 8px;
+}
+
+.ownerPortalAttachmentItem div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalAttachmentItem strong,
+.ownerPortalAttachmentItem span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalAttachmentItem strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalAttachmentItem span {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPortalAttachmentItem button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fecdd3;
+    border-radius: 7px;
+    background: #fff1f2;
+    color: #e42939;
+    cursor: pointer;
+}
+
+.ownerPortalNoticeList {
+    display: grid;
+    gap: 10px;
+    border-top: 1px solid #e5e8eb;
+    padding: 12px;
+}
+
+.locationList.ownerPortalSectionList {
+    gap: 12px;
+    padding: 14px;
+}
+
+.locationItem.ownerPortalListItem {
+    gap: 16px;
+    padding: 16px;
+    border-color: #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalListItem .locationItemMain {
+    display: grid;
+    gap: 6px;
+}
+
+.ownerPortalListItem .locationItemActions {
+    padding-top: 2px;
+}
+
+.ownerPortalReadMeter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.ownerPortalReadMeter span {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalReadMeter span:first-child {
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.ownerPortalRecipientDetails {
+    margin-top: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalRecipientDetails summary {
+    min-height: 38px;
+    padding: 10px 12px;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalRecipientGrid {
+    display: grid;
+    gap: 6px;
+    border-top: 1px solid #e5e8eb;
+    padding: 8px;
+}
+
+.ownerPortalRecipientItem {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 7px;
+    background: #f9fafb;
+    padding: 9px 10px;
+}
+
+.ownerPortalRecipientItem div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.ownerPortalRecipientItem strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalRecipientItem div span {
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalRecipientRead,
+.ownerPortalRecipientUnread {
+    display: inline-flex;
+    min-height: 26px;
+    flex: 0 0 auto;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.ownerPortalRecipientRead {
+    background: #dcfce7;
+    color: #047857;
+}
+
+.ownerPortalRecipientUnread {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.ownerPortalSubmissionDetails {
+    margin-top: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.ownerPortalSubmissionDetails summary {
+    min-height: 34px;
+    padding: 9px 11px;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalSubmissionDetailsTitle {
+    min-height: 34px;
+    padding: 9px 11px;
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalChecklistStoreGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 10px;
+}
+
+.ownerPortalChecklistStoreStatus {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 9px 10px;
+}
+
+.ownerPortalChecklistStoreStatus div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPortalChecklistStoreStatus strong,
+.ownerPortalChecklistStoreStatus span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalChecklistStoreStatus strong {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ownerPortalChecklistStoreStatus span {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.ownerPortalSubmissionDetailGrid {
+    display: grid;
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 10px;
+}
+
+.ownerPortalSubmissionDetailItem {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+    border-radius: 7px;
+    background: #f9fafb;
+    padding: 9px 10px;
+}
+
+.ownerPortalSubmissionDetailItem strong {
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.ownerPortalSubmissionDetailItem span {
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.ownerPortalPagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0 0;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalPagination div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ownerPortalPagination strong {
+    color: #191f28;
+    font-size: 13px;
+}
+
+.ownerPortalPagination button {
+    min-height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalPagination button:disabled {
+    background: #f9fafb;
+    color: #b0b8c1;
+    cursor: not-allowed;
+}
+
+.primarySmallButton {
+    display: inline-flex;
+    min-height: 34px;
+    width: fit-content;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.primarySmallButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ownerPortalNotice,
+.ownerPortalError {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPortalNotice {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.ownerPortalError {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.ownerPortalNotice button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPortalFileStrip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.ownerPortalFileLink,
+.ownerPortalFileFallback {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ownerPortalFileLink img {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border: 1px solid #e5e8eb;
+    border-radius: 6px;
+    background: #f2f4f6;
+    object-fit: cover;
+}
+
+.ownerPortalFileLink span {
+    overflow: hidden;
+    max-width: 180px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .checkboxCell {
     width: 42px;
     padding-left: 10px !important;
@@ -6437,6 +7593,21 @@
     font-weight: 600;
 }
 
+.requiredMark {
+    display: inline-flex;
+    width: fit-content;
+    color: #f04452;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.disclosureLabelText {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
 .disclosureFormGrid input,
 .disclosureFormGrid select,
 .disclosureMemoLabel textarea {
@@ -6466,6 +7637,94 @@
 .disclosureMemoLabel textarea:focus {
     border-color: #3182f6;
     box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
+}
+
+.disclosureAlimtalkPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.disclosureAlimtalkPreviewHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.disclosureAlimtalkPreviewHeader strong {
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.disclosureAlimtalkPreviewHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: right;
+}
+
+.disclosureAlimtalkMock {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: min(100%, 360px);
+    border-radius: 8px;
+    background: #d9e7f2;
+    padding: 14px;
+}
+
+.disclosureAlimtalkNotice {
+    align-self: flex-start;
+    border-radius: 8px 8px 0 0;
+    background: #ffe812;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 9px;
+}
+
+.disclosureAlimtalkBubble {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: min(100%, 240px);
+    border-radius: 0 0 8px 8px;
+    background: #ffffff;
+    color: #191f28;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.disclosureAlimtalkBubble strong,
+.disclosureAlimtalkBubble p {
+    margin: 0;
+}
+
+.disclosureAlimtalkBubble strong {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.disclosureAlimtalkVariables {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.disclosureAlimtalkVariables span {
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1c64d1;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 8px;
 }
 
 .disclosureUploadLabel {
@@ -9368,6 +10627,23 @@
         margin-left: 0;
     }
 
+    .locationListSearch,
+    .locationListControlBar .locationSortControl {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .locationListControlBar .locationSortControl {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        white-space: nowrap;
+    }
+
+    .locationListControlBar .locationSortControl select {
+        width: 100%;
+        min-width: 0;
+    }
+
     .locationModeTabs {
         flex: 1 1 auto;
     }
@@ -10052,6 +11328,89 @@
     .detailContentGrid > .detailSection:nth-child(6),
     .contractChecklistSection {
         grid-column: auto;
+    }
+
+    .ownerPortalGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPortalViewTabs,
+    .ownerPortalSplit,
+    .ownerPortalChecklistSummary,
+    .ownerPortalChecklistWorkspace {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPortalViewTab,
+    .ownerPortalViewTabActive {
+        min-height: 52px;
+    }
+
+    .ownerPortalInlineTabs {
+        width: calc(100% - 24px);
+    }
+
+    .ownerPortalInlineTab,
+    .ownerPortalInlineTabActive {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+
+    .ownerPortalForm .locationListSearch,
+    .ownerPortalForm .locationSortControl,
+    .ownerPortalForm .locationSortControl select,
+    .ownerPortalFilterBar,
+    .ownerPortalLocationOptions,
+    .ownerPortalTextarea,
+    .primarySmallButton {
+        width: 100%;
+    }
+
+    .ownerPortalFilterBar {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPortalLocationOptions {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPortalChecklistPicker {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPortalChecklistPicker button {
+        width: 100%;
+    }
+
+    .ownerPortalChecklistSelectedItem {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ownerPortalChecklistSelectedItem button {
+        width: 100%;
+    }
+
+    .ownerPortalChecklistActions {
+        justify-content: stretch;
+    }
+
+    .ownerPortalChecklistActions button {
+        flex: 1 1 100%;
+    }
+
+    .ownerPortalChecklistTaskRow {
+        grid-template-columns: 32px minmax(0, 1fr);
+    }
+
+    .ownerPortalChecklistTaskRow .dangerOutlineButton {
+        grid-column: 2;
+        width: 100%;
+    }
+
+    .ownerPortalPagination {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
 

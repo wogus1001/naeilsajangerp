@@ -52,15 +52,27 @@ export async function POST(request: Request) {
 
         const supabaseAdmin = getSupabaseAdmin();
         const email = id.includes('@') ? id : `${id}@example.com`;
+        const normalizedLoginId = normalizeLoginId(id);
 
-        // Check auth users
-        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
-
-        // This is inefficient for large user base but fine for now. Better to try-catch createUser? NO, that's invasive.
-        // Actually, searching by email in profiles is better if triggers work reliably.
-
-        // Let's use listUsers for Auth check (definitive).
-        const exists = users.some(u => u.email === email);
+        const { data: emailProfiles, error: emailError } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .limit(1);
+        if (emailError) {
+            console.error('Profile email ID check error:', emailError);
+            return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        }
+        const { data: loginProfiles, error: loginError } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('login_id_normalized', normalizedLoginId)
+            .limit(1);
+        if (loginError) {
+            console.error('Profile login ID check error:', loginError);
+            return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        }
+        const exists = (emailProfiles ?? []).length > 0 || (loginProfiles ?? []).length > 0;
 
         if (exists) {
             return NextResponse.json({ available: false, message: '이미 사용 중인 아이디입니다.' });

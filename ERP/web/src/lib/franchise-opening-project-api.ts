@@ -81,7 +81,7 @@ function parseNullableDate(value: unknown): string | null {
     const raw = cleanString(value);
     if (!raw) return null;
     const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString().slice(0, 10);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
 }
 
 function readJsonRecord(value: unknown): JsonRecord {

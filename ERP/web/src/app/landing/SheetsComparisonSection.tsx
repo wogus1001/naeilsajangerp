@@ -7,11 +7,11 @@ export function SheetsComparisonSection() {
             <div className={styles.inner}>
                 <div className={styles.sectionHeader}>
                     <span className={styles.eyebrow}>도입 이유</span>
-                    <h2>구글시트로는 기록할 수 있지만, 다음 업무까지 이어지기 어렵습니다.</h2>
+                    <h2>직접 구축하면 비용은 커지고, 운영 정착은 늦어집니다.</h2>
                 </div>
                 <div className={styles.sheetComparisonGrid}>
                     {SHEET_COMPARISON.map(column => {
-                        const cardClassName = column.title === 'Franchise OS'
+                        const cardClassName = column.title === '프랜차이즈 본부 ERP 성장 패키지'
                             ? `${styles.sheetComparisonCard} ${styles.sheetComparisonCardPrimary}`
                             : styles.sheetComparisonCard;
 

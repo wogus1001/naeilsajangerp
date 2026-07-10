@@ -60,7 +60,7 @@ export function useLeadLocationLinks({
                         if (!response.ok) throw new Error(readApiError(payload));
                         return unwrapApiData<{ locations?: FranchiseLocation[] }>(payload);
                     }),
-                fetch(`/api/realty/listings?${listingParams.toString()}`, { cache: 'no-store', signal: controller.signal })
+                fetch(`/api/realty/listings?${listingParams.toString()}`, { cache: 'no-store', signal: controller.signal, headers })
                     .then(async response => {
                         const payload = await response.json();
                         if (!response.ok) throw new Error(readApiError(payload));

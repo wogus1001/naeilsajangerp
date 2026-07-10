@@ -43,6 +43,134 @@
     padding: 20px;
 }
 
+.previewSection {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 20px;
+    padding: 16px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.previewHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.previewHeader h3 {
+    margin: 0;
+    color: #191f28;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.previewHeader span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.previewGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.previewGrid div {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.previewGrid dt {
+    margin: 0 0 4px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.previewGrid dd {
+    margin: 0;
+    color: #191f28;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.previewFiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.previewFile {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.previewFile img,
+.previewFileIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: #f2f4f6;
+}
+
+.previewFile img {
+    object-fit: cover;
+}
+
+.previewFileIcon {
+    display: grid;
+    place-items: center;
+    color: #6b7684;
+}
+
+.previewFile strong,
+.previewFile a,
+.previewFile small {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.previewFile strong,
+.previewFile a {
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.previewFile a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.previewFile small {
+    margin-top: 4px;
+    color: #8b95a1;
+    font-size: 12px;
+}
+
 .section {
     margin: 0 0 18px;
 }
@@ -209,6 +337,11 @@
     }
 
     .editGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .previewGrid,
+    .previewFiles {
         grid-template-columns: 1fr;
     }
 

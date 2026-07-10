@@ -42,7 +42,7 @@ export function LocationAttachmentFileInput({
 
         const rejected = selected.find(file => !isAcceptedFranchiseAttachment(file.name));
         if (rejected) {
-            setError('PDF, JPG, PNG, WebP, HEIC 파일만 등록할 수 있습니다.');
+            setError('PDF, JPG, PNG, WebP 파일만 등록할 수 있습니다.');
             return;
         }
 
@@ -86,7 +86,7 @@ export function LocationAttachmentFileInput({
             <div className={styles.locationFileHeader}>
                 <div>
                     <strong>도면·사진·자료 등록</strong>
-                    <span>PDF/JPG/PNG/WebP/HEIC · 파일당 10MB · 최대 10개 · 총 50MB</span>
+                    <span>PDF/JPG/PNG/WebP · 파일당 10MB · 최대 10개 · 총 50MB</span>
                 </div>
                 <button type="button" className={styles.locationFileSelectButton} onClick={() => inputRef.current?.click()}>
                     <Upload size={15} /> 파일 선택

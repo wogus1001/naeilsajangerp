@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import styles from './page.module.css';
 import { AlertModal } from '@/components/common/AlertModal';
+import { BusinessInfoFooter } from '@/components/common/BusinessInfoFooter';
 import { CompanySearchModal, type Company } from '../signup/CompanySearchModal';
 import { LoginForm } from './LoginForm';
 import type { LoginApiResponse, LoginUser } from './loginTypes';
@@ -200,8 +201,8 @@ export default function LoginPage() {
                     <div className={styles.logoIcon}>
                         <div className={styles.gridIcon} />
                     </div>
-                    <h1 className={styles.title}>부동산 ERP</h1>
-                    <p className={styles.subtitle}>부동산 전문가를 위한 통합 솔루션</p>
+                    <h1 className={styles.title}>프랜차이즈 본부 ERP</h1>
+                    <p className={styles.subtitle}>창업 및 부동산 전문가를 위한 통합 솔루션</p>
                 </div>
 
                 {loggedInUser ? (
@@ -242,6 +243,7 @@ export default function LoginPage() {
                     <a href="/signup" className={styles.link}>회원가입</a>
                 </div>
             </div>
+            <BusinessInfoFooter className={styles.authBusinessInfo} />
 
             {/* Custom Error Modal */}
             <AlertModal

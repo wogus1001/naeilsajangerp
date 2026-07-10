@@ -3,6 +3,7 @@ import {
     getRequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { notifyAlimtalkDisclosureEmailSent } from '@/lib/alimtalk-event-notifications';
 import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import {
     fetchActiveGmailConnection,
@@ -32,12 +33,14 @@ type LeadRow = {
     readonly created_by: string | null;
     readonly name: string | null;
     readonly mobile: string | null;
+    readonly interested_brand: string | null;
 };
 
 type DisclosureDocumentRow = {
     readonly id: string;
     readonly company_id: string;
     readonly title: string | null;
+    readonly brand_name: string | null;
     readonly version: string | null;
     readonly file_url: string | null;
     readonly status: string | null;
@@ -51,6 +54,10 @@ function cleanString(value: unknown): string | null {
     if (value === null || value === undefined) return null;
     const normalized = String(value).trim();
     return normalized.length > 0 ? normalized : null;
+}
+
+function hasOwnField(record: JsonRecord, field: string): boolean {
+    return Object.prototype.hasOwnProperty.call(record, field);
 }
 
 async function readBody(request: Request): Promise<JsonRecord> {
@@ -97,14 +104,18 @@ export async function POST(request: Request) {
 
         const leadId = cleanString(body.leadId || body.lead_id);
         const documentId = cleanString(body.documentId || body.document_id);
+        const recipientName = cleanString(body.recipientName || body.recipient_name || body.candidateName || body.candidate_name);
         const recipientEmail = cleanString(body.recipientEmail || body.recipient_email);
+        const hasRecipientPhoneInput = hasOwnField(body, 'recipientPhone') || hasOwnField(body, 'recipient_phone');
+        const recipientPhoneInput = cleanString(body.recipientPhone || body.recipient_phone);
         if (!leadId) return fail(400, 'VALIDATION_ERROR', 'leadId is required');
         if (!documentId) return fail(400, 'VALIDATION_ERROR', 'documentId is required');
+        if (!recipientName) return fail(400, 'VALIDATION_ERROR', 'recipientName is required');
         if (!recipientEmail || !isEmail(recipientEmail)) return fail(400, 'VALIDATION_ERROR', 'Valid recipientEmail is required');
 
         const { data: lead, error: leadError } = await supabaseAdmin
             .from('franchise_leads')
-            .select('id, company_id, manager_id, created_by, name, mobile')
+            .select('id, company_id, manager_id, created_by, name, mobile, interested_brand')
             .eq('id', leadId)
             .single();
         if (leadError || !lead) return fail(404, 'NOT_FOUND', 'Franchise lead not found');
@@ -114,7 +125,7 @@ export async function POST(request: Request) {
 
         const { data: document, error: documentError } = await supabaseAdmin
             .from('franchise_disclosure_documents')
-            .select('id, company_id, title, version, file_url, status')
+            .select('id, company_id, title, brand_name, version, file_url, status')
             .eq('id', documentId)
             .single();
         if (documentError || !document) return fail(404, 'NOT_FOUND', 'Disclosure document not found');
@@ -122,6 +133,8 @@ export async function POST(request: Request) {
         if (documentRow.company_id !== leadRow.company_id) return fail(403, 'FORBIDDEN', 'Forbidden: disclosure document company mismatch');
         if (documentRow.status === 'archived') return fail(400, 'VALIDATION_ERROR', 'Archived disclosure document cannot be sent');
         if (!documentRow.file_url) return fail(400, 'VALIDATION_ERROR', 'Disclosure document file URL is required');
+        const alimtalkBrandName = documentRow.brand_name || leadRow.interested_brand || documentRow.title || '브랜드';
+        const alimtalkRecipientPhone = hasRecipientPhoneInput ? recipientPhoneInput : leadRow.mobile;
 
         const connection = await fetchActiveGmailConnection(supabaseAdmin, requester.id, leadRow.company_id);
         if (!connection) return fail(400, 'VALIDATION_ERROR', 'Gmail account is not connected');
@@ -131,13 +144,15 @@ export async function POST(request: Request) {
         const openToken = createDisclosureOpenToken();
         const confirmationUrl = new URL('/api/franchise-lead-disclosures/confirm', getAppUrl(request));
         confirmationUrl.searchParams.set('token', confirmationToken);
+        const documentUrl = new URL('/api/franchise-lead-disclosures/document', getAppUrl(request));
+        documentUrl.searchParams.set('token', confirmationToken);
         const openTrackingUrl = new URL('/api/franchise-lead-disclosures/open', getAppUrl(request));
         openTrackingUrl.searchParams.set('token', openToken);
         const content = buildDisclosureEmailContent({
-            leadName: leadRow.name || '',
+            leadName: recipientName,
             documentTitle: documentRow.title || '정보공개서',
             documentVersion: documentRow.version || 'v1',
-            documentUrl: documentRow.file_url,
+            documentUrl: documentUrl.toString(),
             confirmationUrl: confirmationUrl.toString(),
             openTrackingUrl: openTrackingUrl.toString(),
             memo: cleanString(body.memo) || undefined
@@ -159,7 +174,7 @@ export async function POST(request: Request) {
                 sent_by: requester.id,
                 sent_at: now,
                 channel: 'email',
-                recipient_name: leadRow.name || '',
+                recipient_name: recipientName,
                 recipient_contact: recipientEmail,
                 recipient_email: recipientEmail,
                 document_title: documentRow.title || '정보공개서',
@@ -173,39 +188,85 @@ export async function POST(request: Request) {
                 memo: cleanString(body.memo) || '',
                 created_at: now,
                 updated_at: now,
-                data: {}
+                data: {
+                    alimtalk: {
+                        disclosure_email_sent: {
+                            brandName: alimtalkBrandName,
+                            candidateName: recipientName,
+                            recipientPhone: alimtalkRecipientPhone
+                        }
+                    },
+                    brandName: alimtalkBrandName,
+                    candidateName: recipientName,
+                    recipientPhone: alimtalkRecipientPhone
+                }
             })
             .select('id')
             .single();
         if (insertError || !inserted) throw insertError || new Error('Disclosure delivery insert failed');
         const deliveryId = String((inserted as { readonly id: string }).id);
 
+        let gmailResult: Awaited<ReturnType<typeof sendGmailMessage>>;
         try {
-            const gmailResult = await sendGmailMessage(usableConnection.accessToken, rawMessage);
-            const sentAt = new Date().toISOString();
-            const { error: updateError } = await supabaseAdmin
-                .from('franchise_lead_disclosure_deliveries')
-                .update({
-                    send_status: 'sent',
-                    sent_at: sentAt,
-                    gmail_message_id: gmailResult.messageId,
-                    gmail_thread_id: gmailResult.threadId,
-                    send_error: null,
-                    updated_at: sentAt
-                })
-                .eq('id', deliveryId);
-            if (updateError) throw updateError;
-            return ok({
-                deliveryId,
-                sendStatus: 'sent',
-                sentAt,
-                gmailMessageId: gmailResult.messageId,
-                gmailThreadId: gmailResult.threadId
-            }, 201);
+            gmailResult = await sendGmailMessage(usableConnection.accessToken, rawMessage);
         } catch (error) {
             const message = await markFailed(supabaseAdmin, deliveryId, error);
             return fail(error instanceof GmailIntegrationError ? error.statusCode : 502, 'INTERNAL_ERROR', message);
         }
+
+        const sentAt = new Date().toISOString();
+        const sentUpdate = {
+            send_status: 'sent',
+            sent_at: sentAt,
+            gmail_message_id: gmailResult.messageId,
+            gmail_thread_id: gmailResult.threadId,
+            send_error: null,
+            updated_at: sentAt
+        };
+        const { error: updateError } = await supabaseAdmin
+            .from('franchise_lead_disclosure_deliveries')
+            .update(sentUpdate)
+            .eq('id', deliveryId);
+        let persistenceWarning = '';
+        if (updateError) {
+            console.error('Disclosure delivery sent-state update failed after Gmail success:', updateError);
+            const { error: recoveryError } = await supabaseAdmin
+                .from('franchise_lead_disclosure_deliveries')
+                .update({
+                    send_status: 'sent',
+                    sent_at: sentAt,
+                    send_error: null,
+                    updated_at: sentAt
+                })
+                .eq('id', deliveryId);
+            if (recoveryError) {
+                console.error('Disclosure delivery sent-state recovery failed:', recoveryError);
+                persistenceWarning = 'Gmail 발송은 완료됐지만 발송 이력 저장을 재확인해야 합니다.';
+            }
+        }
+        try {
+            await notifyAlimtalkDisclosureEmailSent(supabaseAdmin, {
+                brand_name: alimtalkBrandName,
+                company_id: leadRow.company_id,
+                id: deliveryId,
+                lead_id: leadRow.id,
+                recipient_name: recipientName,
+                recipient_phone: alimtalkRecipientPhone
+            });
+        } catch (error) {
+            console.error(
+                'Disclosure email sent AlimTalk notification failed:',
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+        return ok({
+            deliveryId,
+            sendStatus: 'sent',
+            sentAt,
+            gmailMessageId: gmailResult.messageId,
+            gmailThreadId: gmailResult.threadId,
+            ...(persistenceWarning ? { warning: persistenceWarning } : {})
+        }, persistenceWarning ? 202 : 201);
     } catch (error) {
         console.error('Franchise disclosure Gmail send error:', error);
         if (error instanceof GmailIntegrationError) {

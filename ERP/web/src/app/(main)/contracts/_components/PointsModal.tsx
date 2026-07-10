@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CreditCard, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 interface PointsModalProps {
     isOpen: boolean;
@@ -24,7 +25,9 @@ export default function PointsModal({ isOpen, onClose }: PointsModalProps) {
             const storedUser = localStorage.getItem('user');
             if (!storedUser) return;
             const uid = JSON.parse(storedUser).id;
-            const res = await fetch(`/api/points/balance?userId=${uid}`);
+            const res = await fetch(`/api/points/balance?userId=${uid}`, {
+                headers: await getApiAuthHeaders()
+            });
             const data = await res.json();
             if (data.balance !== undefined) setBalance(data.balance);
         } catch (e) {
@@ -41,7 +44,9 @@ export default function PointsModal({ isOpen, onClose }: PointsModalProps) {
             const uid = JSON.parse(storedUser).id;
 
             const endpoint = tab === 'charge' ? '/api/points/history/charge' : '/api/points/history/usage';
-            const res = await fetch(`${endpoint}?userId=${uid}`);
+            const res = await fetch(`${endpoint}?userId=${uid}`, {
+                headers: await getApiAuthHeaders()
+            });
             const data = await res.json();
 
             if (Array.isArray(data)) {

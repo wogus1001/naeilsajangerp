@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    canManageNotice,
     formatNoticeRows,
     parseNoticeLimit,
     type NoticeAuthor,
@@ -25,6 +26,7 @@ test('formatNoticeRows formats notices without a Supabase relationship join', ()
 
     assert.equal(notice?.authorName, '김담당');
     assert.equal(notice?.authorRole, 'manager');
+    assert.equal(notice?.authorId, 'profile-1');
     assert.equal(notice?.isPinned, true);
     assert.match(notice?.createdAt || '', /2026/);
 });
@@ -52,4 +54,34 @@ test('parseNoticeLimit caps invalid and oversized limit values', () => {
     assert.equal(parseNoticeLimit('0'), null);
     assert.equal(parseNoticeLimit('5'), 5);
     assert.equal(parseNoticeLimit('500'), 50);
+});
+
+test('canManageNotice allows a notice author identified by profile uid', () => {
+    assert.equal(
+        canManageNotice(
+            { id: 'admin', uid: 'profile-goldasset-manager', role: 'manager', companyId: 'company-goldasset' },
+            { authorId: 'profile-goldasset-manager', companyId: 'company-goldasset', type: 'team' }
+        ),
+        true
+    );
+});
+
+test('canManageNotice allows same-company managers to repair team notices saved with a legacy author', () => {
+    assert.equal(
+        canManageNotice(
+            { id: 'admin', uid: 'profile-goldasset-manager', role: 'manager', companyId: 'company-goldasset' },
+            { authorId: 'legacy-admin-profile', companyId: 'company-goldasset', type: 'team' }
+        ),
+        true
+    );
+});
+
+test('canManageNotice blocks staff from managing another author notice', () => {
+    assert.equal(
+        canManageNotice(
+            { id: 'staff', uid: 'profile-staff', role: 'staff', companyId: 'company-goldasset' },
+            { authorId: 'profile-goldasset-manager', companyId: 'company-goldasset', type: 'team' }
+        ),
+        false
+    );
 });

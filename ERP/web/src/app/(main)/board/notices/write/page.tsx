@@ -4,10 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+import { getRequesterId, getStoredUser, type StoredUser } from '@/utils/userUtils';
 
 export default function NoticeWritePage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<StoredUser>(null);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [type, setType] = useState<'system' | 'team'>('team');
@@ -19,9 +21,9 @@ export default function NoticeWritePage() {
     const closeAlert = () => setAlertConfig(prev => ({ ...prev, isOpen: false }));
 
     useEffect(() => {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            setUser(JSON.parse(userStr));
+        const storedUser = getStoredUser();
+        if (storedUser) {
+            setUser(storedUser);
         } else {
             showAlert('로그인이 필요합니다.');
             router.push('/login');
@@ -30,13 +32,14 @@ export default function NoticeWritePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!user) return;
         if (!title.trim() || !content.trim()) return;
 
         setLoading(true);
         try {
             const res = await fetch('/api/notices', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     title,
                     content,
@@ -44,6 +47,7 @@ export default function NoticeWritePage() {
                     authorName: user.name,
                     authorRole: user.role, // 'manager' or 'staff' or 'admin'
                     authorId: user.id,
+                    authorUid: getRequesterId(user),
                     companyName: user.companyName,
                     isPinned
                 })
@@ -56,7 +60,7 @@ export default function NoticeWritePage() {
                 showAlert('등록 실패');
             }
         } catch (error) {
-            console.error(error);
+            console.error(error instanceof Error ? error.message : String(error));
             showAlert('오류 발생');
         } finally {
             setLoading(false);

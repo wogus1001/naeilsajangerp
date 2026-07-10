@@ -1,72 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedRequesterProfile } from '@/lib/api-auth';
 import { isLoginIdSchemaMissing, isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
+import { isValidProfileEmail, normalizeProfileEmail, normalizeProfilePhone } from '@/lib/profile-contact';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import {
+    PROFILE_UPDATE_SELECTS,
+    selectProfileByEmail,
+    selectProfileById,
+    type ProfileUpdates,
+    type ResolvedProfile
+} from '@/lib/user-profile-update';
 
-type ResolvedProfile = {
-    id: string;
-    email: string | null;
-    company_id: string | null;
-    login_id?: string | null;
-};
-
-async function selectProfileById(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
-    id: string
-): Promise<ResolvedProfile | null> {
-    const result = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id, login_id')
-        .eq('id', id)
-        .single<ResolvedProfile>();
-
-    if (!isLoginIdSchemaMissing(result.error)) {
-        return result.data;
-    }
-
-    const fallbackResult = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id')
-        .eq('id', id)
-        .single<Omit<ResolvedProfile, 'login_id'>>();
-
-    return fallbackResult.data ? { ...fallbackResult.data, login_id: null } : null;
-}
-
-async function selectProfileByEmail(
-    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
-    email: string
-): Promise<ResolvedProfile | null> {
-    const result = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id, login_id')
-        .eq('email', email)
-        .single<ResolvedProfile>();
-
-    if (!isLoginIdSchemaMissing(result.error)) {
-        return result.data;
-    }
-
-    const fallbackResult = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, company_id')
-        .eq('email', email)
-        .single<Omit<ResolvedProfile, 'login_id'>>();
-
-    return fallbackResult.data ? { ...fallbackResult.data, login_id: null } : null;
-}
+export { PROFILE_UPDATE_SELECTS };
 
 export async function PUT(request: Request) {
     try {
 
         const body = await request.json();
-        const { currentId, newId, name, oldPassword, newPassword, targetUuid } = body;
+        const { currentId, newId, name, oldPassword, newPassword, targetUuid, email: rawEmail, phone: rawPhone } = body;
 
         if (!currentId && !targetUuid) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
         const supabaseAdmin = await getSupabaseAdmin();
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+        }
 
         let profile: ResolvedProfile | null = null;
         let userId = '';
@@ -104,6 +66,24 @@ export async function PUT(request: Request) {
         const actualEmail = profile.email;
         if (!targetUuid) {
             userId = profile.id;
+        }
+
+        if (requester.id !== userId) {
+            return NextResponse.json({ error: '본인 정보만 수정할 수 있습니다.' }, { status: 403 });
+        }
+
+        const nextEmail = typeof rawEmail === 'string' ? normalizeProfileEmail(rawEmail) : null;
+        if (nextEmail !== null && !isValidProfileEmail(nextEmail)) {
+            return NextResponse.json({ error: '이메일 형식이 올바르지 않습니다.' }, { status: 400 });
+        }
+
+        const nextPhone = typeof rawPhone === 'string' ? String(rawPhone).trim() : null;
+        const nextPhoneNormalized = typeof rawPhone === 'string' ? normalizeProfilePhone(rawPhone) : null;
+        if (
+            typeof rawPhone === 'string' &&
+            (!nextPhoneNormalized || nextPhoneNormalized.length < 10 || nextPhoneNormalized.length > 11)
+        ) {
+            return NextResponse.json({ error: '휴대폰 번호를 정확히 입력해주세요.' }, { status: 400 });
         }
 
         if (newId && normalizeLoginId(newId) !== normalizeLoginId(profile.login_id || currentId)) {
@@ -155,6 +135,22 @@ export async function PUT(request: Request) {
             }
         }
 
+        const shouldUpdateEmail = Boolean(nextEmail && nextEmail !== normalizeProfileEmail(actualEmail || ''));
+        if (shouldUpdateEmail && nextEmail) {
+            const { data: duplicateEmails, error: duplicateEmailError } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('email', nextEmail)
+                .neq('id', userId)
+                .limit(1);
+
+            if (duplicateEmailError) throw duplicateEmailError;
+
+            if ((duplicateEmails ?? []).length > 0) {
+                return NextResponse.json({ error: '이미 사용 중인 이메일입니다.' }, { status: 409 });
+            }
+        }
+
         if (newPassword) {
             if (!oldPassword) {
                 return NextResponse.json({ error: '기존 비밀번호를 입력해주세요.' }, { status: 401 });
@@ -186,23 +182,44 @@ export async function PUT(request: Request) {
             }
         }
 
-        const updates: { name?: string } = {};
+        if (shouldUpdateEmail && nextEmail) {
+            const { error: updateEmailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+                email: nextEmail,
+                email_confirm: true
+            });
+
+            if (updateEmailError) {
+                const message = updateEmailError.message.toLowerCase();
+                if (message.includes('already') || message.includes('unique') || message.includes('duplicate')) {
+                    return NextResponse.json({ error: '이미 사용 중인 이메일입니다.' }, { status: 409 });
+                }
+                throw updateEmailError;
+            }
+        }
+
+        const updates: ProfileUpdates = {};
         if (typeof name === 'string') updates.name = name;
+        if (nextEmail) updates.email = nextEmail;
+        if (nextPhone !== null && nextPhoneNormalized !== null) {
+            updates.phone = nextPhone;
+            updates.phone_normalized = nextPhoneNormalized;
+        }
 
         if (Object.keys(updates).length > 0) {
-            await supabaseAdmin.from('profiles').update(updates).eq('id', userId);
+            const { error: updateProfileError } = await supabaseAdmin.from('profiles').update(updates).eq('id', userId);
+            if (updateProfileError) throw updateProfileError;
         }
 
         let finalProfileResult = await supabaseAdmin
             .from('profiles')
-            .select(`*, company:companies(name, logo_url)`)
+            .select(PROFILE_UPDATE_SELECTS.withLogo)
             .eq('id', userId)
             .single();
 
         if (finalProfileResult.error) {
             finalProfileResult = await supabaseAdmin
                 .from('profiles')
-                .select(`*, company:companies(name)`)
+                .select(PROFILE_UPDATE_SELECTS.fallback)
                 .eq('id', userId)
                 .single();
         }
@@ -217,6 +234,7 @@ export async function PUT(request: Request) {
                 id: finalProfile.login_id || newId || currentId,
                 name: finalProfile.name,
                 email: finalProfile.email,
+                phone: finalProfile.phone || '',
                 role: finalProfile.role,
                 status: finalProfile.status,
                 companyName: finalProfile.company?.name || '',

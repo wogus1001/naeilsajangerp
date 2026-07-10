@@ -4,6 +4,7 @@ import { readApiJson } from '@/utils/apiResponse';
 import React, { useState, useEffect } from 'react';
 import { Search, User, CreditCard, Check } from 'lucide-react';
 import styles from './PersonSelectorModal.module.css';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { getRequesterId, getStoredUser } from '@/utils/userUtils';
 import { matchesSearchTerms, normalizeSearchValue, parseSearchTerms } from '@/utils/search';
 
@@ -89,7 +90,9 @@ export default function PersonSelectorModal({ isOpen, onClose, onSelect, company
         try {
             const url = activeTab === 'customer' ? '/api/customers' : '/api/business-cards';
             const query = buildQueryString(500);
-            const res = await fetch(`${url}${query ? `?${query}` : ''}`);
+            const res = await fetch(`${url}${query ? `?${query}` : ''}`, {
+                headers: await getApiAuthHeaders()
+            });
             if (res.ok) {
                 const data = await readApiJson(res);
                 if (activeTab === 'customer') {
@@ -134,7 +137,10 @@ export default function PersonSelectorModal({ isOpen, onClose, onSelect, company
             try {
                 const url = activeTab === 'customer' ? '/api/customers' : '/api/business-cards';
                 const query = buildQueryString('all', searchQuery);
-                const res = await fetch(`${url}${query ? `?${query}` : ''}`, { signal: controller.signal });
+                const res = await fetch(`${url}${query ? `?${query}` : ''}`, {
+                    signal: controller.signal,
+                    headers: await getApiAuthHeaders()
+                });
                 if (res.ok) {
                     const data = await readApiJson(res);
                     if (searchFetchControllerRef.current === controller) {

@@ -4,12 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { createClient } from '@/utils/supabase/client';
 import {
     getAdminUserRoleLabel,
     type AssignableAdminUserRole
 } from './AdminUserRoleSelect';
+import { AdminUsersControls, AdminUsersPagination } from './AdminUsersControls';
 import { AdminUserModals } from './AdminUserModals';
+import { AdminUsersPageHeader } from './AdminUsersPageHeader';
 import { AdminUsersTable } from './AdminUsersTable';
 import {
     approveAdminUser,
@@ -20,11 +21,29 @@ import {
 } from './adminUsersRequests';
 import { adminUsersStyles as styles } from './adminUsersStyles';
 import { getRequesterId, getStoredUser } from '@/utils/userUtils';
+import {
+    countPendingAdminUsers,
+    filterAndSortAdminUsers,
+    getAdminUserCompanyOptions,
+    pageAdminUsers,
+    type AdminUserRoleFilter,
+    type AdminUserSortDirection,
+    type AdminUserSortKey,
+    type AdminUserStatusFilter
+} from './adminUsersTableState';
+import { useAdminUserPasswordReset } from './useAdminUserPasswordReset';
 
 export default function AdminUsersPage() {
     const router = useRouter();
     const [users, setUsers] = useState<AdminUserRow[]>([]);
-    const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+    const [query, setQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<AdminUserStatusFilter>('all');
+    const [roleFilter, setRoleFilter] = useState<AdminUserRoleFilter>('all');
+    const [companyFilter, setCompanyFilter] = useState('');
+    const [sortKey, setSortKey] = useState<AdminUserSortKey>('joinedAt');
+    const [sortDirection, setSortDirection] = useState<AdminUserSortDirection>('desc');
+    const [pageSize, setPageSize] = useState(20);
+    const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null);
@@ -118,99 +137,59 @@ export default function AdminUsersPage() {
         }
     };
 
-    // Derived state
-    const pendingUsers = users.filter(u => u.status === 'pending_approval');
-    const filteredUsers = activeTab === 'pending' ? pendingUsers : users;
+    const pendingCount = React.useMemo(() => countPendingAdminUsers(users), [users]);
+    const companyOptions = React.useMemo(() => getAdminUserCompanyOptions(users), [users]);
+    const filteredUsers = React.useMemo(() => filterAndSortAdminUsers(users, {
+        query,
+        status: statusFilter,
+        role: roleFilter,
+        company: companyFilter,
+        sortKey,
+        sortDirection
+    }), [companyFilter, query, roleFilter, sortDirection, sortKey, statusFilter, users]);
+    const pageCount = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const visibleUsers = pageAdminUsers(filteredUsers, currentPage, pageSize);
 
-    // --- PASSWORD RESET LOGIC ---
-    const [resetTargetId, setResetTargetId] = useState<string | null>(null);
-    const [newPassword, setNewPassword] = useState('');
-    const [resetLoading, setResetLoading] = useState(false);
+    useEffect(() => {
+        setPage(1);
+    }, [companyFilter, pageSize, query, roleFilter, sortDirection, sortKey, statusFilter]);
 
-    const handlePasswordReset = async () => {
-        if (!resetTargetId || !newPassword) return;
-        if (newPassword.length < 6) {
-            showAlert('비밀번호는 6자 이상이어야 합니다.');
-            return;
-        }
-
-        showConfirm('정말 이 사용자의 비밀번호를 변경하시겠습니까?', async () => {
-            setResetLoading(true);
-            try {
-                // Get current session token
-                const supabase = createClient();
-                const { data: { session } } = await supabase.auth.getSession();
-                const token = session?.access_token;
-
-                if (!token) {
-                    showAlert('로그인 세션이 만료된 것 같습니다. 새로고침 후 다시 시도해주세요.');
-                    setResetLoading(false);
-                    return;
-                }
-
-                const res = await fetch('/api/admin/users/reset-password', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        userId: resetTargetId,
-                        newPassword: newPassword
-                    })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    showAlert('비밀번호가 성공적으로 변경되었습니다.');
-                    setResetTargetId(null);
-                    setNewPassword('');
-                } else {
-                    console.error('Reset failed data:', data);
-                    // Production-friendly message
-                    showAlert(`변경 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
-                }
-            } catch (e: unknown) {
-                console.error('Password reset failed', e);
-                showAlert('오류가 발생했습니다.');
-            } finally {
-                setResetLoading(false);
-            }
-        }, true);
-    };
+    const {
+        resetTargetId,
+        newPassword,
+        resetLoading,
+        setResetTargetId,
+        setNewPassword,
+        handlePasswordReset
+    } = useAdminUserPasswordReset({ showAlert, showConfirm });
 
     if (isLoading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
 
     return (
         <div style={styles.container}>
-            <div style={styles.header}>
-                <h1 style={styles.title}>회원 및 권한 관리</h1>
-                <p style={styles.subtitle}>사용자의 가입 승인, 등급 변경, 탈퇴 처리 및 비밀번호 재설정을 관리합니다.</p>
-            </div>
+            <AdminUsersPageHeader />
 
-            {/* Tabs */}
-            <div style={styles.tabContainer}>
-                <div
-                    style={{ ...styles.tab, ...(activeTab === 'all' ? styles.activeTab : {}) }}
-                    onClick={() => setActiveTab('all')}
-                >
-                    전체 사용자
-                    <span style={{ fontSize: '12px', color: '#adb5bd', fontWeight: 400 }}>{users.length}</span>
-                </div>
-                <div
-                    style={{ ...styles.tab, ...(activeTab === 'pending' ? styles.activeTab : {}) }}
-                    onClick={() => setActiveTab('pending')}
-                >
-                    승인 대기
-                    {pendingUsers.length > 0 && (
-                        <span style={styles.badge}>{pendingUsers.length}</span>
-                    )}
-                </div>
-            </div>
+            <AdminUsersControls
+                totalCount={users.length}
+                pendingCount={pendingCount}
+                query={query}
+                statusFilter={statusFilter}
+                roleFilter={roleFilter}
+                companyFilter={companyFilter}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                companyOptions={companyOptions}
+                onQueryChange={setQuery}
+                onStatusFilterChange={setStatusFilter}
+                onRoleFilterChange={setRoleFilter}
+                onCompanyFilterChange={setCompanyFilter}
+                onSortKeyChange={setSortKey}
+                onSortDirectionChange={setSortDirection}
+            />
 
             <AdminUsersTable
-                users={filteredUsers}
+                users={visibleUsers}
                 updatingRoleUserId={updatingRoleUserId}
                 onApprove={handleApprove}
                 onRoleChange={handleRoleChange}
@@ -219,6 +198,16 @@ export default function AdminUsersPage() {
                     setResetTargetId(userId);
                     setNewPassword('');
                 }}
+            />
+
+            <AdminUsersPagination
+                filteredCount={filteredUsers.length}
+                visibleCount={visibleUsers.length}
+                page={currentPage}
+                pageCount={pageCount}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
             />
 
             <AdminUserModals

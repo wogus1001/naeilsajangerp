@@ -136,8 +136,7 @@ function candidateSecrets(request: Request): readonly string[] {
     return [
         bearer,
         request.headers.get('x-ucansign-webhook-secret') || '',
-        request.headers.get('x-webhook-secret') || '',
-        searchParams.get('secret') || ''
+        request.headers.get('x-webhook-secret') || ''
     ].filter(Boolean);
 }
 

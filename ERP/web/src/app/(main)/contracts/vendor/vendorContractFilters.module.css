@@ -1,0 +1,41 @@
+.filterBar {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 160px 160px;
+    gap: 8px;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 0 12px;
+    color: #8b95a1;
+}
+
+.searchBox input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    color: #191f28;
+    font-size: 14px;
+}
+
+.filterBar select {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    font-size: 14px;
+    padding: 0 12px;
+}
+
+@media (max-width: 720px) {
+    .filterBar {
+        grid-template-columns: 1fr;
+    }
+}

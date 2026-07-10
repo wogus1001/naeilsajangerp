@@ -11,6 +11,7 @@
     gap: 10px;
     margin: 0;
     padding: 0;
+    background: linear-gradient(#d1d6db, #d1d6db) 50% 32px / calc(100% - 28px) 2px no-repeat;
     list-style: none;
 }
 
@@ -23,18 +24,6 @@
     border-radius: 12px;
     background: #ffffff;
     padding: 16px;
-}
-
-.workflowList li:not(:last-child)::after {
-    position: absolute;
-    top: 32px;
-    right: -14px;
-    z-index: 1;
-    width: 18px;
-    height: 2px;
-    border-radius: 999px;
-    background: #d1d6db;
-    content: "";
 }
 
 .workflowStepTop {
@@ -122,10 +111,7 @@
 @media (max-width: 1040px) {
     .workflowList {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .workflowList li:not(:last-child)::after {
-        display: none;
+        background: none;
     }
 }
 

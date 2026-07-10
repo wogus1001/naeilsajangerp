@@ -2,8 +2,10 @@ import type { LeadDisclosureSummary } from './franchise-lead-disclosure-summary'
 
 export const FRANCHISE_NOTIFICATION_SEVERITIES = ['info', 'warning', 'danger', 'success'] as const;
 export const FRANCHISE_NOTIFICATION_SOURCE_TYPES = [
-    'disclosure-missing', 'disclosure-failed', 'disclosure-due', 'disclosure-eligible',
-    'contact-overdue', 'contact-today', 'hot-lead-followup'
+    'disclosure-missing', 'disclosure-failed', 'disclosure-unconfirmed', 'disclosure-due', 'disclosure-eligible',
+    'contact-overdue', 'contact-today', 'hot-lead-followup',
+    'vendor-contract-due',
+    'workflow-schedule', 'workflow-approval', 'supervision-visit', 'supervision-report'
 ] as const;
 
 export type FranchiseNotificationSeverity = typeof FRANCHISE_NOTIFICATION_SEVERITIES[number];
@@ -14,7 +16,7 @@ export type FranchiseNotificationCandidate = {
     readonly recipientProfileId: string;
     readonly sourceType: FranchiseNotificationSourceType;
     readonly sourceId: string;
-    readonly leadId: string;
+    readonly leadId: string | null;
     readonly severity: FranchiseNotificationSeverity;
     readonly title: string;
     readonly body: string;
@@ -43,6 +45,8 @@ export type NotificationLead = {
     readonly nextContactAt?: string | null;
     readonly disclosureSummary?: LeadDisclosureSummary | null;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type FranchiseNotificationRow = {
     readonly id: string;
@@ -92,6 +96,12 @@ function isPast(value: string | null | undefined, now: Date): boolean {
     return new Date(date).getTime() < now.getTime() && !isToday(date, now);
 }
 
+function isDisclosureUnconfirmedQueueTarget(disclosure: LeadDisclosureSummary, now: Date): boolean {
+    if (disclosure.confirmedAt || !['sent', 'opened'].includes(disclosure.state)) return false;
+    const sentAt = toIsoOrNull(disclosure.latestSentAt);
+    return sentAt ? now.getTime() - new Date(sentAt).getTime() >= DAY_MS : false;
+}
+
 function buildLeadActionUrl(leadId: string): string {
     return `/dashboard/franchise-leads?tab=db&leadId=${encodeURIComponent(leadId)}`;
 }
@@ -108,12 +118,15 @@ function createCandidate(
     const companyId = cleanString(lead.companyId);
     const recipientProfileId = cleanString(lead.managerId);
     if (!companyId || !recipientProfileId) return null;
+    const sourceIdSuffix = sourceType === 'disclosure-due'
+        ? cleanString(data.deliveryId)
+        : cleanString(data.remainingDays);
 
     return {
         companyId,
         recipientProfileId,
         sourceType,
-        sourceId: `${lead.id}:${sourceType}:${data.remainingDays ?? ''}`,
+        sourceId: `${lead.id}:${sourceType}:${sourceIdSuffix}`,
         leadId: lead.id,
         severity,
         title,
@@ -156,7 +169,22 @@ export function buildAutomaticFranchiseNotifications(
                 { deliveryId: disclosure.latestDeliveryId }
             );
             if (candidate) items.push(candidate);
-        } else if (disclosure.remainingDays === 3 || disclosure.remainingDays === 1) {
+        } else {
+            if (isDisclosureUnconfirmedQueueTarget(disclosure, now)) {
+                const candidate = createCandidate(
+                    lead,
+                    'disclosure-unconfirmed',
+                    'warning',
+                    '정보공개서 수령 미확인',
+                    `${lead.name}님의 정보공개서 수령 확인이 아직 없습니다.`,
+                    disclosure.latestSentAt,
+                    { deliveryId: disclosure.latestDeliveryId, latestSentAt: disclosure.latestSentAt, openedAt: disclosure.openedAt, state: disclosure.state }
+                );
+                if (candidate) items.push(candidate);
+            }
+        }
+
+        if (typeof disclosure?.remainingDays === 'number' && disclosure.remainingDays >= 1 && disclosure.remainingDays <= 3) {
             const candidate = createCandidate(
                 lead,
                 'disclosure-due',
@@ -167,7 +195,7 @@ export function buildAutomaticFranchiseNotifications(
                 { remainingDays: disclosure.remainingDays, deliveryId: disclosure.latestDeliveryId }
             );
             if (candidate) items.push(candidate);
-        } else if (disclosure.remainingDays === 0) {
+        } else if (disclosure?.remainingDays === 0) {
             const candidate = createCandidate(
                 lead,
                 'disclosure-eligible',
@@ -175,7 +203,11 @@ export function buildAutomaticFranchiseNotifications(
                 '계약 진행 가능',
                 `${lead.name}님은 정보공개서 14일 기준을 충족했습니다.`,
                 disclosure.contractEligibleAt,
-                { deliveryId: disclosure.latestDeliveryId }
+                {
+                    confirmedAt: disclosure.confirmedAt,
+                    deliveryId: disclosure.latestDeliveryId,
+                    latestSentAt: disclosure.latestSentAt
+                }
             );
             if (candidate) items.push(candidate);
         }
@@ -233,7 +265,7 @@ export function transformFranchiseNotification(row: FranchiseNotificationRow): F
         recipientProfileId: row.recipient_profile_id,
         sourceType: normalizeSourceType(row.source_type),
         sourceId: row.source_id,
-        leadId: row.lead_id || '',
+        leadId: row.lead_id || null,
         severity: normalizeSeverity(row.severity),
         title: row.title || '',
         body: row.body || '',

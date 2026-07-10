@@ -108,7 +108,8 @@ export async function fetchOpeningProjects(scope: RequestScope): Promise<Franchi
 export async function fetchManualPromotedProperties(scope: RequestScope): Promise<ManualPromotedOperationProperty[]> {
     const params = new URLSearchParams({ requesterId: scope.userId, limit: 'all' });
     if (scope.companyName) params.set('company', scope.companyName);
-    const response = await fetch(`/api/properties?${params.toString()}`, { cache: 'no-store' });
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/properties?${params.toString()}`, { cache: 'no-store', headers });
     const payload = await readResponsePayload(response);
     return unwrapApiData<ManualPromotedOperationProperty[]>(payload) || [];
 }

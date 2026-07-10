@@ -1,0 +1,245 @@
+.panel {
+    background: #ffffff;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.sectionTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.secondaryButton,
+.primaryButton,
+.dangerButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.primaryButton {
+    background: #3182f6;
+    border: 1px solid #3182f6;
+    color: #ffffff;
+}
+
+.secondaryButton {
+    background: #ffffff;
+    border: 1px solid #e5e8eb;
+    color: #333d4b;
+}
+
+.dangerButton {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #e42939;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.emptyDetail {
+    display: flex;
+    min-height: 180px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #8b95a1;
+    text-align: center;
+}
+
+.emptyDetail strong {
+    color: #333d4b;
+    font-size: 15px;
+}
+
+.detailHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.detailHeader p {
+    margin: 6px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+}
+
+.detailSummary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.detailSummary div {
+    min-height: 68px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.detailSummary span,
+.eventItem span,
+.helperText {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.detailSummary strong {
+    display: block;
+    margin-top: 6px;
+    color: #191f28;
+    font-size: 14px;
+}
+
+.lifecycleGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.7fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.lifecycleBox {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 14px;
+}
+
+.lifecycleTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.lifecycleBox label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.lifecycleBox input,
+.lifecycleBox textarea {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    color: #191f28;
+    font-size: 14px;
+    padding: 0 12px;
+}
+
+.lifecycleBox textarea {
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+.twoColumns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.eventSection {
+    margin-top: 16px;
+}
+
+.statusLine {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: #6b7684;
+    font-size: 13px;
+}
+
+.eventList {
+    display: grid;
+    gap: 8px;
+}
+
+.eventItem {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    gap: 8px 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.eventItem strong {
+    display: block;
+    color: #191f28;
+    font-size: 14px;
+}
+
+.eventItem p {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.eventItem small {
+    color: #6b7684;
+    font-size: 12px;
+}
+
+.emptySmall {
+    border: 1px dashed #d1d6db;
+    border-radius: 8px;
+    color: #8b95a1;
+    padding: 24px 12px;
+    text-align: center;
+}
+
+@media (max-width: 1024px) {
+    .detailSummary,
+    .lifecycleGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .detailHeader,
+    .statusLine {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .twoColumns,
+    .eventItem {
+        grid-template-columns: 1fr;
+    }
+}

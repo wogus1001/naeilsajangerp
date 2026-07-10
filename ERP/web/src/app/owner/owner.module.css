@@ -1,0 +1,1035 @@
+.ownerShell {
+    min-height: 100dvh;
+    background: #f2f4f6;
+    color: #191f28;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+}
+
+.portalLayout {
+    display: grid;
+    grid-template-columns: 244px minmax(0, 1fr);
+    min-height: 100dvh;
+}
+
+.ownerSidebar {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    border-right: 1px solid #e5e8eb;
+    background: #fff;
+    padding: 18px 14px;
+}
+
+.ownerBrandBlock {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 6px 18px;
+}
+
+.ownerBrandBlock div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.ownerBrandBlock strong {
+    color: #191f28;
+    font-size: 15px;
+}
+
+.ownerBrandBlock span {
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerNav {
+    display: grid;
+    gap: 4px;
+}
+
+.ownerNavLink {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 10px;
+    border-radius: 8px;
+    color: #4e5968;
+    padding: 0 12px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.ownerNavLink:hover,
+.ownerNavLinkActive {
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.ownerMain {
+    min-width: 0;
+}
+
+.loginWrap {
+    display: grid;
+    min-height: 100dvh;
+    place-items: center;
+    padding: 24px;
+}
+
+.loginPanel {
+    width: min(100%, 420px);
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #fff;
+    padding: 28px;
+}
+
+.brandMark {
+    display: inline-flex;
+    width: 48px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #191f28;
+    color: #fff;
+    font-weight: 700;
+}
+
+.title {
+    margin: 18px 0 6px;
+    font-size: 24px;
+    line-height: 1.35;
+}
+
+.description {
+    margin: 0 0 22px;
+    color: #6b7684;
+    font-size: 14px;
+    line-height: 1.57;
+}
+
+.fieldStack {
+    display: grid;
+    gap: 14px;
+}
+
+.field {
+    display: grid;
+    gap: 8px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.fieldHint {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.input,
+.textarea,
+.select {
+    width: 100%;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #191f28;
+    font: inherit;
+    font-size: 14px;
+}
+
+.input,
+.select {
+    height: 44px;
+    padding: 0 12px;
+}
+
+.textarea {
+    min-height: 104px;
+    padding: 12px;
+    resize: vertical;
+}
+
+.button,
+.secondaryButton,
+.dangerButton {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.button {
+    border: 0;
+    background: #3182f6;
+    color: #fff;
+}
+
+.button:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.secondaryButton {
+    border: 1px solid #e5e8eb;
+    background: #fff;
+    color: #333d4b;
+}
+
+.dangerButton {
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.error {
+    border: 1px solid #fecdd3;
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #e42939;
+    padding: 12px;
+    font-size: 13px;
+}
+
+.success {
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    background: #ecfdf3;
+    color: #067647;
+    padding: 12px;
+    font-size: 13px;
+}
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e5e8eb;
+    background: rgba(255, 255, 255, 0.96);
+    padding: 14px 18px;
+}
+
+.headerTitle {
+    display: grid;
+    gap: 2px;
+}
+
+.headerTitle strong {
+    font-size: 16px;
+}
+
+.headerTitle span {
+    color: #6b7684;
+    font-size: 12px;
+}
+
+.content {
+    display: grid;
+    gap: 16px;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.metricCard {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #191f28;
+    padding: 16px;
+    text-decoration: none;
+}
+
+.metricCard span {
+    color: #6b7684;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.metricCard strong {
+    font-size: 28px;
+    line-height: 1.2;
+}
+
+.pageGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+    gap: 16px;
+    align-items: start;
+}
+
+.hero {
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #fff;
+    padding: 20px;
+}
+
+.hero h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+}
+
+.hero p {
+    margin: 0;
+    color: #6b7684;
+    line-height: 1.57;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.panel {
+    border: 1px solid #e5e8eb;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #e5e8eb;
+    padding: 16px;
+}
+
+.panelHeader h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.panelHeader h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.panelHeader p {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+}
+
+.panelBody {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.list {
+    display: grid;
+    gap: 10px;
+}
+
+.listItem {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.listItemHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.checklistIssueTitle {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+}
+
+.listItem strong {
+    font-size: 14px;
+}
+
+.listItem p {
+    margin: 0;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    word-break: keep-all;
+}
+
+.attachmentList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.attachmentLink {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 34px;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #333d4b;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.attachmentLink span {
+    overflow: hidden;
+    max-width: min(360px, 58vw);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachmentLink small {
+    color: #8b95a1;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.noticeBanner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.noticeBanner button {
+    min-height: 30px;
+    border: 1px solid #bfdbfe;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #1d4ed8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.fileUploadBox {
+    display: grid;
+    gap: 10px;
+    border: 1px dashed #b8d6ff;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 12px;
+}
+
+.fileUploadHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.fileUploadHeader div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.fileUploadHeader strong {
+    color: #191f28;
+    font-size: 13px;
+}
+
+.fileUploadHeader span,
+.fileUploadBox p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.fileInput {
+    display: none;
+}
+
+.filePreviewGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.filePreviewItem {
+    position: relative;
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px 38px 8px 8px;
+}
+
+.filePreviewImage,
+.requestThumb {
+    width: 56px;
+    height: 56px;
+    border: 1px solid #e5e8eb;
+    border-radius: 6px;
+    background: #f2f4f6;
+    object-fit: cover;
+}
+
+.filePreviewMeta {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.filePreviewMeta strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filePreviewMeta span {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.fileRemoveButton {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fecdd3;
+    border-radius: 7px;
+    background: #fff1f2;
+    color: #e42939;
+    cursor: pointer;
+}
+
+.requestImageStrip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.requestImageStrip a {
+    display: inline-flex;
+}
+
+.requestFileFallback {
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    border-radius: 7px;
+    background: #f2f4f6;
+    color: #4e5968;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.itemMeta {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.paginationBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid #e5e8eb;
+    padding-top: 12px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.paginationControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.paginationControls strong {
+    color: #191f28;
+    font-size: 13px;
+}
+
+.paginationButton {
+    min-height: 34px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #333d4b;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.paginationButton:disabled {
+    background: #f9fafb;
+    color: #b0b8c1;
+    cursor: not-allowed;
+}
+
+.badge {
+    display: inline-flex;
+    min-height: 28px;
+    width: fit-content;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1b64da;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.badgeMuted {
+    display: inline-flex;
+    min-height: 28px;
+    width: fit-content;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.warning {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #ffd591;
+    border-radius: 8px;
+    background: #fff7e6;
+    color: #8a4b00;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.warning a {
+    color: #1b64da;
+    text-decoration: none;
+}
+
+.emptyState {
+    border: 1px dashed #d1d6db;
+    border-radius: 8px;
+    color: #8b95a1;
+    padding: 24px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.taskGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.taskList {
+    display: grid;
+    gap: 10px;
+}
+
+.taskProgressPanel {
+    display: grid;
+    gap: 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    padding: 14px;
+}
+
+.taskProgressPanel div:first-child {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.taskProgressPanel strong {
+    color: #1b64da;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.taskProgressPanel span {
+    color: #333d4b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.taskProgressPanel p {
+    margin: 0;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.taskProgressTrack {
+    overflow: hidden;
+    height: 8px;
+    border-radius: 999px;
+    background: #dbeafe;
+}
+
+.taskProgressTrack span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #3182f6;
+}
+
+.checklistMeter {
+    display: grid;
+    gap: 8px;
+    padding: 2px 0 4px;
+}
+
+.checklistMeterHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.checklistMeterHeader strong {
+    color: #1b64da;
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.checklistMeterHeader span {
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.checklistDetails {
+    border-top: 1px solid #e5e8eb;
+    margin-top: 2px;
+}
+
+.checklistDetails summary {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.checklistDetails[open] summary {
+    border-bottom: 1px solid #f2f4f6;
+    margin-bottom: 2px;
+}
+
+.checklistDetails .taskList {
+    gap: 0;
+}
+
+.checklistDetails .taskListItem,
+.checklistDetails .taskListItemDone {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 12px 0;
+}
+
+.checklistDetails .taskListItem + .taskListItem,
+.checklistDetails .taskListItem + .taskListItemDone,
+.checklistDetails .taskListItemDone + .taskListItem,
+.checklistDetails .taskListItemDone + .taskListItemDone {
+    border-top: 1px solid #f2f4f6;
+}
+
+.taskCard,
+.taskCardDone {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 14px;
+}
+
+.taskCardDone {
+    background: #f8fbff;
+}
+
+.taskListItem,
+.taskListItemDone {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 116px;
+    gap: 12px;
+    min-width: 0;
+    align-items: center;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.taskListItemDone {
+    background: #f8fbff;
+}
+
+.taskListMain {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    min-width: 0;
+    align-items: start;
+}
+
+.taskIndex {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.taskListItemDone .taskIndex {
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.taskListMain div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.taskListMain strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.taskListMain small {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.taskListMain p {
+    margin: 2px 0 0;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+    overflow-wrap: anywhere;
+}
+
+.taskCardHeader {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.taskCardHeader > span {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.taskCardDone .taskCardHeader > span {
+    background: #e8f3ff;
+    color: #1b64da;
+}
+
+.taskCardHeader div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.taskCardHeader strong {
+    color: #191f28;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.taskCardHeader small {
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.taskCard p,
+.taskCardDone p {
+    margin: 0;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.54;
+    white-space: pre-wrap;
+}
+
+.actionRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 720px) {
+    .loginPanel {
+        padding: 22px;
+    }
+
+    .portalLayout {
+        display: block;
+    }
+
+    .ownerSidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid #e5e8eb;
+        padding: 12px;
+    }
+
+    .ownerBrandBlock {
+        padding: 2px 4px 12px;
+    }
+
+    .ownerNav {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+
+    .ownerNavLink {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .grid,
+    .formGrid,
+    .filePreviewGrid,
+    .summaryGrid,
+    .pageGrid,
+    .taskGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .taskListItem,
+    .taskListItemDone {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .taskListItem .secondaryButton,
+    .taskListItemDone .secondaryButton {
+        width: 100%;
+    }
+
+    .fileUploadHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .fileUploadHeader .secondaryButton {
+        width: 100%;
+    }
+
+    .paginationBar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .content {
+        padding: 14px;
+    }
+}

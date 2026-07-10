@@ -1,15 +1,19 @@
 import { getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-signup-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { isBrandStaffUserRole } from '@/lib/user-role-policy';
 import { NextResponse } from 'next/server';
 
 type StaffAction = 'approve' | 'promote' | 'demote';
-const APPROVABLE_ROLES = new Set(['staff', 'partner_vendor']);
+const APPROVABLE_ROLES = new Set(['sub_manager', 'staff', 'partner_vendor']);
 
 type ProfileRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly name: string | null;
     readonly email: string | null;
+    readonly phone: string | null;
+    readonly phone_normalized: string | null;
     readonly role: string | null;
     readonly status: string | null;
     readonly created_at: string | null;
@@ -74,7 +78,7 @@ export async function GET(request: Request) {
 
         const { data: profiles, error } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email, role, status, created_at')
+            .select('id, company_id, name, email, phone, phone_normalized, role, status, created_at')
             .eq('company_id', targetCompanyId)
             .returns<ProfileRow[]>();
 
@@ -115,7 +119,7 @@ export async function PUT(request: Request) {
 
         const { data: targetUser, error: targetError } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email, role, status, created_at')
+            .select('id, company_id, name, email, phone, phone_normalized, role, status, created_at')
             .eq('id', targetUserId)
             .single<ProfileRow>();
 
@@ -142,11 +146,37 @@ export async function PUT(request: Request) {
                 return NextResponse.json({ error: '승인 대기 상태의 가입 요청만 승인할 수 있습니다.' }, { status: 400 });
             }
             await supabaseAdmin.from('profiles').update({ status: 'active' }).eq('id', targetUserId);
+
+            let companyName = '';
+            if (targetUser.company_id) {
+                const { data: company } = await supabaseAdmin
+                    .from('companies')
+                    .select('name')
+                    .eq('id', targetUser.company_id)
+                    .maybeSingle<{ readonly name: string | null }>();
+                companyName = company?.name || '';
+            }
+
+            try {
+                await notifyAlimtalkSignupApproved({
+                    companyId: targetUser.company_id,
+                    companyName,
+                    name: targetUser.name || '회원',
+                    phone: targetUser.phone_normalized || targetUser.phone,
+                    profileId: targetUserId,
+                    supabaseAdmin
+                });
+            } catch (error) {
+                console.error(
+                    'Staff approval AlimTalk notification failed:',
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
         }
 
         if (action === 'promote') {
-            if (targetUser.role !== 'staff' || targetUser.status !== 'active') {
-                return NextResponse.json({ error: '활성 직원만 팀장으로 승격할 수 있습니다.' }, { status: 400 });
+            if (!isBrandStaffUserRole(targetUser.role) || targetUser.status !== 'active') {
+                return NextResponse.json({ error: '활성 직원 또는 매니저만 팀장으로 승격할 수 있습니다.' }, { status: 400 });
             }
             if ((managerCount || 0) >= 2) {
                 return NextResponse.json({ error: '팀장은 최대 2명까지만 지정할 수 있습니다.' }, { status: 400 });
@@ -166,7 +196,7 @@ export async function PUT(request: Request) {
 
         const { data: updatedUser } = await supabaseAdmin
             .from('profiles')
-            .select('id, company_id, name, email, role, status, created_at')
+            .select('id, company_id, name, email, phone, phone_normalized, role, status, created_at')
             .eq('id', targetUserId)
             .single<ProfileRow>();
 

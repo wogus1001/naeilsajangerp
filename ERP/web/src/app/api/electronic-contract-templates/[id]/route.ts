@@ -15,6 +15,7 @@ import {
     fetchVersionDetails,
     isRecord,
     latestVersionForTemplate,
+    signedTemplateSourceUrl,
     textValue
 } from '../templateApi';
 
@@ -101,9 +102,16 @@ export async function GET(request: Request, context: RouteContext) {
             }
         }
 
+        const signedLatestVersion = latestVersion
+            ? {
+                ...latestVersion,
+                source_file_url: await signedTemplateSourceUrl(supabaseAdmin, latestVersion)
+            }
+            : null;
+
         return ok({
             template: access.template,
-            latestVersion,
+            latestVersion: signedLatestVersion,
             roles,
             fields
         });

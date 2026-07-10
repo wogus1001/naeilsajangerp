@@ -52,6 +52,7 @@ function getTableDescription(
 export function LeadDbWorkspace({
     isLoading,
     workspaceVariant = 'default',
+    userId,
     leadDbLayer,
     viewMode,
     rawIntakeCount,
@@ -113,7 +114,8 @@ export function LeadDbWorkspace({
         summaries: contractChecklistSummaries
     } = useLeadContractChecklistSummaries({
         leadIds: isContractOwnersWorkspace && leadDbLayer === 'candidate' ? paginatedLeads.map(lead => lead.id) : [],
-        refreshKey: contractChecklistRefreshKey
+        refreshKey: contractChecklistRefreshKey,
+        userId
     });
     const exportTitle = leadDbLayer === 'raw_intake' ? '모객 DB - 1차 유입 DB' : '모객 DB - 가맹 희망자';
     const exportFilePrefix = leadDbLayer === 'raw_intake' ? '모객DB_1차유입' : '모객DB_가맹희망자';

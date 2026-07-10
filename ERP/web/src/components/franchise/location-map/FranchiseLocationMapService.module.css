@@ -107,9 +107,26 @@
 }
 
 .statusChipActive {
-    border-color: #d1d6db;
-    background: #f9fafb;
-    color: #191f28;
+    border-color: #3182f6;
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.statusChipState {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #6b7684;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.statusChipActive .statusChipState {
+    background: #ffffff;
+    color: #2272eb;
 }
 
 .statusDot {

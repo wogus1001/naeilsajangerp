@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from '../login/page.module.css'; // Reuse login styles
 import { AlertModal } from '@/components/common/AlertModal';
+import { BusinessInfoFooter } from '@/components/common/BusinessInfoFooter';
 import { CompanySearchModal, type Company } from './CompanySearchModal';
 import { SignupApprovalNotice } from './SignupApprovalNotice';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
@@ -312,7 +313,7 @@ export default function SignupPage() {
                         <div className={styles.gridIcon} />
                     </div>
                     <h1 className={styles.title}>회원가입</h1>
-                    <p className={styles.subtitle}>부동산 ERP 서비스 이용을 위한 가입</p>
+                    <p className={styles.subtitle}>프랜차이즈 본부 ERP 서비스 이용을 위한 가입</p>
                 </div>
 
                 <form onSubmit={handleSignup} className={styles.form}>
@@ -522,6 +523,7 @@ export default function SignupPage() {
                     <a href="/login" className={styles.link}>로그인</a>
                 </div>
             </div>
+            <BusinessInfoFooter className={styles.authBusinessInfo} />
 
             {showSearchModal && (
                 <CompanySearchModal

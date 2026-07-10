@@ -41,7 +41,7 @@ export async function POST(request: Request, context: RouteContext) {
                 company_id: access.template.company_id,
                 version_number: nextVersionNumber,
                 status: 'draft',
-                source_file_url: latestVersion?.source_file_url || null,
+                source_file_url: null,
                 source_file_path: latestVersion?.source_file_path || null,
                 source_file_name: latestVersion?.source_file_name || null,
                 source_file_size: latestVersion?.source_file_size || null,

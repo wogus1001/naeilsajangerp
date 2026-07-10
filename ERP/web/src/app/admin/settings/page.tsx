@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Save, Megaphone, Layers, Database, Download, ChevronRight, UploadCloud } from 'lucide-react';
+import { Save, Megaphone, Layers, Database, Download, UploadCloud } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 const styles = {
     container: { padding: '32px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'var(--font-pretendard)' },
@@ -107,7 +107,7 @@ export default function AdminSettingsPage() {
         try {
             const res = await fetch('/api/system/settings', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(settings)
             });
             if (res.ok) {
@@ -123,14 +123,35 @@ export default function AdminSettingsPage() {
         }
     };
 
-    const handleUserExport = () => {
-        const userStr = localStorage.getItem('user');
-        const parsed = userStr ? JSON.parse(userStr) : {};
-        const user = parsed.user || parsed;
-        const requesterId = user?.uid || user?.id || '';
-        const query = requesterId ? `?requesterId=${encodeURIComponent(requesterId)}` : '';
-        window.open(`/api/users${query}`, '_blank');
+    const downloadJson = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url, {
+                headers: await getApiAuthHeaders()
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                const message = typeof payload?.error === 'string' ? payload.error : '데이터 내려받기에 실패했습니다.';
+                showAlert(message, '다운로드 실패');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            showAlert('데이터 내려받기 중 오류가 발생했습니다.', '다운로드 실패');
+        }
     };
+
+    const handleUserExport = () => downloadJson('/api/users', 'users.json');
+    const handleContractExport = () => downloadJson('/api/contracts', 'contracts.json');
 
     if (isLoading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
 
@@ -421,7 +442,7 @@ export default function AdminSettingsPage() {
                             <button style={{ ...styles.btn, ...styles.downloadBtn, margin: 0 }} onClick={handleUserExport}>
                                 <Download size={14} /> 사용자 정보
                             </button>
-                            <button style={{ ...styles.btn, ...styles.downloadBtn, margin: 0 }} onClick={() => window.open('/api/contracts', '_blank')}>
+                            <button style={{ ...styles.btn, ...styles.downloadBtn, margin: 0 }} onClick={handleContractExport}>
                                 <Download size={14} /> 계약 리스트
                             </button>
                         </div>

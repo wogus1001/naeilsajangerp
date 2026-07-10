@@ -20,6 +20,7 @@ type Props = {
     readonly activeLocationId: string;
     readonly activePoint: LocationMapPoint | null;
     readonly center: LocationMapPosition;
+    readonly comparisonRadiusPoints: readonly LocationMapPoint[];
     readonly focusRequestId: number;
     readonly focusedPoint: LocationMapPoint | null;
     readonly isBusy: boolean;
@@ -60,6 +61,7 @@ export function FranchiseLocationMapCanvas({
     activeLocationId,
     activePoint,
     center,
+    comparisonRadiusPoints,
     focusRequestId,
     focusedPoint,
     isBusy,
@@ -164,14 +166,27 @@ export function FranchiseLocationMapCanvas({
                 }}
                 style={{ width: '100%', height: '100%' }}
             >
+                {comparisonRadiusPoints.map(point => (
+                    <Circle
+                        key={`comparison-radius-${point.location.id}`}
+                        center={point.position}
+                        radius={radiusMeters}
+                        fillColor={LOCATION_MAP_STATUS_COLORS[point.location.status]}
+                        fillOpacity={0.055}
+                        strokeColor={LOCATION_MAP_STATUS_COLORS[point.location.status]}
+                        strokeOpacity={0.52}
+                        strokeWeight={1}
+                        zIndex={0}
+                    />
+                ))}
                 {radiusCenter ? (
                     <Circle
                         center={radiusCenter}
                         radius={radiusMeters}
                         fillColor="#3182f6"
-                        fillOpacity={0.08}
+                        fillOpacity={0.11}
                         strokeColor="#3182f6"
-                        strokeOpacity={0.72}
+                        strokeOpacity={0.84}
                         strokeWeight={2}
                         zIndex={1}
                     />

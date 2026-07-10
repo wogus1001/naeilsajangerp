@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { canAccessCompanyResource, getAuthenticatedRequesterProfile } from '@/lib/api-auth';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-function getSupabaseAdmin() {
-    return createClient(supabaseUrl, supabaseServiceKey);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export async function POST(request: Request) {
@@ -17,6 +15,30 @@ export async function POST(request: Request) {
         }
 
         const supabaseAdmin = getSupabaseAdmin();
+        const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        if (!requester) {
+            return NextResponse.json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' }, { status: 401 });
+        }
+
+        const [{ data: promotedItem }, { data: property }] = await Promise.all([
+            supabaseAdmin
+                .from('business_card_promoted')
+                .select('*, business_cards(*)')
+                .eq('id', promotedId)
+                .single(),
+            supabaseAdmin
+                .from('properties')
+                .select('id, company_id, manager_id, data, name')
+                .eq('id', propertyId)
+                .single()
+        ]);
+
+        if (!promotedItem || !property) {
+            return NextResponse.json({ error: 'Link target not found' }, { status: 404 });
+        }
+        if (!canAccessCompanyResource(requester, property)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
         // 1. Update the Link in business_card_promoted
         const { error: updateError } = await supabaseAdmin
@@ -30,26 +52,13 @@ export async function POST(request: Request) {
 
         // 2. Sync to Property's promotedCustomers list (Optional / Secondary)
         try {
-            // Fetch the Promoted Item & Business Card details
-            const { data: promotedItem } = await supabaseAdmin
-                .from('business_card_promoted')
-                .select('*, business_cards(*)')
-                .eq('id', promotedId)
-                .single();
-
             if (promotedItem && promotedItem.business_cards) {
                 const card = promotedItem.business_cards;
 
-                // Fetch Property
-                const { data: property } = await supabaseAdmin
-                    .from('properties')
-                    .select('id, promotedCustomers, name')
-                    .eq('id', propertyId)
-                    .single();
-
                 if (property) {
-                    const currentList = property.promotedCustomers || [];
-                    const exists = currentList.some((c: any) => c.targetId === card.id);
+                    const propertyData = isRecord(property.data) ? property.data : {};
+                    const currentList = Array.isArray(propertyData.promotedCustomers) ? propertyData.promotedCustomers : [];
+                    const exists = currentList.some((customer: unknown) => isRecord(customer) && customer.targetId === card.id);
 
                     if (!exists) {
                         const newCustomer = {
@@ -67,7 +76,7 @@ export async function POST(request: Request) {
                         const newList = [...currentList, newCustomer];
                         await supabaseAdmin
                             .from('properties')
-                            .update({ promotedCustomers: newList })
+                            .update({ data: { ...propertyData, promotedCustomers: newList } })
                             .eq('id', propertyId);
                     }
                 }
