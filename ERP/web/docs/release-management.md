@@ -11,6 +11,7 @@
 - 실서버 배포는 사용자가 명시적으로 요청한 경우에만 `my_project_main_release` worktree에서 진행한다.
 - production의 Git 기준점은 `origin/main`이다. 기능 브랜치에서 production을 직접 배포한 경우 해당 배포는 임시 릴리즈로 보고, 같은 작업에서 main 통합과 main 기준 재배포까지 완료한다.
 - dev에 main에 없는 고유 커밋이 있으면 dev 전체를 main으로 승격하지 않는다. 운영에 반영할 기능 브랜치를 main에 먼저 통합하고, 검증된 main을 dev로 역병합한다.
+- GitHub protected branch 규칙을 우선한다. `main`과 `dev`는 PR, merge commit 없는 선형 이력, 필수 Vercel check 통과를 기본으로 하며, 직접 push나 rule bypass는 사용자가 긴급 예외를 명시한 경우에만 수행하고 우회 사유와 GitHub 경고를 릴리즈 기록에 남긴다.
 
 ## Commit Policy
 
@@ -29,9 +30,9 @@
 3. 문서 갱신: current status, README, roadmap, QA log, MAC_CONTEXT 중 변경 사실을 알 필요가 있는 문서만 수정한다.
    - 공개 설명/사용 흐름에 영향이 있으면 데모 페이지를 함께 갱신하고, 영향이 없으면 QA 로그에 `데모 영향 없음`으로 남긴다.
 4. 기능 커밋 생성: 커밋 해시와 메시지를 작업 요약에 남긴다.
-5. dev 배포 요청 시: `my_project_dev_deploy`에서 해당 커밋을 반영하고 `dev`로 push한다.
-6. 실서버 배포 요청 시: `my_project_main_release`에서 검증 후 `main`으로 push한다.
-7. 기능 브랜치에서 production을 직접 배포했다면 main 통합 후 `main -> dev` 역병합을 완료하고 main 소스를 다시 production에 배포한다.
+5. dev 배포 요청 시: dev 통합 브랜치에서 검증 후 PR과 필수 Vercel check를 거쳐 선형 이력으로 반영한다.
+6. 실서버 배포 요청 시: main 통합 브랜치에서 검증 후 PR과 필수 Vercel check를 거쳐 선형 이력으로 반영한다.
+7. 기능 브랜치에서 production을 직접 배포했다면 main PR 통합 후 동일 패치를 dev에도 PR 또는 cherry-pick 기반 선형 커밋으로 반영하고 main 소스를 다시 production에 배포한다.
 8. 배포 후 확인: Vercel READY 상태, 주요 URL, API 상태, known env gap을 기록한다.
 
 ## Fast Release Runbook
@@ -98,7 +99,8 @@ git push origin HEAD
 ```
 
 - 사용자가 `dev/main 반영`을 명시하지 않았으면 작업 브랜치만 push한다.
-- `dev` 또는 `main`으로 직접 push/merge/promotion은 사용자가 명시적으로 요청한 경우에만 진행한다.
+- `dev` 또는 `main`은 직접 push하지 않고 통합 브랜치를 push해 PR을 만든다. 긴급 직접 반영은 사용자가 rule bypass까지 명시적으로 승인한 경우에만 예외로 둔다.
+- protected branch push에서 `Bypassed rule violations`, `PR required`, `merge commits prohibited`, `Required status check` 경고가 나오면 성공 여부와 무관하게 릴리즈 기록에 남기고 다음 릴리즈부터 PR/선형 이력으로 복귀한다.
 
 ### 5.1 production 기준점 동기화
 
@@ -110,24 +112,24 @@ git rev-list --left-right --count origin/main...origin/<feature-branch>
 git rev-list --left-right --count origin/dev...origin/<feature-branch>
 ```
 
-1. `my_project_main_release`가 깨끗하고 `origin/main`과 같은지 확인한다.
-2. 기능 브랜치를 main에 `--no-ff --no-commit`으로 병합해 충돌과 staged diff를 먼저 검토한다.
-3. 관련 테스트, `tsc`, lint, build, 브라우저 QA를 통과한 뒤 main을 push한다.
-4. `my_project_dev_deploy`에서 갱신된 main을 dev로 역병합하고 최소 회귀 검증 후 dev를 push한다.
+1. `my_project_main_release`가 깨끗하고 `origin/main`과 같은지 확인한 뒤 main 통합 브랜치를 만든다.
+2. 통합 브랜치에서 기능 변경과 충돌을 검토하고 관련 테스트, `tsc`, lint, build, 브라우저 QA를 통과한다.
+3. 통합 브랜치를 push해 main PR을 만들고 필수 Vercel check 통과 후 저장소가 허용한 squash/rebase 방식으로 병합한다. `--no-ff` merge commit은 사용하지 않는다.
+4. 갱신된 main의 릴리즈 패치를 dev 통합 브랜치에 cherry-pick하거나 PR로 반영하고 최소 회귀 검증 후 선형 방식으로 dev에 병합한다. dev 고유 커밋은 유지한다.
 5. main worktree의 repo root에서 `naeilsajang` production을 다시 배포하고 운영 도메인을 확인한다.
 
-dev에 main에 없는 고유 커밋이 있으면 `dev -> main` 전체 병합을 금지한다. 이 방식은 운영 검증되지 않은 dev 작업이 함께 production으로 승격되는 것을 막는다. protected branch에는 rebase, force-push, 이력 재작성을 사용하지 않는다.
+dev에 main에 없는 고유 커밋이 있으면 `dev -> main` 전체 병합을 금지한다. 이 방식은 운영 검증되지 않은 dev 작업이 함께 production으로 승격되는 것을 막는다. protected branch 자체에는 force-push나 이력 재작성을 사용하지 않는다.
 
 동기화 완료 기준:
 
 ```bash
-git merge-base --is-ancestor <feature-commit> origin/main
-git merge-base --is-ancestor origin/main origin/dev
 git rev-list --left-right --count origin/main...main
 git rev-list --left-right --count origin/dev...dev
+git cherry origin/dev origin/main
 ```
 
-- 두 ancestry 명령이 exit 0이어야 한다.
+- main/dev PR URL, 필수 check 결과, 최종 반영 커밋을 릴리즈 기록에 남긴다.
+- merge가 허용된 저장소에서는 ancestry를 확인한다. squash/rebase/cherry-pick을 사용한 선형 이력에서는 `git cherry origin/dev origin/main`의 릴리즈 대상에 `+` 패치가 남지 않아야 하며, squash로 patch-id가 달라진 경우 변경 경로 diff와 회귀 검증으로 동등성을 확인한다.
 - main/dev upstream parity는 각각 `0 0`이어야 한다.
 - main/dev worktree에는 요청 범위 밖 변경이 없어야 한다.
 - production inspect 결과는 `name=naeilsajang`, `target=production`, `status=Ready`여야 한다.
