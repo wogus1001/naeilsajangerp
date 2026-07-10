@@ -221,8 +221,9 @@ YYYY-MM-DD
   - main 통합: `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`
   - 주요 기능: 점주 소통 후속 고도화와 공통 일정·결재 MVP를 main에 통합했다. 점주 체크리스트는 발송 이력별 목록과 가맹점별 현황을 유지하고, 공지 첨부/삭제 및 알림톡 연동을 포함한다. `/schedule`은 기존 `점포개발 일정` 탭을 유지하면서 `전사 업무·결재` 탭을 추가한다.
   - SQL: `supabase_franchise_approval_calendar_migration.sql` 운영 DB 적용 완료 확인. dev/production Supabase가 분리된 환경은 각 환경 적용 여부를 별도 확인한다.
-  - 직접 배포: `dpl_HZGEyoWQ6835zzpr9Y5CQbvytrVw`, `https://www.fcerp.co.kr` READY. main/dev 기준점 동기화 후 main 소스로 production을 재배포한다.
-  - 검증: 점주 포털·공통 workflow·슈퍼바이징·지도 유틸 51건, `tsc`, lint, build, staged diff check 통과. main/dev push와 최종 production inspect는 Fast Release Runbook의 동기화 완료 기준으로 확인한다.
+  - 직접 배포 기록: 기능 브랜치 기준 `dpl_HZGEyoWQ6835zzpr9Y5CQbvytrVw` READY 확인 후, main `b6d4559` 기준 `dpl_7am4D2Devjn3EQhGE8ZYhUQVekNW`를 `naeilsajang` production에 재배포했다.
+  - 브랜치 동기화: `origin/main`은 `b6d4559`, `origin/dev`는 `3793d08`이며 기능 커밋의 main 포함, main의 dev 포함, 양쪽 upstream parity `0 0`을 확인했다.
+  - 검증: main에서 점주 포털·공통 workflow·슈퍼바이징·지도 유틸 51건, dev 역병합에서 관련 83건, `tsc`, lint, build, staged diff check를 통과했다. production inspect는 `name=naeilsajang`, `target=production`, `status=Ready`, 운영 도메인 aliases를 확인했다.
   - 남은 이슈: 인증 세션으로 `/schedule`의 전사 업무·결재 탭과 SV 보고서 제출/승인/반려 데이터 persistence를 live QA한다.
 
 - 2026-07-09
