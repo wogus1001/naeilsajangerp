@@ -134,6 +134,8 @@ git cherry origin/dev origin/main
 - main/dev worktree에는 요청 범위 밖 변경이 없어야 한다.
 - production inspect 결과는 `name=naeilsajang`, `target=production`, `status=Ready`여야 한다.
 - main 통합 결과가 직전 기능 브랜치 직접 배포본과 다르면 반드시 main 소스로 재배포한다.
+- Vercel Git 연동은 main의 문서 전용 커밋도 production 배포를 생성할 수 있다. 릴리즈 문서는 가능한 한 배포 전에 확정하고, 배포 후 main push가 추가되면 모든 push와 required check가 끝난 뒤 운영 도메인을 다시 inspect해 최종 deployment를 확인한다.
+- 배포 ID를 문서에 다시 적는 커밋이 또 자동 배포를 만드는 순환은 피한다. 수동 배포 ID는 릴리즈 기록으로 유지하고, 마지막 자동 배포 ID는 최종 보고에 남긴다.
 
 ### 6. 배포
 

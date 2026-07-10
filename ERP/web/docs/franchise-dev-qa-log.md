@@ -38,6 +38,7 @@
 - 최종 브랜치 동기화: `origin/main`은 `b6d4559`, `origin/dev`는 `3793d08 merge: main 운영 기준점을 dev에 동기화`까지 반영했다. 기능 커밋의 main 포함, main의 dev 포함, 각 로컬/원격 parity `0 0`을 확인했다. dev 역병합 결과는 관련 테스트 83건, `tsc`, lint, build를 통과했다.
 - 운영 재배포: main worktree에서 `naeilsajang` production을 배포해 `dpl_7am4D2Devjn3EQhGE8ZYhUQVekNW` READY와 두 운영 도메인 alias를 확인했다. `/login`, `/schedule`, `/owner/opening-tasks`는 200, 보호 API 3개는 비로그인 401, 배포 후 error/500 로그는 0건이었다. 점주 체크리스트 mock 비교는 1440px/390px 접힘·펼침 모두 유사도 100점, horizontal overflow 0, console error 0이었다.
 - protected branch 경고: 이번 사용자 승인 릴리즈의 main/dev 직접 push는 GitHub에서 `PR required`, `merge commits prohibited`, `Required status check Vercel` 경고를 rule bypass로 통과했다. 향후 기본 절차는 통합 브랜치 PR, 필수 Vercel check, squash/rebase 또는 cherry-pick 기반 선형 이력으로 변경하고, 직접 push/bypass는 명시적 긴급 예외로만 허용한다.
+- Vercel Git 연동: 운영 재배포 결과를 기록한 main 문서 커밋도 자동 production 배포를 생성했다. 앞으로 릴리즈 문서는 가능한 한 배포 전에 확정하고, 배포 후 문서 push가 불가피하면 deployment ID를 반복 커밋하지 않고 모든 main push가 끝난 뒤 최종 inspect 결과를 최종 보고에 남긴다.
 
 ### 2026-07-09
 
