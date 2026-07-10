@@ -1,17 +1,75 @@
 import { NextResponse } from 'next/server';
 import { canAccessCompanyScope, getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
+import type { RequesterProfile } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isUcansignNotConnectedError } from '@/lib/ucansign/client';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DashboardRouteDependencies = {
+    readonly getSupabaseAdmin: () => SupabaseAdminClient;
+    readonly resolveRequester: (
+        supabaseAdmin: SupabaseAdminClient,
+        request: Request
+    ) => Promise<RequesterProfile | null>;
+    readonly getContracts: (requesterId: string) => Promise<readonly ElectronicContractRow[]>;
+};
+
+type ScheduleWidgetRow = {
+    readonly id: string;
+    readonly date: string;
+    readonly time?: string | null;
+    readonly title: string;
+    readonly location?: string | null;
+    readonly type?: string | null;
+    readonly scope?: string | null;
+    readonly user_id?: string | null;
+};
+
+type ContractRow = {
+    readonly id: string;
+    readonly name?: string | null;
+    readonly status?: string | null;
+    readonly created_at?: string | null;
+};
+
+type PropertyRow = {
+    readonly id: string;
+    readonly created_at?: string | null;
+};
+
+type ElectronicContractRow = {
+    readonly documentId?: string | number | null;
+    readonly id?: string | number | null;
+    readonly title?: string | null;
+    readonly name?: string | null;
+    readonly receiverName?: string | null;
+    readonly status?: string | null;
+    readonly createdAt?: string | null;
+};
+
+function createDefaultDashboardRouteDependencies(): DashboardRouteDependencies {
+    return {
+        getSupabaseAdmin,
+        resolveRequester: getAuthenticatedRequesterProfile,
+        getContracts: async (requesterId: string) => {
+            const { getContracts } = await import('@/lib/ucansign/client');
+            return await getContracts(requesterId) || [];
+        }
+    };
+}
+
+export async function handleDashboardGET(
+    request: Request,
+    dependencies: DashboardRouteDependencies = createDefaultDashboardRouteDependencies()
+) {
     try {
         const { searchParams } = new URL(request.url);
         const requestedCompanyId = searchParams.get('companyId');
 
-        const supabaseAdmin = getSupabaseAdmin();
-        const requesterProfile = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
+        const requesterProfile = await dependencies.resolveRequester(supabaseAdmin, request);
 
         if (!requesterProfile) {
             return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -42,7 +100,7 @@ export async function GET(request: Request) {
         const currentMonth = now.getMonth(); // 0-indexed
 
         // Prepare Queries
-        let scheduleQuery = supabaseAdmin.from('schedules').select('*');
+        let scheduleQuery = supabaseAdmin.from('schedules').select('*').is('source_type', null);
         let contractQuery = supabaseAdmin.from('contracts').select('*');
         let propertyQuery = supabaseAdmin.from('properties').select('id, created_at');
         let customerQuery = supabaseAdmin.from('customers').select('id', { count: 'exact', head: true });
@@ -89,7 +147,8 @@ export async function GET(request: Request) {
         // 3. Process Data
 
         // A. Schedules
-        const validSchedules = (schedules || []).filter((s: any) => {
+        const scheduleRows = Array.isArray(schedules) ? schedules as readonly ScheduleWidgetRow[] : [];
+        const validSchedules = scheduleRows.filter(s => {
             // Additional filtering if needed (e.g., private logic)
             // Assuming DB policy/query handles mostly correct data.
             // Check Scope if 'private' (personal)
@@ -98,10 +157,10 @@ export async function GET(request: Request) {
         });
 
         // Upcoming Count (Today ~ D+2)
-        const shortTermCount = validSchedules.filter((s: any) => s.date <= dPlus2Str).length;
+        const shortTermCount = validSchedules.filter(s => s.date <= dPlus2Str).length;
 
         // Top 5 for Widget
-        const widgetSchedules = validSchedules.slice(0, 5).map((s: any) => ({
+        const widgetSchedules = validSchedules.slice(0, 5).map(s => ({
             id: s.id,
             time: `${s.date.slice(5)} ${s.time?.slice(0, 5) || ''}`.trim(), // MM-DD HH:mm
             title: s.title,
@@ -112,26 +171,32 @@ export async function GET(request: Request) {
 
         // B. Contracts
         // 1. Projects (DB)
-        const projectContracts = contracts || [];
-        const projectOngoing = projectContracts.filter((c: any) =>
-            ['on_going', 'active', 'progress', 'WAITING', 'APPROVAL_REQUESTED'].includes(c.status)
+        const projectContracts = Array.isArray(contracts) ? contracts as readonly ContractRow[] : [];
+        const projectOngoing = projectContracts.filter(c =>
+            ['on_going', 'active', 'progress', 'WAITING', 'APPROVAL_REQUESTED'].includes(c.status || '')
         );
 
         // 2. Electronic (API)
         let electronicOngoingCount = 0;
-        let apiRecentContracts: any[] = [];
+        let apiRecentContracts: Array<{
+            readonly id: string;
+            readonly title: string;
+            readonly customer: string;
+            readonly status?: string | null;
+            readonly date: string;
+            readonly type: string;
+        }> = [];
 
         try {
-            const { getContracts } = await import('@/lib/ucansign/client');
-            const apiContracts = await getContracts(requesterProfile.id) || [];
+            const apiContracts = await dependencies.getContracts(requesterProfile.id);
 
-            const ongoingMerged = apiContracts.filter((c: any) => {
+            const ongoingMerged = apiContracts.filter(c => {
                 const status = (c.status || '').toLowerCase();
                 return !['completed', 'canceled', 'rejected', 'trash', 'expired', 'deleted'].includes(status);
             });
             electronicOngoingCount = ongoingMerged.length;
 
-            apiRecentContracts = apiContracts.slice(0, 10).map((c: any) => ({
+            apiRecentContracts = apiContracts.slice(0, 10).map(c => ({
                 id: String(c.documentId || c.id),
                 title: c.title || c.name || '전자계약',
                 customer: c.receiverName || '고객',
@@ -147,7 +212,7 @@ export async function GET(request: Request) {
         }
 
         // Merge Recent Contracts
-        const localProjects = projectContracts.map((c: any) => ({
+        const localProjects = projectContracts.map(c => ({
             id: c.id,
             title: c.name || '계약 프로젝트',
             customer: '고객', // Join with customer table if needed, or store name
@@ -162,7 +227,8 @@ export async function GET(request: Request) {
 
 
         // C. Properties (New This Month)
-        const newPropertiesCount = (properties || []).filter((p: any) => {
+        const propertyRows = Array.isArray(properties) ? properties as readonly PropertyRow[] : [];
+        const newPropertiesCount = propertyRows.filter(p => {
             if (!p.created_at) return false;
             const d = new Date(p.created_at);
             return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
@@ -189,4 +255,8 @@ export async function GET(request: Request) {
         console.error('Dashboard API Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
+}
+
+export async function GET(request: Request) {
+    return handleDashboardGET(request);
 }

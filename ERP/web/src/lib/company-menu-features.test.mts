@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
+import companyMenuFeatures from './company-menu-features.js';
+import sidebarMenuConfig from '../components/layout/SidebarMenuConfig.js';
+
+const {
     DEFAULT_COMPANY_DASHBOARD_MODE,
     getCompanyMenuFeatureForPath,
     getDefaultCompanyMenuFlags,
     isCompanyDashboardMode,
     normalizeCompanyDashboardMode,
     normalizeCompanyMenuFlags
-} from './company-menu-features.js';
-import { SIDEBAR_SECTIONS } from '../components/layout/SidebarMenuConfig.js';
+} = companyMenuFeatures;
+const { SIDEBAR_SECTIONS } = sidebarMenuConfig;
 
 test('Given no saved company dashboard mode When normalizing Then A type is the default', () => {
     assert.equal(DEFAULT_COMPANY_DASHBOARD_MODE, 'a');
@@ -51,7 +54,7 @@ test('Given sidebar sections When reading navigation Then dashboard is top-level
     assert.equal(dashboardSection?.direct, true);
     assert.deepEqual(dashboardSection?.items.map(item => item.title), ['대시보드']);
     assert.equal(franchiseSection?.key, 'franchise');
-    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '후보지 목록', '인력 세팅', '물건지 지도', '가맹 운영', '가맹점 목록', '슈퍼바이징', '점주 소통', '계약·업체 관리', '전자계약', '업체 관리', '업체 계약함']);
+    assert.deepEqual(franchiseSection?.items.map(item => item.title), ['모객 DB', '출점 후보지', '후보지 목록', '인력 세팅', '물건지 지도', '가맹 운영', '가맹점 목록', '슈퍼바이징', '일정관리', '점주 소통', '계약·업체 관리', '전자계약', '업체 관리', '업체 계약함']);
     assert.equal(franchiseSection?.items.find(item => item.title === '출점 후보지')?.group, true);
     assert.equal(franchiseSection?.items.find(item => item.title === '출점 후보지')?.url, undefined);
     assert.equal(franchiseSection?.items.find(item => item.title === '후보지 목록')?.depth, 1);
@@ -66,6 +69,8 @@ test('Given sidebar sections When reading navigation Then dashboard is top-level
     assert.equal(franchiseSection?.items.find(item => item.title === '가맹점 목록')?.url, '/dashboard/franchise-operations');
     assert.equal(franchiseSection?.items.find(item => item.title === '슈퍼바이징')?.depth, 1);
     assert.equal(franchiseSection?.items.find(item => item.title === '슈퍼바이징')?.category, '가맹 운영');
+    assert.equal(franchiseSection?.items.find(item => item.title === '일정관리')?.depth, 1);
+    assert.equal(franchiseSection?.items.find(item => item.title === '일정관리')?.featureKey, 'franchiseOperations');
     assert.equal(franchiseSection?.items.find(item => item.title === '점주 소통')?.depth, 1);
     assert.equal(franchiseSection?.items.find(item => item.title === '점주 소통')?.category, '가맹 운영');
     assert.equal(franchiseSection?.items.find(item => item.title === '계약·업체 관리')?.group, true);

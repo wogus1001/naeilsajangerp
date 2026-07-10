@@ -290,3 +290,18 @@ export function getCompanyMenuFeatureForPath(pathname: string): CompanyMenuFeatu
 
     return bestFeature;
 }
+
+const companyMenuFeatures = {
+    COMPANY_DASHBOARD_MODES,
+    COMPANY_MENU_FEATURES,
+    DEFAULT_COMPANY_DASHBOARD_MODE,
+    getCompanyMenuFeatureForPath,
+    getDefaultCompanyMenuFlags,
+    isCompanyDashboardMode,
+    isCompanyMenuEnabled,
+    isCompanyMenuFeatureKey,
+    normalizeCompanyDashboardMode,
+    normalizeCompanyMenuFlags
+};
+
+export default companyMenuFeatures;

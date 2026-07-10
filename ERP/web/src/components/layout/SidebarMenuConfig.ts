@@ -16,7 +16,8 @@ export type SidebarLinkIcon =
     | 'list'
     | 'fileSignature'
     | 'clipboardCheck'
-    | 'calculator';
+    | 'calculator'
+    | 'calendar';
 
 export type SidebarMenuItem = {
     readonly title: string;
@@ -59,6 +60,7 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
             { title: '가맹 운영', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store', group: true },
             { title: '가맹점 목록', url: '/dashboard/franchise-operations', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'list', depth: 1 },
             { title: '슈퍼바이징', url: '/dashboard/franchise-supervision', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'clipboardCheck', depth: 1 },
+            { title: '일정관리', url: '/dashboard/franchise-operations/schedule', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'calendar', depth: 1 },
             { title: '점주 소통', url: '/dashboard/franchise-operations/owner-portal', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'users', depth: 1 },
             { title: '계약·업체 관리', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature', group: true },
             { title: '전자계약', url: '/contracts/electronic', category: '계약·업체 관리', featureKey: 'electronicPremiumContracts', icon: 'fileSignature', depth: 1 },
@@ -118,3 +120,10 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
 ];
 
 export const SIDEBAR_MENU_ITEMS: readonly SidebarMenuItem[] = SIDEBAR_SECTIONS.flatMap(section => section.items);
+
+const sidebarMenuConfig = {
+    SIDEBAR_MENU_ITEMS,
+    SIDEBAR_SECTIONS
+};
+
+export default sidebarMenuConfig;

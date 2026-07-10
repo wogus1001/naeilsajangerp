@@ -9,13 +9,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
-import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
-import {
-    completeWorkflowSchedule,
-    upsertWorkflowSchedule,
-    type JsonRecord,
-    type WorkflowScheduleRow
-} from '@/lib/franchise-workflow-store';
+import type { JsonRecord, WorkflowScheduleRow } from '@/lib/franchise-workflow-store';
 
 type ScheduleRow = WorkflowScheduleRow & {
     readonly customer_id?: string | null;
@@ -42,7 +36,22 @@ type ProfileScopeRow = {
     readonly status: string | null;
 };
 
-const PUBLIC_WORKFLOW_SOURCE_TYPES = new Set(['manual-workflow']);
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type ScheduleRouteDependencies = {
+    readonly getSupabaseAdmin: () => SupabaseAdminClient;
+    readonly resolveRequester: (
+        supabaseAdmin: SupabaseAdminClient,
+        request: Request,
+        requesterId?: string | null
+    ) => Promise<RequesterProfile | null>;
+};
+
+function createDefaultRouteDependencies(): ScheduleRouteDependencies {
+    return {
+        getSupabaseAdmin,
+        resolveRequester: getRequesterProfile
+    };
+}
 
 function isRecord(value: unknown): value is JsonRecord {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -87,13 +96,6 @@ function transformSchedule(row: ScheduleRow | null) {
     };
 }
 
-function failWorkflowSchema(error: unknown, fallbackMessage: string): Response {
-    if (isMissingWorkflowSchemaError(error)) {
-        return fail(500, 'INTERNAL_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 등록이 필요합니다.');
-    }
-    return fail(500, 'INTERNAL_ERROR', fallbackMessage);
-}
-
 function canReadSchedule(requester: RequesterProfile, schedule: { company_id: string | null; user_id: string | null; scope: string | null }) {
     if (isAdmin(requester)) return true;
 
@@ -126,12 +128,20 @@ function canManageWorkflowSchedules(requester: RequesterProfile): boolean {
     return requester.role === 'admin' || requester.role === 'manager';
 }
 
-function isPublicWorkflowSourceType(sourceType: string): boolean {
-    return PUBLIC_WORKFLOW_SOURCE_TYPES.has(sourceType);
-}
-
 function touchesWorkflowFields(body: JsonRecord): boolean {
-    return ['sourceType', 'sourceId', 'assigneeProfileId', 'managerProfileId', 'dueAt', 'remindAt', 'metadata'].some(key => hasOwn(body, key));
+    return [
+        'sourceType',
+        'sourceId',
+        'workflow',
+        'workflowId',
+        'workflowType',
+        'workflowStatus',
+        'assigneeProfileId',
+        'managerProfileId',
+        'dueAt',
+        'remindAt',
+        'metadata'
+    ].some(key => hasOwn(body, key));
 }
 
 function canCompleteSchedule(requester: RequesterProfile, schedule: ScheduleAccessRow): boolean {
@@ -174,20 +184,20 @@ async function ensureActiveProfileInCompany(
     return null;
 }
 
-export async function GET(request: Request) {
+export async function handleSchedulesGET(
+    request: Request,
+    dependencies: ScheduleRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
         const { searchParams } = new URL(request.url);
         const company = searchParams.get('company');
         const userIdParam = searchParams.get('userId');
         const dateFrom = searchParams.get('dateFrom');
         const dateTo = searchParams.get('dateTo');
         const status = searchParams.get('status');
-        const sourceType = searchParams.get('sourceType');
-        const assigneeProfileId = searchParams.get('assigneeProfileId');
-        const managerProfileId = searchParams.get('managerProfileId');
 
-        const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
+        const requesterProfile = await dependencies.resolveRequester(supabaseAdmin, request);
         if (!requesterProfile) {
             return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
         }
@@ -212,6 +222,7 @@ export async function GET(request: Request) {
         let query = supabaseAdmin
             .from('schedules')
             .select('*, user:profiles(name), company:companies(name)')
+            .is('source_type', null)
             .order('date', { ascending: true })
             .order('created_at', { ascending: true });
 
@@ -228,9 +239,6 @@ export async function GET(request: Request) {
         if (dateFrom) query = query.gte('date', dateFrom);
         if (dateTo) query = query.lte('date', dateTo);
         if (status) query = query.eq('status', status);
-        if (sourceType) query = query.eq('source_type', sourceType);
-        if (assigneeProfileId) query = query.eq('assignee_profile_id', assigneeProfileId);
-        if (managerProfileId) query = query.eq('manager_profile_id', managerProfileId);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -249,17 +257,24 @@ export async function GET(request: Request) {
         return ok(result.map(transformSchedule));
     } catch (e) {
         console.error('Schedules GET Error:', e);
-        return failWorkflowSchema(e, 'Failed to fetch schedules');
+        return fail(500, 'INTERNAL_ERROR', 'Failed to fetch schedules');
     }
 }
 
-export async function POST(request: Request) {
+export async function handleSchedulesPOST(
+    request: Request,
+    dependencies: ScheduleRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
         const parsed: unknown = await request.json().catch(() => ({}));
         const body = isRecord(parsed) ? parsed : {};
 
-        const requesterProfile = await getRequesterProfile(
+        if (touchesWorkflowFields(body)) {
+            return fail(400, 'VALIDATION_ERROR', 'Workflow fields are not supported by the legacy schedule API');
+        }
+
+        const requesterProfile = await dependencies.resolveRequester(
             supabaseAdmin,
             request,
             textValue(body.requesterId) || textValue(body.userId) || null
@@ -312,49 +327,6 @@ export async function POST(request: Request) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cannot create personal schedule for another user');
         }
 
-        const sourceType = textValue(body.sourceType);
-        const sourceId = textValue(body.sourceId);
-
-        if (sourceType || sourceId) {
-            if (!sourceType || !sourceId) {
-                return fail(400, 'VALIDATION_ERROR', 'sourceType and sourceId are both required');
-            }
-            if (!canManageWorkflowSchedules(requesterProfile)) {
-                return fail(403, 'FORBIDDEN', 'Workflow schedule source fields require manager permission');
-            }
-            if (sourceType === 'approval-document') {
-                return fail(403, 'FORBIDDEN', 'Approval schedules must be created through the approval workflow');
-            }
-            if (!isPublicWorkflowSourceType(sourceType)) {
-                return fail(403, 'FORBIDDEN', 'Workflow source schedules must be created through module workflow APIs');
-            }
-            const assigneeProfileId = textValue(body.assigneeProfileId) || userUuid;
-            const managerProfileId = textValue(body.managerProfileId) || null;
-            const assigneeError = await ensureActiveProfileInCompany(supabaseAdmin, assigneeProfileId, companyId, 'Forbidden: assignee/company mismatch');
-            if (assigneeError) return assigneeError;
-            const managerError = await ensureActiveProfileInCompany(supabaseAdmin, managerProfileId, companyId, 'Forbidden: manager/company mismatch', true);
-            if (managerError) return managerError;
-
-            const schedule = await upsertWorkflowSchedule(supabaseAdmin, {
-                companyId,
-                sourceType,
-                sourceId,
-                title: textValue(body.title) || '일정',
-                date: textValue(body.date) || null,
-                status: textValue(body.status) || null,
-                type: textValue(body.type) || null,
-                details: textValue(body.details) || null,
-                color: textValue(body.color) || null,
-                assigneeProfileId,
-                managerProfileId,
-                userId: userUuid,
-                dueAt: textValue(body.dueAt) || null,
-                remindAt: textValue(body.remindAt) || null,
-                metadata: isRecord(body.metadata) ? body.metadata : {}
-            });
-            return ok(transformSchedule(schedule), 201);
-        }
-
         const { data, error } = await supabaseAdmin
             .from('schedules')
             .insert({
@@ -380,17 +352,24 @@ export async function POST(request: Request) {
         return ok(transformSchedule(data), 201);
     } catch (e) {
         console.error('Schedules POST Error:', e);
-        return failWorkflowSchema(e, 'Failed to create schedule');
+        return fail(500, 'INTERNAL_ERROR', 'Failed to create schedule');
     }
 }
 
-export async function PUT(request: Request) {
+export async function handleSchedulesPUT(
+    request: Request,
+    dependencies: ScheduleRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
         const parsed: unknown = await request.json().catch(() => ({}));
         const body = isRecord(parsed) ? parsed : {};
 
-        const requesterProfile = await getRequesterProfile(
+        if (touchesWorkflowFields(body)) {
+            return fail(400, 'VALIDATION_ERROR', 'Workflow fields are not supported by the legacy schedule API');
+        }
+
+        const requesterProfile = await dependencies.resolveRequester(
             supabaseAdmin,
             request,
             textValue(body.requesterId) || textValue(body.userId) || null
@@ -446,15 +425,16 @@ export async function PUT(request: Request) {
             if (!canCompleteSchedule(requesterProfile, existing)) {
                 return fail(403, 'FORBIDDEN', 'Approval schedules must be completed through the approval workflow');
             }
-            await completeWorkflowSchedule(supabaseAdmin, {
-                companyId: existing.company_id || '',
-                scheduleId: id,
-                completedAt: textValue(body.completedAt) || null
-            });
             const { data: completed, error: completedError } = await supabaseAdmin
                 .from('schedules')
-                .select('*, user:profiles(name), company:companies(name)')
+                .update({
+                    completed_at: textValue(body.completedAt) || new Date().toISOString(),
+                    status: 'completed',
+                    type: 'completed',
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', id)
+                .select('*, user:profiles(name), company:companies(name)')
                 .single<ScheduleRow>();
             if (completedError) throw completedError;
             return ok(transformSchedule(completed));
@@ -462,13 +442,6 @@ export async function PUT(request: Request) {
 
         if (existing.source_type && !canManageWorkflowSchedules(requesterProfile)) {
             return fail(403, 'FORBIDDEN', 'Source-linked schedules require manager permission');
-        }
-
-        if (hasOwn(body, 'sourceType') || hasOwn(body, 'sourceId')) {
-            return fail(403, 'FORBIDDEN', 'Workflow source links cannot be changed through the public schedule API');
-        }
-        if (touchesWorkflowFields(body) && !canManageWorkflowSchedules(requesterProfile)) {
-            return fail(403, 'FORBIDDEN', 'Workflow schedule fields require manager permission');
         }
 
         const nextScope = textValue(body.scope) || existing.scope;
@@ -525,13 +498,16 @@ export async function PUT(request: Request) {
         return ok(transformSchedule(data));
     } catch (e) {
         console.error('Schedules PUT Error:', e);
-        return failWorkflowSchema(e, 'Failed to update schedule');
+        return fail(500, 'INTERNAL_ERROR', 'Failed to update schedule');
     }
 }
 
-export async function DELETE(request: Request) {
+export async function handleSchedulesDELETE(
+    request: Request,
+    dependencies: ScheduleRouteDependencies = createDefaultRouteDependencies()
+) {
     try {
-        const supabaseAdmin = getSupabaseAdmin();
+        const supabaseAdmin = dependencies.getSupabaseAdmin();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -539,7 +515,7 @@ export async function DELETE(request: Request) {
             return fail(400, 'VALIDATION_ERROR', 'ID required');
         }
 
-        const requesterProfile = await getRequesterProfile(
+        const requesterProfile = await dependencies.resolveRequester(
             supabaseAdmin,
             request,
             searchParams.get('requesterId') || searchParams.get('userId') || null
@@ -579,4 +555,20 @@ export async function DELETE(request: Request) {
         console.error('Schedules DELETE Error:', e);
         return fail(500, 'INTERNAL_ERROR', 'Failed to delete schedule');
     }
+}
+
+export async function GET(request: Request) {
+    return handleSchedulesGET(request);
+}
+
+export async function POST(request: Request) {
+    return handleSchedulesPOST(request);
+}
+
+export async function PUT(request: Request) {
+    return handleSchedulesPUT(request);
+}
+
+export async function DELETE(request: Request) {
+    return handleSchedulesDELETE(request);
 }

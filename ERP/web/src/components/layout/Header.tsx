@@ -56,6 +56,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
         if (path === '/dashboard/franchise-leads/work-intake') return { category: '업무', title: '진행현황' };
         if (path === '/dashboard/franchise-leads/market-insights') return { category: '프랜차이즈', title: '출점 후보지' };
         if (path === '/dashboard/franchise-operations') return { category: '프랜차이즈', title: '가맹 운영' };
+        if (path === '/dashboard/franchise-operations/schedule') return { category: '가맹 운영', title: '일정관리' };
 
         // Consulting
         if (path === '/properties') return { category: '점포개발 업무', title: '점포 목록' };

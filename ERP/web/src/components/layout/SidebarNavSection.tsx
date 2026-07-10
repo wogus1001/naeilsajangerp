@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {
     Briefcase,
     Calculator,
+    CalendarDays,
     ChevronDown,
     ChevronRight,
     ClipboardCheck,
@@ -66,6 +67,8 @@ function renderLinkIcon(icon: SidebarLinkIcon | undefined) {
             return <ClipboardCheck size={14} />;
         case 'calculator':
             return <Calculator size={14} />;
+        case 'calendar':
+            return <CalendarDays size={14} />;
         default:
             return null;
     }

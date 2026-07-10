@@ -236,6 +236,17 @@ YYYY-MM-DD
 ## Current Release Baseline
 
 - 2026-07-10
+  - 작업 브랜치: `codex/franchise-independent-schedule-20260710`
+  - 기능 커밋: 이번 프랜차이즈 전용 일정관리 커밋
+  - 주요 기능: 기존 점포개발 업무 `/schedule`은 점포개발 일정관리로 유지하고, `가맹 운영 > 일정관리`(`/dashboard/franchise-operations/schedule`)를 별도 신설했다. 새 화면은 `franchise_schedules`와 `/api/franchise-schedules`만 사용하며 기존 `schedules`와 연동하지 않는다. 수동 일정은 프랜차이즈 화면에서 등록/완료/삭제하고, source-linked 일정은 원천 workflow에서만 갱신되도록 공개 API 직접 수정/삭제/완료를 차단했다.
+  - 신규 SQL: `supabase_franchise_schedule_prepare_migration.sql`, `supabase_franchise_schedule_cutover_migration.sql`, `supabase_franchise_schedule_cutover_rollback.sql` 추가. prepare 적용 후 QA, cutover 적용 순서로 진행한다. **SQL 등록 필요**.
+  - dev 반영: none
+  - main 반영: none
+  - 배포 URL: none
+  - 검증: `npx tsx --test src/lib/franchise-schedules.test.mts src/lib/franchise-schedule-store.test.mts src/lib/franchise-schedule-migration.test.mts src/app/api/schedules/route.test.mts src/app/api/dashboard/route.test.mts src/app/api/franchise-schedules/route.test.mts 'src/app/(main)/schedule/store-schedule-model.test.mts' src/components/franchise/schedules/franchiseScheduleViewModel.test.mts src/lib/company-menu-features.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`, `node scripts/qa/franchise-schedule-scope-scan.mjs origin/dev`, `node scripts/qa/franchise-schedule-visual-qa.mjs` 통과. DB migration runtime QA는 `TEST_DATABASE_URL` 부재로 `PENDING_EXTERNAL`.
+  - 남은 이슈: SQL 적용 후 실계정으로 가맹 운영 일정 탭의 등록/완료/삭제 persistence와 기존 점포개발 일정관리 미연동을 live QA한다.
+
+- 2026-07-10
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `955f42b feat(franchise): 공통 일정 결재 기반 추가`
   - main 통합: `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`
