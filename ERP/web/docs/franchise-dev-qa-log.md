@@ -30,7 +30,8 @@
 - 운영에 직접 배포된 기능 브랜치 `955f42b`가 `main`에 없던 상태를 해소하기 위해 `my_project_main_release`에서 기능 브랜치를 병합했다. main 고유 5개 커밋과 기능 브랜치 고유 14개 커밋이 분기된 상태였으며, 점주 포털 관련 충돌은 최신 운영 정책인 체크리스트 승인 제외, 발송 이력 목록, 공지 첨부/삭제 연동을 유지하도록 해결했다. main 전용 물건지 지도 반경 보정은 자동 병합 결과에 유지했다.
 - main 병합 커밋: `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`.
 - 병합 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts src/components/franchise/location-map/mapUtils.test.mts` 51건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --cached --check`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
-- 브랜치 운영 규칙을 보강했다. 기능 브랜치에서 production을 직접 배포한 경우 같은 릴리즈에서 main 통합, main push, `main -> dev` 역병합, main 소스 재배포를 완료한다. dev에 운영 미검증 고유 커밋이 있으면 `dev -> main` 전체 병합을 금지한다.
+- 이번 복구 예외: 기능 브랜치가 production에 먼저 배포됐고 dev에는 운영 미검증 고유 커밋이 40개 있어, main에 운영 소스를 먼저 복구한 뒤 main 변경을 dev에 동기화했다. 이 `feature -> main -> dev` 순서는 일회성 복구 절차이며 일반 배포 규칙으로 사용하지 않는다.
+- 향후 기본 절차: 최신 dev에서 기능 브랜치를 만들고 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 진행한다. dev 전체가 운영 준비 상태가 아니면 dev PR의 최종 반영 커밋만 `origin/main` 기반 release 브랜치로 선별하고, release preview에서 smoke와 회귀 QA를 다시 통과한 뒤 main PR을 만든다.
 - 병렬 코드리뷰에서 `/schedule`과 고객·명함·물건지·계약 화면의 `/api/schedules` 호출이 보호 API 전환 후에도 세션 header를 누락한 문제를 확인했다. 모든 일정 API 호출에 `getApiAuthHeaders()`를 적용하고, 향후 보호 API 정책 변경 시 기존 호출부 전수 검색과 로그인 세션 CRUD QA를 릴리즈 규칙에 추가했다.
 - 점주 체크리스트 모바일 문장은 단어 중간에서 부자연스럽게 끊기지 않도록 `word-break: keep-all`과 긴 문자열 fallback을 적용했다. 구조 개선 후속으로 `franchise-workflow-store.ts`, `OwnerPortalPanelSections.tsx` 책임 분리, 공지 Office/HWPX 첨부의 컨테이너 검증, 회사 범위 route/RLS 통합 테스트 보강을 추적한다.
 - `supabase_franchise_approval_calendar_migration.sql`은 사용자 확인 기준 운영 DB 적용 완료다. **SQL 등록 완료 확인**.
