@@ -9,6 +9,8 @@
 - `dev`와 `main`은 배포 반영 단계에서만 사용한다.
 - 배포 요청이 없으면 `dev` 또는 `main`으로 push하지 않는다.
 - 실서버 배포는 사용자가 명시적으로 요청한 경우에만 `my_project_main_release` worktree에서 진행한다.
+- production의 Git 기준점은 `origin/main`이다. 기능 브랜치에서 production을 직접 배포한 경우 해당 배포는 임시 릴리즈로 보고, 같은 작업에서 main 통합과 main 기준 재배포까지 완료한다.
+- dev에 main에 없는 고유 커밋이 있으면 dev 전체를 main으로 승격하지 않는다. 운영에 반영할 기능 브랜치를 main에 먼저 통합하고, 검증된 main을 dev로 역병합한다.
 
 ## Commit Policy
 
@@ -28,7 +30,8 @@
 4. 기능 커밋 생성: 커밋 해시와 메시지를 작업 요약에 남긴다.
 5. dev 배포 요청 시: `my_project_dev_deploy`에서 해당 커밋을 반영하고 `dev`로 push한다.
 6. 실서버 배포 요청 시: `my_project_main_release`에서 검증 후 `main`으로 push한다.
-7. 배포 후 확인: Vercel READY 상태, 주요 URL, API 상태, known env gap을 기록한다.
+7. 기능 브랜치에서 production을 직접 배포했다면 main 통합 후 `main -> dev` 역병합을 완료하고 main 소스를 다시 production에 배포한다.
+8. 배포 후 확인: Vercel READY 상태, 주요 URL, API 상태, known env gap을 기록한다.
 
 ## Fast Release Runbook
 
@@ -94,6 +97,39 @@ git push origin HEAD
 
 - 사용자가 `dev/main 반영`을 명시하지 않았으면 작업 브랜치만 push한다.
 - `dev` 또는 `main`으로 직접 push/merge/promotion은 사용자가 명시적으로 요청한 경우에만 진행한다.
+
+### 5.1 production 기준점 동기화
+
+기능 브랜치 소스를 Vercel production에 직접 배포한 경우 배포 완료만으로 릴리즈를 종료하지 않는다. 다음 main 배포에서 기능이 빠지지 않도록 같은 릴리즈에서 Git 기준점을 맞춘다.
+
+```bash
+git fetch origin main dev <feature-branch>
+git rev-list --left-right --count origin/main...origin/<feature-branch>
+git rev-list --left-right --count origin/dev...origin/<feature-branch>
+```
+
+1. `my_project_main_release`가 깨끗하고 `origin/main`과 같은지 확인한다.
+2. 기능 브랜치를 main에 `--no-ff --no-commit`으로 병합해 충돌과 staged diff를 먼저 검토한다.
+3. 관련 테스트, `tsc`, lint, build, 브라우저 QA를 통과한 뒤 main을 push한다.
+4. `my_project_dev_deploy`에서 갱신된 main을 dev로 역병합하고 최소 회귀 검증 후 dev를 push한다.
+5. main worktree의 repo root에서 `naeilsajang` production을 다시 배포하고 운영 도메인을 확인한다.
+
+dev에 main에 없는 고유 커밋이 있으면 `dev -> main` 전체 병합을 금지한다. 이 방식은 운영 검증되지 않은 dev 작업이 함께 production으로 승격되는 것을 막는다. protected branch에는 rebase, force-push, 이력 재작성을 사용하지 않는다.
+
+동기화 완료 기준:
+
+```bash
+git merge-base --is-ancestor <feature-commit> origin/main
+git merge-base --is-ancestor origin/main origin/dev
+git rev-list --left-right --count origin/main...main
+git rev-list --left-right --count origin/dev...dev
+```
+
+- 두 ancestry 명령이 exit 0이어야 한다.
+- main/dev upstream parity는 각각 `0 0`이어야 한다.
+- main/dev worktree에는 요청 범위 밖 변경이 없어야 한다.
+- production inspect 결과는 `name=naeilsajang`, `target=production`, `status=Ready`여야 한다.
+- main 통합 결과가 직전 기능 브랜치 직접 배포본과 다르면 반드시 main 소스로 재배포한다.
 
 ### 6. 배포
 
@@ -176,6 +212,16 @@ YYYY-MM-DD
 - 신규 SQL: 위 후속 작업은 우선 기존 `electronic_contracts`, `profiles.login_id` 기준 조회/표시로 처리 가능하다. 추가 집계 테이블이나 audit column이 필요해지면 SQL 작성 후 사용자가 직접 Supabase SQL Editor에 등록한다.
 
 ## Current Release Baseline
+
+- 2026-07-10
+  - 작업 브랜치: `codex/franchise-next-alerts-20260616`
+  - 기능 커밋: `955f42b feat(franchise): 공통 일정 결재 기반 추가`
+  - main 통합: `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`
+  - 주요 기능: 점주 소통 후속 고도화와 공통 일정·결재 MVP를 main에 통합했다. 점주 체크리스트는 발송 이력별 목록과 가맹점별 현황을 유지하고, 공지 첨부/삭제 및 알림톡 연동을 포함한다. `/schedule`은 기존 `점포개발 일정` 탭을 유지하면서 `전사 업무·결재` 탭을 추가한다.
+  - SQL: `supabase_franchise_approval_calendar_migration.sql` 운영 DB 적용 완료 확인. dev/production Supabase가 분리된 환경은 각 환경 적용 여부를 별도 확인한다.
+  - 직접 배포: `dpl_HZGEyoWQ6835zzpr9Y5CQbvytrVw`, `https://www.fcerp.co.kr` READY. main/dev 기준점 동기화 후 main 소스로 production을 재배포한다.
+  - 검증: 점주 포털·공통 workflow·슈퍼바이징·지도 유틸 51건, `tsc`, lint, build, staged diff check 통과. main/dev push와 최종 production inspect는 이어서 수행한다.
+  - 남은 이슈: 인증 세션으로 `/schedule`의 전사 업무·결재 탭과 SV 보고서 제출/승인/반려 데이터 persistence를 live QA한다.
 
 - 2026-07-09
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`

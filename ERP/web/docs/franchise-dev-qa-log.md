@@ -25,6 +25,15 @@
 
 ## 개발 과정 로그
 
+### 2026-07-10
+
+- 운영에 직접 배포된 기능 브랜치 `955f42b`가 `main`에 없던 상태를 해소하기 위해 `my_project_main_release`에서 기능 브랜치를 병합했다. main 고유 5개 커밋과 기능 브랜치 고유 14개 커밋이 분기된 상태였으며, 점주 포털 관련 충돌은 최신 운영 정책인 체크리스트 승인 제외, 발송 이력 목록, 공지 첨부/삭제 연동을 유지하도록 해결했다. main 전용 물건지 지도 반경 보정은 자동 병합 결과에 유지했다.
+- main 병합 커밋: `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`.
+- 병합 검증: `npx tsx --test src/lib/franchise-owner-portal.test.mts src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts src/components/franchise/location-map/mapUtils.test.mts` 51건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --cached --check`를 통과했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 브랜치 운영 규칙을 보강했다. 기능 브랜치에서 production을 직접 배포한 경우 같은 릴리즈에서 main 통합, main push, `main -> dev` 역병합, main 소스 재배포를 완료한다. dev에 운영 미검증 고유 커밋이 있으면 `dev -> main` 전체 병합을 금지한다.
+- `supabase_franchise_approval_calendar_migration.sql`은 사용자 확인 기준 운영 DB 적용 완료다. **SQL 등록 완료 확인**.
+- 데모 영향: 이번 작업은 이미 검증된 기능을 main/dev 기준점에 동기화하는 릴리즈 작업이므로 `/landing`, `/demo` 콘텐츠 변경은 없다.
+
 ### 2026-07-09
 
 - 점주 포털 로그인 링크를 회사명 query가 붙은 긴 URL에서 `/owner/login/{companyId}` 형태의 회사별 단축 링크로 변경했다. 본사 `점주 소통 > 점주 계정 설정`은 이 링크를 복사하게 하고, 점주 로그인 화면은 회사명 입력/표시 필드를 숨겨 아이디와 비밀번호만 입력한다. 기존 `?companyId=` 링크는 호환용으로 유지한다.
