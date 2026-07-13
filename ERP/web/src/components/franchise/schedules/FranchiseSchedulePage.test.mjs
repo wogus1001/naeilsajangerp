@@ -69,3 +69,17 @@ test('Given manual schedule controls When rendered Then shared and personal scop
     assert.match(dialogSource, /event\.key === 'Escape'/);
     assert.match(dialogSource, /initialFocusRef\.current\?\.focus\(\)/);
 });
+
+test('Given the selected day panel When rendered Then it uses a readable list with labelled actions', () => {
+    const pageSource = readFileSync(new URL('./FranchiseSchedulePage.tsx', import.meta.url), 'utf8');
+    const dayListSource = readFileSync(new URL('./FranchiseScheduleDayList.tsx', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /<FranchiseScheduleDayList/);
+    assert.match(dayListSource, /공유 일정/);
+    assert.match(dayListSource, /개인 일정/);
+    assert.match(dayListSource, /이 날짜에는 일정이 없습니다/);
+    assert.match(dayListSource, /메모 없음/);
+    assert.match(dayListSource, /<Pencil size=\{15\} \/> 수정/);
+    assert.match(dayListSource, /<Check size=\{15\} \/> 완료/);
+    assert.match(dayListSource, /<Trash2 size=\{15\} \/> 삭제/);
+});
