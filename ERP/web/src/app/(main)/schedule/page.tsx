@@ -175,7 +175,6 @@ export default function SchedulePage() {
         const linkedApprovalDocumentId = new URLSearchParams(window.location.search).get('approvalDocumentId') || '';
         if (linkedApprovalDocumentId) {
             setApprovalDocumentId(linkedApprovalDocumentId);
-            setActiveScheduleTab('workflow');
         }
         // Set default date for form
         setFormData(prev => ({ ...prev, date: formatDate(new Date()) }));
@@ -532,12 +531,6 @@ export default function SchedulePage() {
                         onClick={() => setActiveScheduleTab('location')}
                     >
                         점포개발 일정
-                    </button>
-                    <button
-                        className={`${styles.scheduleTab} ${activeScheduleTab === 'workflow' ? styles.activeScheduleTab : ''}`}
-                        onClick={() => setActiveScheduleTab('workflow')}
-                    >
-                        전사 업무·결재
                     </button>
                 </div>
                 {activeScheduleTab === 'workflow' ? (

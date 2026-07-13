@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from 'lucide-react';
-import { getMonthDays } from './franchiseScheduleViewModel';
+import { getMonthDays, toDateKey } from './franchiseScheduleViewModel';
 import type { FranchiseScheduleItem } from './franchiseScheduleViewModel';
 import styles from './FranchiseSchedulePage.module.css';
 
@@ -25,22 +25,24 @@ function getStatusTone(items: readonly FranchiseScheduleItem[]): string {
 export function FranchiseScheduleCalendar({ monthDate, selectedDate, items, focusId, onSelectDate }: CalendarProps) {
     const month = monthDate.getMonth();
     const days = getMonthDays(monthDate);
+    const today = toDateKey(new Date());
 
     return (
         <section className={styles.calendarPanel} aria-label="월간 일정 달력">
             <div className={styles.weekHeader}>
-                {WEEKDAYS.map(day => <span key={day}>{day}</span>)}
+                {WEEKDAYS.map((day, index) => <span className={index === 0 ? styles.weekSunday : index === 6 ? styles.weekSaturday : ''} key={day}>{day}</span>)}
             </div>
             <div className={styles.calendarGrid}>
-                {days.map(day => {
+                {days.map((day, index) => {
                     const dayItems = items.filter(item => item.date === day);
                     const isSelected = day === selectedDate;
                     const isCurrentMonth = Number(day.slice(5, 7)) === month + 1;
+                    const weekday = index % 7;
                     return (
                         <button
                             key={day}
                             type="button"
-                            className={`${styles.dayCell} ${isSelected ? styles.daySelected : ''} ${isCurrentMonth ? '' : styles.dayMuted}`}
+                            className={`${styles.dayCell} ${isSelected ? styles.daySelected : ''} ${day === today ? styles.dayToday : ''} ${weekday === 0 ? styles.daySunday : ''} ${weekday === 6 ? styles.daySaturday : ''} ${isCurrentMonth ? '' : styles.dayMuted}`}
                             onClick={() => onSelectDate(day)}
                             aria-pressed={isSelected}
                         >

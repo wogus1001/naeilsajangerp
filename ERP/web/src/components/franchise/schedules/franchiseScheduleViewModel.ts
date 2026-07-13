@@ -21,11 +21,17 @@ export type FranchiseScheduleItem = {
     readonly date: string;
     readonly status: FranchiseScheduleStatus;
     readonly source: FranchiseScheduleSource;
+    readonly assigneeProfileId: string;
     readonly assigneeName: string;
     readonly managerName: string;
     readonly details: string;
     readonly approvalDocumentId: string;
     readonly completedAt: string;
+};
+
+export type FranchiseScheduleAssignee = {
+    readonly id: string;
+    readonly name: string;
 };
 
 export type FranchiseScheduleFilters = {
@@ -101,6 +107,7 @@ export function parseFranchiseScheduleItems(payload: unknown): readonly Franchis
             date,
             status: normalizeStatus(readString(entry, 'status')),
             source: normalizeSource(readString(entry, 'sourceType') || readString(entry, 'source')),
+            assigneeProfileId: readString(entry, 'assigneeProfileId'),
             assigneeName: readString(entry, 'assigneeName') || '담당자 미지정',
             managerName: readString(entry, 'managerName') || '관리자 미지정',
             details: readString(entry, 'details'),
@@ -108,6 +115,16 @@ export function parseFranchiseScheduleItems(payload: unknown): readonly Franchis
             completedAt: readString(entry, 'completedAt')
         }];
     }).sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title));
+}
+
+export function parseFranchiseScheduleAssignees(payload: unknown): readonly FranchiseScheduleAssignee[] {
+    const rows = isRecord(payload) && Array.isArray(payload.data) ? payload.data : [];
+    return rows.flatMap(row => {
+        if (!isRecord(row)) return [];
+        const id = readString(row, 'id');
+        const name = readString(row, 'name');
+        return id && name ? [{ id, name }] : [];
+    });
 }
 
 export function getMonthDays(monthDate: Date): readonly string[] {
@@ -170,7 +187,7 @@ export function buildFranchiseScheduleViewModel(input: {
             { label: '오늘 일정', value: todayCount, helper: '오늘 실행할 운영 일정' },
             { label: '승인 대기', value: pendingApprovals, helper: '결재 문서 기반 일정' },
             { label: '지연 일정', value: overdue, helper: '완료되지 않은 과거 일정' },
-            { label: '이번 주', value: thisWeek, helper: '향후 7일 운영 큐' }
+            { label: '이번 주', value: thisWeek, helper: '향후 7일 예정 일정' }
         ],
         focusId: focus?.id || '',
         message: input.message || ''
