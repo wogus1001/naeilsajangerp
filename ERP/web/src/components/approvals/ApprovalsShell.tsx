@@ -45,10 +45,6 @@ export function ApprovalsShell({ children }: ApprovalsShellProps) {
                     <h1>전자결재</h1>
                     <p>작성부터 승인, 수신과 보관까지 회사 문서를 한 흐름으로 관리합니다.</p>
                 </div>
-                <Link className={styles.writeButton} href="/approvals/write">
-                    <FilePenLine size={17} aria-hidden="true" />
-                    문서 작성
-                </Link>
             </header>
             <nav className={styles.localNav} aria-label="전자결재 메뉴">
                 {APPROVAL_LOCAL_NAVIGATION.map(item => (

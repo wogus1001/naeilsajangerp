@@ -1,5 +1,5 @@
 import type { ApprovalContext } from './access';
-import { receiverIds, type parseDocumentDraft } from './documents';
+import { approvalLineProfileIds, receiverIds, type parseDocumentDraft } from './documents';
 import { ApprovalRouteError, throwDatabaseError } from './errors';
 
 type DocumentDraft = ReturnType<typeof parseDocumentDraft>;
@@ -15,16 +15,18 @@ export async function validateDocumentReferences(context: ApprovalContext, draft
     const receivers = receiverIds(draft.data);
     const profileIds = [...new Set([
         ...(draft.approver_profile_id ? [draft.approver_profile_id] : []),
+        ...approvalLineProfileIds(draft.data),
         ...draft.readerProfileIds,
         ...receivers.profileIds
     ])];
     if (profileIds.length > 0) {
         const { data, error } = await context.supabase.from('profiles').select('id')
-            .eq('company_id', context.companyId).in('id', profileIds)
+            .eq('company_id', context.companyId).eq('status', 'active')
+            .neq('role', 'partner_vendor').in('id', profileIds)
             .returns<Array<{ readonly id: string }>>();
         throwDatabaseError(error);
         if ((data || []).length !== profileIds.length) {
-            throw new ApprovalRouteError(400, 'VALIDATION_ERROR', 'Approval profile references must belong to the company');
+            throw new ApprovalRouteError(400, 'VALIDATION_ERROR', '선택한 결재자 또는 참조자가 회사의 사용 가능한 구성원이 아닙니다.');
         }
     }
     if (receivers.unitIds.length > 0) {

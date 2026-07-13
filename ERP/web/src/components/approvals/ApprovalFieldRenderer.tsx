@@ -119,7 +119,9 @@ export function ApprovalFieldRenderer({ editable = false, fields, onAttachmentCh
                         {field.type !== 'description' && (
                             <label>{field.label}{field.required && <span className={styles.required}>필수</span>}</label>
                         )}
-                        {field.description && field.type !== 'description' && <p>{field.description}</p>}
+                        {field.type !== 'description' && (
+                            <p aria-hidden={field.description ? undefined : true}>{field.description || '\u00a0'}</p>
+                        )}
                         {control}
                     </div>
                 );

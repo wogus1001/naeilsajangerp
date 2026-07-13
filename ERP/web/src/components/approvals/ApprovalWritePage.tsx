@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { FilePenLine, Save, Send } from 'lucide-react';
+import { ArrowLeft, FilePenLine, Save, Send } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { ApprovalAttachments } from './ApprovalAttachments';
 import { fetchApprovalDocument, fetchApprovalOrganization, fetchApprovalTemplates, saveApprovalDocument } from './approvalApi';
 import { ApprovalFieldRenderer } from './ApprovalFieldRenderer';
-import { ApprovalLinePreview } from './ApprovalLinePreview';
+import { ApprovalLineSelector } from './ApprovalLineSelector';
 import { ApprovalPageHeader } from './ApprovalPageHeader';
 import { ApprovalRecipientsPanel } from './ApprovalRecipientsPanel';
-import type { ApprovalFieldValue, ApprovalFieldValues, ApprovalOrganization, ApprovalTemplate } from './approvalTypes';
+import { approvalCategoryLabel } from './approvalLabels';
+import { ApprovalTemplatePicker } from './ApprovalTemplatePicker';
+import type { ApprovalFieldValue, ApprovalFieldValues, ApprovalLineSelections, ApprovalOrganization, ApprovalTemplate } from './approvalTypes';
 import { hasApprovalValue } from './approvalValidation';
 import { approvalDocumentHref } from './approvalsNavigation';
 import { ApprovalWriteMeta, type ApprovalWriteMetaValue } from './ApprovalWriteMeta';
@@ -30,6 +32,7 @@ type ResultModal = {
 };
 
 type ApprovalWritePageProps = { readonly documentId?: string };
+type WriteStage = 'template' | 'document';
 
 export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
     const router = useRouter();
@@ -47,7 +50,9 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
     const [existingAttachmentCount, setExistingAttachmentCount] = React.useState(0);
     const [organization, setOrganization] = React.useState<ApprovalOrganization | null>(null);
     const [readerProfileIds, setReaderProfileIds] = React.useState<readonly string[]>([]);
+    const [approvalLineSelections, setApprovalLineSelections] = React.useState<ApprovalLineSelections>({});
     const [receiverUnitIds, setReceiverUnitIds] = React.useState<readonly string[]>([]);
+    const [writeStage, setWriteStage] = React.useState<WriteStage>(documentId ? 'document' : 'template');
     const selectedTemplate = templates.find(template => template.id === templateId) ?? null;
 
     React.useEffect(() => {
@@ -74,13 +79,14 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                         ? { ...template, fields: document.fields }
                         : template);
                 setTemplates(documentTemplate);
-                setTemplateId(document?.templateId || documentTemplate[0]?.id || '');
+                setTemplateId(document?.templateId || '');
                 setOrganization(organizationResult);
                 if (document) {
                     setTitle(document.title);
                     setValues(document.values);
                     setExistingAttachmentCount(document.attachments.length);
                     setReaderProfileIds(document.readerProfileIds);
+                    setApprovalLineSelections(document.approvalLineSelections);
                     setReceiverUnitIds(document.receiverUnitIds);
                     setMeta({
                         documentBox: document.documentBox,
@@ -102,6 +108,15 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
 
     function updateValue(fieldId: string, value: ApprovalFieldValue) {
         setValues(current => ({ ...current, [fieldId]: value }));
+    }
+
+    function selectTemplate(nextTemplateId: string) {
+        if (nextTemplateId !== templateId) {
+            setValues({});
+            setFiles([]);
+            setApprovalLineSelections({});
+        }
+        setTemplateId(nextTemplateId);
     }
 
     function validationMessage(action: 'saveDraft' | 'submit'): string {
@@ -132,7 +147,8 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                 title: title.trim() || `${selectedTemplate.name} 임시 문서`,
                 documentId: documentId || undefined,
                 readerProfileIds,
-                receiverUnitIds
+                receiverUnitIds,
+                approvalLineSelections
             });
             setSavedDocumentId(document.id);
             setResultModal({
@@ -153,12 +169,22 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
 
     return (
         <section className={styles.page}>
-            <ApprovalPageHeader description="양식을 선택하고 결재 정보를 확인한 뒤 문서를 제출합니다." title={documentId ? '문서 수정' : '작성하기'} />
+            <ApprovalPageHeader description={documentId ? '반려 사유를 확인하고 문서 내용을 수정합니다.' : '양식을 먼저 선택한 뒤 문서 내용을 작성하고 결재를 요청합니다.'} title={documentId ? '문서 수정' : '새 문서'} />
+            {!documentId && writeStage === 'template' ? (
+                <ApprovalTemplatePicker
+                    loading={loading}
+                    onContinue={() => setWriteStage('document')}
+                    onSelect={selectTemplate}
+                    selectedId={templateId}
+                    templates={templates}
+                />
+            ) : (
             <div className={styles.writeLayout}>
                 <div className={styles.documentPanel}>
                     <div className={styles.documentHeading}>
                         <FilePenLine size={20} aria-hidden="true" />
-                        <div><strong>결재 문서</strong><span>{selectedTemplate?.name || '양식 선택 필요'}</span></div>
+                        <div><strong>{documentId ? '문서 수정' : '2단계 · 문서 작성'}</strong><span>{selectedTemplate?.name || '양식 선택 필요'}</span></div>
+                        {!documentId && <button className={styles.changeTemplateButton} onClick={() => setWriteStage('template')} type="button"><ArrowLeft size={15} />양식 다시 선택</button>}
                     </div>
                     <label className={styles.titleField}>
                         <span>문서 제목 <b>필수</b></span>
@@ -175,43 +201,36 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                         />
                     )}
                     {!loading && !selectedTemplate && (
-                        <div className={styles.emptyDocument}>게시된 양식이 없습니다. 양식 관리에서 사용할 양식을 게시해 주세요.</div>
+                        <div className={styles.emptyDocument}>사용 중인 양식이 없습니다. 양식 관리에서 양식 사용을 시작해 주세요.</div>
                     )}
-                    <ApprovalAttachments files={files} onChange={setFiles} />
+                    <ApprovalAttachments disabled={saving} existingCount={existingAttachmentCount} files={files} onChange={setFiles} />
                     {existingAttachmentCount > 0 && <p className={styles.existingAttachmentNote}>기존 첨부파일 {existingAttachmentCount}개는 유지됩니다.</p>}
                 </div>
                 <aside className={styles.writeSidebar}>
                     <div className={styles.sidePanel}>
-                        <h3>양식 선택</h3>
-                        <select
-                            aria-label="결재 양식"
-                            disabled={loading}
-                            onChange={event => {
-                                setTemplateId(event.target.value);
-                                setValues({});
-                            }}
-                            value={templateId}
-                        >
-                            {loading && <option value="">불러오는 중</option>}
-                            {!loading && templates.length === 0 && <option value="">게시된 양식 없음</option>}
-                            {templates.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}
-                        </select>
-                        {selectedTemplate && <p>{selectedTemplate.description}</p>}
+                        <h3>사용 양식</h3>
+                        {selectedTemplate && <span className={styles.selectedTemplateSummary}>{approvalCategoryLabel(selectedTemplate.category)}<strong>{selectedTemplate.name}</strong></span>}
+                        {selectedTemplate && <p>{selectedTemplate.description || '양식 설명이 없습니다.'}</p>}
                     </div>
                     <div className={styles.sidePanel}>
                         <h3>문서 설정</h3>
                         <ApprovalWriteMeta onChange={setMeta} value={meta} />
                     </div>
                     <ApprovalRecipientsPanel
-                        onReaderChange={setReaderProfileIds}
                         onReceiverChange={setReceiverUnitIds}
                         organization={organization}
-                        readerProfileIds={readerProfileIds}
                         receiverUnitIds={receiverUnitIds}
                     />
                     <div className={styles.sidePanel}>
                         {selectedTemplate
-                            ? <ApprovalLinePreview kind="template" steps={selectedTemplate.steps ?? []} />
+                            ? <ApprovalLineSelector
+                                onChange={setApprovalLineSelections}
+                                onReaderChange={setReaderProfileIds}
+                                organization={organization}
+                                readerProfileIds={readerProfileIds}
+                                selections={approvalLineSelections}
+                                steps={selectedTemplate.steps ?? []}
+                            />
                             : <p className={styles.emptyLine}>양식을 선택하면 결재선이 표시됩니다.</p>}
                     </div>
                     <div className={styles.actionBar}>
@@ -224,6 +243,7 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                     </div>
                 </aside>
             </div>
+            )}
             <ConfirmModal
                 confirmText="요청하기"
                 isOpen={confirmSubmit}

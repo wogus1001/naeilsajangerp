@@ -27,6 +27,10 @@
     align-items: start;
 }
 
+.singleColumn {
+    grid-template-columns: minmax(0, 760px);
+}
+
 .panel {
     min-width: 0;
     overflow: hidden;
@@ -92,6 +96,13 @@
     overflow-wrap: anywhere;
 }
 
+.rowActions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+}
+
 .activeBadge,
 .inactiveBadge,
 .primaryBadge {
@@ -148,6 +159,13 @@
     color: #4e5968;
     font-size: 11px;
     font-weight: 600;
+}
+
+.fieldHelp {
+    color: #8b95a1;
+    font-size: 11px;
+    line-height: 1.45;
+    word-break: keep-all;
 }
 
 .formBand input:not([type='checkbox']),

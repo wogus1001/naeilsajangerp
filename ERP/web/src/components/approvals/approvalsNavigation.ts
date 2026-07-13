@@ -6,7 +6,7 @@ export type ApprovalNavigationItem = {
 
 export const APPROVAL_LOCAL_NAVIGATION: readonly ApprovalNavigationItem[] = [
     { href: '/approvals', icon: 'home', label: '홈' },
-    { href: '/approvals/write', icon: 'write', label: '작성하기' },
+    { href: '/approvals/write', icon: 'write', label: '새 문서' },
     { href: '/approvals/pending', icon: 'waiting', label: '결재 대기' },
     { href: '/approvals/mine', icon: 'mine', label: '내 문서함' },
     { href: '/approvals/department', icon: 'department', label: '부서 문서함' },

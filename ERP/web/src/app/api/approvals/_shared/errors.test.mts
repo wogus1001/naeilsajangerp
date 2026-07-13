@@ -38,3 +38,15 @@ test('Given invalid boundary input When handling the error Then the API returns 
     assert.equal(body.code, 'VALIDATION_ERROR');
     assert.equal(body.message, 'title is required');
 });
+
+test('Given a linked organization row appears during deletion When handling the FK error Then the API returns conflict', async () => {
+    const response = approvalErrorResponse({
+        code: '23503',
+        message: '연결된 조직 데이터가 있어 삭제할 수 없습니다.'
+    }, 'fallback');
+    const body = await payload(response);
+
+    assert.equal(response.status, 409);
+    assert.equal(body.code, 'CONFLICT');
+    assert.match(String(body.message), /연결된 항목/);
+});

@@ -4,12 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileDown, FileText, Paperclip, Pencil } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
-import { fetchApprovalDocument, runApprovalAction } from './approvalApi';
+import { downloadApprovalAttachment, fetchApprovalDocument, runApprovalAction } from './approvalApi';
 import { ApprovalDocumentActions } from './ApprovalDocumentActions';
 import { ApprovalFieldRenderer } from './ApprovalFieldRenderer';
 import { formatApprovalDate } from './approvalFormatting';
 import { ApprovalHistory } from './ApprovalHistory';
 import { ApprovalLinePreview } from './ApprovalLinePreview';
+import { approvalDocumentBoxLabel, approvalRetentionLabel, approvalSecurityLabel } from './approvalLabels';
 import { ApprovalStatusBadge } from './ApprovalStatusBadge';
 import type { ApprovalAction, ApprovalDocumentDetail } from './approvalTypes';
 import styles from './ApprovalDocument.module.css';
@@ -24,6 +25,7 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
     const [document, setDocument] = React.useState<ApprovalDocumentDetail | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
+    const [downloadingId, setDownloadingId] = React.useState('');
     const [error, setError] = React.useState('');
     const [result, setResult] = React.useState<ResultModal | null>(null);
 
@@ -51,6 +53,17 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
             setResult({ message: caught instanceof Error ? caught.message : '문서를 처리하지 못했습니다.', type: 'error' });
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleAttachmentDownload(attachment: ApprovalDocumentDetail['attachments'][number]) {
+        setDownloadingId(attachment.id);
+        try {
+            await downloadApprovalAttachment(attachment);
+        } catch (caught) {
+            setResult({ message: caught instanceof Error ? caught.message : '첨부파일을 내려받지 못했습니다.', type: 'error' });
+        } finally {
+            setDownloadingId('');
         }
     }
 
@@ -85,9 +98,9 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
                             <div><dt>소속 부서</dt><dd>{document.departmentName}</dd></div>
                             <div><dt>제출일</dt><dd>{formatApprovalDate(document.submittedAt)}</dd></div>
                             <div><dt>처리기한</dt><dd>{formatApprovalDate(document.dueAt)}</dd></div>
-                            <div><dt>보존기간</dt><dd>{document.retentionPeriod}</dd></div>
-                            <div><dt>보안등급</dt><dd>{document.securityLevel}</dd></div>
-                            <div><dt>문서함</dt><dd>{document.documentBox}</dd></div>
+                            <div><dt>보존기간</dt><dd>{approvalRetentionLabel(document.retentionPeriod)}</dd></div>
+                            <div><dt>보안등급</dt><dd>{approvalSecurityLabel(document.securityLevel)}</dd></div>
+                            <div><dt>문서함</dt><dd>{approvalDocumentBoxLabel(document.documentBox)}</dd></div>
                         </dl>
                         <ApprovalFieldRenderer fields={document.fields ?? []} values={document.values ?? {}} />
                         <div className={styles.savedAttachments}>
@@ -100,7 +113,11 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
                                     {document.attachments.map(attachment => (
                                         <li key={attachment.id}>
                                             <span><Paperclip size={15} aria-hidden="true" />{attachment.name}</span>
-                                            {attachment.url && <a href={attachment.url} rel="noreferrer" target="_blank"><Download size={15} aria-hidden="true" />열기</a>}
+                                            {attachment.url && (
+                                                <button disabled={downloadingId === attachment.id} onClick={() => void handleAttachmentDownload(attachment)} type="button">
+                                                    <Download size={15} aria-hidden="true" />{downloadingId === attachment.id ? '내려받는 중' : '내려받기'}
+                                                </button>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>

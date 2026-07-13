@@ -15,6 +15,10 @@ export function canManageApprovals(requester: RequesterProfile, approvalAdmin: b
     return requester.role === 'admin' || approvalAdmin;
 }
 
+export function canManageApprovalOrganization(requester: RequesterProfile, assignedUnitManager: boolean): boolean {
+    return requester.role === 'admin' || requester.role === 'manager' || assignedUnitManager;
+}
+
 export function canViewApprovalDocument(facts: DocumentVisibilityFacts): boolean {
     return facts.globalAdmin ||
         facts.approvalAdmin ||

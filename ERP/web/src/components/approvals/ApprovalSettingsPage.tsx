@@ -5,6 +5,8 @@ import { AlertModal } from '@/components/common/AlertModal';
 import {
     createApprovalDelegation,
     deleteApprovalDelegation,
+    deleteApprovalMembership,
+    deleteApprovalOrganizationUnit,
     fetchApprovalOrganization,
     saveApprovalOrganization,
     type ApprovalDelegationInput,
@@ -12,18 +14,16 @@ import {
 } from './approvalApi';
 import { ApprovalDelegationsSection } from './ApprovalDelegationsSection';
 import { ApprovalPageHeader } from './ApprovalPageHeader';
-import { ApprovalRolesSection } from './ApprovalRolesSection';
 import type {
     ApprovalMembership,
     ApprovalOrganization,
-    ApprovalOrganizationUnit,
-    ApprovalRoleAssignment
+    ApprovalOrganizationUnit
 } from './approvalTypes';
 import { OrganizationMembershipsSection } from './OrganizationMembershipsSection';
 import { OrganizationUnitsSection } from './OrganizationUnitsSection';
 import styles from './ApprovalSettings.module.css';
 
-const EMPTY_ORGANIZATION: ApprovalOrganization = { people: [], units: [], memberships: [], roleAssignments: [], delegations: [] };
+const EMPTY_ORGANIZATION: ApprovalOrganization = { canManageOrganization: false, requesterProfileId: '', people: [], units: [], memberships: [], roleAssignments: [], delegations: [] };
 type ResultModal = { readonly message: string; readonly type: 'success' | 'error' };
 
 export function ApprovalSettingsPage() {
@@ -84,15 +84,40 @@ export function ApprovalSettingsPage() {
         }
     }
 
+    async function removeOrganizationUnit(id: string) {
+        setSaving(true);
+        try {
+            await deleteApprovalOrganizationUnit(id);
+            setResult({ message: '조직을 삭제했습니다.', type: 'success' });
+            await load();
+        } catch (caught) {
+            setResult({ message: caught instanceof Error ? caught.message : '조직을 삭제하지 못했습니다.', type: 'error' });
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function removeMembership(id: string) {
+        setSaving(true);
+        try {
+            await deleteApprovalMembership(id);
+            setResult({ message: '구성원 소속을 해제했습니다.', type: 'success' });
+            await load();
+        } catch (caught) {
+            setResult({ message: caught instanceof Error ? caught.message : '구성원 소속을 해제하지 못했습니다.', type: 'error' });
+        } finally {
+            setSaving(false);
+        }
+    }
+
     return (
         <section className={styles.page}>
-            <ApprovalPageHeader description="부서, 소속, 결재 역할과 부재 시 위임 범위를 회사 기준으로 관리합니다." title="조직·결재 설정" />
+            <ApprovalPageHeader description="팀장은 부서와 구성원을 관리하고, 모든 구성원은 부재 시 대신 결재할 사람을 설정할 수 있습니다." title="조직과 결재 설정" />
             {loading ? <div className={styles.loading}>설정을 불러오는 중입니다.</div> : (
-                <div className={styles.settingsGrid}>
-                    <OrganizationUnitsSection disabled={saving} onSave={(unit: Partial<ApprovalOrganizationUnit>) => void patchOrganization({ units: [unit] })} people={organization.people} units={organization.units} />
-                    <OrganizationMembershipsSection disabled={saving} memberships={organization.memberships} onSave={(membership: Partial<ApprovalMembership>) => void patchOrganization({ memberships: [membership] })} people={organization.people} units={organization.units} />
-                    <ApprovalRolesSection disabled={saving} onSave={(role: Partial<ApprovalRoleAssignment>) => void patchOrganization({ roleAssignments: [role] })} people={organization.people} roles={organization.roleAssignments} units={organization.units} />
-                    <ApprovalDelegationsSection delegations={organization.delegations} disabled={saving} onCreate={input => void createDelegation(input)} onDelete={id => void removeDelegation(id)} people={organization.people} />
+                <div className={`${styles.settingsGrid} ${organization.canManageOrganization ? '' : styles.singleColumn}`}>
+                    {organization.canManageOrganization && <OrganizationUnitsSection disabled={saving} onDelete={id => void removeOrganizationUnit(id)} onSave={(unit: Partial<ApprovalOrganizationUnit>) => void patchOrganization({ units: [unit] })} people={organization.people} units={organization.units} />}
+                    {organization.canManageOrganization && <OrganizationMembershipsSection disabled={saving} memberships={organization.memberships} onDelete={id => void removeMembership(id)} onSave={(membership: Partial<ApprovalMembership>) => void patchOrganization({ memberships: [membership] })} people={organization.people} units={organization.units} />}
+                    <ApprovalDelegationsSection delegations={organization.delegations} disabled={saving} onCreate={input => void createDelegation(input)} onDelete={id => void removeDelegation(id)} people={organization.people} requesterProfileId={organization.requesterProfileId} />
                 </div>
             )}
             <AlertModal isOpen={result !== null} message={result?.message ?? ''} onClose={() => setResult(null)} title={result?.type === 'success' ? '저장 완료' : '처리 실패'} type={result?.type} />

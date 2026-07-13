@@ -13,6 +13,7 @@ type ApprovalDelegationsSectionProps = {
     readonly onCreate: (input: ApprovalDelegationInput) => void;
     readonly onDelete: (id: string) => void;
     readonly people: readonly ApprovalPerson[];
+    readonly requesterProfileId: string;
 };
 
 const SCOPES = [
@@ -21,12 +22,16 @@ const SCOPES = [
     { value: 'acknowledgement', label: '수신 확인' }
 ] as const;
 
+function scopeLabel(value: string): string {
+    return SCOPES.find(scope => scope.value === value)?.label ?? '결재 처리';
+}
+
 function formatDate(value: string): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(date);
 }
 
-export function ApprovalDelegationsSection({ delegations, disabled, onCreate, onDelete, people }: ApprovalDelegationsSectionProps) {
+export function ApprovalDelegationsSection({ delegations, disabled, onCreate, onDelete, people, requesterProfileId }: ApprovalDelegationsSectionProps) {
     const [delegateProfileId, setDelegateProfileId] = React.useState('');
     const [startsAt, setStartsAt] = React.useState('');
     const [endsAt, setEndsAt] = React.useState('');
@@ -40,8 +45,8 @@ export function ApprovalDelegationsSection({ delegations, disabled, onCreate, on
             <div className={styles.rows}>
                 {delegations.map(delegation => (
                     <div className={styles.row} key={delegation.id}>
-                        <span><strong>{personName(delegation.delegateProfileId)}에게 위임</strong><small>{formatDate(delegation.startsAt)} ~ {formatDate(delegation.endsAt)} · {delegation.actionScope.join(', ')}</small></span>
-                        <button aria-label="위임 해제" className={styles.deleteButton} onClick={() => setDeleteId(delegation.id)} type="button"><Trash2 size={15} /></button>
+                        <span><strong>{delegation.delegatorProfileId === requesterProfileId ? `${personName(delegation.delegateProfileId)}에게 위임` : `${personName(delegation.delegatorProfileId)}님의 결재를 대신 처리`}</strong><small>{formatDate(delegation.startsAt)} ~ {formatDate(delegation.endsAt)} · {delegation.actionScope.map(scopeLabel).join(', ')}</small></span>
+                        {delegation.delegatorProfileId === requesterProfileId && <button aria-label="위임 해제" className={styles.deleteButton} onClick={() => setDeleteId(delegation.id)} type="button"><Trash2 size={15} /></button>}
                     </div>
                 ))}
                 {delegations.length === 0 && <p className={styles.empty}>현재 적용 중인 결재 위임이 없습니다.</p>}
@@ -54,7 +59,7 @@ export function ApprovalDelegationsSection({ delegations, disabled, onCreate, on
                 onCreate({ actionScope, delegateProfileId: delegateProfileId.trim(), endsAt: end.toISOString(), reason: reason.trim(), startsAt: start.toISOString() });
                 setDelegateProfileId(''); setReason('');
             }}>
-                <label><span>대리자</span><select onChange={event => setDelegateProfileId(event.target.value)} value={delegateProfileId}><option value="">대리자 선택</option>{people.map(person => <option key={person.id} value={person.id}>{person.name}{person.email ? ` · ${person.email}` : ''}</option>)}</select></label>
+                <label><span>대리자</span><select onChange={event => setDelegateProfileId(event.target.value)} value={delegateProfileId}><option value="">대리자 선택</option>{people.filter(person => person.id !== requesterProfileId).map(person => <option key={person.id} value={person.id}>{person.name}{person.email ? ` · ${person.email}` : ''}</option>)}</select></label>
                 <label><span>시작</span><input onChange={event => setStartsAt(event.target.value)} type="datetime-local" value={startsAt} /></label>
                 <label><span>종료</span><input onChange={event => setEndsAt(event.target.value)} type="datetime-local" value={endsAt} /></label>
                 <label><span>사유</span><input onChange={event => setReason(event.target.value)} placeholder="휴가, 출장 등" value={reason} /></label>

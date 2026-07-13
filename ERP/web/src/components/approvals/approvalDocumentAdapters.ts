@@ -7,8 +7,10 @@ import type {
     ApprovalField,
     ApprovalFieldValue,
     ApprovalFieldValues,
+    ApprovalLineSelections,
     ApprovalLineStep
 } from './approvalTypes';
+import { approvalCategoryLabel } from './approvalLabels';
 
 export function isApprovalRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -58,7 +60,7 @@ export function approvalSummaryFromWire(value: unknown): ApprovalDocumentSummary
         id: value.id,
         documentNumber: text(value.documentNumber, `DOC-${value.id.slice(0, 8).toUpperCase()}`),
         title: value.title,
-        templateName: text(value.templateName, text(value.category, '일반 결재')),
+        templateName: text(value.templateName, approvalCategoryLabel(text(value.category, 'general'))),
         authorName: text(value.authorName, authorId ? `${authorId.slice(0, 8)}…` : '기안자'),
         departmentName: text(value.departmentName, '소속 정보 없음'),
         status: status(value.status),
@@ -133,6 +135,14 @@ function stringIds(value: unknown): readonly string[] {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+function lineSelections(value: unknown): ApprovalLineSelections {
+    if (!isApprovalRecord(value)) return {};
+    return Object.fromEntries(Object.entries(value).flatMap(([stepId, profileIds]) => {
+        const ids = stringIds(profileIds);
+        return ids.length > 0 ? [[stepId, ids]] : [];
+    }));
+}
+
 export function approvalDetailTemplateId(value: unknown): string {
     if (!isApprovalRecord(value) || !isApprovalRecord(value.document)) return '';
     return text(value.document.templateId);
@@ -166,6 +176,7 @@ export function approvalDetailFromWire(value: unknown, fields: readonly Approval
         }),
         events: events(value.events),
         eligibleActions: eligibleActions(value.eligibleActions),
+        approvalLineSelections: lineSelections(body.approvalLineSelections),
         readerProfileIds: profileIds(value.readers),
         receiverUnitIds: stringIds(body.receiver_unit_ids)
     };

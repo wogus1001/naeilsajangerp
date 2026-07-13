@@ -71,7 +71,7 @@ function stepTarget(value: unknown): ApprovalStepTarget {
 function targetLabel(target: ApprovalStepTarget): string {
     switch (target.kind) {
         case 'profiles': return `${target.profileIds.length}명 지정`;
-        case 'role': return target.roleKey || '결재 역할';
+        case 'role': return '결재 담당자';
         case 'unit_manager': return '선택 부서장';
         case 'unit_members': return '선택 부서원';
         case 'author_manager': return '작성자 소속 부서장';

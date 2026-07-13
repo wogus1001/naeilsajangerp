@@ -41,6 +41,7 @@ function fakeContext(options: { readonly authorProfileId?: string } = {}) {
     };
     const context: ApprovalContext = {
         approvalAdmin: true,
+        organizationManager: true,
         companyId,
         requester: { company_id: companyId, id: actorId, role: 'staff', status: 'active' },
         supabase: fakeSupabase as never
@@ -119,6 +120,7 @@ test('Given submit wins a race When saving a stale draft Then the mutation is re
     };
     const context: ApprovalContext = {
         approvalAdmin: true,
+        organizationManager: true,
         companyId,
         requester: { company_id: companyId, id: actorId, role: 'staff', status: 'active' },
         supabase: { from: () => query } as never

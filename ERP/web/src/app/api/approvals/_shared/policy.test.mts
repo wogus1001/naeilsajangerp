@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { RequesterProfile } from '@/lib/api-auth';
-import { canManageApprovals, canViewApprovalDocument } from './policy.js';
+import { canManageApprovalOrganization, canManageApprovals, canViewApprovalDocument } from './policy.js';
 
 const companyId = '11111111-1111-4111-8111-111111111111';
 const requesterId = '22222222-2222-4222-8222-222222222222';
@@ -16,6 +16,13 @@ test('Given a company approval-admin assignment When checking management Then st
     assert.equal(canManageApprovals(requester('staff'), false), false);
     assert.equal(canManageApprovals(requester('manager'), false), false);
     assert.equal(canManageApprovals(requester('admin'), false), true);
+});
+
+test('Given an organization setting request When checking management Then only administrators, managers, and assigned unit managers can edit', () => {
+    assert.equal(canManageApprovalOrganization(requester('admin'), false), true);
+    assert.equal(canManageApprovalOrganization(requester('manager'), false), true);
+    assert.equal(canManageApprovalOrganization(requester('staff'), true), true);
+    assert.equal(canManageApprovalOrganization(requester('staff'), false), false);
 });
 
 test('Given an unrelated company member When checking a document Then company membership alone grants no visibility', () => {

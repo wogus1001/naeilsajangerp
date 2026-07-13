@@ -53,6 +53,7 @@ export function approvalErrorResponse(error: unknown, fallbackMessage: string): 
         if (code === 'P0002') return fail(404, 'NOT_FOUND', message);
         if (code === '42501' || code === '28000') return fail(403, 'FORBIDDEN', message);
         if (code === '22023' || code === '23514') return fail(400, 'VALIDATION_ERROR', message);
+        if (code === '23503') return fail(409, 'CONFLICT', '연결된 데이터가 있어 삭제하거나 변경할 수 없습니다. 먼저 연결된 항목을 정리해 주세요.');
         if (code === '55000' || code === '23505') return fail(409, 'CONFLICT', message);
     }
     return fail(500, 'INTERNAL_ERROR', fallbackMessage);

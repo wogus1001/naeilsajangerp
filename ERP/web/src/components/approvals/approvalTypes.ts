@@ -47,6 +47,7 @@ export type ApprovalFieldValue =
     | readonly Readonly<Record<string, string>>[]
     | null;
 export type ApprovalFieldValues = Readonly<Record<string, ApprovalFieldValue>>;
+export type ApprovalLineSelections = Readonly<Record<string, readonly string[]>>;
 
 export type ApprovalLineStep = {
     readonly id: string;
@@ -93,6 +94,7 @@ export type ApprovalDocumentDetail = ApprovalDocumentSummary & {
     readonly eligibleActions: readonly ApprovalAction[];
     readonly readerProfileIds: readonly string[];
     readonly receiverUnitIds: readonly string[];
+    readonly approvalLineSelections: ApprovalLineSelections;
 };
 
 export type ApprovalTemplate = {
@@ -164,6 +166,8 @@ export type ApprovalDelegation = {
 };
 
 export type ApprovalOrganization = {
+    readonly canManageOrganization: boolean;
+    readonly requesterProfileId: string;
     readonly people: readonly ApprovalPerson[];
     readonly units: readonly ApprovalOrganizationUnit[];
     readonly memberships: readonly ApprovalMembership[];
