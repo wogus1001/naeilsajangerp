@@ -25,6 +25,15 @@
 
 ## 개발 과정 로그
 
+### 2026-07-13
+
+- 진행현황의 `입점 요청 확인/수정` 모달에 등록 주소 기반 Kakao 지도, Kakao 지도 외부 열기, 첨부 이미지 큰 화면·썸네일·이전/다음 탐색을 추가했다. 임대 조건 요약과 금액 입력은 보증금, 월세, 관리비, 권리금에 천 단위 쉼표를 표시한다.
+- 검증: 입점 요청 request/첨부 upload/access/display 관련 테스트 14건, property registration 테스트 3건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 브라우저 QA: 로컬 `http://localhost:3220/dashboard/franchise-leads/work-intake?tab=properties`에서 첨부 3장 mock 기준 이전/다음 버튼의 `1 / 3 -> 2 / 3` 전환, 활성 파일명, 보증금 `4,000`, 월세 `350`, 1440px·390px page-level horizontal overflow 0건을 확인했다. Kakao SDK는 등록되지 않은 로컬 포트에서 `ERR_BLOCKED_BY_ORB`로 차단되어 지도 fallback과 외부 Kakao 지도 링크를 확인했으며, 실제 타일·마커는 허용 도메인인 `www.fcerp.co.kr` 배포 후 확인한다.
+- 런타임 가설 검증: H1 사진 배열 변경 시 index 기반 선택이 다른 사진을 가리킬 수 있다는 리뷰를 파일 identity 기반 선택으로 보강했고, 좌우 버튼과 `ArrowRight`가 모두 `2 / 3`과 동일 활성 파일을 표시하는 것을 확인했다. H2 초기 금액 문자열이 쉼표 포맷을 우회할 가능성은 실제 입력값 `4,000`, `350`, `50`으로 반증했다. H3 로컬 지도 실패가 지오코더 로직이 아니라 SDK 도메인 제한이라는 가설은 Kakao SDK 요청의 `ERR_BLOCKED_BY_ORB`, 지도 fallback, 정상 외부 지도 링크로 확인했으며 운영 도메인 타일 검증을 배포 게이트로 둔다.
+- 리뷰 보정: 주소 입력 중 지오코딩은 350ms debounce하고, 지도 host는 `ResizeObserver`와 지연 relayout으로 모달 크기 변화를 반영한다. 지오코더 예외 fallback, 지도 상태 live region, 사진 탐색 그룹의 키보드 안내도 추가했다.
+- 데모 영향: 기존 진행현황 상세 확인 UX만 보강하므로 `/landing`, `/demo` 시나리오 변경은 없다. 신규 SQL도 없다.
+
 ### 2026-07-10
 
 - 운영에 직접 배포된 기능 브랜치 `955f42b`가 `main`에 없던 상태를 해소하기 위해 `my_project_main_release`에서 기능 브랜치를 병합했다. main 고유 5개 커밋과 기능 브랜치 고유 14개 커밋이 분기된 상태였으며, 점주 포털 관련 충돌은 최신 운영 정책인 체크리스트 승인 제외, 발송 이력 목록, 공지 첨부/삭제 연동을 유지하도록 해결했다. main 전용 물건지 지도 반경 보정은 자동 병합 결과에 유지했다.

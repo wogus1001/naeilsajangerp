@@ -51,7 +51,7 @@ function renderTextField(
     const isMoneyField = field.unit === '만원';
     const input = (
         <input
-            value={value[field.key]}
+            value={isMoneyField ? formatMoneyText(value[field.key]) : value[field.key]}
             type={isMoneyField ? 'text' : field.kind}
             inputMode={field.kind === 'number' ? (isMoneyField ? 'numeric' : 'decimal') : undefined}
             onChange={event => updateField(field.key, isMoneyField ? formatMoneyText(event.target.value) : event.target.value)}

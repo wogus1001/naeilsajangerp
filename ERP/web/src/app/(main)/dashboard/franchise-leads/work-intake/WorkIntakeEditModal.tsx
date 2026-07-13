@@ -1,18 +1,14 @@
 "use client";
 
 import React from 'react';
-import { FileText, Image as ImageIcon } from 'lucide-react';
 import {
     updatePropertyRegistrationAttachments,
-    type PropertyRegistrationFileAttachment,
     type PropertyRegistrationForm
 } from '@/lib/franchise-property-registration';
-import {
-    isOpenablePropertyAttachment,
-    isPreviewablePropertyAttachment,
-    uploadPropertyRegistrationAttachments
-} from '@/lib/franchise-property-registration-uploads';
-import { formatByteSize } from '@/lib/franchise-property-registration-format';
+import { uploadPropertyRegistrationAttachments } from '@/lib/franchise-property-registration-uploads';
+import { formatMoneyText } from '@/lib/franchise-property-registration-format';
+import { PropertyAddressMap } from './PropertyAddressMap';
+import { PropertyAttachmentGallery } from './PropertyAttachmentGallery';
 import { WorkIntakeEditFields } from './WorkIntakeEditFields';
 import { buildInitialEditForm, saveWorkIntakeEdit, type WorkIntakeEditForm } from './requests';
 import type { WorkIntakeEditTarget } from './types';
@@ -36,32 +32,6 @@ function displayValue(value: string): string {
     return value.trim() || '-';
 }
 
-function isImageAttachment(attachment: PropertyRegistrationFileAttachment): boolean {
-    return attachment.type.startsWith('image/');
-}
-
-function PropertyAttachmentPreview({ attachment }: { readonly attachment: PropertyRegistrationFileAttachment }) {
-    return (
-        <li className={styles.previewFile}>
-            {isPreviewablePropertyAttachment(attachment) ? (
-                <img src={attachment.publicUrl || ''} alt={`${attachment.name} 미리보기`} />
-            ) : (
-                <span className={styles.previewFileIcon}>
-                    {isImageAttachment(attachment) ? <ImageIcon size={16} /> : <FileText size={16} />}
-                </span>
-            )}
-            <div>
-                {isOpenablePropertyAttachment(attachment) ? (
-                    <a href={attachment.publicUrl} target="_blank" rel="noreferrer">{attachment.name}</a>
-                ) : (
-                    <strong>{attachment.name}</strong>
-                )}
-                <small>{formatByteSize(attachment.size)}</small>
-            </div>
-        </li>
-    );
-}
-
 function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationForm }) {
     const operatingDetails: readonly (readonly [string, string])[] = form.currentStatus === '영업중'
         ? [['현재 영업중 상호/매장명', form.operatingStoreName]]
@@ -74,9 +44,10 @@ function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationFo
         ['업태/업종', [form.desiredBusinessType, form.desiredCategory].filter(Boolean).join(' / ')],
         ['주소', [form.propertyAddress, form.detailAddress].filter(Boolean).join(' ')],
         ['임대 조건', [
-            form.deposit ? `보증금 ${form.deposit}만원` : '',
-            form.monthlyRent ? `월세 ${form.monthlyRent}만원` : '',
-            form.maintenanceFee ? `관리비 ${form.maintenanceFee}만원` : ''
+            form.deposit ? `보증금 ${formatMoneyText(form.deposit)}만원` : '',
+            form.monthlyRent ? `월세 ${formatMoneyText(form.monthlyRent)}만원` : '',
+            form.maintenanceFee ? `관리비 ${formatMoneyText(form.maintenanceFee)}만원` : '',
+            form.premium ? `권리금 ${formatMoneyText(form.premium)}만원` : ''
         ].filter(Boolean).join(' / ')],
         ['상담 메모', form.consultationMemo],
         ['리스크 메모', form.riskMemo]
@@ -96,16 +67,8 @@ function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationFo
                     </div>
                 ))}
             </dl>
-            {form.fileAttachments.length > 0 && (
-                <ul className={styles.previewFiles}>
-                    {form.fileAttachments.map(attachment => (
-                        <PropertyAttachmentPreview
-                            key={`${attachment.name}:${attachment.size}:${attachment.storagePath || ''}`}
-                            attachment={attachment}
-                        />
-                    ))}
-                </ul>
-            )}
+            <PropertyAddressMap address={form.propertyAddress} detailAddress={form.detailAddress} />
+            <PropertyAttachmentGallery attachments={form.fileAttachments} />
         </section>
     );
 }
