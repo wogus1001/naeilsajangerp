@@ -529,14 +529,6 @@ export default function SchedulePage() {
         <div className={styles.container}>
             {/* Calendar Section */}
             <div className={styles.calendarSection}>
-                <div className={styles.scheduleTabs}>
-                    <button
-                        className={`${styles.scheduleTab} ${activeScheduleTab === 'location' ? styles.activeScheduleTab : ''}`}
-                        onClick={() => setActiveScheduleTab('location')}
-                    >
-                        점포개발 일정
-                    </button>
-                </div>
                 {activeScheduleTab === 'workflow' ? (
                     <div className={styles.workflowTabContent}>
                         <div className={styles.workflowHub}>

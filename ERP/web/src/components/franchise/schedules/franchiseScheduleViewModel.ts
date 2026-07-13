@@ -13,6 +13,7 @@ export function getFranchiseScheduleMutationPath(
 
 export type FranchiseScheduleStatus = '예정' | '진행중' | '완료' | '지연' | '취소';
 export type FranchiseScheduleSource = 'manual' | 'approval-document' | 'supervision-visit' | 'report' | 'corrective-action';
+export type FranchiseScheduleVisibility = 'shared' | 'personal';
 export type FranchiseScheduleLoadState = 'loading' | 'empty' | 'ready' | 'needs-sql' | 'forbidden' | 'error';
 
 export type FranchiseScheduleItem = {
@@ -21,6 +22,7 @@ export type FranchiseScheduleItem = {
     readonly date: string;
     readonly status: FranchiseScheduleStatus;
     readonly source: FranchiseScheduleSource;
+    readonly visibility: FranchiseScheduleVisibility;
     readonly assigneeProfileId: string;
     readonly assigneeName: string;
     readonly managerName: string;
@@ -37,6 +39,7 @@ export type FranchiseScheduleAssignee = {
 export type FranchiseScheduleFilters = {
     readonly status: 'all' | FranchiseScheduleStatus;
     readonly source: 'all' | FranchiseScheduleSource;
+    readonly visibility: 'all' | FranchiseScheduleVisibility;
     readonly assignee: string;
 };
 
@@ -87,6 +90,10 @@ function normalizeSource(value: string): FranchiseScheduleSource {
     return 'manual';
 }
 
+function normalizeVisibility(value: string): FranchiseScheduleVisibility {
+    return value === 'personal' ? 'personal' : 'shared';
+}
+
 export function parseFranchiseScheduleItems(payload: unknown): readonly FranchiseScheduleItem[] {
     const source = Array.isArray(payload)
         ? payload
@@ -107,6 +114,7 @@ export function parseFranchiseScheduleItems(payload: unknown): readonly Franchis
             date,
             status: normalizeStatus(readString(entry, 'status')),
             source: normalizeSource(readString(entry, 'sourceType') || readString(entry, 'source')),
+            visibility: normalizeVisibility(readString(entry, 'visibility')),
             assigneeProfileId: readString(entry, 'assigneeProfileId'),
             assigneeName: readString(entry, 'assigneeName') || '담당자 미지정',
             managerName: readString(entry, 'managerName') || '관리자 미지정',
@@ -118,13 +126,23 @@ export function parseFranchiseScheduleItems(payload: unknown): readonly Franchis
 }
 
 export function parseFranchiseScheduleAssignees(payload: unknown): readonly FranchiseScheduleAssignee[] {
-    const rows = isRecord(payload) && Array.isArray(payload.data) ? payload.data : [];
+    const data = isRecord(payload) ? payload.data : null;
+    const rows = Array.isArray(data)
+        ? data
+        : isRecord(data) && Array.isArray(data.assignees)
+            ? data.assignees
+            : [];
     return rows.flatMap(row => {
         if (!isRecord(row)) return [];
         const id = readString(row, 'id');
         const name = readString(row, 'name');
         return id && name ? [{ id, name }] : [];
     });
+}
+
+export function parseFranchiseScheduleRequesterProfileId(payload: unknown): string {
+    const data = isRecord(payload) ? payload.data : null;
+    return isRecord(data) ? readString(data, 'requesterProfileId') : '';
 }
 
 export function getMonthDays(monthDate: Date): readonly string[] {
@@ -162,6 +180,7 @@ export function buildFranchiseScheduleViewModel(input: {
     const filteredItems = input.items.filter(item =>
         (input.filters.status === 'all' || item.status === input.filters.status) &&
         (input.filters.source === 'all' || item.source === input.filters.source) &&
+        (input.filters.visibility === 'all' || item.visibility === input.filters.visibility) &&
         (!input.filters.assignee || item.assigneeName.includes(input.filters.assignee))
     );
     const focus = input.approvalDocumentId

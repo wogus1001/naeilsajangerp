@@ -17,10 +17,13 @@ import {
 
 function canMutateManualSchedule(
     requester: { readonly id: string; readonly company_id: string | null; readonly role: string | null },
-    schedule: Pick<ScheduleRow, 'assignee_profile_id' | 'company_id' | 'creator_profile_id' | 'source_id' | 'source_type'>
+    schedule: Pick<ScheduleRow, 'assignee_profile_id' | 'company_id' | 'creator_profile_id' | 'source_id' | 'source_type' | 'visibility'>
 ): Response | null {
     if (requester.company_id !== schedule.company_id) return fail(403, 'FORBIDDEN', 'cross-company access denied');
     if (!isManualSchedule(schedule)) return fail(403, 'FORBIDDEN', 'source schedules must be managed through their workflow');
+    if (schedule.visibility === 'personal' && schedule.creator_profile_id !== requester.id) {
+        return fail(403, 'FORBIDDEN', 'personal schedules can only be changed by their creator');
+    }
     if (isManagerRole(requester.role)) return null;
     if (schedule.creator_profile_id === requester.id || schedule.assignee_profile_id === requester.id) return null;
     return fail(403, 'FORBIDDEN', 'staff can only update their own manual schedules');
@@ -88,7 +91,8 @@ function nullRow(): ScheduleRow {
         status: null,
         title: null,
         type: null,
-        updated_at: null
+        updated_at: null,
+        visibility: null
     };
 }
 
@@ -104,13 +108,25 @@ export async function updateSchedule(
     }
     const canAssign = isManagerRole(target.requester.role);
     const companyId = target.row.company_id || '';
-    const creatorId = hasOwn(body, 'creatorProfileId') || hasOwn(body, 'creator_profile_id')
+    const visibility = hasOwn(body, 'visibility')
+        ? cleanString(body.visibility) === 'personal' ? 'personal' : 'shared'
+        : target.row.visibility === 'personal' ? 'personal' : 'shared';
+    if (visibility === 'personal' && target.row.creator_profile_id !== target.requester.id) {
+        return fail(403, 'FORBIDDEN', 'only the creator can make a schedule personal');
+    }
+    const creatorId = visibility === 'personal'
+        ? target.requester.id
+        : hasOwn(body, 'creatorProfileId') || hasOwn(body, 'creator_profile_id')
         ? cleanString(valueFor(body, 'creatorProfileId', 'creator_profile_id')) || target.row.creator_profile_id
         : target.row.creator_profile_id;
-    const assigneeId = hasOwn(body, 'assigneeProfileId') || hasOwn(body, 'assignee_profile_id')
+    const assigneeId = visibility === 'personal'
+        ? target.requester.id
+        : hasOwn(body, 'assigneeProfileId') || hasOwn(body, 'assignee_profile_id')
         ? cleanString(valueFor(body, 'assigneeProfileId', 'assignee_profile_id')) || target.row.assignee_profile_id
         : target.row.assignee_profile_id;
-    const managerId = hasOwn(body, 'managerProfileId') || hasOwn(body, 'manager_profile_id')
+    const managerId = visibility === 'personal'
+        ? null
+        : hasOwn(body, 'managerProfileId') || hasOwn(body, 'manager_profile_id')
         ? cleanString(valueFor(body, 'managerProfileId', 'manager_profile_id')) || null
         : target.row.manager_profile_id;
     if (!canAssign && (creatorId !== target.requester.id || assigneeId !== target.requester.id || managerId)) {
@@ -130,6 +146,7 @@ export async function updateSchedule(
     if (hasOwn(body, 'dueAt') || hasOwn(body, 'due_at')) updates.due_at = cleanString(valueFor(body, 'dueAt', 'due_at')) || null;
     if (hasOwn(body, 'remindAt') || hasOwn(body, 'remind_at')) updates.remind_at = cleanString(valueFor(body, 'remindAt', 'remind_at')) || null;
     if (hasOwn(body, 'metadata')) updates.metadata = isRecord(body.metadata) ? body.metadata : {};
+    updates.visibility = visibility;
     updates.creator_profile_id = creatorId;
     updates.assignee_profile_id = assigneeId;
     updates.manager_profile_id = managerId;

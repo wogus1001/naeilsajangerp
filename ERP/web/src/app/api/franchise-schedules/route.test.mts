@@ -31,6 +31,7 @@ type FakeState = {
     readonly profiles: Record<string, JsonRecord>;
     readonly schedules: Record<string, JsonRecord>;
     readonly schemaMissing?: boolean;
+    readonly visibilityMissing?: boolean;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -117,6 +118,7 @@ function scheduleRow(overrides: JsonRecord = {}): JsonRecord {
         title: 'Manual schedule',
         type: null,
         updated_at: '2026-07-10T00:00:00.000Z',
+        visibility: 'shared',
         ...overrides
     };
 }
@@ -149,6 +151,13 @@ function schemaError() {
     return {
         code: '42P01',
         message: 'relation "franchise_schedules" does not exist'
+    };
+}
+
+function visibilitySchemaError() {
+    return {
+        code: 'PGRST204',
+        message: "Could not find the 'visibility' column of 'franchise_schedules' in the schema cache"
     };
 }
 
@@ -190,6 +199,7 @@ class FakeSelectQuery {
 
     async maybeSingle() {
         if (this.state.schemaMissing && this.table === 'franchise_schedules') return { data: null, error: schemaError() };
+        if (this.state.visibilityMissing && this.table === 'franchise_schedules') return { data: null, error: visibilitySchemaError() };
         return { data: selectRows(this.state, this.table, this.filters)[0] || null, error: null };
     }
 
@@ -203,7 +213,9 @@ class FakeSelectQuery {
     ): Promise<TResult1 | TResult2> {
         const value = this.state.schemaMissing && this.table === 'franchise_schedules'
             ? { data: [], error: schemaError() }
-            : { data: selectRows(this.state, this.table, this.filters), error: null };
+            : this.state.visibilityMissing && this.table === 'franchise_schedules'
+                ? { data: [], error: visibilitySchemaError() }
+                : { data: selectRows(this.state, this.table, this.filters), error: null };
         return Promise.resolve(value).then(onfulfilled, onrejected);
     }
 }
@@ -353,6 +365,22 @@ test('Given manager filters When listing schedules Then company scope and filter
     ].filter(filter => filter.column !== 'id'));
 });
 
+test('Given shared and personal schedules When listing Then another users personal schedule is hidden', async () => {
+    const state = createState({
+        schedules: {
+            shared: scheduleRow({ id: 'shared', visibility: 'shared' }),
+            own: scheduleRow({ creator_profile_id: 'manager-1', id: 'own', visibility: 'personal' }),
+            other: scheduleRow({ creator_profile_id: 'staff-1', id: 'other', visibility: 'personal' })
+        }
+    });
+    const response = await handleFranchiseSchedulesGET(request('GET'), createDependencies(state));
+    const payload = await json(response);
+    const data = Array.isArray(payload.data) ? payload.data : [];
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(data.map(row => isRecord(row) ? row.id : '').sort(), ['own', 'shared']);
+});
+
 test('Given calendar date aliases When listing schedules Then from and to bounds are applied', async () => {
     const state = createState();
     const response = await handleFranchiseSchedulesGET(
@@ -420,7 +448,8 @@ test('Given manager When creating assigning and mutating manual schedule Then CR
         status: '예정',
         title: 'Created schedule',
         type: 'manual',
-        updated_at: state.mutations[0]?.payload.updated_at
+        updated_at: state.mutations[0]?.payload.updated_at,
+        visibility: 'shared'
     });
     assert.equal(patched.status, 200);
     assert.equal(completed.status, 200);
@@ -470,6 +499,35 @@ test('Given staff requester When assigning another member Then it is rejected bu
     assert.equal(accepted.status, 201);
 });
 
+test('Given personal schedule When creating Then it is owned and assigned to the requester', async () => {
+    const state = createState();
+    const response = await handleFranchiseSchedulesPOST(request('POST', {
+        date: '2026-07-13',
+        title: 'Personal schedule',
+        visibility: 'personal'
+    }), createDependencies(state));
+
+    assert.equal(response.status, 201);
+    assert.equal(state.mutations[0]?.payload.creator_profile_id, 'manager-1');
+    assert.equal(state.mutations[0]?.payload.assignee_profile_id, 'manager-1');
+    assert.equal(state.mutations[0]?.payload.manager_profile_id, null);
+    assert.equal(state.mutations[0]?.payload.visibility, 'personal');
+});
+
+test('Given another users personal schedule When manager mutates it Then access is denied', async () => {
+    const state = createState({
+        schedules: {
+            private: scheduleRow({ creator_profile_id: 'staff-1', id: 'private', visibility: 'personal' })
+        }
+    });
+    const deps = createDependencies(state);
+    const edit = await handleFranchiseSchedulesPATCH(request('PATCH', { id: 'private', title: 'x' }), deps);
+    const deleted = await handleFranchiseSchedulesDELETE(request('DELETE', {}, 'http://localhost/api/franchise-schedules?id=private'), deps);
+
+    assert.deepEqual([edit.status, deleted.status], [403, 403]);
+    assert.equal(state.mutations.length, 0);
+});
+
 test('Given source schedule When edit delete or complete is attempted Then public mutations are forbidden', async () => {
     const state = createState();
     const deps = createDependencies(state);
@@ -490,4 +548,12 @@ test('Given missing franchise schedule schema When listing Then route returns 42
 
     assert.equal(response.status, 424);
     assert.match(String(payload.message), /supabase_franchise_schedule_prepare_migration\.sql/);
+});
+
+test('Given missing visibility column When listing Then route returns 424 with visibility SQL filename', async () => {
+    const response = await handleFranchiseSchedulesGET(request('GET'), createDependencies(createState({ visibilityMissing: true })));
+    const payload = await json(response);
+
+    assert.equal(response.status, 424);
+    assert.match(String(payload.message), /supabase_franchise_schedule_visibility_migration\.sql/);
 });

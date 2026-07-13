@@ -29,9 +29,11 @@ export type ScheduleRow = {
     readonly source_type: string | null; readonly source_id: string | null;
     readonly due_at: string | null; readonly remind_at: string | null; readonly completed_at: string | null;
     readonly metadata: JsonRecord | null; readonly created_at: string | null; readonly updated_at: string | null;
+    readonly visibility: string | null;
 };
 
 const PREPARE_SQL = 'supabase_franchise_schedule_prepare_migration.sql';
+const VISIBILITY_SQL = 'supabase_franchise_schedule_visibility_migration.sql';
 const MISSING_SCHEMA_CODES = ['PGRST204', 'PGRST205', '42P01', '42703'] as const;
 
 export function createDefaultRouteDependencies(): FranchiseScheduleRouteDependencies {
@@ -76,8 +78,21 @@ function isMissingFranchiseScheduleSchemaError(error: unknown): boolean {
         && /franchise_schedules|creator_profile_id|assignee_profile_id|manager_profile_id/i.test(message);
 }
 
+function isMissingVisibilitySchemaError(error: unknown): boolean {
+    const code = isRecord(error) && typeof error.code === 'string' ? error.code : '';
+    const message = error instanceof Error
+        ? error.message
+        : isRecord(error) && typeof error.message === 'string'
+            ? error.message
+            : '';
+    return (code === '42703' || code === 'PGRST204') && /visibility/i.test(message);
+}
+
 export function handleFranchiseScheduleError(error: unknown, action: string): Response {
     console.error(`Franchise schedules ${action} error:`, error);
+    if (isMissingVisibilitySchemaError(error)) {
+        return fail(424, 'VALIDATION_ERROR', `프랜차이즈 일정 SQL 등록 필요: ${VISIBILITY_SQL}`);
+    }
     if (isMissingFranchiseScheduleSchemaError(error)) {
         return fail(424, 'VALIDATION_ERROR', `프랜차이즈 일정 SQL 등록 필요: ${PREPARE_SQL}`);
     }
@@ -159,7 +174,8 @@ export function transformSchedule(row: unknown): JsonRecord | null {
         completedAt: row.completed_at,
         metadata: isRecord(row.metadata) ? row.metadata : {},
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        visibility: cleanString(row.visibility) === 'personal' ? 'personal' : 'shared'
     };
 }
 
@@ -183,7 +199,7 @@ export async function listSchedules(
 
     let query = supabaseAdmin
         .from('franchise_schedules')
-        .select('*')
+        .select('*, visibility')
         .eq('company_id', companyId)
         .order('date', { ascending: true })
         .order('created_at', { ascending: true });
@@ -203,7 +219,13 @@ export async function listSchedules(
 
     const { data, error } = await query;
     if (error) throw error;
-    const rows = Array.isArray(data) ? data : [];
+    const visibility = cleanString(searchParams.get('visibility'));
+    const rows = (Array.isArray(data) ? data : []).filter(row => {
+        if (!isRecord(row)) return false;
+        const rowVisibility = cleanString(row.visibility) === 'personal' ? 'personal' : 'shared';
+        if (rowVisibility === 'personal' && cleanString(row.creator_profile_id) !== requester.id) return false;
+        return !visibility || visibility === 'all' || rowVisibility === visibility;
+    });
     return ok(rows.map(transformSchedule));
 }
 
@@ -223,9 +245,16 @@ export async function createSchedule(
     const companyId = cleanString(valueFor(body, 'companyId', 'company_id')) || requester.company_id;
     if (companyId !== requester.company_id) return fail(403, 'FORBIDDEN', 'cross-company create denied');
     const canAssign = isManagerRole(requester.role);
-    const creatorId = cleanString(valueFor(body, 'creatorProfileId', 'creator_profile_id')) || requester.id;
-    const assigneeId = cleanString(valueFor(body, 'assigneeProfileId', 'assignee_profile_id')) || requester.id;
-    const managerId = cleanString(valueFor(body, 'managerProfileId', 'manager_profile_id')) || null;
+    const visibility = cleanString(body.visibility) === 'personal' ? 'personal' : 'shared';
+    const creatorId = visibility === 'personal'
+        ? requester.id
+        : cleanString(valueFor(body, 'creatorProfileId', 'creator_profile_id')) || requester.id;
+    const assigneeId = visibility === 'personal'
+        ? requester.id
+        : cleanString(valueFor(body, 'assigneeProfileId', 'assignee_profile_id')) || requester.id;
+    const managerId = visibility === 'personal'
+        ? null
+        : cleanString(valueFor(body, 'managerProfileId', 'manager_profile_id')) || null;
     if (!canAssign && (creatorId !== requester.id || assigneeId !== requester.id || managerId)) {
         return fail(403, 'FORBIDDEN', 'staff can only create their own manual schedules');
     }
@@ -254,7 +283,8 @@ export async function createSchedule(
             remind_at: cleanString(valueFor(body, 'remindAt', 'remind_at')) || null,
             metadata: isRecord(body.metadata) ? body.metadata : {},
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            visibility
         })
         .select('*')
         .single<ScheduleRow>();
