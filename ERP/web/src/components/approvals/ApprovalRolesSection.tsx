@@ -18,6 +18,7 @@ export function ApprovalRolesSection({ disabled, roles, units, onSave, people }:
     const [roleName, setRoleName] = React.useState('결재 관리자');
     const [profileId, setProfileId] = React.useState('');
     const [unitId, setUnitId] = React.useState('');
+    const companyWideRole = roleKey === 'approval_admin';
     const personName = (id: string) => people.find(person => person.id === id)?.name ?? '알 수 없는 구성원';
     return (
         <section className={styles.panel}>
@@ -34,13 +35,13 @@ export function ApprovalRolesSection({ disabled, roles, units, onSave, people }:
             <form className={styles.formBand} onSubmit={event => {
                 event.preventDefault();
                 if (!roleKey || !roleName || !profileId) return;
-                onSave({ active: true, profileId: profileId.trim(), roleKey: roleKey.trim(), roleName: roleName.trim(), unitId: unitId || null });
+                onSave({ active: true, profileId: profileId.trim(), roleKey: roleKey.trim(), roleName: roleName.trim(), unitId: companyWideRole ? null : unitId || null });
                 setProfileId('');
             }}>
-                <label><span>역할 키</span><input onChange={event => setRoleKey(event.target.value)} value={roleKey} /></label>
+                <label><span>역할 키</span><input onChange={event => { setRoleKey(event.target.value); if (event.target.value === 'approval_admin') setUnitId(''); }} value={roleKey} /></label>
                 <label><span>역할명</span><input onChange={event => setRoleName(event.target.value)} value={roleName} /></label>
                 <label><span>담당자</span><select onChange={event => setProfileId(event.target.value)} value={profileId}><option value="">담당자 선택</option>{people.map(person => <option key={person.id} value={person.id}>{person.name}{person.email ? ` · ${person.email}` : ''}</option>)}</select></label>
-                <label><span>적용 조직</span><select onChange={event => setUnitId(event.target.value)} value={unitId}><option value="">회사 전체</option>{units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
+                <label><span>적용 조직</span><select disabled={companyWideRole} onChange={event => setUnitId(event.target.value)} value={companyWideRole ? '' : unitId}><option value="">회사 전체</option>{units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
                 <button disabled={disabled || !profileId} type="submit"><Plus size={15} />역할 추가</button>
             </form>
         </section>

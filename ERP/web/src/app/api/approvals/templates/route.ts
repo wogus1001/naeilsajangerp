@@ -14,6 +14,7 @@ import {
     templateView,
     type ApprovalTemplateRow
 } from '../_shared/template-rows';
+import { parseTemplateDefinition, templateStepInserts } from '../_shared/template';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,20 +57,50 @@ export async function POST(request: Request) {
         const body = await readJsonRecord(request);
         const context = await resolveApprovalContext(request, body);
         requireApprovalManager(context);
+        const name = parseRequiredText(body.name, 'name', 120);
+        const description = parseOptionalText(body.description, 'description', 2_000);
+        const category = parseOptionalText(body.category, 'category', 80) || 'general';
+        const security = body.securityLevel === undefined ? 'company' : securityLevel(body.securityLevel);
+        const retentionYears = body.retentionYears === undefined
+            ? 5
+            : parseIntegerValue(body.retentionYears, 'retentionYears', 1, 30);
+        if (hasOwn(body, 'fields') || hasOwn(body, 'steps')) {
+            const definition = parseTemplateDefinition(body);
+            const status = parseOptionalText(body.status, 'status', 20) || 'draft';
+            if (!['draft', 'published', 'retired'].includes(status)) {
+                return fail(400, 'VALIDATION_ERROR', 'status is not supported');
+            }
+            const { data: templateId, error: rpcError } = await context.supabase.rpc('create_company_approval_template_with_version', {
+                p_actor_profile_id: context.requester.id,
+                p_category: category,
+                p_company_id: context.companyId,
+                p_description: description,
+                p_fields: definition.fields,
+                p_name: name,
+                p_retention_years: retentionYears,
+                p_security_level: security,
+                p_status: status,
+                p_steps: templateStepInserts(definition.steps)
+            });
+            throwDatabaseError(rpcError);
+            const { data, error } = await context.supabase.from('approval_templates').select(TEMPLATE_SELECT)
+                .eq('id', templateId).eq('company_id', context.companyId).single<ApprovalTemplateRow>();
+            throwDatabaseError(error);
+            if (!data) throw new ApprovalRouteError(500, 'INTERNAL_ERROR', 'Approval template was not returned');
+            return ok({ template: templateView(data) }, 201);
+        }
         const now = new Date().toISOString();
         const { data, error } = await context.supabase
             .from('approval_templates')
             .insert({
                 company_id: context.companyId,
                 template_key: parseOptionalText(body.templateKey, 'templateKey', 100) || undefined,
-                name: parseRequiredText(body.name, 'name', 120),
-                description: parseOptionalText(body.description, 'description', 2_000),
+                name,
+                description,
                 document_type: parseOptionalText(body.documentType, 'documentType', 80) || 'general',
-                category: parseOptionalText(body.category, 'category', 80) || 'general',
-                security_level: body.securityLevel === undefined ? 'company' : securityLevel(body.securityLevel),
-                retention_years: body.retentionYears === undefined
-                    ? 5
-                    : parseIntegerValue(body.retentionYears, 'retentionYears', 1, 30),
+                category,
+                security_level: security,
+                retention_years: retentionYears,
                 active: body.active === undefined ? true : parseBoolean(body.active, 'active'),
                 created_by: context.requester.id,
                 updated_by: context.requester.id,

@@ -19,6 +19,32 @@ export const dynamic = 'force-dynamic';
 
 type ReaderRow = { readonly document_id: string };
 type MembershipRow = { readonly unit_id: string };
+const QUERY_PAGE_SIZE = 500;
+
+async function allRows<Row>(load: (from: number, to: number) => PromiseLike<{
+    readonly data: Row[] | null;
+    readonly error: unknown;
+}>): Promise<readonly Row[]> {
+    const rows: Row[] = [];
+    for (let from = 0; ; from += QUERY_PAGE_SIZE) {
+        const result = await load(from, from + QUERY_PAGE_SIZE - 1);
+        throwDatabaseError(result.error);
+        const page = result.data || [];
+        rows.push(...page);
+        if (page.length < QUERY_PAGE_SIZE) return rows;
+    }
+}
+
+async function visibleInBatches(
+    context: Awaited<ReturnType<typeof resolveApprovalContext>>,
+    documents: readonly ApprovalDocumentRow[]
+): Promise<readonly ApprovalDocumentRow[]> {
+    const visible: ApprovalDocumentRow[] = [];
+    for (let offset = 0; offset < documents.length; offset += QUERY_PAGE_SIZE) {
+        visible.push(...await visibleApprovalDocuments(context, documents.slice(offset, offset + QUERY_PAGE_SIZE)));
+    }
+    return visible;
+}
 
 function matchesFilter(input: {
     readonly filter: InboxFilter;
@@ -60,30 +86,26 @@ export async function GET(request: Request) {
         const context = await resolveApprovalContext(request);
         const parsed = parseInboxQuery(new URL(request.url).searchParams);
         const [documents, steps, readers, memberships] = await Promise.all([
-            context.supabase.from('approval_documents').select(DOCUMENT_SELECT)
+            allRows<ApprovalDocumentRow>((from, to) => context.supabase.from('approval_documents').select(DOCUMENT_SELECT)
                 .eq('company_id', context.companyId).order('updated_at', { ascending: false })
-                .returns<ApprovalDocumentRow[]>(),
-            context.supabase.from('approval_document_steps').select(DOCUMENT_STEP_SELECT)
+                .range(from, to).returns<ApprovalDocumentRow[]>()),
+            allRows<ApprovalDocumentStepRow>((from, to) => context.supabase.from('approval_document_steps').select(DOCUMENT_STEP_SELECT)
                 .eq('company_id', context.companyId).eq('status', 'active')
-                .returns<ApprovalDocumentStepRow[]>(),
-            context.supabase.from('approval_document_readers').select('document_id')
+                .range(from, to).returns<ApprovalDocumentStepRow[]>()),
+            allRows<ReaderRow>((from, to) => context.supabase.from('approval_document_readers').select('document_id')
                 .eq('company_id', context.companyId).eq('profile_id', context.requester.id)
-                .returns<ReaderRow[]>(),
-            context.supabase.from('organization_memberships').select('unit_id')
+                .range(from, to).returns<ReaderRow[]>()),
+            allRows<MembershipRow>((from, to) => context.supabase.from('organization_memberships').select('unit_id')
                 .eq('company_id', context.companyId).eq('profile_id', context.requester.id).eq('active', true)
-                .returns<MembershipRow[]>()
+                .range(from, to).returns<MembershipRow[]>())
         ]);
-        throwDatabaseError(documents.error);
-        throwDatabaseError(steps.error);
-        throwDatabaseError(readers.error);
-        throwDatabaseError(memberships.error);
-        const waitingDocumentIds = new Set((steps.data || [])
+        const waitingDocumentIds = new Set(steps
             .filter(step => actorAppearsInTargets(step.targets, context.requester.id)
                 && !actorAlreadyResponded(step.targets, step.responses, context.requester.id))
             .map(step => step.document_id));
-        const readerDocumentIds = new Set((readers.data || []).map(reader => reader.document_id));
-        const receiverUnitIds = new Set((memberships.data || []).map(membership => membership.unit_id));
-        const matched = (documents.data || []).filter(document => matchesFilter({
+        const readerDocumentIds = new Set(readers.map(reader => reader.document_id));
+        const receiverUnitIds = new Set(memberships.map(membership => membership.unit_id));
+        const matched = documents.filter(document => matchesFilter({
             filter: parsed.filter,
             document,
             requesterId: context.requester.id,
@@ -91,7 +113,7 @@ export async function GET(request: Request) {
             readerDocumentIds,
             receiverUnitIds
         }));
-        const filtered = await visibleApprovalDocuments(context, matched);
+        const filtered = await visibleInBatches(context, matched);
         const delayedTotal = filtered.filter(document => document.due_at && new Date(document.due_at).getTime() < Date.now()).length;
         const offset = (parsed.page - 1) * parsed.pageSize;
         const pageDocuments = filtered.slice(offset, offset + parsed.pageSize);

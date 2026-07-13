@@ -14,7 +14,7 @@ function requester(role: string, id = requesterId): RequesterProfile {
 test('Given a company approval-admin assignment When checking management Then staff gains approval administration only there', () => {
     assert.equal(canManageApprovals(requester('staff'), true), true);
     assert.equal(canManageApprovals(requester('staff'), false), false);
-    assert.equal(canManageApprovals(requester('manager'), false), true);
+    assert.equal(canManageApprovals(requester('manager'), false), false);
     assert.equal(canManageApprovals(requester('admin'), false), true);
 });
 
@@ -26,7 +26,8 @@ test('Given an unrelated company member When checking a document Then company me
         pastOrActiveAssignee: false,
         reader: false,
         requesterId,
-        approvalAdmin: false
+        approvalAdmin: false,
+        securityLevel: 'company'
     }), false);
 });
 
@@ -38,7 +39,8 @@ test('Given each allowed document relationship When checking visibility Then acc
         pastOrActiveAssignee: false,
         reader: false,
         requesterId,
-        approvalAdmin: false
+        approvalAdmin: false,
+        securityLevel: 'company'
     };
 
     assert.equal(canViewApprovalDocument({ ...base, requesterId: authorId }), true);
@@ -47,4 +49,20 @@ test('Given each allowed document relationship When checking visibility Then acc
     assert.equal(canViewApprovalDocument({ ...base, organizationReceiver: true }), true);
     assert.equal(canViewApprovalDocument({ ...base, approvalAdmin: true }), true);
     assert.equal(canViewApprovalDocument({ ...base, globalAdmin: true }), true);
+});
+
+test('Given a confidential document When checking recipients Then only an explicitly assigned reader can view it', () => {
+    const base = {
+        authorProfileId: authorId,
+        globalAdmin: false,
+        organizationReceiver: false,
+        pastOrActiveAssignee: false,
+        reader: false,
+        requesterId,
+        approvalAdmin: false,
+        securityLevel: 'confidential'
+    };
+
+    assert.equal(canViewApprovalDocument({ ...base, reader: true }), true);
+    assert.equal(canViewApprovalDocument({ ...base, organizationReceiver: true }), false);
 });

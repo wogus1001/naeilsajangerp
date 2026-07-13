@@ -78,6 +78,9 @@ type TemplateVersionWire = {
     readonly id: string;
     readonly version: number;
     readonly status: 'draft' | 'published' | 'retired';
+    readonly name?: string;
+    readonly description?: string;
+    readonly category?: string;
     readonly fields: unknown;
     readonly steps: unknown;
 };
@@ -111,10 +114,12 @@ export function fetchApprovalInbox(
 ): Promise<ApprovalInboxResult> {
     const params = new URLSearchParams({ filter, page: String(page), pageSize: String(pageSize) });
     return requestJson<unknown>(`/api/approvals/inbox?${params.toString()}`).then(value => {
-        if (!isApprovalRecord(value)) return { documents: [], page, pageSize, total: 0, delayedTotal: 0 };
+        if (!isApprovalRecord(value) || !Array.isArray(value.documents) || !isApprovalRecord(value.pagination)) {
+            throw new Error('전자결재 문서함 응답 형식을 확인할 수 없습니다.');
+        }
         const pagination = isApprovalRecord(value.pagination) ? value.pagination : {};
         const summary = isApprovalRecord(value.summary) ? value.summary : {};
-        const rawDocuments = Array.isArray(value.documents) ? value.documents : [];
+        const rawDocuments = value.documents;
         return {
             documents: rawDocuments.map(approvalSummaryFromWire).filter((item): item is ApprovalDocumentSummary => item !== null),
             page: typeof pagination.page === 'number' ? pagination.page : page,
@@ -145,6 +150,9 @@ export function fetchApprovalTemplates(includeArchived = false): Promise<readonl
                 : versions.versions.find(version => version.id === template.currentVersionId && version.status === 'published');
             return {
                 ...template,
+                name: selected?.name ?? template.name,
+                description: selected?.description ?? template.description,
+                category: selected?.category ?? template.category,
                 status: template.active
                     ? selected?.status === 'published' ? 'published' as const : 'draft' as const
                     : 'archived' as const,
@@ -217,19 +225,8 @@ export function runApprovalAction(
 
 export async function saveApprovalTemplate(input: SaveApprovalTemplateInput): Promise<ApprovalTemplate> {
     const status = input.command === 'publish' ? 'published' : input.command === 'archive' ? 'archived' : 'draft';
-    const metadata = await requestJson<{ readonly template: ApprovalTemplateSummary }>('/api/approvals/templates', {
-        method: input.template.id ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            id: input.template.id || undefined,
-            name: input.template.name,
-            description: input.template.description,
-            category: input.template.category,
-            active: input.command !== 'archive'
-        })
-    });
-    if (input.command !== 'archive') {
-        await requestJson(`/api/approvals/templates/${encodeURIComponent(metadata.template.id)}/versions`, {
+    if (input.command !== 'archive' && !input.template.id) {
+        const created = await requestJson<{ readonly template: ApprovalTemplateSummary }>('/api/approvals/templates', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -241,8 +238,35 @@ export async function saveApprovalTemplate(input: SaveApprovalTemplateInput): Pr
                 steps: input.template.steps.map(step => ({ ...step, key: step.id }))
             })
         });
+        return { ...input.template, ...created.template, status, version: 1 };
     }
-    return { ...input.template, ...metadata.template, status, version: input.template.version + (input.command === 'archive' ? 0 : 1) };
+    if (input.command !== 'archive') {
+        await requestJson(`/api/approvals/templates/${encodeURIComponent(input.template.id)}/versions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                category: input.template.category,
+                description: input.template.description,
+                fields: input.template.fields.map(field => ({ ...field, key: field.id })),
+                name: input.template.name,
+                status,
+                steps: input.template.steps.map(step => ({ ...step, key: step.id }))
+            })
+        });
+        return { ...input.template, status, version: input.template.version + 1 };
+    }
+    const metadata = await requestJson<{ readonly template: ApprovalTemplateSummary }>('/api/approvals/templates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: input.template.id || undefined,
+            name: input.template.name,
+            description: input.template.description,
+            category: input.template.category,
+            active: input.command !== 'archive'
+        })
+    });
+    return { ...input.template, ...metadata.template, status, version: input.template.version };
 }
 
 export function saveApprovalOrganization(patch: ApprovalOrganizationPatch): Promise<Omit<ApprovalOrganization, 'delegations'>> {

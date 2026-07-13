@@ -1,12 +1,13 @@
 const PROPERTY_IMAGES_BUCKET = 'property-images';
 const PROPERTY_DOCUMENTS_BUCKET = 'property-documents';
+export const SUPERVISION_REPORT_BUCKET = 'franchise-supervision-private';
 const LEAD_DOCUMENT_PREFIX = 'franchise-lead-documents';
 const DISCLOSURE_PREFIX = 'franchise-disclosures';
 const VENDOR_CONTRACT_PREFIX = 'franchise-vendor-contracts';
 const SUPERVISION_PREFIX = 'franchise-supervision';
 const PROPERTY_DOCUMENT_PREFIX = 'properties';
 
-type UploadBucket = typeof PROPERTY_IMAGES_BUCKET | typeof PROPERTY_DOCUMENTS_BUCKET;
+type UploadBucket = typeof PROPERTY_IMAGES_BUCKET | typeof PROPERTY_DOCUMENTS_BUCKET | typeof SUPERVISION_REPORT_BUCKET;
 
 type BaseUploadTarget = {
     readonly bucket: UploadBucket;
@@ -59,12 +60,26 @@ function cleanString(value: unknown): string {
 function readPathSegments(path: string): readonly string[] | null {
     if (!path || path.startsWith('/') || path.includes('\\') || path.includes('..')) return null;
     const segments = path.split('/');
-    if (segments.some(segment => segment.trim().length === 0)) return null;
+    if (segments.some(segment => {
+        if (segment.trim().length === 0) return true;
+        try {
+            let decoded = segment;
+            for (let depth = 0; depth < 3; depth += 1) {
+                const next = decodeURIComponent(decoded);
+                if (next === '.' || next === '..' || next.includes('/') || next.includes('\\')) return true;
+                if (next === decoded) break;
+                decoded = next;
+            }
+            return false;
+        } catch {
+            return true;
+        }
+    })) return null;
     return segments;
 }
 
 function isUploadBucket(value: string): value is UploadBucket {
-    return value === PROPERTY_IMAGES_BUCKET || value === PROPERTY_DOCUMENTS_BUCKET;
+    return value === PROPERTY_IMAGES_BUCKET || value === PROPERTY_DOCUMENTS_BUCKET || value === SUPERVISION_REPORT_BUCKET;
 }
 
 export function parseUploadStorageTarget(input: {
@@ -90,6 +105,10 @@ export function parseUploadStorageTarget(input: {
                 propertyId: segments[0]
             }
         };
+    }
+
+    if (bucket === SUPERVISION_REPORT_BUCKET && segments[0] !== SUPERVISION_PREFIX) {
+        return { ok: false, error: 'Unsupported upload path' };
     }
 
     if (segments[0] === PROPERTY_DOCUMENT_PREFIX) {
@@ -155,6 +174,9 @@ export function parseUploadStorageTarget(input: {
     }
 
     if (segments[0] === SUPERVISION_PREFIX) {
+        if (bucket !== SUPERVISION_REPORT_BUCKET) {
+            return { ok: false, error: 'Invalid supervision report storage bucket' };
+        }
         if (segments.length < 4) return { ok: false, error: 'Invalid supervision report storage path' };
         const companyId = cleanString(input.companyId);
         if (!companyId || companyId !== segments[1]) {
@@ -173,4 +195,20 @@ export function parseUploadStorageTarget(input: {
     }
 
     return { ok: false, error: 'Unsupported upload path' };
+}
+
+export function isSupervisionReportStoragePath(input: {
+    readonly companyId: string;
+    readonly path: string;
+    readonly reportId: string;
+}): boolean {
+    const parsed = parseUploadStorageTarget({
+        bucket: SUPERVISION_REPORT_BUCKET,
+        companyId: input.companyId,
+        path: input.path
+    });
+    return parsed.ok &&
+        parsed.target.kind === 'supervisionReport' &&
+        parsed.target.companyId === input.companyId &&
+        parsed.target.reportId === input.reportId;
 }

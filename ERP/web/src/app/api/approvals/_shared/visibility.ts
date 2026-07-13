@@ -51,19 +51,19 @@ export async function visibleApprovalDocuments(
     const requesterUnitIds = new Set((memberships.data || []).map(row => row.unit_id));
     return documents.filter(document => {
         const receivers = receiverIds(document.data);
-        const confidential = document.security_level === 'confidential';
         return canViewApprovalDocument({
             requesterId: context.requester.id,
             authorProfileId: document.author_profile_id,
             pastOrActiveAssignee: document.approver_profile_id === context.requester.id || (steps.data || []).some(step =>
                 step.document_id === document.id && actorAppearsInTargets(step.targets, context.requester.id)),
-            reader: !confidential && readerDocumentIds.has(document.id),
-            organizationReceiver: !confidential && (
+            reader: readerDocumentIds.has(document.id),
+            organizationReceiver: (
                 receivers.profileIds.includes(context.requester.id) ||
                 receivers.unitIds.some(unitId => requesterUnitIds.has(unitId))
             ),
             approvalAdmin: context.approvalAdmin,
-            globalAdmin: context.requester.role === 'admin'
+            globalAdmin: context.requester.role === 'admin',
+            securityLevel: document.security_level
         });
     });
 }

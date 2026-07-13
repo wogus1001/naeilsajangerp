@@ -26,7 +26,7 @@ function fakeSupabase(row: unknown | null): UploadAccessSupabase {
 
 test('Given a lead document target for another company When checking upload access Then it is denied', async () => {
     const target: UploadStorageTarget = {
-        bucket: 'property-documents',
+        bucket: 'franchise-supervision-private',
         companyId: 'company-2',
         kind: 'leadDocument',
         leadId: 'lead-2',
@@ -63,4 +63,52 @@ test('Given a disclosure upload target for another company When checking upload 
     };
 
     assert.equal(await canUploadToTarget(fakeSupabase(null), requester, target), false);
+});
+
+test('Given a supervision report owned by another member When checking upload access Then it is denied', async () => {
+    const target: UploadStorageTarget = {
+        bucket: 'franchise-supervision-private',
+        companyId: 'company-1',
+        kind: 'supervisionReport',
+        path: 'franchise-supervision/company-1/report-1/photo.jpg',
+        reportId: 'report-1'
+    };
+
+    assert.equal(await canUploadToTarget(fakeSupabase({
+        company_id: 'company-1',
+        created_by: 'another-member',
+        status: '임시저장'
+    }), requester, target), false);
+});
+
+test('Given the report author and an editable report When checking upload access Then it is allowed', async () => {
+    const target: UploadStorageTarget = {
+        bucket: 'franchise-supervision-private',
+        companyId: 'company-1',
+        kind: 'supervisionReport',
+        path: 'franchise-supervision/company-1/report-1/photo.jpg',
+        reportId: 'report-1'
+    };
+
+    assert.equal(await canUploadToTarget(fakeSupabase({
+        company_id: 'company-1',
+        created_by: requester.id,
+        status: '반려'
+    }), requester, target), true);
+});
+
+test('Given a submitted supervision report When checking upload access Then evidence stays immutable', async () => {
+    const target: UploadStorageTarget = {
+        bucket: 'franchise-supervision-private',
+        companyId: 'company-1',
+        kind: 'supervisionReport',
+        path: 'franchise-supervision/company-1/report-1/photo.jpg',
+        reportId: 'report-1'
+    };
+
+    assert.equal(await canUploadToTarget(fakeSupabase({
+        company_id: 'company-1',
+        created_by: requester.id,
+        status: '제출'
+    }), requester, target), false);
 });

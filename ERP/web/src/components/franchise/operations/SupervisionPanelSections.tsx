@@ -370,7 +370,8 @@ export function ReportEditor(props: {
     readonly onBackToList: () => void;
 }) {
     if (!props.selectedVisit) return <div className={styles.empty}>보고서를 작성할 방문 일정을 선택해주세요.</div>;
-    const canEditReport = canEditSupervisionReport(props.report?.status);
+    const canEditReport = canEditSupervisionReport(props.report?.status)
+        && (!props.report || props.report.createdBy === props.userId);
     const editorDisabled = props.disabled || !canEditReport;
     const summary = summarizeInspectionItems(props.inspectionItems);
     const actionRequiredItems = getActionRequiredInspectionItems(props.inspectionItems);

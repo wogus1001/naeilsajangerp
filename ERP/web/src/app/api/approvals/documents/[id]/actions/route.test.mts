@@ -2,17 +2,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ApprovalContext } from '../../../_shared/access';
 import { isRecord } from '../../../_shared/boundary';
-import { handleApprovalActionPOST } from './route.js';
+import { handleApprovalActionPOST } from './action-handler.js';
 
 const companyId = '11111111-1111-4111-8111-111111111111';
 const actorId = '22222222-2222-4222-8222-222222222222';
 const authorId = '33333333-3333-4333-8333-333333333333';
 const documentId = '44444444-4444-4444-8444-444444444444';
 
-function documentRow(authorProfileId = authorId) {
+function documentRow(authorProfileId = authorId, status = '제출') {
     return {
         id: documentId, company_id: companyId, template_id: null, source_type: null, source_id: null,
-        title: '구매 품의', status: '제출', author_profile_id: authorProfileId,
+        title: '구매 품의', status, author_profile_id: authorProfileId,
         approver_profile_id: actorId, reviewer_profile_id: null, values: {}, reject_reason: null,
         category: 'general', security_level: 'company', retention_until: null,
         current_version_id: null, current_step_order: 1, due_at: null,
@@ -42,7 +42,7 @@ function fakeContext(options: { readonly authorProfileId?: string } = {}) {
     const context: ApprovalContext = {
         approvalAdmin: true,
         companyId,
-        requester: { company_id: companyId, id: actorId, role: 'staff' },
+        requester: { company_id: companyId, id: actorId, role: 'staff', status: 'active' },
         supabase: fakeSupabase as never
     };
     return { calls, context };
@@ -101,4 +101,35 @@ test('Given the author attempts approval When posting Then self approval is deni
 
     assert.equal(response.status, 403);
     assert.equal(fake.calls.length, 0);
+});
+
+test('Given submit wins a race When saving a stale draft Then the mutation is rejected', async () => {
+    let updateQuery = false;
+    let statusFilter: readonly string[] = [];
+    const query = {
+        select() { return this; },
+        update() { updateQuery = true; return this; },
+        eq() { return this; },
+        in(_column: string, values: readonly string[]) { statusFilter = values; return this; },
+        async maybeSingle() {
+            return updateQuery
+                ? { data: null, error: null }
+                : { data: documentRow(actorId, '임시저장'), error: null };
+        }
+    };
+    const context: ApprovalContext = {
+        approvalAdmin: true,
+        companyId,
+        requester: { company_id: companyId, id: actorId, role: 'staff', status: 'active' },
+        supabase: { from: () => query } as never
+    };
+    const response = await handleApprovalActionPOST(
+        request({ action: 'saveDraft', title: '수정 제목' }),
+        { params: Promise.resolve({ id: documentId }) },
+        { resolveContext: async () => context }
+    );
+    const responseBody = await payload(response);
+
+    assert.equal(response.status, 409, JSON.stringify(responseBody));
+    assert.deepEqual(statusFilter, ['임시저장', '반려', '회수']);
 });

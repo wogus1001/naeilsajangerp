@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes } from 'node:crypto';
 
 // --- CONFIGURATION ---
 const OLD_SUPABASE_URL = 'https://qcyeoicgkpdooqurufyr.supabase.co';
-const OLD_SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjeWVvaWNna3Bkb29xdXJ1ZnlyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzA3NjY5MywiZXhwIjoyMDgyNjUyNjkzfQ.nsevAO_n4IoZ54RvH4itgvS5nnfufNWOfSsKVu2CkjM';
+const OLD_SUPABASE_SERVICE_ROLE_KEY = process.env.OLD_SUPABASE_SERVICE_ROLE_KEY;
 
 const NEW_SUPABASE_URL = 'https://ocskrmbtpxsgeeukjimr.supabase.co';
-const NEW_SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jc2tybWJ0cHhzZ2VldWtqaW1yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzU5NDkxMywiZXhwIjoyMDgzMTcwOTEzfQ.DhK_TqfzvsKFxOOl7Ausf39Ie4hqysX-zSAqTBrQzqI';
+const NEW_SUPABASE_SERVICE_ROLE_KEY = process.env.NEW_SUPABASE_SERVICE_ROLE_KEY;
+
+if (!OLD_SUPABASE_SERVICE_ROLE_KEY || !NEW_SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('OLD_SUPABASE_SERVICE_ROLE_KEY and NEW_SUPABASE_SERVICE_ROLE_KEY are required.');
+}
 
 const oldClient = createClient(OLD_SUPABASE_URL, OLD_SUPABASE_SERVICE_ROLE_KEY);
 const newClient = createClient(NEW_SUPABASE_URL, NEW_SUPABASE_SERVICE_ROLE_KEY);
@@ -30,12 +35,13 @@ async function migrate() {
 
     for (const user of users) {
         console.log(`Migrating user: ${user.email} (${user.id})`);
+        const temporaryPassword = randomBytes(32).toString('base64url');
         const { data: newUser, error: createErr } = await newClient.auth.admin.createUser({
             id: user.id,
             email: user.email,
             email_confirm: true,
             user_metadata: user.user_metadata,
-            password: 'temporaryPassword123!', // Users will need to reset or we try to set a placeholder
+            password: temporaryPassword,
         });
         if (createErr) {
             if (createErr.message.includes('already exists')) {

@@ -104,15 +104,16 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
         setValues(current => ({ ...current, [fieldId]: value }));
     }
 
-    function validationMessage(): string {
+    function validationMessage(action: 'saveDraft' | 'submit'): string {
         if (!selectedTemplate) return '사용할 결재 양식을 선택해 주세요.';
+        if (action === 'saveDraft') return '';
         if (!title.trim()) return '문서 제목을 입력해 주세요.';
         const missing = selectedTemplate.fields.find(field => field.required && !hasApprovalValue(values[field.id]));
         return missing ? `${missing.label} 항목을 입력해 주세요.` : '';
     }
 
     async function save(action: 'saveDraft' | 'submit') {
-        const validation = validationMessage();
+        const validation = validationMessage(action);
         if (validation) {
             setResultModal({ title: '입력 확인', message: validation, type: 'error' });
             return;
@@ -128,7 +129,7 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                 retentionPeriod: meta.retentionPeriod,
                 securityLevel: meta.securityLevel,
                 templateId: selectedTemplate.id,
-                title: title.trim(),
+                title: title.trim() || `${selectedTemplate.name} 임시 문서`,
                 documentId: documentId || undefined,
                 readerProfileIds,
                 receiverUnitIds

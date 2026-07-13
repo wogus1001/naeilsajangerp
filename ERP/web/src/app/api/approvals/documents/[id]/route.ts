@@ -210,10 +210,11 @@ export async function PATCH(request: Request, routeContext: RouteContext) {
             .update({ ...updates, updated_by: context.requester.id, updated_at: new Date().toISOString() })
             .eq('id', id)
             .eq('company_id', context.companyId)
+            .in('status', ['임시저장', '반려', '회수'])
             .select(DOCUMENT_SELECT)
-            .single<ApprovalDocumentRow>();
+            .maybeSingle<ApprovalDocumentRow>();
         throwDatabaseError(error);
-        if (!data) return fail(404, 'NOT_FOUND', 'Approval document not found');
+        if (!data) return fail(409, 'CONFLICT', 'The document was submitted while it was being edited');
         if (hasOwn(body, 'readerProfileIds')) {
             const { error: readerError } = await context.supabase.rpc('replace_approval_document_readers', {
                 p_actor_profile_id: context.requester.id,

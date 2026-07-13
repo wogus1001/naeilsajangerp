@@ -10,6 +10,7 @@ import {
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
+import { canReadSchedule } from '@/lib/schedule-access';
 import {
     completeWorkflowSchedule,
     upsertWorkflowSchedule,
@@ -92,20 +93,6 @@ function failWorkflowSchema(error: unknown, fallbackMessage: string): Response {
         return fail(500, 'INTERNAL_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 등록이 필요합니다.');
     }
     return fail(500, 'INTERNAL_ERROR', fallbackMessage);
-}
-
-function canReadSchedule(requester: RequesterProfile, schedule: { company_id: string | null; user_id: string | null; scope: string | null }) {
-    if (isAdmin(requester)) return true;
-
-    if (schedule.scope === 'personal') {
-        return !!schedule.user_id && schedule.user_id === requester.id;
-    }
-
-    if (requester.company_id && schedule.company_id && requester.company_id === schedule.company_id) {
-        return true;
-    }
-
-    return !!schedule.user_id && schedule.user_id === requester.id;
 }
 
 function canWriteSchedule(requester: RequesterProfile, schedule: { company_id: string | null; user_id: string | null; scope: string | null }) {
@@ -235,7 +222,14 @@ export async function GET(request: Request) {
         const { data, error } = await query;
         if (error) throw error;
 
-        let result = (data || []).filter((row: ScheduleRow) => canReadSchedule(requesterProfile, row));
+        let result = (data || []).filter((row: ScheduleRow) => canReadSchedule(requesterProfile, {
+            assigneeProfileId: row.assignee_profile_id,
+            companyId: row.company_id,
+            metadata: row.metadata,
+            scope: row.scope,
+            sourceType: row.source_type,
+            userId: row.user_id
+        }));
 
         if (requestedUserId) {
             result = result.filter((row: ScheduleRow) => {

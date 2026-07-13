@@ -134,13 +134,18 @@ function membershipRow(value: JsonRecord, companyId: string) {
 }
 
 function roleAssignmentRow(value: JsonRecord, companyId: string, actorId: string) {
+    const roleKey = parseRequiredText(value.roleKey, 'roleAssignments.roleKey', 80);
+    const unitId = parseOptionalUuid(value.unitId, 'roleAssignments.unitId');
+    if (roleKey === 'approval_admin' && unitId) {
+        throw new ApprovalInputError('roleAssignments.unitId', '결재 관리자 역할은 회사 전체 범위로만 지정할 수 있습니다.');
+    }
     return {
         ...optionalId(value.id, 'roleAssignments.id'),
         company_id: companyId,
-        role_key: parseRequiredText(value.roleKey, 'roleAssignments.roleKey', 80),
+        role_key: roleKey,
         role_name: parseRequiredText(value.roleName, 'roleAssignments.roleName', 120),
         profile_id: parseRequiredUuid(value.profileId, 'roleAssignments.profileId'),
-        unit_id: parseOptionalUuid(value.unitId, 'roleAssignments.unitId'),
+        unit_id: unitId,
         active_from: parseOptionalText(value.activeFrom, 'roleAssignments.activeFrom', 40) || null,
         active_until: parseOptionalText(value.activeUntil, 'roleAssignments.activeUntil', 40) || null,
         active: value.active === undefined ? true : parseBoolean(value.active, 'roleAssignments.active'),

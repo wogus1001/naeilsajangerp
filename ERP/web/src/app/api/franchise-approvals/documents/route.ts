@@ -40,7 +40,7 @@ function cleanText(value: unknown): string {
 }
 
 function canManageApprovals(requester: RequesterProfile): boolean {
-    return requester.role === 'admin' || requester.role === 'manager';
+    return requester.role === 'admin';
 }
 
 function recordOrEmpty(value: unknown): JsonRecord {
@@ -101,7 +101,7 @@ async function resolveCompanyId(
 
 function schemaFailure(error: unknown): Response {
     if (isMissingWorkflowSchemaError(error)) {
-        return fail(500, 'INTERNAL_ERROR', '결재 문서 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 등록이 필요합니다.');
+        return fail(500, 'INTERNAL_ERROR', '결재 문서 SQL이 아직 적용되지 않았습니다. supabase_company_approvals_v2_migration.sql 등록이 필요합니다.');
     }
     return fail(500, 'INTERNAL_ERROR', '결재 문서를 처리하지 못했습니다.');
 }
@@ -191,7 +191,7 @@ export async function POST(request: Request) {
         const sourceId = randomUUID();
         const sourceType = 'manual-approval';
         const requestedAuthorProfileId = cleanText(body.authorProfileId);
-        if (requestedAuthorProfileId && !canManageApprovals(requester) && requestedAuthorProfileId !== requester.id) {
+        if (requestedAuthorProfileId && requestedAuthorProfileId !== requester.id) {
             return fail(403, 'FORBIDDEN', '다른 작성자로 결재 문서를 작성할 권한이 없습니다.');
         }
 
@@ -259,7 +259,11 @@ export async function POST(request: Request) {
                 p_actor_profile_id: requester.id,
                 p_memo: ''
             });
-            if (actionError) throw actionError;
+            if (actionError) {
+                const { error: cleanupError } = await supabaseAdmin.from('approval_documents')
+                    .delete().eq('id', document.id).eq('company_id', companyId);
+                throw cleanupError || actionError;
+            }
         } else {
             await insertApprovalDocumentEvent(supabaseAdmin, {
                 companyId,

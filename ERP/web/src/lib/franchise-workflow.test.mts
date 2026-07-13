@@ -47,5 +47,9 @@ void test('Given unknown approval state and workflow notification event When nor
 void test('Given Supabase schema cache errors When checking workflow readiness Then new workflow tables are detected', () => {
     assert.equal(isMissingWorkflowSchemaError({ code: 'PGRST205', message: 'Could not find the approval_documents table in the schema cache' }), true);
     assert.equal(isMissingWorkflowSchemaError({ code: '42703', message: "column schedules.source_type does not exist" }), true);
+    assert.equal(isMissingWorkflowSchemaError({ code: 'PGRST202', message: 'Could not find the function public.perform_approval_document_action in the schema cache' }), true);
+    assert.equal(isMissingWorkflowSchemaError({ code: '42883', message: 'function perform_approval_document_action(uuid) does not exist' }), true);
+    assert.equal(isMissingWorkflowSchemaError({ code: 'PGRST202', message: 'Could not find the function public.sync_supervision_report_approval in the schema cache' }), true);
+    assert.equal(isMissingWorkflowSchemaError({ code: 'PGRST202', message: 'Could not find the function public.save_supervision_report_with_approval in the schema cache' }), true);
     assert.equal(isMissingWorkflowSchemaError({ code: 'PGRST205', message: 'Could not find the profiles table in the schema cache' }), false);
 });

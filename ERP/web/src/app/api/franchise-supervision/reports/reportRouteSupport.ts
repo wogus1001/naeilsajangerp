@@ -1,9 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import { cleanString, getFirst, isRecord } from '@/lib/franchise-supervision-api';
+import { isSupervisionReportStoragePath, SUPERVISION_REPORT_BUCKET } from '@/lib/upload-storage-policy';
 import {
-    fetchWorkflowManagerProfileIds,
-    upsertApprovalDocumentForSource
+    fetchWorkflowManagerProfileIds
 } from '@/lib/franchise-workflow-store';
 import {
     buildCorrectiveActionSeeds,
@@ -35,9 +35,15 @@ export type ReportRow = {
     readonly status: string | null;
     readonly inspection_items?: unknown;
     readonly photo_attachments?: unknown;
+    readonly reject_reason?: string | null;
+    readonly reviewed_at?: string | null;
+    readonly reviewed_by?: string | null;
     readonly special_note?: string | null;
+    readonly submitted_at?: string | null;
     readonly template_id?: string | null;
     readonly created_by: string | null;
+    readonly updated_at?: string | null;
+    readonly updated_by?: string | null;
 };
 
 type CorrectiveActionRow = {
@@ -64,25 +70,26 @@ export function reportEventTypeFor(event: SupervisionReportStatusEvent): Supervi
     }
 }
 
-function visitStatusForReportStatus(status: SupervisionReportEventType): string {
-    if (status === '제출') return '승인대기';
-    if (status === '승인') return '완료';
-    if (status === '반려') return '보고서대기';
-    return '';
-}
-
 export function hasField(body: Record<string, unknown>, keys: readonly string[]): boolean {
     return keys.some(key => Object.prototype.hasOwnProperty.call(body, key));
 }
 
-export function readPhotoAttachments(value: unknown): readonly SupervisionPhotoAttachment[] {
+export function readPhotoAttachments(
+    value: unknown,
+    input: { readonly companyId: string; readonly reportId: string }
+): readonly SupervisionPhotoAttachment[] {
     if (!Array.isArray(value)) return [];
     return value.filter(isRecord).map(item => ({
         name: cleanString(item.name),
         path: cleanString(item.path),
+        storageBucket: cleanString(item.storageBucket),
         size: Number(item.size) || 0,
         contentType: cleanString(item.contentType)
-    })).filter(item => item.name && item.path && item.path.startsWith('franchise-supervision/'));
+    })).filter(item => item.name && item.path && item.storageBucket === SUPERVISION_REPORT_BUCKET && isSupervisionReportStoragePath({
+        companyId: input.companyId,
+        path: item.path,
+        reportId: input.reportId
+    }));
 }
 
 export function readStatusEvent(value: unknown): SupervisionReportStatusEvent {
@@ -210,46 +217,6 @@ export async function insertCorrectiveActions(input: {
     }));
 }
 
-export async function insertReportEvent(input: {
-    readonly actorProfileId: string;
-    readonly companyId: string;
-    readonly eventType: SupervisionReportEventType;
-    readonly memo: string;
-    readonly reportId: string;
-    readonly supabaseAdmin: SupabaseClient;
-}) {
-    const { error } = await input.supabaseAdmin
-        .from('franchise_supervision_report_events')
-        .insert({
-            company_id: input.companyId,
-            report_id: input.reportId,
-            event_type: input.eventType,
-            memo: input.memo || null,
-            actor_profile_id: input.actorProfileId
-        });
-    if (error) throw error;
-}
-
-export async function syncVisitStatus(input: {
-    readonly supabaseAdmin: SupabaseClient;
-    readonly updatedBy: string;
-    readonly visitId: string | null;
-    readonly reportEventType: SupervisionReportEventType;
-}) {
-    if (!input.visitId) return;
-    const status = visitStatusForReportStatus(input.reportEventType);
-    if (!status) return;
-    const { error } = await input.supabaseAdmin
-        .from('franchise_store_visits')
-        .update({
-            status,
-            updated_by: input.updatedBy,
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', input.visitId);
-    if (error) throw error;
-}
-
 export async function notifyReportReviewed(input: {
     readonly companyId: string;
     readonly eventType: SupervisionReportEventType;
@@ -290,42 +257,89 @@ export async function syncSupervisionReportWorkflow(input: {
     readonly supervisorProfileId: string;
     readonly templateId?: string | null;
     readonly visitId?: string | null;
+    readonly reportWrite: {
+        readonly create: boolean;
+        readonly expectedUpdatedAt?: string | null;
+        readonly inspectionItems: unknown;
+        readonly locationId: string;
+        readonly photoAttachments: unknown;
+        readonly status: string;
+        readonly submittedAt: string | null;
+        readonly reviewedAt: string | null;
+        readonly reviewedBy: string | null;
+    };
 }) {
-    const managerIds = (await fetchWorkflowManagerProfileIds(input.supabaseAdmin, input.companyId))
-        .filter(profileId => profileId !== input.supervisorProfileId);
+    const needsApprover = input.eventType === '제출' || input.eventType === '임시저장';
+    const managerIds = needsApprover
+        ? (await fetchWorkflowManagerProfileIds(input.supabaseAdmin, input.companyId))
+            .filter(profileId => profileId !== input.actorProfileId)
+        : [];
     const approverProfileId = managerIds[0] || null;
     if (input.eventType === '제출' && !approverProfileId) {
         throw new TypeError('점검 보고서를 결재할 회사 팀장을 먼저 등록해 주세요.');
     }
-    const document = input.eventType === '제출' || input.eventType === '임시저장'
-        ? await upsertApprovalDocumentForSource(input.supabaseAdmin, {
-            companyId: input.companyId,
-            templateId: input.templateId || null,
-            sourceType: 'supervision-report',
-            sourceId: input.reportId,
-            title: `${input.locationName} 점검 보고서`,
-            status: '임시저장',
-            authorProfileId: input.supervisorProfileId,
-            approverProfileId,
-            data: {
-                reportId: input.reportId,
-                visitId: input.visitId || '',
-                locationName: input.locationName,
-                specialNote: input.specialNote || ''
-            },
-            actorProfileId: input.actorProfileId
-        })
-        : (await input.supabaseAdmin.from('approval_documents').select('*')
-            .eq('company_id', input.companyId).eq('source_type', 'supervision-report')
-            .eq('source_id', input.reportId).maybeSingle()).data;
-    if (!document || input.eventType === '임시저장') return;
-    const action = input.eventType === '제출' ? 'submit' : input.eventType === '승인' ? 'approve' : 'reject';
-    const { error } = await input.supabaseAdmin.rpc('perform_approval_document_action', {
-        p_document_id: document.id,
-        p_company_id: input.companyId,
-        p_action: action,
+    const { error } = await input.supabaseAdmin.rpc('save_supervision_report_with_approval', {
+        p_approval_data: {
+            reportId: input.reportId,
+            visitId: input.visitId || '',
+            locationName: input.locationName,
+            specialNote: input.specialNote || '',
+            supervisorProfileId: input.supervisorProfileId,
+            supervisionTemplateId: input.templateId || ''
+        },
+        p_approver_profile_id: approverProfileId,
         p_actor_profile_id: input.actorProfileId,
-        p_memo: input.rejectReason || input.specialNote || ''
+        p_company_id: input.companyId,
+        p_create: input.reportWrite.create,
+        p_event_type: input.eventType,
+        p_expected_updated_at: input.reportWrite.expectedUpdatedAt || null,
+        p_inspection_items: input.reportWrite.inspectionItems,
+        p_location_id: input.reportWrite.locationId,
+        p_memo: input.rejectReason || input.specialNote || '',
+        p_photo_attachments: input.reportWrite.photoAttachments,
+        p_reject_reason: input.rejectReason || null,
+        p_report_id: input.reportId,
+        p_report_status: input.reportWrite.status,
+        p_reviewed_at: input.reportWrite.reviewedAt,
+        p_reviewed_by: input.reportWrite.reviewedBy,
+        p_special_note: input.specialNote || null,
+        p_submitted_at: input.reportWrite.submittedAt,
+        p_supervisor_profile_id: input.supervisorProfileId,
+        p_template_id: input.templateId || null,
+        p_title: `${input.locationName} 점검 보고서`,
+        p_visit_id: input.visitId || null
     });
     if (error) throw error;
+}
+
+export async function reconcileSubmittedSupervisionReport(input: {
+    readonly actorProfileId: string;
+    readonly report: ReportRow;
+    readonly supabaseAdmin: SupabaseClient;
+    readonly visit: VisitRow | null;
+}) {
+    await syncSupervisionReportWorkflow({
+        actorProfileId: input.actorProfileId,
+        companyId: input.report.company_id,
+        eventType: '제출',
+        locationName: readVisitLocationName(input.visit),
+        reportId: input.report.id,
+        rejectReason: input.report.reject_reason || null,
+        specialNote: input.report.special_note || null,
+        supervisorProfileId: input.report.supervisor_profile_id,
+        supabaseAdmin: input.supabaseAdmin,
+        templateId: input.report.template_id || null,
+        visitId: input.report.visit_id,
+        reportWrite: {
+            create: false,
+            expectedUpdatedAt: input.report.updated_at || null,
+            inspectionItems: input.report.inspection_items,
+            locationId: input.report.location_id,
+            photoAttachments: input.report.photo_attachments,
+            reviewedAt: input.report.reviewed_at || null,
+            reviewedBy: input.report.reviewed_by || null,
+            status: '제출',
+            submittedAt: input.report.submitted_at || null
+        }
+    });
 }

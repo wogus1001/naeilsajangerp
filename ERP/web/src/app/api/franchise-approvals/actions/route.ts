@@ -18,10 +18,6 @@ function cleanText(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
 
-function canManageApprovals(requester: RequesterProfile): boolean {
-    return requester.role === 'admin' || requester.role === 'manager';
-}
-
 function normalizeAction(value: unknown): ApprovalDocumentAction | null {
     const action = cleanText(value);
     if (action === 'submit' || action === 'approve' || action === 'reject' || action === 'complete' || action === 'saveDraft') return action;
@@ -30,22 +26,18 @@ function normalizeAction(value: unknown): ApprovalDocumentAction | null {
 
 function canActOnDocument(requester: RequesterProfile, document: ApprovalDocumentRow, action: ApprovalDocumentAction): boolean {
     if (action === 'approve' || action === 'reject') {
-        if (!canManageApprovals(requester)) return false;
         if (document.author_profile_id === requester.id) return false;
-        if (requester.role !== 'admin' && document.approver_profile_id && document.approver_profile_id !== requester.id) {
-            return false;
-        }
-        return true;
+        return document.approver_profile_id === requester.id;
     }
     if (action === 'submit' || action === 'saveDraft' || action === 'complete') {
-        return canManageApprovals(requester) || document.author_profile_id === requester.id;
+        return document.author_profile_id === requester.id;
     }
     return false;
 }
 
 function schemaFailure(error: unknown): Response {
     if (isMissingWorkflowSchemaError(error)) {
-        return fail(500, 'INTERNAL_ERROR', '결재 액션 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 등록이 필요합니다.');
+        return fail(500, 'INTERNAL_ERROR', '결재 액션 SQL이 아직 적용되지 않았습니다. supabase_company_approvals_v2_migration.sql 등록이 필요합니다.');
     }
     return fail(500, 'INTERNAL_ERROR', '결재 액션을 처리하지 못했습니다.');
 }

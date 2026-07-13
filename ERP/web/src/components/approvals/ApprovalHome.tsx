@@ -59,9 +59,9 @@ export function ApprovalHome() {
         .slice(0, 5);
     const metrics = [
         { label: '결재 대기', value: data.waiting.total, helper: '내 처리가 필요한 문서', href: '/approvals/pending', icon: Clock3, tone: 'warning' },
-        { label: '반려', value: data.rejected.total, helper: '보완 후 다시 제출할 문서', href: '/approvals/mine?status=rejected', icon: RotateCcw, tone: 'danger' },
-        { label: '참조·수신', value: data.reference.total + data.received.total, helper: '확인하거나 수신할 문서', href: '/approvals/mine?box=received', icon: MailCheck, tone: 'info' },
-        { label: '지연', value: data.waiting.delayedTotal, helper: '처리기한이 지난 결재', href: '/approvals/pending?due=overdue', icon: AlertTriangle, tone: 'danger' }
+        { label: '반려', value: data.rejected.total, helper: '보완 후 다시 제출할 문서', href: '/approvals/mine', icon: RotateCcw, tone: 'danger' },
+        { label: '참조·수신', value: data.reference.total + data.received.total, helper: '확인하거나 수신할 문서', href: '/approvals/department', icon: MailCheck, tone: 'info' },
+        { label: '지연', value: data.waiting.delayedTotal, helper: '처리기한이 지난 결재', href: '/approvals/pending', icon: AlertTriangle, tone: 'danger' }
     ] as const;
 
     return (

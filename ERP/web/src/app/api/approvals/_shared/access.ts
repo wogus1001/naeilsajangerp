@@ -20,6 +20,7 @@ export type ApprovalContext = {
 type RoleAssignmentRow = {
     readonly active_from: string | null;
     readonly active_until: string | null;
+    readonly unit_id: string | null;
 };
 
 function activeAt(row: RoleAssignmentRow, now: string): boolean {
@@ -42,7 +43,7 @@ async function hasApprovalAdminAssignment(
     if (requester.role === 'admin') return true;
     const { data, error } = await supabase
         .from('approval_role_assignments')
-        .select('active_from, active_until')
+        .select('active_from, active_until, unit_id')
         .eq('company_id', companyId)
         .eq('profile_id', requester.id)
         .eq('role_key', 'approval_admin')
@@ -50,7 +51,7 @@ async function hasApprovalAdminAssignment(
         .returns<RoleAssignmentRow[]>();
     throwDatabaseError(error);
     const now = new Date().toISOString();
-    return (data || []).some(row => activeAt(row, now));
+    return (data || []).some(row => row.unit_id === null && activeAt(row, now));
 }
 
 export async function resolveApprovalContext(request: Request, parsedBody?: unknown): Promise<ApprovalContext> {
