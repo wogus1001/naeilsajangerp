@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, ClipboardCheck, Pencil, Plus, Printer, Save, Send, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ClipboardCheck, Pencil, Plus, Printer, Save, Send, Trash2, X } from 'lucide-react';
 import {
     CORRECTIVE_ACTION_STATUSES,
     canEditSupervisionReport,
@@ -875,19 +875,24 @@ function ReportScopedTimeline(props: {
     ].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     if (events.length === 0) return null;
     return (
-        <div className={styles.timeline}>
-            <div className={styles.timelineHeader}>
-                <strong>이 보고서 처리 이력</strong>
+        <details className={styles.timelineAccordion}>
+            <summary className={styles.timelineSummary}>
+                <span className={styles.timelineSummaryTitle}>
+                    <ChevronDown className={styles.timelineChevron} size={16} aria-hidden="true" />
+                    <strong>이 보고서 처리 이력</strong>
+                </span>
                 <span>{events.length.toLocaleString()}건</span>
+            </summary>
+            <div className={styles.timelineContent}>
+                {events.map(event => (
+                    <div key={event.id} className={styles.timelineItem}>
+                        <span>{event.title}</span>
+                        <small>{event.actorName} · {event.createdAt?.slice(0, 16).replace('T', ' ') || '-'}</small>
+                        {event.memo ? <p>{event.memo}</p> : null}
+                    </div>
+                ))}
             </div>
-            {events.map(event => (
-                <div key={event.id} className={styles.timelineItem}>
-                    <span>{event.title}</span>
-                    <small>{event.actorName} · {event.createdAt?.slice(0, 16).replace('T', ' ') || '-'}</small>
-                    {event.memo ? <p>{event.memo}</p> : null}
-                </div>
-            ))}
-        </div>
+        </details>
     );
 }
 
