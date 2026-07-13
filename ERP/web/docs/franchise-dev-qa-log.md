@@ -1207,3 +1207,9 @@
 - 신규 SQL: `supabase_franchise_approval_calendar_migration.sql`을 추가했다. 기존 `schedules` 확장, 결재 템플릿/문서/이벤트 테이블, source 중복 방지 인덱스, 회사 범위 RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 검증: `npx tsx --test src/lib/franchise-workflow.test.mts src/lib/franchise-supervision.test.mts` 19건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. `next start -p 3168` production build에서 Playwright로 `/schedule` 미로그인 진입이 console error 0으로 조용히 처리되고, `/login` 1440px/390px 렌더링과 page-level horizontal overflow 0을 확인했다. `/schedule` 탭 클릭 QA는 Supabase 세션이 필요한 화면이라 SQL 적용 후 실계정 live QA에서 확인한다.
 - 남은 live QA: SQL 적용 후 실계정으로 `/schedule`의 기존 `점포개발 일정` 탭 보존, 새 `전사 업무·결재` 탭 KPI/업무 큐 표시, SV 방문 일정 source badge, SV 점검 보고서 제출 후 관리자 승인 대기 일정/인앱 알림 생성, 승인/반려 후 작성자 알림과 승인 대기 일정 완료 처리, source 기반 중복 방지를 확인한다.
+
+## 2026-07-13 가맹운영 일정 공유/개인 구분 QA
+
+- 범위: 가맹운영 일정관리의 수동 일정을 `공유 일정`과 `개인 일정`으로 구분했다. 자동 생성 일정은 공유로 고정하고, 개인 일정은 생성자 본인에게만 반환되며 관리자도 다른 사용자의 개인 일정을 조회·수정·삭제할 수 없다.
+- 화면: 수동 일정 등록/수정 모달에 일정 구분 선택을 추가했다. 개인 일정은 로그인한 본인을 담당자로 고정하며, 일정 목록과 필터에서 공유/개인 여부를 확인할 수 있다.
+- 신규 SQL: `supabase_franchise_schedule_visibility_migration.sql`은 기존 데이터를 공유로 보존하고 `visibility` 제약, 조회 인덱스, 개인 일정 RLS를 추가한다. **SQL 등록 필요**.

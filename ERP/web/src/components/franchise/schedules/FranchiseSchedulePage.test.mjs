@@ -49,3 +49,23 @@ test('Given the monthly calendar When navigating Then it exposes the point-devel
     assert.match(calendarSource, /styles\.daySunday/);
     assert.match(calendarSource, /styles\.daySaturday/);
 });
+
+test('Given a schedule mutation result When notifying the user Then a centered alert modal is used', () => {
+    const pageSource = readFileSync(new URL('./FranchiseSchedulePage.tsx', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /<AlertModal/);
+    assert.doesNotMatch(pageSource, /styles\.alert/);
+});
+
+test('Given manual schedule controls When rendered Then shared and personal scopes are exposed', () => {
+    const pageSource = readFileSync(new URL('./FranchiseSchedulePage.tsx', import.meta.url), 'utf8');
+    const dialogSource = readFileSync(new URL('./FranchiseScheduleDialogs.tsx', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /공유 일정/);
+    assert.match(pageSource, /개인 일정/);
+    assert.match(dialogSource, /회사 구성원 모두 확인/);
+    assert.match(dialogSource, /나만 확인/);
+    assert.match(dialogSource, /setAttribute\('inert'/);
+    assert.match(dialogSource, /event\.key === 'Escape'/);
+    assert.match(dialogSource, /initialFocusRef\.current\?\.focus\(\)/);
+});

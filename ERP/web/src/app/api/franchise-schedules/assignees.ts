@@ -28,5 +28,5 @@ export async function listScheduleAssignees(
         const name = row.name.trim();
         return id && name ? [{ id, name }] : [];
     });
-    return ok(assignees);
+    return ok({ assignees, requesterProfileId: access.requester.id });
 }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertModal } from '@/components/common/AlertModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { FranchiseScheduleCalendar } from './FranchiseScheduleCalendar';
 import { FranchiseScheduleConfirm, FranchiseScheduleDialog } from './FranchiseScheduleDialogs';
@@ -15,15 +16,18 @@ import type {
     FranchiseScheduleFilters,
     FranchiseScheduleItem,
     FranchiseScheduleSource,
-    FranchiseScheduleStatus
+    FranchiseScheduleStatus,
+    FranchiseScheduleVisibility
 } from './franchiseScheduleViewModel';
 import type { ScheduleFormValue } from './FranchiseScheduleDialogs';
-import { getFranchiseScheduleFailure, useFranchiseScheduleData } from './useFranchiseScheduleData';
+import { getFranchiseScheduleResponseFailure, useFranchiseScheduleData } from './useFranchiseScheduleData';
 import styles from './FranchiseSchedulePage.module.css';
 
 const STATUS_FILTERS: readonly ('all' | FranchiseScheduleStatus)[] = ['all', '예정', '진행중', '완료', '지연'];
 const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = ['all', 'manual', 'approval-document', 'supervision-visit', 'report'];
-const EMPTY_FORM: ScheduleFormValue = { id: '', title: '', date: toDateKey(new Date()), status: '예정', assigneeProfileId: '', details: '' };
+const VISIBILITY_FILTERS: readonly ('all' | FranchiseScheduleVisibility)[] = ['all', 'shared', 'personal'];
+const EMPTY_FORM: ScheduleFormValue = { id: '', title: '', date: toDateKey(new Date()), status: '예정', visibility: 'shared', assigneeProfileId: '', details: '' };
+type ScheduleAlert = { readonly message: string; readonly type: 'success' | 'error' };
 
 function getSourceLabel(source: FranchiseScheduleSource): string {
     switch (source) {
@@ -59,6 +63,7 @@ function getFormValue(item: FranchiseScheduleItem): ScheduleFormValue {
         title: item.title,
         date: item.date,
         status: item.status,
+        visibility: item.visibility,
         assigneeProfileId: item.assigneeProfileId,
         details: item.details
     };
@@ -66,12 +71,12 @@ function getFormValue(item: FranchiseScheduleItem): ScheduleFormValue {
 
 export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approvalDocumentId: string }) {
     const [monthDate, setMonthDate] = React.useState(new Date());
-    const { items, assignees, assigneesLoading, assigneesError, state, message, reloadSchedules } = useFranchiseScheduleData(monthDate);
+    const { items, assignees, assigneesLoading, assigneesError, requesterProfileId, state, message, reloadSchedules } = useFranchiseScheduleData(monthDate);
     const [selectedDate, setSelectedDate] = React.useState(toDateKey(new Date()));
-    const [filters, setFilters] = React.useState<FranchiseScheduleFilters>({ status: 'all', source: 'all', assignee: '' });
+    const [filters, setFilters] = React.useState<FranchiseScheduleFilters>({ status: 'all', source: 'all', visibility: 'all', assignee: '' });
     const [form, setForm] = React.useState<ScheduleFormValue | null>(null);
     const [confirm, setConfirm] = React.useState<{ readonly item: FranchiseScheduleItem; readonly action: 'complete' | 'delete' } | null>(null);
-    const [alert, setAlert] = React.useState('');
+    const [alert, setAlert] = React.useState<ScheduleAlert | null>(null);
     const [saving, setSaving] = React.useState(false);
 
     const model = buildFranchiseScheduleViewModel({ items, filters, selectedDate, monthDate, state, approvalDocumentId, message });
@@ -85,11 +90,11 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
         });
         setSaving(false);
         if (!response.ok) {
-            const next = getFranchiseScheduleFailure(response.status);
-            setAlert(next.message);
+            const next = await getFranchiseScheduleResponseFailure(response);
+            setAlert({ message: next.message, type: 'error' });
             return;
         }
-        setAlert('처리됐습니다.');
+        setAlert({ message: '요청한 작업을 정상적으로 처리했습니다.', type: 'success' });
         setForm(null);
         setConfirm(null);
         await reloadSchedules();
@@ -105,7 +110,15 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
 
     return (
         <div className={styles.pageShell} data-testid="franchise-schedule-root">
-            {alert && <div className={styles.alert} role="status">{alert}<button type="button" onClick={() => setAlert('')}>확인</button></div>}
+            {alert && (
+                <AlertModal
+                    isOpen
+                    onClose={() => setAlert(null)}
+                    title={alert.type === 'success' ? '처리 완료' : '처리 오류'}
+                    message={alert.message}
+                    type={alert.type}
+                />
+            )}
             <header className={styles.header}>
                 <div>
                     <span className={styles.eyebrow}>가맹 운영</span>
@@ -130,6 +143,13 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                 }}>
                     {SOURCE_FILTERS.map(source => <option key={source} value={source}>{source === 'all' ? '전체 유형' : getSourceLabel(source)}</option>)}
                 </select>
+                <select value={filters.visibility} onChange={event => {
+                    const value = event.currentTarget.value;
+                    const visibility = value === 'shared' || value === 'personal' ? value : 'all';
+                    setFilters(current => ({ ...current, visibility }));
+                }}>
+                    {VISIBILITY_FILTERS.map(visibility => <option key={visibility} value={visibility}>{visibility === 'all' ? '전체 일정' : visibility === 'shared' ? '공유 일정' : '개인 일정'}</option>)}
+                </select>
                 <input value={filters.assignee} onChange={event => {
                     const assignee = event.currentTarget.value;
                     setFilters(current => ({ ...current, assignee }));
@@ -153,13 +173,13 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                     {model.selectedItems.map(item => (
                         <article className={`${styles.scheduleRow} ${item.id === model.focusId ? styles.focusRow : ''}`} key={item.id}>
                             <div><strong>{item.title}</strong><p>{item.assigneeName}</p><p>{item.details || '메모 없음'}</p></div>
-                            <div className={styles.rowMeta}><span>{getSourceLabel(item.source)}</span><span>{item.status}</span></div>
+                            <div className={styles.rowMeta}><span className={item.visibility === 'personal' ? styles.personalBadge : styles.sharedBadge}>{item.visibility === 'personal' ? '개인' : '공유'}</span><span>{getSourceLabel(item.source)}</span><span>{item.status}</span></div>
                             {item.source === 'manual' && <div className={styles.rowActions}><button type="button" title="수정" onClick={() => setForm(getFormValue(item))}><Pencil size={16} /></button><button type="button" title="완료" onClick={() => setConfirm({ item, action: 'complete' })}><Check size={16} /></button><button type="button" title="삭제" onClick={() => setConfirm({ item, action: 'delete' })}><Trash2 size={16} /></button></div>}
                         </article>
                     ))}
                 </section>
             </div>
-            {form && <FranchiseScheduleDialog value={form} assignees={assignees} assigneesLoading={assigneesLoading} assigneesError={assigneesError} mode={formMode} saving={saving} onChange={setForm} onClose={() => setForm(null)} onSubmit={() => void persist(formMode === 'create' ? 'POST' : 'PATCH', { id: form.id, title: form.title, date: form.date, status: form.status, assigneeProfileId: form.assigneeProfileId, details: form.details })} />}
+            {form && <FranchiseScheduleDialog value={form} assignees={assignees} assigneesLoading={assigneesLoading} assigneesError={assigneesError} requesterProfileId={requesterProfileId} mode={formMode} saving={saving} onChange={setForm} onClose={() => setForm(null)} onSubmit={() => void persist(formMode === 'create' ? 'POST' : 'PATCH', { id: form.id, title: form.title, date: form.date, status: form.status, visibility: form.visibility, assigneeProfileId: form.assigneeProfileId, details: form.details })} />}
             {confirm && <FranchiseScheduleConfirm item={confirm.item} action={confirm.action} saving={saving} onClose={() => setConfirm(null)} onConfirm={() => void persist(confirm.action === 'delete' ? 'DELETE' : 'PATCH', { id: confirm.item.id, action: confirm.action })} />}
         </div>
     );

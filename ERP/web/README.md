@@ -79,6 +79,7 @@ supabase_franchise_alimtalk_operations_migration.sql
 supabase_franchise_supervision_migration.sql
 supabase_franchise_supervision_v2_migration.sql
 supabase_franchise_approval_calendar_migration.sql
+supabase_franchise_schedule_visibility_migration.sql
 supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_portal_migration.sql
 supabase_franchise_owner_company_login_scope.sql
@@ -89,6 +90,8 @@ supabase_realty_import_migration.sql
 ```
 
 `franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, `franchise_supervisor_assignments`, `approval_templates`, `approval_documents`, `approval_document_events`, `franchise_labor_settings`, `franchise_owner_accounts`, 또는 `franchise_owner_notices.attachments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. 점주 포털 알림톡 3종은 `supabase_franchise_alimtalk_operations_migration.sql` 적용 후 `supabase_franchise_owner_portal_alimtalk_templates_migration.sql`로 seed를 추가하고, `/admin/alimtalk`에서 승인 템플릿의 SOLAPI template/channel ID를 저장한다. 공통 일정/결재 MVP는 `supabase_franchise_approval_calendar_migration.sql`로 기존 `schedules` 확장과 결재 테이블을 추가한 뒤 확인한다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
+
+가맹운영 전용 일정의 공유/개인 구분은 `franchise_schedules` 생성 SQL 적용 후 `supabase_franchise_schedule_visibility_migration.sql`을 실행한다. 기존 일정과 시스템 생성 일정은 공유로 유지되고, 개인 일정은 생성자 본인에게만 조회·수정·삭제가 허용된다. **SQL 등록 필요**.
 
 ## Franchise Supervision Setup
 

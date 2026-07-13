@@ -5,7 +5,8 @@ import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     FRANCHISE_SCHEDULES_API_PATH,
     parseFranchiseScheduleAssignees,
-    parseFranchiseScheduleItems
+    parseFranchiseScheduleItems,
+    parseFranchiseScheduleRequesterProfileId
 } from './franchiseScheduleViewModel';
 import type {
     FranchiseScheduleAssignee,
@@ -18,10 +19,18 @@ type ScheduleLoadFailure = {
     readonly message: string;
 };
 
-export function getFranchiseScheduleFailure(status: number): ScheduleLoadFailure {
-    if (status === 424) return { state: 'needs-sql', message: '프랜차이즈 일정 SQL 등록 필요: prepare migration 적용 후 다시 시도하세요.' };
+export function getFranchiseScheduleFailure(status: number, serverMessage = ''): ScheduleLoadFailure {
+    if (status === 424) return { state: 'needs-sql', message: serverMessage || '프랜차이즈 일정 SQL 등록 필요: prepare migration 적용 후 다시 시도하세요.' };
     if (status === 403) return { state: 'forbidden', message: '가맹 운영 일정 접근 권한이 없습니다.' };
     return { state: 'error', message: '일정 목록을 불러오지 못했습니다.' };
+}
+
+export async function getFranchiseScheduleResponseFailure(response: Response): Promise<ScheduleLoadFailure> {
+    const payload: unknown = await response.json().catch(() => null);
+    const serverMessage = typeof payload === 'object' && payload !== null && 'message' in payload && typeof payload.message === 'string'
+        ? payload.message
+        : '';
+    return getFranchiseScheduleFailure(response.status, serverMessage);
 }
 
 export function useFranchiseScheduleData(monthDate: Date) {
@@ -29,6 +38,7 @@ export function useFranchiseScheduleData(monthDate: Date) {
     const [assignees, setAssignees] = React.useState<readonly FranchiseScheduleAssignee[]>([]);
     const [assigneesLoading, setAssigneesLoading] = React.useState(true);
     const [assigneesError, setAssigneesError] = React.useState('');
+    const [requesterProfileId, setRequesterProfileId] = React.useState('');
     const [state, setState] = React.useState<FranchiseScheduleLoadState>('loading');
     const [message, setMessage] = React.useState('');
 
@@ -43,7 +53,7 @@ export function useFranchiseScheduleData(monthDate: Date) {
             headers: await getApiAuthHeaders()
         });
         if (!response.ok) {
-            const failure = getFranchiseScheduleFailure(response.status);
+            const failure = await getFranchiseScheduleResponseFailure(response);
             setState(failure.state);
             setMessage(failure.message);
             setItems([]);
@@ -73,7 +83,9 @@ export function useFranchiseScheduleData(monthDate: Date) {
                 setAssigneesLoading(false);
                 return;
             }
-            setAssignees(parseFranchiseScheduleAssignees(await response.json()));
+            const payload: unknown = await response.json();
+            setAssignees(parseFranchiseScheduleAssignees(payload));
+            setRequesterProfileId(parseFranchiseScheduleRequesterProfileId(payload));
             setAssigneesLoading(false);
         };
         void loadAssignees().catch(() => {
@@ -88,5 +100,5 @@ export function useFranchiseScheduleData(monthDate: Date) {
         assigneeName: assigneeNames.get(item.assigneeProfileId) || item.assigneeName
     }));
 
-    return { items: namedItems, assignees, assigneesLoading, assigneesError, state, message, reloadSchedules };
+    return { items: namedItems, assignees, assigneesLoading, assigneesError, requesterProfileId, state, message, reloadSchedules };
 }
