@@ -2,6 +2,7 @@ import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 
 export type SidebarSectionKey =
     | 'dashboard'
+    | 'approvals'
     | 'franchise'
     | 'franchiseWork'
     | 'consulting'
@@ -45,6 +46,15 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
         direct: true,
         items: [
             { title: '대시보드', url: '/dashboard', category: '대시보드', featureKey: 'dashboard' }
+        ]
+    },
+    {
+        key: 'approvals',
+        title: '전자결재',
+        collapsedTitle: '전자결재',
+        direct: true,
+        items: [
+            { title: '전자결재', url: '/approvals', category: '전자결재', featureKey: 'approvals' }
         ]
     },
     {

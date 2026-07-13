@@ -68,6 +68,8 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
         switch (key) {
             case 'dashboard':
                 return isDashboardOpen;
+            case 'approvals':
+                return true;
             case 'franchise':
                 return isFranchiseOpen;
             case 'franchiseWork':
@@ -87,6 +89,8 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
         switch (key) {
             case 'dashboard':
                 setIsDashboardOpen(prev => !prev);
+                return;
+            case 'approvals':
                 return;
             case 'franchise':
                 setIsFranchiseOpen(prev => !prev);

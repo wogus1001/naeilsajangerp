@@ -2,13 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import { cleanString, getFirst, isRecord } from '@/lib/franchise-supervision-api';
 import {
-    buildWorkflowNotification,
-    completeWorkflowSchedule,
-    createWorkflowNotifications,
     fetchWorkflowManagerProfileIds,
-    insertApprovalDocumentEvent,
-    upsertApprovalDocumentForSource,
-    upsertWorkflowSchedule
+    upsertApprovalDocumentForSource
 } from '@/lib/franchise-workflow-store';
 import {
     buildCorrectiveActionSeeds,
@@ -19,7 +14,6 @@ import {
     type SupervisionPhotoAttachment,
     type SupervisionReportTemplateItem
 } from '@/lib/franchise-supervision';
-import type { ApprovalDocumentStatus } from '@/lib/franchise-workflow';
 
 export type VisitRow = {
     readonly id: string;
@@ -75,13 +69,6 @@ function visitStatusForReportStatus(status: SupervisionReportEventType): string 
     if (status === '승인') return '완료';
     if (status === '반려') return '보고서대기';
     return '';
-}
-
-function approvalStatusForReportEvent(eventType: SupervisionReportEventType): ApprovalDocumentStatus {
-    if (eventType === '제출') return '제출';
-    if (eventType === '승인') return '승인';
-    if (eventType === '반려') return '반려';
-    return '임시저장';
 }
 
 export function hasField(body: Record<string, unknown>, keys: readonly string[]): boolean {
@@ -307,90 +294,38 @@ export async function syncSupervisionReportWorkflow(input: {
     const managerIds = (await fetchWorkflowManagerProfileIds(input.supabaseAdmin, input.companyId))
         .filter(profileId => profileId !== input.supervisorProfileId);
     const approverProfileId = managerIds[0] || null;
-    const approvalStatus = approvalStatusForReportEvent(input.eventType);
-    const document = await upsertApprovalDocumentForSource(input.supabaseAdmin, {
-        companyId: input.companyId,
-        templateId: input.templateId || null,
-        sourceType: 'supervision-report',
-        sourceId: input.reportId,
-        title: `${input.locationName} 점검 보고서`,
-        status: approvalStatus,
-        authorProfileId: input.supervisorProfileId,
-        approverProfileId,
-        reviewerProfileId: input.eventType === '승인' || input.eventType === '반려' ? input.actorProfileId : null,
-        rejectReason: input.eventType === '반려' ? input.rejectReason || '' : null,
-        data: {
-            reportId: input.reportId,
-            visitId: input.visitId || '',
-            locationName: input.locationName,
-            specialNote: input.specialNote || ''
-        },
-        actorProfileId: input.actorProfileId
-    });
-    await insertApprovalDocumentEvent(input.supabaseAdmin, {
-        companyId: input.companyId,
-        documentId: document.id,
-        eventType: input.eventType === '제출' ? '제출' : approvalStatus,
-        actorProfileId: input.actorProfileId,
-        fromStatus: null,
-        toStatus: approvalStatus,
-        memo: input.rejectReason || input.specialNote || '',
-        data: { reportId: input.reportId, visitId: input.visitId || '' }
-    });
-
-    if (input.eventType === '제출') {
-        await upsertWorkflowSchedule(input.supabaseAdmin, {
-            companyId: input.companyId,
-            sourceType: 'approval-document',
-            sourceId: document.id,
-            title: `결재 검토: ${input.locationName} 점검 보고서`,
-            status: '진행중',
-            type: '슈퍼바이징 결재',
-            details: 'SV 점검 보고서 승인 대기',
-            assigneeProfileId: approverProfileId,
-            managerProfileId: approverProfileId,
-            dueAt: new Date().toISOString(),
-            metadata: { documentId: document.id, reportId: input.reportId, visitId: input.visitId || '' }
-        });
-        await createWorkflowNotifications(
-            input.supabaseAdmin,
-            managerIds.map(profileId => buildWorkflowNotification({
-                companyId: input.companyId,
-                recipientProfileId: profileId,
-                sourceType: 'supervision-report',
-                sourceId: input.reportId,
-                eventKey: 'submit',
-                severity: 'info',
-                title: 'SV 점검 보고서 승인 대기',
-                body: `${input.locationName} 점검 보고서가 제출되었습니다.`,
-                actionUrl: `/schedule?approvalDocumentId=${encodeURIComponent(document.id)}`,
-                data: { documentId: document.id, reportId: input.reportId, visitId: input.visitId || '' }
-            }))
-        );
-        return;
+    if (input.eventType === '제출' && !approverProfileId) {
+        throw new TypeError('점검 보고서를 결재할 회사 팀장을 먼저 등록해 주세요.');
     }
-
-    if (input.eventType === '승인' || input.eventType === '반려') {
-        await completeWorkflowSchedule(input.supabaseAdmin, {
+    const document = input.eventType === '제출' || input.eventType === '임시저장'
+        ? await upsertApprovalDocumentForSource(input.supabaseAdmin, {
             companyId: input.companyId,
-            sourceType: 'approval-document',
-            sourceId: document.id
-        });
-        await createWorkflowNotifications(input.supabaseAdmin, [
-            buildWorkflowNotification({
-                companyId: input.companyId,
-                recipientProfileId: input.supervisorProfileId,
-                sourceType: 'supervision-report',
-                sourceId: input.reportId,
-                eventKey: input.eventType === '승인' ? 'approve' : 'reject',
-                severity: input.eventType === '승인' ? 'success' : 'warning',
-                title: input.eventType === '승인' ? '점검 보고서 승인 완료' : '점검 보고서 반려',
-                body: input.eventType === '승인'
-                    ? `${input.locationName} 점검 보고서가 승인되었습니다.`
-                    : `${input.locationName} 점검 보고서가 반려되었습니다.${input.rejectReason ? ` 사유: ${input.rejectReason}` : ''}`,
-                actionUrl: `/dashboard/franchise-operations?tab=supervision&reportId=${encodeURIComponent(input.reportId)}`,
-                data: { documentId: document.id, reportId: input.reportId, visitId: input.visitId || '' }
-            })
-        ]);
-    }
+            templateId: input.templateId || null,
+            sourceType: 'supervision-report',
+            sourceId: input.reportId,
+            title: `${input.locationName} 점검 보고서`,
+            status: '임시저장',
+            authorProfileId: input.supervisorProfileId,
+            approverProfileId,
+            data: {
+                reportId: input.reportId,
+                visitId: input.visitId || '',
+                locationName: input.locationName,
+                specialNote: input.specialNote || ''
+            },
+            actorProfileId: input.actorProfileId
+        })
+        : (await input.supabaseAdmin.from('approval_documents').select('*')
+            .eq('company_id', input.companyId).eq('source_type', 'supervision-report')
+            .eq('source_id', input.reportId).maybeSingle()).data;
+    if (!document || input.eventType === '임시저장') return;
+    const action = input.eventType === '제출' ? 'submit' : input.eventType === '승인' ? 'approve' : 'reject';
+    const { error } = await input.supabaseAdmin.rpc('perform_approval_document_action', {
+        p_document_id: document.id,
+        p_company_id: input.companyId,
+        p_action: action,
+        p_actor_profile_id: input.actorProfileId,
+        p_memo: input.rejectReason || input.specialNote || ''
+    });
+    if (error) throw error;
 }

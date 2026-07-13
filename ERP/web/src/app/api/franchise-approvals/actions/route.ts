@@ -2,20 +2,10 @@ import { canAccessCompanyScope, getAuthenticatedRequesterProfile, type Requester
 import { fail, ok } from '@/lib/api-response';
 import {
     isMissingWorkflowSchemaError,
-    nextApprovalDocumentStatus,
     normalizeApprovalDocumentStatus,
     type ApprovalDocumentAction
 } from '@/lib/franchise-workflow';
-import {
-    buildWorkflowNotification,
-    completeWorkflowSchedule,
-    createWorkflowNotifications,
-    fetchWorkflowManagerProfileIds,
-    insertApprovalDocumentEvent,
-    upsertWorkflowSchedule,
-    type ApprovalDocumentRow,
-    type JsonRecord
-} from '@/lib/franchise-workflow-store';
+import { type ApprovalDocumentRow, type JsonRecord } from '@/lib/franchise-workflow-store';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -60,89 +50,6 @@ function schemaFailure(error: unknown): Response {
     return fail(500, 'INTERNAL_ERROR', '결재 액션을 처리하지 못했습니다.');
 }
 
-function timestampUpdates(status: string, requesterId: string, rejectReason: string | null, now: string): JsonRecord {
-    const updates: JsonRecord = {
-        status,
-        updated_by: requesterId,
-        updated_at: now
-    };
-    if (status === '제출') updates.submitted_at = now;
-    if (status === '승인' || status === '반려') updates.reviewed_at = now;
-    if (status === '승인' || status === '반려') updates.reviewer_profile_id = requesterId;
-    if (status === '완료처리') updates.completed_at = now;
-    if (status === '반려') updates.reject_reason = rejectReason || '';
-    if (status !== '반려') updates.reject_reason = null;
-    return updates;
-}
-
-async function notifyActionResult(input: {
-    readonly companyId: string;
-    readonly document: ApprovalDocumentRow;
-    readonly status: string;
-    readonly action: ApprovalDocumentAction;
-    readonly rejectReason: string | null;
-}) {
-    const supabaseAdmin = getSupabaseAdmin();
-    if (input.status === '제출') {
-        const managerIds = (await fetchWorkflowManagerProfileIds(supabaseAdmin, input.companyId))
-            .filter(profileId => profileId !== input.document.author_profile_id);
-        await createWorkflowNotifications(
-            supabaseAdmin,
-            managerIds.map(profileId => buildWorkflowNotification({
-                companyId: input.companyId,
-                recipientProfileId: profileId,
-                sourceType: 'workflow-approval',
-                sourceId: input.document.id,
-                eventKey: 'submit',
-                severity: 'info',
-                title: '결재 요청',
-                body: `${input.document.title} 문서가 승인 대기 상태입니다.`,
-                actionUrl: `/schedule?approvalDocumentId=${encodeURIComponent(input.document.id)}`,
-                data: { documentId: input.document.id }
-            }))
-        );
-        await upsertWorkflowSchedule(supabaseAdmin, {
-            companyId: input.companyId,
-            sourceType: 'approval-document',
-            sourceId: input.document.id,
-            title: `결재 검토: ${input.document.title}`,
-            status: '진행중',
-            type: '결재',
-            details: '승인 대기 문서 검토',
-            managerProfileId: managerIds[0] || null,
-            dueAt: new Date().toISOString(),
-            metadata: { documentId: input.document.id }
-        });
-        return;
-    }
-
-    if (!input.document.author_profile_id) return;
-    const isRejected = input.status === '반려';
-    const isApproved = input.status === '승인';
-    if (!isRejected && !isApproved) return;
-    await createWorkflowNotifications(supabaseAdmin, [
-        buildWorkflowNotification({
-            companyId: input.companyId,
-            recipientProfileId: input.document.author_profile_id,
-            sourceType: 'workflow-approval',
-            sourceId: input.document.id,
-            eventKey: input.action,
-            severity: isRejected ? 'warning' : 'success',
-            title: isRejected ? '결재 반려' : '결재 승인 완료',
-            body: isRejected
-                ? `${input.document.title} 문서가 반려되었습니다.${input.rejectReason ? ` 사유: ${input.rejectReason}` : ''}`
-                : `${input.document.title} 문서가 승인되었습니다.`,
-            actionUrl: `/schedule?approvalDocumentId=${encodeURIComponent(input.document.id)}`,
-            data: { documentId: input.document.id, rejectReason: input.rejectReason || '' }
-        })
-    ]);
-    await completeWorkflowSchedule(supabaseAdmin, {
-        companyId: input.companyId,
-        sourceType: 'approval-document',
-        sourceId: input.document.id
-    });
-}
-
 export async function POST(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
@@ -173,36 +80,29 @@ export async function POST(request: Request) {
         const rejectReason = cleanText(body.rejectReason);
         if (action === 'reject' && !rejectReason) return fail(400, 'VALIDATION_ERROR', '반려 사유가 필요합니다.');
 
-        const transition = nextApprovalDocumentStatus(document.status, action);
-        if (!transition.ok) return fail(400, 'VALIDATION_ERROR', transition.reason);
+        if (action === 'saveDraft') {
+            if (!['임시저장', '반려', '회수'].includes(document.status)) {
+                return fail(409, 'CONFLICT', '제출된 결재 문서는 임시저장할 수 없습니다.');
+            }
+            const { error: draftError } = await supabaseAdmin.from('approval_documents')
+                .update({ updated_by: requester.id, updated_at: new Date().toISOString() })
+                .eq('id', document.id).eq('company_id', document.company_id);
+            if (draftError) throw draftError;
+        } else {
+            const { error: actionError } = await supabaseAdmin.rpc('perform_approval_document_action', {
+                p_document_id: document.id,
+                p_company_id: document.company_id,
+                p_action: action,
+                p_actor_profile_id: requester.id,
+                p_memo: rejectReason
+            });
+            if (actionError) throw actionError;
+        }
 
-        const now = new Date().toISOString();
-        const { data: updated, error: updateError } = await supabaseAdmin
-            .from('approval_documents')
-            .update(timestampUpdates(transition.status, requester.id, rejectReason || null, now))
-            .eq('id', document.id)
-            .select('*')
+        const { data: updated, error: updatedError } = await supabaseAdmin.from('approval_documents')
+            .select('*').eq('id', document.id).eq('company_id', document.company_id)
             .single<ApprovalDocumentRow>();
-        if (updateError || !updated) throw updateError || new Error('Approval action update failed');
-
-        await insertApprovalDocumentEvent(supabaseAdmin, {
-            companyId: document.company_id,
-            documentId: document.id,
-            eventType: transition.eventType,
-            actorProfileId: requester.id,
-            fromStatus: normalizeApprovalDocumentStatus(document.status),
-            toStatus: transition.status,
-            memo: rejectReason,
-            data: { action }
-        });
-
-        await notifyActionResult({
-            companyId: document.company_id,
-            document: updated,
-            status: transition.status,
-            action,
-            rejectReason: rejectReason || null
-        });
+        if (updatedError || !updated) throw updatedError || new TypeError('결재 처리 결과를 확인할 수 없습니다.');
 
         return ok({
             id: updated.id,

@@ -1,5 +1,6 @@
 export type CompanyMenuFeatureKey =
     | 'dashboard'
+    | 'approvals'
     | 'franchiseLeads'
     | 'franchiseWorkIntake'
     | 'franchiseMatchingRequest'
@@ -53,6 +54,7 @@ export const COMPANY_DASHBOARD_MODES: readonly {
 
 export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
     { key: 'dashboard', category: '대시보드', title: '대시보드', description: '전체 현황과 주요 업무 흐름 요약을 보여줍니다.', routePrefixes: ['/dashboard'] },
+    { key: 'approvals', category: '전자결재', title: '전자결재', description: '회사 공통 결재 문서의 작성, 처리, 보관과 양식을 관리합니다.', routePrefixes: ['/approvals'] },
     { key: 'franchiseLeads', category: '프랜차이즈', title: '모객 DB', description: '가맹 희망자 유입, 상담, 계약 전환 흐름을 관리합니다.', routePrefixes: ['/dashboard/franchise-leads'] },
     { key: 'franchiseMatchingRequest', category: '업무', title: '예비 창업자 등록', description: '예비 창업자 정보를 모객 DB로 등록합니다.', routePrefixes: ['/dashboard/franchise-leads/matching-request'] },
     { key: 'franchisePropertyRegistration', category: '업무', title: '입점 요청', description: '프랜차이즈 입점 요청 정보를 별도로 등록합니다.', routePrefixes: ['/dashboard/franchise-leads/property-registration'] },
@@ -79,6 +81,7 @@ export const COMPANY_MENU_FEATURES: readonly CompanyMenuFeatureDefinition[] = [
 
 export const DEFAULT_COMPANY_MENU_FLAGS: CompanyMenuFlagMap = {
     dashboard: true,
+    approvals: true,
     franchiseLeads: true,
     franchiseWorkIntake: true,
     franchiseMatchingRequest: true,
