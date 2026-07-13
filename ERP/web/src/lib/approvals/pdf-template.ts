@@ -12,6 +12,48 @@ type TextSchema = {
     readonly alignment?: 'left' | 'center' | 'right';
 };
 
+const FIRST_PAGE_BODY_LINES = 34;
+const CONTINUATION_BODY_LINES = 44;
+const BODY_LINE_WIDTH = 45;
+
+function characterWidth(character: string): number {
+    return /^[\u0000-\u00ff]$/.test(character) ? 0.55 : 1;
+}
+
+function wrappedBodyLines(value: string): readonly string[] {
+    return value.split('\n').flatMap(sourceLine => {
+        if (!sourceLine) return [''];
+        const lines: string[] = [];
+        let line = '';
+        let width = 0;
+        for (const character of sourceLine) {
+            const nextWidth = characterWidth(character);
+            if (line && width + nextWidth > BODY_LINE_WIDTH) {
+                lines.push(line.trimEnd());
+                line = '';
+                width = 0;
+            }
+            line += character;
+            width += nextWidth;
+        }
+        lines.push(line.trimEnd());
+        return lines;
+    });
+}
+
+export function paginateApprovalBody(value: string): readonly string[] {
+    const lines = wrappedBodyLines(value);
+    const pages: string[] = [];
+    let offset = 0;
+    let capacity = FIRST_PAGE_BODY_LINES;
+    while (offset < lines.length) {
+        pages.push(lines.slice(offset, offset + capacity).join('\n'));
+        offset += capacity;
+        capacity = CONTINUATION_BODY_LINES;
+    }
+    return pages.length > 0 ? pages : [''];
+}
+
 function firstPageSchemas(index: number): TextSchema[] {
     return [
         { name: 'heading', type: 'text', position: { x: 20, y: 18 }, width: 170, height: 16, fontName: 'NotoSansKR', fontSize: 20, alignment: 'center' },

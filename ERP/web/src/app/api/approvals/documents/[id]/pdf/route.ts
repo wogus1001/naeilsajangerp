@@ -6,7 +6,7 @@ import { parseRequiredUuid } from '../../../_shared/boundary';
 import { DOCUMENT_SELECT, isApprovalRetentionExpired, type ApprovalDocumentRow } from '../../../_shared/documents';
 import { approvalErrorResponse, throwDatabaseError } from '../../../_shared/errors';
 import { requireVisibleApprovalDocument } from '../../../_shared/visibility';
-import { createApprovalPdfInput, createApprovalPdfTemplate } from '@/lib/approvals/pdf-template';
+import { createApprovalPdfInput, createApprovalPdfTemplate, paginateApprovalBody } from '@/lib/approvals/pdf-template';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,20 +42,6 @@ function documentBody(valuesInput: unknown, fields: unknown, events: readonly { 
         ? ''
         : `\n\n처리 이력\n${events.map(event => `- ${event.event_type} · ${event.created_at}${event.memo ? ` · ${event.memo}` : ''}`).join('\n')}`;
     return `${body}${history}`;
-}
-
-function bodyPages(value: string, maximumLength = 1_400): readonly string[] {
-    if (value.length <= maximumLength) return [value];
-    const pages: string[] = [];
-    let remaining = value;
-    while (remaining.length > maximumLength) {
-        const preferredBreak = remaining.lastIndexOf('\n', maximumLength);
-        const breakAt = preferredBreak > maximumLength / 2 ? preferredBreak : maximumLength;
-        pages.push(remaining.slice(0, breakAt).trim());
-        remaining = remaining.slice(breakAt).trim();
-    }
-    if (remaining) pages.push(remaining);
-    return pages;
 }
 
 export async function GET(request: Request, routeContext: RouteContext) {
@@ -97,7 +83,7 @@ export async function GET(request: Request, routeContext: RouteContext) {
         const font = await readFile(path.join(process.cwd(), 'public/fonts/noto-sans-kr-400.woff2'));
         const documentTitle = versionResult.data?.title || document.title;
         const body = documentBody(versionResult.data?.values ?? document.values, templateResult.data?.fields, eventResult.data || []);
-        const chunks = bodyPages(body);
+        const chunks = paginateApprovalBody(body);
         const template = createApprovalPdfTemplate(chunks.length);
         const pdfInput = createApprovalPdfInput(
             chunks,

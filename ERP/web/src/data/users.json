@@ -4,13 +4,7 @@
     "password": "1234",
     "name": "관리자",
     "role": "admin",
-    "companyName": "내일",
-    "ucansign": {
-      "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxOTk5MDE4ODUxNjQ4NTI0MjkwIiwidXNlcl9pZCI6MTk5OTAxODg1MTY0ODUyNDI5MCwidG9rZW5fdHlwZSI6Im9hdXRoIiwiZXhwIjoxNzY3MTU2NzIzLCJpYXQiOjE3NjcxNTQ5MjMsImRldmVsb3Blcl9pZCI6MTk5OTAxODg1MTY0ODUyNDI5MH0.Ih5EXH2N-0z1D1X9NtpLOFN_zLH94Q7qBPSupWLM_Yw",
-      "refreshToken": "097B5A8727E2371D8F0741742CF8F3C8CE68722068FCEFF09E3055B2CB2E32DA",
-      "linkedAt": "2025-12-31T00:09:40.722Z",
-      "expiresAt": 1767156663747
-    }
+    "companyName": "내일"
   },
   {
     "id": "test1",

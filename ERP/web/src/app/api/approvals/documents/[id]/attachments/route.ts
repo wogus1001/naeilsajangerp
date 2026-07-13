@@ -117,22 +117,21 @@ export async function POST(request: Request, routeContext: RouteContext) {
         const { error: uploadError } = await storage
             .upload(uploadedPath, file, { contentType, upsert: false });
         throwDatabaseError(uploadError);
-        const { data, error } = await context.supabase.from('approval_attachments').insert({
-            company_id: context.companyId,
-            document_id: documentId,
-            file_name: file.name,
-            storage_bucket: APPROVAL_ATTACHMENT_BUCKET,
-            storage_path: uploadedPath,
-            mime_type: contentType,
-            size_bytes: file.size,
-            security_level: document.security_level,
-            uploaded_by: context.requester.id
-        }).select('id, file_name, mime_type, size_bytes').single();
+        const { data: attachmentId, error } = await context.supabase.rpc('create_approval_attachment', {
+            p_actor_profile_id: context.requester.id,
+            p_company_id: context.companyId,
+            p_document_id: documentId,
+            p_file_name: file.name,
+            p_mime_type: contentType,
+            p_size_bytes: file.size,
+            p_storage_bucket: APPROVAL_ATTACHMENT_BUCKET,
+            p_storage_path: uploadedPath
+        });
         if (error) {
             await storage.remove([uploadedPath]);
             throwDatabaseError(error);
         }
-        return ok({ attachment: data }, 201);
+        return ok({ attachment: { id: attachmentId, file_name: file.name, mime_type: contentType, size_bytes: file.size } }, 201);
     } catch (error) {
         return approvalErrorResponse(error, 'Failed to upload approval attachment');
     }

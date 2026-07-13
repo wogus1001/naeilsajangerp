@@ -23,6 +23,16 @@ export type TemplateDefinition = {
     readonly steps: readonly TemplateStepWire[];
 };
 
+export type TemplateStepInsert = {
+    readonly action_kind: string;
+    readonly completion_mode: string;
+    readonly name: string;
+    readonly step_key: string;
+    readonly step_order: number;
+    readonly target_config: Record<string, unknown>;
+    readonly target_type: string;
+};
+
 function issueMessage(field: string, issues: readonly { readonly index: number; readonly message: string }[]): string {
     const first = issues[0];
     return first ? `${field}[${first.index}]: ${first.message}` : `${field} is invalid`;
@@ -47,6 +57,29 @@ function targetWire(target: StepTargetSelector): StepTargetWire {
 
 function assertNever(value: never): never {
     throw new TypeError(`Unsupported approval target: ${JSON.stringify(value)}`);
+}
+
+function targetConfig(step: TemplateStepWire): Record<string, unknown> {
+    switch (step.target.kind) {
+        case 'profiles': return { profile_ids: step.target.profileIds };
+        case 'role': return { role_key: step.target.roleKey, unit_id: step.target.unitId };
+        case 'unit_manager':
+        case 'unit_members': return { unit_id: step.target.unitId };
+        case 'author_manager': return {};
+        default: return assertNever(step.target);
+    }
+}
+
+export function templateStepInserts(steps: readonly TemplateStepWire[]): readonly TemplateStepInsert[] {
+    return steps.map(step => ({
+        action_kind: step.action,
+        completion_mode: step.mode,
+        name: step.label,
+        step_key: step.key,
+        step_order: step.order,
+        target_config: targetConfig(step),
+        target_type: step.target.kind
+    }));
 }
 
 export function parseTemplateDefinition(body: JsonRecord): TemplateDefinition {

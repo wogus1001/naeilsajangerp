@@ -19,10 +19,11 @@ import {
     normalizeTemplateItems,
     normalizeVisitPurpose,
     normalizeVisitStatus,
-    summarizeSupervision,
-    type SupervisionPhotoAttachment
+    summarizeSupervision
 } from '@/lib/franchise-supervision';
+import { readSupervisionPhotoAttachments } from '@/lib/franchise-supervision-attachment-access';
 import { buildSupervisionOperationQueue } from '@/lib/franchise-supervision-operation-queue';
+import { isSupervisionReportStoragePath, SUPERVISION_REPORT_BUCKET } from '@/lib/upload-storage-policy';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,30 +118,17 @@ type NamedMaps = {
     readonly profiles: ReadonlyMap<string, SupervisionProfileRow>;
 };
 
-function readAttachments(
-    value: unknown,
-    getPublicUrl: (path: string) => string
-): readonly SupervisionPhotoAttachment[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter(isRecord).map(item => {
-        const path = cleanString(item.path);
-        return {
-            name: cleanString(item.name),
-            path,
-            publicUrl: path.startsWith('franchise-supervision/') ? getPublicUrl(path) : '',
-            size: Number(item.size) || 0,
-            contentType: cleanString(item.contentType)
-        };
-    }).filter(item => item.name && item.path);
-}
-
 function collectAttachmentPaths(rows: readonly ReportRow[]): string[] {
     const paths = new Set<string>();
     rows.forEach(row => {
         if (!Array.isArray(row.photo_attachments)) return;
         row.photo_attachments.filter(isRecord).forEach(item => {
             const path = cleanString(item.path);
-            if (path.startsWith('franchise-supervision/')) paths.add(path);
+            if (cleanString(item.storageBucket) === SUPERVISION_REPORT_BUCKET && isSupervisionReportStoragePath({
+                companyId: row.company_id,
+                path,
+                reportId: row.id
+            })) paths.add(path);
         });
     });
     return Array.from(paths);
@@ -205,9 +193,14 @@ function transformReport(
         templateId: row.template_id,
         status: normalizeReportStatus(row.status),
         inspectionItems: mergeInspectionItems(row.inspection_items, templateItems),
-        photoAttachments: readAttachments(row.photo_attachments, getAttachmentPublicUrl),
+        photoAttachments: readSupervisionPhotoAttachments(
+            row.photo_attachments,
+            { companyId: row.company_id, reportId: row.id },
+            getAttachmentPublicUrl
+        ),
         specialNote: row.special_note || '',
         rejectReason: row.reject_reason || '',
+        createdBy: row.created_by,
         submittedAt: row.submitted_at,
         reviewedAt: row.reviewed_at,
         updatedAt: row.updated_at
@@ -328,7 +321,7 @@ export async function GET(request: Request) {
         const templateItemsById = new Map(templates.map(template => [template.id, template.inspectionItems]));
         const signedAttachmentEntries = await Promise.all(collectAttachmentPaths(reports).map(async path => {
             const { data, error } = await supabaseAdmin.storage
-                .from('property-documents')
+                .from(SUPERVISION_REPORT_BUCKET)
                 .createSignedUrl(path, 60 * 5);
             if (error) {
                 console.warn('Franchise supervision photo signed URL warning:', error.message);

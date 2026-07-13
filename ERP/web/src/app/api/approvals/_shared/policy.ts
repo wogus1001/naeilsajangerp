@@ -8,10 +8,11 @@ type DocumentVisibilityFacts = {
     readonly organizationReceiver: boolean;
     readonly approvalAdmin: boolean;
     readonly globalAdmin: boolean;
+    readonly securityLevel: string;
 };
 
 export function canManageApprovals(requester: RequesterProfile, approvalAdmin: boolean): boolean {
-    return requester.role === 'admin' || requester.role === 'manager' || approvalAdmin;
+    return requester.role === 'admin' || approvalAdmin;
 }
 
 export function canViewApprovalDocument(facts: DocumentVisibilityFacts): boolean {
@@ -20,5 +21,5 @@ export function canViewApprovalDocument(facts: DocumentVisibilityFacts): boolean
         facts.authorProfileId === facts.requesterId ||
         facts.pastOrActiveAssignee ||
         facts.reader ||
-        facts.organizationReceiver;
+        (facts.securityLevel !== 'confidential' && facts.organizationReceiver);
 }

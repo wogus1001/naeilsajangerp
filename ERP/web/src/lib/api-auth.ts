@@ -10,6 +10,10 @@ export interface RequesterProfile {
     status?: string | null;
 }
 
+export function isActiveRequester(requester: RequesterProfile | null): requester is RequesterProfile {
+    return requester?.status === 'active';
+}
+
 type RequesterProfileRow = {
     readonly id: string;
     readonly role: string | null;
@@ -129,7 +133,8 @@ export async function getRequesterProfile(
         if (!requesterId || requesterId !== authenticatedUserId) return null;
     }
 
-    return fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
+    const requester = await fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
+    return isActiveRequester(requester) ? requester : null;
 }
 
 export async function getAuthenticatedRequesterProfile(
@@ -138,7 +143,8 @@ export async function getAuthenticatedRequesterProfile(
 ): Promise<RequesterProfile | null> {
     const authenticatedUserId = await resolveAuthenticatedUserId(request);
     if (!authenticatedUserId) return null;
-    return fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
+    const requester = await fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
+    return isActiveRequester(requester) ? requester : null;
 }
 
 export function isAdmin(requester: RequesterProfile | null): boolean {

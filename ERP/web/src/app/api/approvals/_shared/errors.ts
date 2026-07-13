@@ -4,7 +4,7 @@ import { ApprovalInputError, isRecord } from './boundary';
 
 const MIGRATION_FILE = 'supabase_company_approvals_v2_migration.sql';
 const SCHEMA_CODES = ['PGRST202', 'PGRST204', 'PGRST205', '42P01', '42703', '42883'] as const;
-const APPROVAL_SCHEMA_PATTERN = /approval_|organization_units|organization_memberships|perform_approval_document_action|create_company_approval_template_version|replace_approval_document_readers/i;
+const APPROVAL_SCHEMA_PATTERN = /approval_|organization_units|organization_memberships|perform_approval_document_action|sync_supervision_report_approval|save_supervision_report_with_approval|create_company_approval_template_version|replace_approval_document_readers/i;
 
 export class ApprovalRouteError extends Error {
     readonly status: number;

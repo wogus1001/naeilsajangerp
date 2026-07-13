@@ -6,6 +6,10 @@ insert into storage.buckets (id, name, public)
 values ('approval-documents', 'approval-documents', false)
 on conflict (id) do update set public = false;
 
+insert into storage.buckets (id, name, public)
+values ('franchise-supervision-private', 'franchise-supervision-private', false)
+on conflict (id) do update set public = false;
+
 create table if not exists public.approval_templates (
   id uuid default uuid_generate_v4() primary key,
   company_id uuid references public.companies(id) on delete cascade not null,
@@ -414,6 +418,9 @@ create index if not exists idx_approval_attachments_document
   on public.approval_attachments(company_id, document_id, created_at desc);
 create index if not exists idx_approval_documents_company_due
   on public.approval_documents(company_id, status, due_at) where due_at is not null;
+create unique index if not exists idx_approval_documents_source_unique
+  on public.approval_documents(company_id, source_type, source_id)
+  where source_type is not null and source_id is not null;
 create index if not exists idx_approval_documents_retention
   on public.approval_documents(company_id, retention_until) where retention_until is not null;
 
@@ -438,7 +445,7 @@ begin
       from public.profiles p
       where p.company_id = legacy_document.company_id
         and p.role in ('admin', 'manager')
-        and coalesce(p.status, 'active') = 'active'
+        and p.status = 'active'
         and p.id <> legacy_document.author_profile_id
       order by case when p.role = 'manager' then 0 else 1 end, p.created_at
       limit 1;
@@ -511,7 +518,7 @@ as $$
     from public.profiles p
     where p.id = auth.uid()
       and p.company_id = target_company_id
-      and coalesce(p.status, 'active') = 'active'
+      and p.status = 'active'
       and p.role <> 'partner_vendor'
   );
 $$;
@@ -528,8 +535,21 @@ as $$
     from public.profiles p
     where p.id = auth.uid()
       and p.company_id = target_company_id
-      and coalesce(p.status, 'active') = 'active'
-      and p.role in ('admin', 'manager')
+      and p.status = 'active'
+      and (
+        p.role = 'admin'
+        or exists (
+          select 1
+          from public.approval_role_assignments a
+          where a.company_id = target_company_id
+            and a.profile_id = p.id
+            and a.role_key = 'approval_admin'
+            and a.unit_id is null
+            and a.active
+            and (a.active_from is null or a.active_from <= timezone('utc'::text, now()))
+            and (a.active_until is null or a.active_until >= timezone('utc'::text, now()))
+        )
+      )
   );
 $$;
 
@@ -548,16 +568,16 @@ as $$
       where d.id = target_document_id
         and d.company_id = target_company_id
         and (
-          p.role in ('admin', 'manager')
+          public.can_manage_company_approvals(target_company_id)
           or d.author_profile_id = auth.uid()
           or d.approver_profile_id = auth.uid()
-          or (d.security_level <> 'confidential' and exists (
+          or exists (
             select 1
             from public.approval_document_readers r
             where r.document_id = d.id
               and r.company_id = d.company_id
               and r.profile_id = auth.uid()
-          ))
+          )
           or exists (
             select 1
             from public.approval_document_steps s
@@ -764,7 +784,7 @@ as $$
   ) order by t.profile_id::text), '[]'::jsonb)
   from distinct_targets t
   join public.profiles p on p.id = t.profile_id and p.company_id = target_company_id
-    and coalesce(p.status, 'active') = 'active'
+    and p.status = 'active'
     and p.role <> 'partner_vendor'
     and (action_kind <> 'approval' or p.id <> author_profile_id)
   left join lateral (
@@ -822,6 +842,140 @@ alter table public.approval_document_steps enable row level security;
 alter table public.approval_document_readers enable row level security;
 alter table public.approval_attachments enable row level security;
 alter table public.approval_document_events enable row level security;
+
+drop policy if exists "Company members can view franchise_inspection_reports" on public.franchise_inspection_reports;
+create policy "Company members can view franchise_inspection_reports" on public.franchise_inspection_reports
+  for select using (
+    public.is_approval_company_member(company_id)
+    and (
+      supervisor_profile_id = auth.uid()
+      or created_by = auth.uid()
+      or exists (
+        select 1
+        from public.profiles requester
+        where requester.id = auth.uid()
+          and requester.company_id = franchise_inspection_reports.company_id
+          and requester.status = 'active'
+          and requester.role in ('admin', 'manager')
+      )
+    )
+  );
+
+drop policy if exists "Company members can write franchise_inspection_reports" on public.franchise_inspection_reports;
+
+drop policy if exists "Company members can view franchise_supervision_report_events" on public.franchise_supervision_report_events;
+create policy "Company members can view franchise_supervision_report_events" on public.franchise_supervision_report_events
+  for select using (
+    public.is_approval_company_member(company_id)
+    and exists (
+      select 1
+      from public.franchise_inspection_reports report
+      where report.id = franchise_supervision_report_events.report_id
+        and report.company_id = franchise_supervision_report_events.company_id
+    )
+  );
+
+drop policy if exists "Company members can insert franchise_supervision_report_events" on public.franchise_supervision_report_events;
+
+drop policy if exists "Company members can view schedules" on public.schedules;
+create policy "Company members can view schedules" on public.schedules
+  for select using (
+    public.is_approval_company_member(company_id)
+    and (
+      source_type is distinct from 'approval-document'
+      or user_id = auth.uid()
+      or assignee_profile_id = auth.uid()
+      or coalesce(metadata -> 'targetProfileIds', '[]'::jsonb) ? auth.uid()::text
+      or exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid() and p.company_id = public.schedules.company_id
+          and p.status = 'active' and p.role = 'admin'
+      )
+    )
+  );
+
+drop policy if exists "Company members can insert schedules" on public.schedules;
+create policy "Company members can insert schedules" on public.schedules
+  for insert with check (
+    public.is_approval_company_member(company_id)
+    and source_type is null
+    and exists (
+      select 1 from public.profiles owner
+      where owner.id = user_id
+        and owner.company_id = schedules.company_id
+        and owner.status = 'active'
+        and owner.role <> 'partner_vendor'
+    )
+    and (
+      scope is distinct from 'personal'
+      or user_id = auth.uid()
+      or exists (
+        select 1 from public.profiles actor
+        where actor.id = auth.uid()
+          and actor.company_id = schedules.company_id
+          and actor.status = 'active'
+          and actor.role = 'admin'
+      )
+    )
+  );
+
+drop policy if exists "Company members can update schedules" on public.schedules;
+create policy "Company members can update schedules" on public.schedules
+  for update using (
+    public.is_approval_company_member(company_id)
+    and source_type is null
+    and (
+      scope is distinct from 'personal'
+      or user_id = auth.uid()
+      or exists (
+        select 1 from public.profiles actor
+        where actor.id = auth.uid()
+          and actor.company_id = schedules.company_id
+          and actor.status = 'active'
+          and actor.role = 'admin'
+      )
+    )
+  )
+  with check (
+    public.is_approval_company_member(company_id)
+    and source_type is null
+    and exists (
+      select 1 from public.profiles owner
+      where owner.id = user_id
+        and owner.company_id = schedules.company_id
+        and owner.status = 'active'
+        and owner.role <> 'partner_vendor'
+    )
+    and (
+      scope is distinct from 'personal'
+      or user_id = auth.uid()
+      or exists (
+        select 1 from public.profiles actor
+        where actor.id = auth.uid()
+          and actor.company_id = schedules.company_id
+          and actor.status = 'active'
+          and actor.role = 'admin'
+      )
+    )
+  );
+
+drop policy if exists "Company members can delete schedules" on public.schedules;
+create policy "Company members can delete schedules" on public.schedules
+  for delete using (
+    public.is_approval_company_member(company_id)
+    and source_type is null
+    and (
+      scope is distinct from 'personal'
+      or user_id = auth.uid()
+      or exists (
+        select 1 from public.profiles actor
+        where actor.id = auth.uid()
+          and actor.company_id = schedules.company_id
+          and actor.status = 'active'
+          and actor.role = 'admin'
+      )
+    )
+  );
 
 do $$
 declare
@@ -1285,6 +1439,44 @@ $$;
 revoke all on function public.create_company_approval_template_version(uuid, uuid, uuid, text, text, text, text, text, integer, jsonb, jsonb) from public;
 grant execute on function public.create_company_approval_template_version(uuid, uuid, uuid, text, text, text, text, text, integer, jsonb, jsonb) to service_role;
 
+create or replace function public.create_company_approval_template_with_version(
+  p_company_id uuid,
+  p_actor_profile_id uuid,
+  p_status text,
+  p_name text,
+  p_description text,
+  p_category text,
+  p_security_level text,
+  p_retention_years integer,
+  p_fields jsonb,
+  p_steps jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  template_id uuid;
+begin
+  insert into public.approval_templates (
+    company_id, name, description, document_type, category, security_level,
+    retention_years, fields, active, created_by, updated_by
+  ) values (
+    p_company_id, p_name, p_description, 'general', p_category, p_security_level,
+    p_retention_years, p_fields, true, p_actor_profile_id, p_actor_profile_id
+  ) returning id into template_id;
+  perform public.create_company_approval_template_version(
+    p_company_id, template_id, p_actor_profile_id, p_status, p_name,
+    p_description, p_category, p_security_level, p_retention_years, p_fields, p_steps
+  );
+  return template_id;
+end;
+$$;
+
+revoke all on function public.create_company_approval_template_with_version(uuid, uuid, text, text, text, text, text, integer, jsonb, jsonb) from public;
+grant execute on function public.create_company_approval_template_with_version(uuid, uuid, text, text, text, text, text, integer, jsonb, jsonb) to service_role;
+
 create or replace function public.replace_approval_document_readers(
   p_company_id uuid,
   p_document_id uuid,
@@ -1313,7 +1505,7 @@ begin
     select 1 from unnest(coalesce(p_reader_profile_ids, '{}'::uuid[])) reader_id
     where not exists (
       select 1 from public.profiles p
-      where p.id = reader_id and p.company_id = p_company_id and coalesce(p.status, 'active') = 'active'
+    where p.id = reader_id and p.company_id = p_company_id and p.status = 'active'
     )
   ) then
     raise exception using errcode = '23514', message = 'approval readers must be active company members';
@@ -1331,6 +1523,121 @@ $$;
 
 revoke all on function public.replace_approval_document_readers(uuid, uuid, uuid, uuid[]) from public;
 grant execute on function public.replace_approval_document_readers(uuid, uuid, uuid, uuid[]) to service_role;
+
+create or replace function public.create_approval_attachment(
+  p_company_id uuid,
+  p_document_id uuid,
+  p_actor_profile_id uuid,
+  p_file_name text,
+  p_storage_bucket text,
+  p_storage_path text,
+  p_mime_type text,
+  p_size_bytes bigint
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  attachment_id uuid;
+  document_row public.approval_documents%rowtype;
+begin
+  if coalesce(auth.role(), '') <> 'service_role'
+    and (auth.uid() is null or auth.uid() <> p_actor_profile_id) then
+    raise exception using errcode = '42501', message = 'approval actor does not match the authenticated user';
+  end if;
+  select d.* into document_row
+  from public.approval_documents d
+  where d.id = p_document_id and d.company_id = p_company_id
+  for update;
+  if not found or document_row.author_profile_id <> p_actor_profile_id then
+    raise exception using errcode = '42501', message = 'only the document author can upload attachments';
+  end if;
+  if document_row.status not in ('임시저장', '반려', '회수') then
+    raise exception using errcode = '55000', message = 'submitted approval document attachments are immutable';
+  end if;
+  if (select count(*) from public.approval_attachments a
+      where a.company_id = p_company_id and a.document_id = p_document_id) >= 5 then
+    raise exception using errcode = '23514', message = 'approval documents support up to five attachments';
+  end if;
+  insert into public.approval_attachments (
+    company_id, document_id, file_name, storage_bucket, storage_path,
+    mime_type, size_bytes, security_level, uploaded_by
+  ) values (
+    p_company_id, p_document_id, p_file_name, p_storage_bucket, p_storage_path,
+    p_mime_type, p_size_bytes, document_row.security_level, p_actor_profile_id
+  ) returning id into attachment_id;
+  return attachment_id;
+end;
+$$;
+
+revoke all on function public.create_approval_attachment(uuid, uuid, uuid, text, text, text, text, bigint) from public;
+grant execute on function public.create_approval_attachment(uuid, uuid, uuid, text, text, text, text, bigint) to service_role;
+
+create or replace function public.sync_supervision_report_source(
+  p_company_id uuid,
+  p_source_id text,
+  p_status text,
+  p_actor_profile_id uuid,
+  p_memo text,
+  p_action_time timestamptz
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  report_row public.franchise_inspection_reports%rowtype;
+  visit_status text;
+begin
+  if p_status not in ('임시저장', '제출', '승인', '반려') then
+    raise exception using errcode = '22023', message = 'unsupported supervision report source status';
+  end if;
+  update public.franchise_inspection_reports report
+  set status = p_status,
+      submitted_at = case
+        when p_status = '제출' then coalesce(report.submitted_at, p_action_time)
+        else report.submitted_at
+      end,
+      reviewed_by = case when p_status in ('승인', '반려') then p_actor_profile_id else null end,
+      reviewed_at = case when p_status in ('승인', '반려') then p_action_time else null end,
+      reject_reason = case when p_status = '반려' then nullif(btrim(coalesce(p_memo, '')), '') else null end,
+      updated_by = p_actor_profile_id,
+      updated_at = p_action_time
+  where report.id = p_source_id::uuid
+    and report.company_id = p_company_id
+  returning * into report_row;
+  if not found then
+    raise exception using errcode = 'P0002', message = 'linked supervision report was not found';
+  end if;
+
+  insert into public.franchise_supervision_report_events (
+    company_id, report_id, event_type, actor_profile_id, memo
+  ) values (
+    p_company_id, report_row.id, p_status, p_actor_profile_id,
+    nullif(btrim(coalesce(p_memo, '')), '')
+  );
+
+  visit_status := case p_status
+    when '제출' then '승인대기'
+    when '승인' then '완료'
+    when '반려' then '보고서대기'
+    when '임시저장' then '보고서대기'
+  end;
+  if report_row.visit_id is not null then
+    update public.franchise_store_visits
+    set status = visit_status,
+        updated_by = p_actor_profile_id,
+        updated_at = p_action_time
+    where id = report_row.visit_id
+      and company_id = p_company_id;
+  end if;
+end;
+$$;
+
+revoke all on function public.sync_supervision_report_source(uuid, text, text, uuid, text, timestamptz) from public;
 
 create or replace function public.perform_approval_document_action(
   p_document_id uuid,
@@ -1389,7 +1696,7 @@ begin
     select 1 from public.profiles p
     where p.id = p_actor_profile_id
       and p.company_id = p_company_id
-      and coalesce(p.status, 'active') = 'active'
+      and p.status = 'active'
       and p.role <> 'partner_vendor'
   ) then
     raise exception using errcode = '42501', message = 'approval actor is not an active company member';
@@ -1421,7 +1728,13 @@ begin
     end if;
 
     selected_template_version_id := null;
-    if document_row.template_id is not null then
+    if document_row.current_version_id is not null and document_row.status in ('반려', '회수') then
+      select v.template_version_id into selected_template_version_id
+      from public.approval_document_versions v
+      where v.id = document_row.current_version_id
+        and v.document_id = document_row.id
+        and v.company_id = p_company_id;
+    elsif document_row.template_id is not null then
       select t.current_version_id into selected_template_version_id
       from public.approval_templates t
       where t.id = document_row.template_id and t.company_id = p_company_id and t.active;
@@ -1564,7 +1877,7 @@ begin
           )) into resolved_targets
           from public.profiles p
           where p.id = document_row.approver_profile_id and p.company_id = p_company_id
-            and coalesce(p.status, 'active') = 'active'
+            and p.status = 'active'
             and p.role <> 'partner_vendor'
             and p.id <> document_row.author_profile_id;
         end if;
@@ -1598,7 +1911,7 @@ begin
       )) into resolved_targets
       from public.profiles p
       where p.id = document_row.approver_profile_id and p.company_id = p_company_id
-        and coalesce(p.status, 'active') = 'active'
+        and p.status = 'active'
         and p.role <> 'partner_vendor'
         and p.id <> document_row.author_profile_id;
       if coalesce(jsonb_array_length(resolved_targets), 0) = 0 then
@@ -1675,6 +1988,11 @@ begin
       p_company_id, document_row.id, version_id, event_type, p_action,
       p_actor_profile_id, actor_snapshot, document_row.status, '제출', coalesce(p_memo, '')
     );
+    if document_row.source_type = 'supervision-report' then
+      perform public.sync_supervision_report_source(
+        p_company_id, document_row.source_id, '제출', p_actor_profile_id, p_memo, action_time
+      );
+    end if;
     perform public.sync_approval_document_workflow(p_company_id, document_row.id, p_action, p_memo);
     return jsonb_build_object(
       'document_id', document_row.id,
@@ -1717,6 +2035,11 @@ begin
       p_company_id, document_row.id, document_row.current_version_id, '회수', p_action,
       p_actor_profile_id, actor_snapshot, document_row.status, '회수', coalesce(p_memo, '')
     );
+    if document_row.source_type = 'supervision-report' then
+      perform public.sync_supervision_report_source(
+        p_company_id, document_row.source_id, '임시저장', p_actor_profile_id, p_memo, action_time
+      );
+    end if;
     perform public.sync_approval_document_workflow(p_company_id, document_row.id, p_action, p_memo);
     return jsonb_build_object('document_id', document_row.id, 'status', '회수', 'action', p_action);
   end if;
@@ -1857,6 +2180,11 @@ begin
       document_row.status, '반려', coalesce(p_memo, ''),
       jsonb_build_object('acting_for_profile_id', acting_for_profile_id)
     );
+    if document_row.source_type = 'supervision-report' then
+      perform public.sync_supervision_report_source(
+        p_company_id, document_row.source_id, '반려', p_actor_profile_id, p_memo, action_time
+      );
+    end if;
     perform public.sync_approval_document_workflow(p_company_id, document_row.id, p_action, p_memo);
     return jsonb_build_object('document_id', document_row.id, 'status', '반려', 'action', p_action);
   end if;
@@ -1912,6 +2240,11 @@ begin
     document_row.status, resulting_status, coalesce(p_memo, ''),
     jsonb_build_object('acting_for_profile_id', acting_for_profile_id)
   );
+  if document_row.source_type = 'supervision-report' and resulting_status = '승인' then
+    perform public.sync_supervision_report_source(
+      p_company_id, document_row.source_id, '승인', p_actor_profile_id, p_memo, action_time
+    );
+  end if;
   perform public.sync_approval_document_workflow(p_company_id, document_row.id, p_action, p_memo);
   return jsonb_build_object(
     'document_id', document_row.id,
@@ -1925,5 +2258,250 @@ $$;
 
 revoke all on function public.perform_approval_document_action(uuid, uuid, text, uuid, text) from public;
 grant execute on function public.perform_approval_document_action(uuid, uuid, text, uuid, text) to authenticated, service_role;
+
+create or replace function public.sync_supervision_report_approval(
+  p_company_id uuid,
+  p_report_id uuid,
+  p_event_type text,
+  p_actor_profile_id uuid,
+  p_approver_profile_id uuid,
+  p_title text,
+  p_data jsonb,
+  p_memo text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  document_row public.approval_documents%rowtype;
+  action_key text;
+  action_result jsonb;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'supervision approval sync requires the service role';
+  end if;
+  if p_event_type not in ('임시저장', '제출', '승인', '반려') then
+    raise exception using errcode = '22023', message = 'unsupported supervision approval event';
+  end if;
+
+  if p_event_type in ('임시저장', '제출') then
+    insert into public.approval_documents (
+      company_id, template_id, source_type, source_id, title, status,
+      author_profile_id, approver_profile_id, values, data,
+      created_by, updated_by
+    ) values (
+      p_company_id, null, 'supervision-report', p_report_id::text, p_title, '임시저장',
+      p_actor_profile_id, p_approver_profile_id, '{}'::jsonb, coalesce(p_data, '{}'::jsonb),
+      p_actor_profile_id, p_actor_profile_id
+    ) on conflict (company_id, source_type, source_id)
+      where source_type is not null and source_id is not null
+      do nothing;
+  end if;
+
+  select d.* into document_row
+  from public.approval_documents d
+  where d.company_id = p_company_id
+    and d.source_type = 'supervision-report'
+    and d.source_id = p_report_id::text
+  for update;
+  if not found then
+    raise exception using errcode = 'P0002', message = 'supervision approval document was not found';
+  end if;
+
+  if p_event_type = '제출' and document_row.status = '제출' then
+    return jsonb_build_object(
+      'document_id', document_row.id,
+      'status', document_row.status,
+      'action', 'submit',
+      'idempotent', true
+    );
+  end if;
+
+  if p_event_type in ('임시저장', '제출') then
+    if document_row.status not in ('임시저장', '반려', '회수') then
+      raise exception using errcode = '55000', message = 'supervision approval document is not editable';
+    end if;
+    if document_row.author_profile_id <> p_actor_profile_id then
+      raise exception using errcode = '42501', message = 'only the supervision report author can update its approval document';
+    end if;
+    update public.approval_documents
+    set title = p_title,
+        approver_profile_id = coalesce(p_approver_profile_id, approver_profile_id),
+        data = coalesce(p_data, '{}'::jsonb),
+        updated_by = p_actor_profile_id,
+        updated_at = timezone('utc'::text, now())
+    where id = document_row.id
+    returning * into document_row;
+    if p_event_type = '임시저장' then
+      return jsonb_build_object(
+        'document_id', document_row.id,
+        'status', document_row.status,
+        'action', 'saveDraft'
+      );
+    end if;
+  end if;
+
+  action_key := case p_event_type
+    when '제출' then 'submit'
+    when '승인' then 'approve'
+    else 'reject'
+  end;
+  select public.perform_approval_document_action(
+    document_row.id,
+    p_company_id,
+    action_key,
+    p_actor_profile_id,
+    coalesce(p_memo, '')
+  ) into action_result;
+  return action_result;
+end;
+$$;
+
+revoke all on function public.sync_supervision_report_approval(uuid, uuid, text, uuid, uuid, text, jsonb, text) from public;
+grant execute on function public.sync_supervision_report_approval(uuid, uuid, text, uuid, uuid, text, jsonb, text) to service_role;
+
+create or replace function public.save_supervision_report_with_approval(
+  p_company_id uuid,
+  p_report_id uuid,
+  p_create boolean,
+  p_expected_updated_at timestamptz,
+  p_location_id uuid,
+  p_supervisor_profile_id uuid,
+  p_visit_id uuid,
+  p_report_status text,
+  p_inspection_items jsonb,
+  p_photo_attachments jsonb,
+  p_special_note text,
+  p_reject_reason text,
+  p_submitted_at timestamptz,
+  p_reviewed_by uuid,
+  p_reviewed_at timestamptz,
+  p_template_id uuid,
+  p_event_type text,
+  p_actor_profile_id uuid,
+  p_approver_profile_id uuid,
+  p_title text,
+  p_approval_data jsonb,
+  p_memo text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  report_row public.franchise_inspection_reports%rowtype;
+  approval_result jsonb;
+  action_time timestamptz := timezone('utc'::text, now());
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'supervision report workflow requires the service role';
+  end if;
+  if p_create then
+    if p_event_type not in ('임시저장', '제출') then
+      raise exception using errcode = '22023', message = 'a new supervision report must be saved or submitted';
+    end if;
+    insert into public.franchise_inspection_reports (
+      id, company_id, location_id, supervisor_profile_id, visit_id, status,
+      inspection_items, photo_attachments, special_note, reject_reason,
+      submitted_at, reviewed_by, reviewed_at, template_id,
+      created_by, updated_by, created_at, updated_at
+    ) values (
+      p_report_id, p_company_id, p_location_id, p_supervisor_profile_id, p_visit_id, p_report_status,
+      coalesce(p_inspection_items, '[]'::jsonb), coalesce(p_photo_attachments, '[]'::jsonb),
+      p_special_note, p_reject_reason, p_submitted_at, p_reviewed_by, p_reviewed_at, p_template_id,
+      p_actor_profile_id, p_actor_profile_id, action_time, action_time
+    ) returning * into report_row;
+  else
+    select r.* into report_row
+    from public.franchise_inspection_reports r
+    where r.id = p_report_id and r.company_id = p_company_id
+    for update;
+    if not found then
+      raise exception using errcode = 'P0002', message = 'supervision report was not found';
+    end if;
+    if report_row.updated_at is distinct from p_expected_updated_at then
+      raise exception using errcode = '40001', message = 'supervision report changed concurrently';
+    end if;
+    if p_event_type in ('임시저장', '제출') and report_row.created_by is distinct from p_actor_profile_id then
+      raise exception using errcode = '42501', message = 'only the supervision report author can save or submit';
+    end if;
+    if p_event_type = '제출' and report_row.status = '제출' then
+      select public.sync_supervision_report_approval(
+        p_company_id,
+        p_report_id,
+        p_event_type,
+        p_actor_profile_id,
+        p_approver_profile_id,
+        p_title,
+        p_approval_data,
+        p_memo
+      ) into approval_result;
+      return jsonb_build_object(
+        'report_id', report_row.id,
+        'report_status', report_row.status,
+        'approval', approval_result
+      );
+    end if;
+    if p_event_type in ('임시저장', '제출') then
+      update public.franchise_inspection_reports
+      set location_id = p_location_id,
+          supervisor_profile_id = p_supervisor_profile_id,
+          visit_id = p_visit_id,
+          status = p_report_status,
+          inspection_items = coalesce(p_inspection_items, '[]'::jsonb),
+          photo_attachments = coalesce(p_photo_attachments, '[]'::jsonb),
+          special_note = p_special_note,
+          reject_reason = p_reject_reason,
+          submitted_at = p_submitted_at,
+          reviewed_by = p_reviewed_by,
+          reviewed_at = p_reviewed_at,
+          template_id = p_template_id,
+          updated_by = p_actor_profile_id,
+          updated_at = action_time
+      where id = p_report_id and company_id = p_company_id
+      returning * into report_row;
+    end if;
+  end if;
+
+  select public.sync_supervision_report_approval(
+    p_company_id,
+    p_report_id,
+    p_event_type,
+    p_actor_profile_id,
+    p_approver_profile_id,
+    p_title,
+    p_approval_data,
+    p_memo
+  ) into approval_result;
+  if p_event_type = '임시저장' then
+    insert into public.franchise_supervision_report_events (
+      company_id, report_id, event_type, actor_profile_id, memo
+    ) values (
+      p_company_id, report_row.id, '임시저장', p_actor_profile_id,
+      nullif(btrim(coalesce(p_memo, '')), '')
+    );
+  end if;
+  select report.* into report_row
+  from public.franchise_inspection_reports report
+  where report.id = p_report_id and report.company_id = p_company_id;
+  return jsonb_build_object(
+    'report_id', report_row.id,
+    'report_status', report_row.status,
+    'approval', approval_result
+  );
+end;
+$$;
+
+revoke all on function public.save_supervision_report_with_approval(
+  uuid, uuid, boolean, timestamptz, uuid, uuid, uuid, text, jsonb, jsonb,
+  text, text, timestamptz, uuid, timestamptz, uuid, text, uuid, uuid, text, jsonb, text
+) from public;
+grant execute on function public.save_supervision_report_with_approval(
+  uuid, uuid, boolean, timestamptz, uuid, uuid, uuid, text, jsonb, jsonb,
+  text, text, timestamptz, uuid, timestamptz, uuid, text, uuid, uuid, text, jsonb, text
+) to service_role;
 
 commit;

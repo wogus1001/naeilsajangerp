@@ -14,7 +14,7 @@ import {
     type ApprovalTemplateRow,
     type ApprovalTemplateVersionRow
 } from '../../../_shared/template-rows';
-import { parseTemplateDefinition, type TemplateStepWire } from '../../../_shared/template';
+import { parseTemplateDefinition, templateStepInserts } from '../../../_shared/template';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,21 +29,6 @@ function versionStatus(value: unknown): (typeof VERSION_STATUSES)[number] {
     const status = VERSION_STATUSES.find(candidate => candidate === parsed);
     if (!status) throw new ApprovalRouteError(400, 'VALIDATION_ERROR', 'status is not supported');
     return status;
-}
-
-function targetConfig(step: TemplateStepWire): Record<string, unknown> {
-    switch (step.target.kind) {
-        case 'profiles': return { profile_ids: step.target.profileIds };
-        case 'role': return { role_key: step.target.roleKey, unit_id: step.target.unitId };
-        case 'unit_manager':
-        case 'unit_members': return { unit_id: step.target.unitId };
-        case 'author_manager': return {};
-        default: return assertNever(step.target);
-    }
-}
-
-function assertNever(value: never): never {
-    throw new TypeError(`Unsupported template step target: ${JSON.stringify(value)}`);
 }
 
 async function templateForCompany(
@@ -113,15 +98,7 @@ export async function POST(request: Request, routeContext: RouteContext) {
         const versionRetentionYears = body.retentionYears === undefined
             ? template.retention_years
             : parseIntegerValue(body.retentionYears, 'retentionYears', 1, 30);
-        const stepInserts = definition.steps.map(step => ({
-            step_order: step.order,
-            step_key: step.key,
-            name: step.label,
-            action_kind: step.action,
-            completion_mode: step.mode,
-            target_type: step.target.kind,
-            target_config: targetConfig(step)
-        }));
+        const stepInserts = templateStepInserts(definition.steps);
         const { data: versionId, error: rpcError } = await context.supabase.rpc('create_company_approval_template_version', {
             p_actor_profile_id: context.requester.id,
             p_category: versionCategory,

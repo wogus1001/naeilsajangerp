@@ -7,6 +7,7 @@ import {
     type SupervisionReportTemplateItem
 } from '@/lib/franchise-supervision';
 import type { SupervisionReportAiSummary } from '@/lib/franchise-supervision-ai-summary';
+import { SUPERVISION_REPORT_BUCKET } from '@/lib/upload-storage-policy';
 import type {
     SupervisionPayload,
     SupervisionScope
@@ -199,7 +200,7 @@ async function uploadReportPhotos(input: {
     for (const file of input.files) {
         const formData = new FormData();
         const path = `franchise-supervision/${input.companyId}/${input.reportId}/${Date.now()}-${safeFileName(file.name)}`;
-        formData.set('bucket', 'property-documents');
+        formData.set('bucket', SUPERVISION_REPORT_BUCKET);
         formData.set('companyId', input.companyId);
         formData.set('path', path);
         formData.set('file', file);
@@ -210,6 +211,7 @@ async function uploadReportPhotos(input: {
         uploaded.push({
             name: file.name,
             path: data.path || path,
+            storageBucket: SUPERVISION_REPORT_BUCKET,
             publicUrl: data.publicUrl || '',
             size: file.size,
             contentType: file.type
@@ -219,48 +221,44 @@ async function uploadReportPhotos(input: {
 }
 
 export async function saveSupervisionReport(input: SaveReportInput): Promise<void> {
-    const method = input.reportId ? 'PATCH' : 'POST';
     const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
-    const response = await fetch('/api/franchise-supervision/reports', {
-        method,
-        headers,
-        body: JSON.stringify({
-            id: input.reportId,
-            requesterId: input.userId,
-            companyId: input.companyId,
-            companyName: input.companyName,
-            visitId: input.visitId,
-            event: input.event,
-            inspectionItems: input.inspectionItems.length > 0 ? input.inspectionItems : buildDefaultInspectionItems(),
-            templateId: input.templateId,
-            specialNote: input.specialNote,
-            rejectReason: input.rejectReason,
-            photoAttachments: input.existingAttachments
-        })
-    });
-    const payload = await readPayload(response);
-    const saved = unwrapApiData<{ readonly id?: string }>(payload);
-    const reportId = input.reportId || saved.id || '';
-    if (!reportId || input.photoFiles.length === 0) return;
+    const sendReport = async (method: 'POST' | 'PATCH', reportId: string, event: SaveReportInput['event'], attachments: readonly SupervisionPhotoAttachment[]) => {
+        const response = await fetch('/api/franchise-supervision/reports', {
+            method,
+            headers,
+            body: JSON.stringify({
+                id: reportId || undefined,
+                requesterId: input.userId,
+                companyId: input.companyId,
+                companyName: input.companyName,
+                visitId: input.visitId,
+                event,
+                inspectionItems: input.inspectionItems.length > 0 ? input.inspectionItems : buildDefaultInspectionItems(),
+                templateId: input.templateId,
+                specialNote: input.specialNote,
+                rejectReason: input.rejectReason,
+                photoAttachments: attachments
+            })
+        });
+        return unwrapApiData<{ readonly id?: string }>(await readPayload(response));
+    };
 
-    const attachments = [
-        ...input.existingAttachments,
-        ...await uploadReportPhotos({ companyId: input.companyId, reportId, files: input.photoFiles })
-    ];
-    const patchResponse = await fetch('/api/franchise-supervision/reports', {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({
-            id: reportId,
-            requesterId: input.userId,
-            companyId: input.companyId,
-            companyName: input.companyName,
-            event: input.event,
-            attachmentsOnly: true,
-            photoAttachments: attachments
-        })
-    });
-    await readPayload(patchResponse);
+    let reportId = input.reportId;
+    if (!reportId) {
+        const initialEvent = input.photoFiles.length > 0 ? 'saveDraft' : input.event;
+        const saved = await sendReport('POST', '', initialEvent, input.existingAttachments);
+        reportId = saved.id || '';
+        if (!reportId) throw new TypeError('저장된 점검 보고서 ID를 확인할 수 없습니다.');
+        if (input.photoFiles.length === 0) return;
+    }
+
+    const attachments = input.photoFiles.length > 0
+        ? [
+            ...input.existingAttachments,
+            ...await uploadReportPhotos({ companyId: input.companyId, reportId, files: input.photoFiles })
+        ]
+        : input.existingAttachments;
+    await sendReport('PATCH', reportId, input.event, attachments);
 }
 
 export async function saveSupervisionTemplate(input: SaveTemplateInput): Promise<void> {

@@ -14,3 +14,7 @@ test('Given report processing history When rendered Then it is collapsed in an a
     assert.match(timelineSource, /이 보고서 처리 이력/);
     assert.doesNotMatch(timelineSource, /\sopen(?:=|\s|>)/);
 });
+
+test('Given an existing report When rendering the editor Then only its author can edit or submit it', () => {
+    assert.match(source, /props\.report\.createdBy === props\.userId/);
+});

@@ -59,7 +59,7 @@ function createDefaultUploadRouteDependencies(): UploadRouteDependencies {
             .from(target.bucket)
             .upload(target.path, buffer, {
                 contentType,
-                upsert: true
+                upsert: target.kind !== 'supervisionReport'
             })
     };
 }
