@@ -112,6 +112,18 @@ function optionalRecord(value: unknown, field: string): JsonRecord {
     return value === undefined || value === null ? {} : parseRecord(value, field);
 }
 
+function parseApprovalLineSelections(value: unknown): JsonRecord {
+    if (value === undefined || value === null) return {};
+    const record = parseRecord(value, 'body.approvalLineSelections');
+    if (Object.keys(record).length > 30) {
+        throw new ApprovalInputError('body.approvalLineSelections', '결재 단계는 30개 이하로 설정해 주세요.');
+    }
+    return Object.fromEntries(Object.entries(record).map(([stepId, profileIds]) => [
+        stepId,
+        parseUuidArray(profileIds, `body.approvalLineSelections.${stepId}`, 30)
+    ]));
+}
+
 function optionalDateTime(value: unknown, field: string): string | null {
     const text = parseOptionalText(value, field, 40);
     if (!text) return null;
@@ -130,13 +142,15 @@ function securityLevel(value: unknown): (typeof SECURITY_LEVELS)[number] {
 export function parseDocumentDraft(body: JsonRecord) {
     const receiverUnitIds = parseUuidArray(body.receiverUnitIds, 'receiverUnitIds', 100);
     const receiverProfileIds = parseUuidArray(body.receiverProfileIds, 'receiverProfileIds', 100);
+    const documentBody = optionalRecord(body.body ?? body.data, 'body');
     return {
         template_id: parseOptionalUuid(body.templateId, 'templateId'),
         approver_profile_id: parseOptionalUuid(body.approverProfileId, 'approverProfileId'),
         title: parseRequiredText(body.title, 'title', 200),
         values: optionalRecord(body.values, 'values'),
         data: {
-            ...optionalRecord(body.body ?? body.data, 'body'),
+            ...documentBody,
+            approvalLineSelections: parseApprovalLineSelections(documentBody.approvalLineSelections),
             receiver_unit_ids: receiverUnitIds,
             receiver_profile_ids: receiverProfileIds
         },
@@ -147,6 +161,13 @@ export function parseDocumentDraft(body: JsonRecord) {
         security_level: body.securityLevel === undefined ? 'company' : securityLevel(body.securityLevel),
         due_at: optionalDateTime(body.dueAt, 'dueAt')
     };
+}
+
+export function approvalLineProfileIds(data: unknown): readonly string[] {
+    if (!isRecord(data) || !isRecord(data.approvalLineSelections)) return [];
+    return [...new Set(Object.values(data.approvalLineSelections).flatMap(value => (
+        Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+    )))];
 }
 
 export function hasProtectedDocumentSourceFields(body: JsonRecord): boolean {

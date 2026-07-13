@@ -7,6 +7,7 @@ import type {
     ApprovalDocumentSummary,
     ApprovalFieldValues,
     ApprovalInboxFilter,
+    ApprovalLineSelections,
     ApprovalOrganization,
     ApprovalTemplate,
     ApprovalTemplateStep
@@ -30,6 +31,7 @@ export type ApprovalInboxResult = {
 export type SaveApprovalDocumentInput = {
     readonly action: 'saveDraft' | 'submit';
     readonly attachments: readonly File[];
+    readonly approvalLineSelections: ApprovalLineSelections;
     readonly documentBox: string;
     readonly fieldValues: ApprovalFieldValues;
     readonly retentionPeriod: string;
@@ -139,6 +141,32 @@ export async function fetchApprovalDocument(documentId: string): Promise<Approva
     return approvalDetailFromWire(wire, fields);
 }
 
+export async function downloadApprovalAttachment(attachment: {
+    readonly name: string;
+    readonly url?: string;
+}): Promise<void> {
+    if (!attachment.url) throw new Error('첨부파일 주소를 확인할 수 없습니다.');
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(attachment.url, { cache: 'no-store', headers });
+    if (!response.ok) {
+        let payload: unknown = null;
+        try {
+            payload = await response.json();
+        } catch {
+            payload = null;
+        }
+        throw new Error(payload ? readApiError(payload) : '첨부파일을 내려받지 못했습니다.');
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = attachment.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+}
+
 export function fetchApprovalTemplates(includeArchived = false): Promise<readonly ApprovalTemplate[]> {
     const params = new URLSearchParams();
     if (includeArchived) params.set('includeInactive', 'true');
@@ -185,6 +213,7 @@ export function saveApprovalDocument(input: SaveApprovalDocumentInput): Promise<
             category: input.documentBox,
             securityLevel: input.securityLevel === 'normal' ? 'company' : input.securityLevel,
             body: {
+                approvalLineSelections: input.approvalLineSelections,
                 documentBox: input.documentBox,
                 retentionPeriod: input.retentionPeriod
             },
@@ -275,6 +304,21 @@ export function saveApprovalOrganization(patch: ApprovalOrganizationPatch): Prom
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch)
     });
+}
+
+export async function deleteApprovalOrganizationUnit(unitId: string): Promise<void> {
+    const params = new URLSearchParams({ entity: 'unit', id: unitId });
+    await requestJson(`/api/approvals/organization?${params.toString()}`, { method: 'DELETE' });
+}
+
+export async function deleteApprovalMembership(membershipId: string): Promise<void> {
+    const params = new URLSearchParams({ entity: 'membership', id: membershipId });
+    await requestJson(`/api/approvals/organization?${params.toString()}`, { method: 'DELETE' });
+}
+
+export async function deleteApprovalRoleAssignment(roleId: string): Promise<void> {
+    const params = new URLSearchParams({ entity: 'role', id: roleId });
+    await requestJson(`/api/approvals/organization?${params.toString()}`, { method: 'DELETE' });
 }
 
 export function createApprovalDelegation(input: ApprovalDelegationInput): Promise<ApprovalDelegation> {

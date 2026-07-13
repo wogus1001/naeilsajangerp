@@ -3,7 +3,7 @@ import type { ApprovalLineStep, ApprovalTemplateStep } from './approvalTypes';
 import styles from './ApprovalDocument.module.css';
 
 type ApprovalLinePreviewProps =
-    | { readonly kind: 'template'; readonly steps: readonly ApprovalTemplateStep[] }
+    | { readonly kind: 'template'; readonly startOrder?: number; readonly steps: readonly ApprovalTemplateStep[] }
     | { readonly kind: 'document'; readonly steps: readonly ApprovalLineStep[] };
 
 const ACTION_LABELS = {
@@ -33,7 +33,7 @@ export function ApprovalLinePreview(props: ApprovalLinePreviewProps) {
                     {props.kind === 'template'
                         ? props.steps.map((step, index) => (
                             <li key={step.id}>
-                                <span className={styles.stepMark}>{index + 1}</span>
+                                <span className={styles.stepMark}>{index + (props.startOrder ?? 1)}</span>
                                 <div><strong>{step.label}</strong><small>{ACTION_LABELS[step.action]} · {step.targetLabel}</small></div>
                             </li>
                         ))

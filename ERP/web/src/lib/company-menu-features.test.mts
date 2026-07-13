@@ -44,8 +44,8 @@ test('Given dashboard and franchise paths When resolving company menu feature Th
 });
 
 test('Given sidebar sections When reading navigation Then dashboard is top-level and franchise owns the franchise links', () => {
-    const dashboardSection = SIDEBAR_SECTIONS[0];
-    const franchiseSection = SIDEBAR_SECTIONS[1];
+    const dashboardSection = SIDEBAR_SECTIONS.find(section => section.key === 'dashboard');
+    const franchiseSection = SIDEBAR_SECTIONS.find(section => section.key === 'franchise');
 
     assert.equal(dashboardSection?.key, 'dashboard');
     assert.equal(dashboardSection?.direct, true);

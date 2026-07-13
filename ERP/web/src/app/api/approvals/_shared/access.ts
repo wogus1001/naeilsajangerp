@@ -6,7 +6,7 @@ import {
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isRecord, parseOptionalUuid, type JsonRecord } from './boundary';
 import { ApprovalRouteError, throwDatabaseError } from './errors';
-import { canManageApprovals } from './policy';
+import { canManageApprovalOrganization, canManageApprovals } from './policy';
 
 export type ApprovalSupabase = ReturnType<typeof getSupabaseAdmin>;
 
@@ -15,6 +15,7 @@ export type ApprovalContext = {
     readonly requester: RequesterProfile;
     readonly companyId: string;
     readonly approvalAdmin: boolean;
+    readonly organizationManager: boolean;
 };
 
 type RoleAssignmentRow = {
@@ -54,6 +55,20 @@ async function hasApprovalAdminAssignment(
     return (data || []).some(row => row.unit_id === null && activeAt(row, now));
 }
 
+async function hasOrganizationManagerAssignment(
+    supabase: ApprovalSupabase,
+    requester: RequesterProfile,
+    companyId: string
+): Promise<boolean> {
+    if (requester.role === 'admin' || requester.role === 'manager') return true;
+    const { count, error } = await supabase.from('organization_units').select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('manager_profile_id', requester.id)
+        .eq('active', true);
+    throwDatabaseError(error);
+    return (count ?? 0) > 0;
+}
+
 export async function resolveApprovalContext(request: Request, parsedBody?: unknown): Promise<ApprovalContext> {
     const supabase = getSupabaseAdmin();
     const requester = await getAuthenticatedRequesterProfile(supabase, request);
@@ -67,16 +82,28 @@ export async function resolveApprovalContext(request: Request, parsedBody?: unkn
     if (!canAccessCompanyScope(requester, companyId)) {
         throw new ApprovalRouteError(403, 'FORBIDDEN', 'Cross-company approval access is denied');
     }
+    const [approvalAdmin, organizationManager] = await Promise.all([
+        hasApprovalAdminAssignment(supabase, requester, companyId),
+        hasOrganizationManagerAssignment(supabase, requester, companyId)
+    ]);
     return {
         supabase,
         requester,
         companyId,
-        approvalAdmin: await hasApprovalAdminAssignment(supabase, requester, companyId)
+        approvalAdmin,
+        organizationManager
     };
 }
 
 export function requireApprovalManager(context: ApprovalContext): void {
     if (!canManageApprovals(context.requester, context.approvalAdmin)) {
         throw new ApprovalRouteError(403, 'FORBIDDEN', 'Approval administration permission is required');
+    }
+}
+
+
+export function requireApprovalOrganizationManager(context: ApprovalContext): void {
+    if (!canManageApprovalOrganization(context.requester, context.organizationManager)) {
+        throw new ApprovalRouteError(403, 'FORBIDDEN', '부서와 구성원 설정은 팀장만 변경할 수 있습니다.');
     }
 }

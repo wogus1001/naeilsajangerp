@@ -23,7 +23,7 @@ test('Given company approvals enabled When reading navigation Then the top-level
         APPROVAL_LOCAL_NAVIGATION.map(item => [item.label, item.href]),
         [
             ['홈', '/approvals'],
-            ['작성하기', '/approvals/write'],
+            ['새 문서', '/approvals/write'],
             ['결재 대기', '/approvals/pending'],
             ['내 문서함', '/approvals/mine'],
             ['부서 문서함', '/approvals/department'],

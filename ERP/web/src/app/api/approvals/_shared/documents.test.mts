@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     actorAlreadyResponded,
+    approvalLineProfileIds,
     hasProtectedDocumentSourceFields,
-    isApprovalRetentionExpired
+    isApprovalRetentionExpired,
+    parseDocumentDraft
 } from './documents.js';
 
 void test('Given an approval retention date When the final UTC day has passed Then downloads are expired', () => {
@@ -24,4 +26,15 @@ void test('Given a document patch When source identifiers are present Then the i
     assert.equal(hasProtectedDocumentSourceFields({ sourceType: 'supervision' }), true);
     assert.equal(hasProtectedDocumentSourceFields({ sourceId: 'source-1' }), true);
     assert.equal(hasProtectedDocumentSourceFields({ title: '수정 제목' }), false);
+});
+
+void test('Given document-specific approvers When parsing a draft Then selections are normalized and discoverable for validation', () => {
+    const profileId = '11111111-1111-4111-8111-111111111111';
+    const draft = parseDocumentDraft({
+        title: '업무 보고',
+        body: { approvalLineSelections: { 'step-1': [profileId, profileId] } }
+    });
+
+    assert.deepEqual(draft.data.approvalLineSelections, { 'step-1': [profileId] });
+    assert.deepEqual(approvalLineProfileIds(draft.data), [profileId]);
 });

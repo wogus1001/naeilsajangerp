@@ -35,6 +35,185 @@
     align-items: start;
 }
 
+.templatePicker {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.pickerHeading {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px;
+    border-bottom: 1px solid #e5e8eb;
+}
+
+.pickerHeading > span {
+    display: inline-flex;
+    min-height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pickerHeading h3,
+.pickerHeading p {
+    margin: 0;
+}
+
+.pickerHeading h3 {
+    color: #191f28;
+    font-size: 16px;
+}
+
+.pickerHeading p {
+    margin-top: 4px;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: keep-all;
+}
+
+.pickerState {
+    margin: 0;
+    padding: 48px 20px;
+    color: #6b7684;
+    font-size: 14px;
+    text-align: center;
+}
+
+.templateCardGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    padding: 20px;
+}
+
+.templateCardGrid > button {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 156px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-content: start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    text-align: left;
+    cursor: pointer;
+}
+
+.templateCardGrid > button:hover {
+    border-color: #b0b8c1;
+    background: #f9fafb;
+}
+
+.templateCardGrid > button.selectedTemplateCard {
+    border-color: #3182f6;
+    background: #f9fcff;
+    box-shadow: 0 0 0 2px #e8f3ff;
+}
+
+.templateIcon {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #3182f6;
+}
+
+.templateCardContent {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.templateCardContent small,
+.templateCardContent em {
+    color: #8b95a1;
+    font-size: 11px;
+    font-style: normal;
+}
+
+.templateCardContent strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.templateCardContent > span {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #6b7684;
+    font-size: 12px;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.templateCardContent em {
+    margin-top: 6px;
+}
+
+.selectedMark {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.pickerActions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    border-top: 1px solid #e5e8eb;
+}
+
+.pickerActions button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 16px;
+    border: 1px solid #3182f6;
+    border-radius: 8px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pickerActions button:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
 .documentPanel,
 .sidePanel {
     min-width: 0;
@@ -72,6 +251,36 @@
     font-size: 12px;
 }
 
+.changeTemplateButton {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 0 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.selectedTemplateSummary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #8b95a1;
+    font-size: 11px;
+}
+
+.selectedTemplateSummary strong {
+    color: #191f28;
+    font-size: 14px;
+}
+
 .titleField,
 .field {
     display: flex;
@@ -107,12 +316,17 @@
 .fieldGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    column-gap: 16px;
+    row-gap: 8px;
     padding: 20px 0;
 }
 
 .field {
+    display: grid;
     grid-column: 1 / -1;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    margin-bottom: 8px;
 }
 
 .fieldHalf {
@@ -307,19 +521,31 @@
 }
 
 .fileControl {
-    display: flex;
-    min-height: 72px;
+    display: grid;
+    min-height: 80px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
     border: 1px dashed #d1d6db;
     border-radius: 8px;
-    color: #3182f6;
-    cursor: pointer;
+    background: #f9fafb;
 }
 
-.fileControl > span {
+.fileControlIcon {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #e8f3ff;
+    color: #3182f6;
+}
+
+.fileControlText {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 2px;
 }
@@ -341,6 +567,34 @@
     opacity: 0;
 }
 
+.fileSelectButton {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #fff;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.fileSelectButton:hover {
+    border-color: #3182f6;
+    color: #2272eb;
+}
+
+.fileError {
+    margin: 8px 0 0;
+    color: #f04452;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .fileList {
     display: grid;
     gap: 4px;
@@ -351,6 +605,9 @@
 
 .fileList li {
     display: flex;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     min-height: 44px;
     align-items: center;
     justify-content: space-between;
@@ -361,12 +618,43 @@
     font-size: 13px;
 }
 
+.fileList li > span {
+    width: 0;
+    flex: 1 1 auto;
+}
+
+.fileList li > button {
+    flex: 0 0 auto;
+}
+
 .fileList span {
     display: inline-flex;
     min-width: 0;
     align-items: center;
     gap: 8px;
     overflow-wrap: anywhere;
+}
+
+.fileList span > span {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+}
+
+.fileList span strong {
+    max-width: 100%;
+    overflow: hidden;
+    color: #333d4b;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fileList span small {
+    color: #8b95a1;
+    font-size: 11px;
 }
 
 .writeSidebar {
@@ -548,11 +836,24 @@
     .actionBar {
         grid-column: 1 / -1;
     }
+
+    .templateCardGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 720px) {
     .documentPanel {
         padding: 16px;
+    }
+
+    .fileControl {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .fileSelectButton {
+        width: 100%;
+        grid-column: 1 / -1;
     }
 
     .fieldGrid,
@@ -588,6 +889,34 @@
     .primaryButton,
     .secondaryButton {
         min-height: 44px;
+    }
+
+    .templateCardGrid {
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+
+    .pickerHeading {
+        padding: 16px;
+    }
+
+    .pickerActions {
+        padding: 12px 16px;
+    }
+
+    .pickerActions button {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .documentHeading {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .changeTemplateButton {
+        min-height: 44px;
+        margin-left: 30px;
     }
 }
 
@@ -729,17 +1058,25 @@
 }
 
 .savedAttachments li span,
-.savedAttachments li a {
+.savedAttachments li button {
     display: inline-flex;
     align-items: center;
     gap: 7px;
 }
 
-.savedAttachments li a {
+.savedAttachments li button {
     min-height: 40px;
+    border: 0;
+    background: transparent;
     color: #3182f6;
+    font: inherit;
     font-weight: 600;
-    text-decoration: none;
+    cursor: pointer;
+}
+
+.savedAttachments li button:disabled {
+    color: #8b95a1;
+    cursor: default;
 }
 
 .savedAttachments > p {

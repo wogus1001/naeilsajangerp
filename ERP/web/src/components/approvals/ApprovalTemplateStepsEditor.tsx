@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { approvalRoleLabel } from './approvalLabels';
 import type { ApprovalOrganization, ApprovalStepTarget, ApprovalTemplateStep } from './approvalTypes';
 import styles from './ApprovalTemplates.module.css';
 
@@ -31,7 +32,10 @@ function targetForKind(kind: ApprovalStepTarget['kind'], organization: ApprovalO
 function targetLabel(target: ApprovalStepTarget, organization: ApprovalOrganization): string {
     if (target.kind === 'author_manager') return '작성자 소속 부서장';
     if (target.kind === 'profiles') return organization.people.find(person => person.id === target.profileIds[0])?.name || '직접 지정';
-    if (target.kind === 'role') return organization.roleAssignments.find(role => role.roleKey === target.roleKey)?.roleName || target.roleKey || '결재 역할';
+    if (target.kind === 'role') {
+        const role = organization.roleAssignments.find(item => item.roleKey === target.roleKey);
+        return approvalRoleLabel(target.roleKey, role?.roleName);
+    }
     const unit = organization.units.find(item => item.id === target.unitId)?.name || '조직 선택';
     return target.kind === 'unit_manager' ? `${unit} 부서장` : `${unit} 구성원`;
 }
@@ -61,9 +65,9 @@ export function ApprovalTemplateStepsEditor({ organization, steps, onChange }: P
                     <label><span>단계명</span><input onChange={event => update(index, { label: event.target.value })} value={step.label} /></label>
                     <label><span>처리 유형</span><select onChange={event => update(index, { action: event.target.value as ApprovalTemplateStep['action'] })} value={step.action}><option value="approval">결재</option><option value="agreement">합의</option><option value="acknowledgement">수신 확인</option></select></label>
                     <label><span>완료 조건</span><select onChange={event => update(index, { mode: event.target.value as ApprovalTemplateStep['mode'] })} value={step.mode}><option value="sequential">순차</option><option value="parallel_all">전원 처리</option><option value="parallel_any">1인 처리</option></select></label>
-                    <label><span>대상 방식</span><select onChange={event => { const target = targetForKind(event.target.value as ApprovalStepTarget['kind'], organization); update(index, { target, targetLabel: targetLabel(target, organization) }); }} value={step.target.kind}><option value="author_manager">작성자 부서장</option><option value="unit_manager">지정 부서장</option><option value="unit_members">지정 부서원</option><option value="role">결재 역할</option><option value="profiles">직접 지정</option></select></label>
+                    <label><span>담당자 지정</span><select onChange={event => { const target = targetForKind(event.target.value as ApprovalStepTarget['kind'], organization); update(index, { target, targetLabel: targetLabel(target, organization) }); }} value={step.target.kind}><option value="author_manager">작성자 부서장</option><option value="unit_manager">지정 부서장</option><option value="unit_members">지정 부서원</option><option value="role">담당 업무 기준</option><option value="profiles">직접 지정</option></select></label>
                     {step.target.kind === 'profiles' && <label><span>담당자</span><select onChange={event => { const target = { kind: 'profiles' as const, profileIds: [event.target.value] }; update(index, { target, targetLabel: targetLabel(target, organization) }); }} value={step.target.profileIds[0] || ''}><option value="">담당자 선택</option>{organization.people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
-                    {step.target.kind === 'role' && <label><span>결재 역할</span><select onChange={event => { const target = { ...step.target, roleKey: event.target.value }; update(index, { target, targetLabel: targetLabel(target, organization) }); }} value={step.target.roleKey}><option value="">역할 선택</option>{organization.roleAssignments.map(role => <option key={role.id} value={role.roleKey}>{role.roleName}</option>)}</select></label>}
+                    {step.target.kind === 'role' && <label><span>담당 업무</span><select onChange={event => { const target = { ...step.target, roleKey: event.target.value }; update(index, { target, targetLabel: targetLabel(target, organization) }); }} value={step.target.roleKey}><option value="">담당 업무 선택</option>{organization.roleAssignments.map(role => <option key={role.id} value={role.roleKey}>{approvalRoleLabel(role.roleKey, role.roleName)}</option>)}</select></label>}
                     {(step.target.kind === 'unit_manager' || step.target.kind === 'unit_members') && <label><span>조직</span><select onChange={event => { const target = { ...step.target, unitId: event.target.value }; update(index, { target, targetLabel: targetLabel(target, organization) }); }} value={step.target.unitId}><option value="">조직 선택</option>{organization.units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>}
                     <div className={styles.stepActions}>
                         <button aria-label="위로 이동" disabled={index === 0} onClick={() => move(index, -1)} type="button"><ArrowUp size={15} /></button>

@@ -36,28 +36,6 @@
     word-break: keep-all;
 }
 
-.writeButton {
-    display: inline-flex;
-    min-height: 40px;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 16px;
-    border-radius: 8px;
-    background: var(--approval-blue);
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 700;
-    text-decoration: none;
-    transition: background-color 160ms ease;
-}
-
-.writeButton:hover {
-    background: var(--approval-blue-hover);
-}
-
-.writeButton:focus-visible,
 .localNav a:focus-visible {
     outline: 2px solid var(--approval-blue);
     outline-offset: 2px;
@@ -123,11 +101,6 @@
         display: none;
     }
 
-    .writeButton {
-        min-height: 44px;
-        padding: 0 14px;
-    }
-
     .localNav {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -146,11 +119,5 @@
 }
 
 @media (max-width: 420px) {
-    .moduleHeader {
-        flex-direction: column;
-    }
-
-    .writeButton {
-        width: 100%;
-    }
+    .moduleHeader { flex-direction: column; }
 }
