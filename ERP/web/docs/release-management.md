@@ -219,6 +219,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-13
+  - 작업 브랜치: `codex/progress-request-map-gallery-20260713`
+  - 기능 커밋: 이번 입점 요청 상세 지도·사진 탐색 커밋
+  - 주요 기능: 진행현황의 입점 요청 상세에서 등록 주소를 Kakao 지도와 외부 지도 링크로 연결하고, 첨부 이미지를 큰 화면·썸네일·이전/다음 버튼으로 탐색한다. 임대 조건 요약과 금액 입력에는 천 단위 쉼표를 표시한다.
+  - dev/main 반영: protected branch PR과 필수 Vercel check를 거쳐 반영한다. dev 고유 커밋을 main 전체 병합하지 않고 이번 기능 패치만 선형 반영한다.
+  - 배포: main 반영 후 `my_project_main_release`에서 `naeilsajang` production을 배포하고 `www.fcerp.co.kr`의 Kakao 지도 타일·마커와 운영 도메인 READY를 확인한다.
+  - 검증: 관련 테스트 17건, `tsc`, lint, build, diff check를 통과했다. Playwright mock으로 사진 좌우 이동, 쉼표 표기, 1440px·390px overflow 0건을 확인했다. 로컬 Kakao SDK는 허용 도메인 제한으로 fallback을 확인했으며 실제 지도는 운영 배포 후 확인한다.
+  - SQL: 신규 SQL 없음.
+
 - 2026-07-10
   - 작업 브랜치: `codex/franchise-next-alerts-20260616`
   - 기능 커밋: `955f42b feat(franchise): 공통 일정 결재 기반 추가`
