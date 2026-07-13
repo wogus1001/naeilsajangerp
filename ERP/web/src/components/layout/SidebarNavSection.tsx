@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {
     Briefcase,
     Calculator,
+    CalendarDays,
     ChevronDown,
     ChevronRight,
     ClipboardCheck,
@@ -50,6 +51,8 @@ function renderSectionIcon(key: SidebarSectionKey) {
 
 function renderLinkIcon(icon: SidebarLinkIcon | undefined) {
     switch (icon) {
+        case 'calendar':
+            return <CalendarDays size={14} />;
         case 'target':
             return <Target size={14} />;
         case 'mapPin':

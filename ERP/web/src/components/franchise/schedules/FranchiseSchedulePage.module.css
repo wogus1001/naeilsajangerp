@@ -1,0 +1,423 @@
+.pageShell {
+    min-height: 100%;
+    padding: 4px;
+    color: #191f28;
+    word-break: keep-all;
+}
+
+.header,
+.monthBar,
+.filterBar,
+.workspace,
+.dialogHeader,
+.dialogActions,
+.rowMeta,
+.rowActions,
+.alert {
+    display: flex;
+    align-items: center;
+}
+
+.header {
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.header h1 {
+    margin: 4px 0;
+    font-size: 28px;
+    line-height: 1.35;
+}
+
+.header p,
+.kpiCard p,
+.scheduleRow p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.eyebrow {
+    color: #3182f6;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton,
+.iconButton,
+.rowActions button {
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+}
+
+.primaryButton {
+    background: #3182f6;
+    color: #ffffff;
+}
+
+.secondaryButton {
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
+    color: #333d4b;
+}
+
+.dangerButton {
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.iconButton,
+.rowActions button {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f2f4f6;
+    color: #4e5968;
+}
+
+.kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.kpiCard,
+.calendarPanel,
+.dayList,
+.statePanel,
+.scheduleRow {
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.kpiCard {
+    min-height: 104px;
+    padding: 16px;
+}
+
+.kpiCard span {
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.kpiCard strong {
+    display: block;
+    margin: 8px 0 4px;
+    font-size: 28px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.filterBar {
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.filterBar select,
+.filterBar input,
+.formGrid input,
+.formGrid select,
+.formGrid textarea {
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    padding: 0 12px;
+    color: #191f28;
+    background: #ffffff;
+}
+
+.filterBar input {
+    flex: 1 1 180px;
+}
+
+.monthBar {
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.monthBar strong {
+    min-width: 180px;
+    display: inline-flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.workspace {
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.calendarPanel {
+    flex: 1 1 720px;
+    padding: 12px;
+}
+
+.weekHeader,
+.calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekHeader span {
+    padding: 8px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.calendarGrid {
+    gap: 6px;
+}
+
+.dayCell {
+    position: relative;
+    min-height: 92px;
+    padding: 8px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.daySelected {
+    border-color: #3182f6;
+    background: #e8f3ff;
+}
+
+.dayMuted {
+    color: #b0b8c1;
+    background: #f9fafb;
+}
+
+.dayNumber,
+.dayCount,
+.focusMark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dayNumber {
+    width: 24px;
+    height: 24px;
+    font-weight: 700;
+}
+
+.dayCount {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    min-width: 28px;
+    height: 24px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.dayPlanned { background: #e8f3ff; color: #2272eb; }
+.dayActive { background: #fff7e6; color: #b25f00; }
+.dayDone { background: #e6f8f0; color: #008a52; }
+.dayLate { background: #fff1f2; color: #e42939; }
+
+.focusMark {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    color: #3182f6;
+}
+
+.dayList {
+    flex: 0 0 360px;
+    padding: 16px;
+}
+
+.dayList h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+}
+
+.scheduleRow {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.focusRow {
+    border-color: #3182f6;
+    background: #f7fbff;
+}
+
+.rowMeta {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.rowMeta span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+}
+
+.rowActions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.statePanel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+    color: #4e5968;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(25, 31, 40, 0.36);
+}
+
+.dialog,
+.confirmDialog {
+    width: min(640px, 100%);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 20px;
+}
+
+.confirmDialog {
+    width: min(420px, 100%);
+}
+
+.dialogHeader {
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.dialogHeader h2,
+.confirmDialog h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.formGrid label {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.fullField {
+    grid-column: 1 / -1;
+}
+
+.formGrid textarea {
+    min-height: 88px;
+    padding-top: 10px;
+}
+
+.dialogActions {
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.alert {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 4300;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px;
+    border: 1px solid #d1e8ff;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+}
+
+.alert button {
+    border: 0;
+    border-radius: 6px;
+    background: #e8f3ff;
+    color: #2272eb;
+    font-weight: 700;
+}
+
+@media (max-width: 720px) {
+    .header,
+    .workspace {
+        display: grid;
+    }
+
+    .kpiGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .calendarPanel,
+    .dayList {
+        width: 100%;
+        flex-basis: auto;
+    }
+
+    .dayCell {
+        min-height: 62px;
+        padding: 6px;
+    }
+
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+}

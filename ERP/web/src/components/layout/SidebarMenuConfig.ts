@@ -9,6 +9,7 @@ export type SidebarSectionKey =
     | 'businessCards'
     | 'contracts';
 export type SidebarLinkIcon =
+    | 'calendar'
     | 'target'
     | 'mapPin'
     | 'store'
@@ -58,6 +59,7 @@ export const SIDEBAR_SECTIONS: readonly SidebarMenuSection[] = [
             { title: '물건지 지도', url: '/dashboard/franchise-locations', category: '출점 후보지', featureKey: 'franchiseLocations', icon: 'mapPin', depth: 1 },
             { title: '가맹 운영', category: '프랜차이즈', featureKey: 'franchiseOperations', icon: 'store', group: true },
             { title: '가맹점 목록', url: '/dashboard/franchise-operations', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'list', depth: 1 },
+            { title: '일정관리', url: '/dashboard/franchise-operations/schedule', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'calendar', depth: 1 },
             { title: '슈퍼바이징', url: '/dashboard/franchise-supervision', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'clipboardCheck', depth: 1 },
             { title: '점주 소통', url: '/dashboard/franchise-operations/owner-portal', category: '가맹 운영', featureKey: 'franchiseOperations', icon: 'users', depth: 1 },
             { title: '계약·업체 관리', category: '프랜차이즈', featureKey: 'electronicPremiumContracts', icon: 'fileSignature', group: true },
