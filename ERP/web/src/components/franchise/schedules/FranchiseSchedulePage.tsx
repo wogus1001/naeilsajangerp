@@ -1,10 +1,11 @@
 "use client";
 
 import React from 'react';
-import { AlertCircle, Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { FranchiseScheduleCalendar } from './FranchiseScheduleCalendar';
+import { FranchiseScheduleDayList } from './FranchiseScheduleDayList';
 import { FranchiseScheduleConfirm, FranchiseScheduleDialog } from './FranchiseScheduleDialogs';
 import {
     FRANCHISE_SCHEDULES_API_PATH,
@@ -167,17 +168,15 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                     </div>
                     <FranchiseScheduleCalendar monthDate={monthDate} selectedDate={model.selectedDate} items={model.filteredItems} focusId={model.focusId} onSelectDate={setSelectedDate} />
                 </div>
-                <section className={styles.dayList} aria-label="선택 날짜 일정">
-                    <h2>{model.selectedDate} 일정</h2>
-                    {model.state === 'empty' && <StatePanel label="등록된 프랜차이즈 일정이 없습니다." />}
-                    {model.selectedItems.map(item => (
-                        <article className={`${styles.scheduleRow} ${item.id === model.focusId ? styles.focusRow : ''}`} key={item.id}>
-                            <div><strong>{item.title}</strong><p>{item.assigneeName}</p><p>{item.details || '메모 없음'}</p></div>
-                            <div className={styles.rowMeta}><span className={item.visibility === 'personal' ? styles.personalBadge : styles.sharedBadge}>{item.visibility === 'personal' ? '개인' : '공유'}</span><span>{getSourceLabel(item.source)}</span><span>{item.status}</span></div>
-                            {item.source === 'manual' && <div className={styles.rowActions}><button type="button" title="수정" onClick={() => setForm(getFormValue(item))}><Pencil size={16} /></button><button type="button" title="완료" onClick={() => setConfirm({ item, action: 'complete' })}><Check size={16} /></button><button type="button" title="삭제" onClick={() => setConfirm({ item, action: 'delete' })}><Trash2 size={16} /></button></div>}
-                        </article>
-                    ))}
-                </section>
+                <FranchiseScheduleDayList
+                    selectedDate={model.selectedDate}
+                    items={model.selectedItems}
+                    focusId={model.focusId}
+                    onCreate={() => setForm({ ...EMPTY_FORM, date: model.selectedDate })}
+                    onEdit={item => setForm(getFormValue(item))}
+                    onComplete={item => setConfirm({ item, action: 'complete' })}
+                    onDelete={item => setConfirm({ item, action: 'delete' })}
+                />
             </div>
             {form && <FranchiseScheduleDialog value={form} assignees={assignees} assigneesLoading={assigneesLoading} assigneesError={assigneesError} requesterProfileId={requesterProfileId} mode={formMode} saving={saving} onChange={setForm} onClose={() => setForm(null)} onSubmit={() => void persist(formMode === 'create' ? 'POST' : 'PATCH', { id: form.id, title: form.title, date: form.date, status: form.status, visibility: form.visibility, assigneeProfileId: form.assigneeProfileId, details: form.details })} />}
             {confirm && <FranchiseScheduleConfirm item={confirm.item} action={confirm.action} saving={saving} onClose={() => setConfirm(null)} onConfirm={() => void persist(confirm.action === 'delete' ? 'DELETE' : 'PATCH', { id: confirm.item.id, action: confirm.action })} />}

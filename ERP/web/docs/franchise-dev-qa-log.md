@@ -1237,4 +1237,5 @@
 
 - 범위: 가맹운영 일정관리의 수동 일정을 `공유 일정`과 `개인 일정`으로 구분했다. 자동 생성 일정은 공유로 고정하고, 개인 일정은 생성자 본인에게만 반환되며 관리자도 다른 사용자의 개인 일정을 조회·수정·삭제할 수 없다.
 - 화면: 수동 일정 등록/수정 모달에 일정 구분 선택을 추가했다. 개인 일정은 로그인한 본인을 담당자로 고정하며, 일정 목록과 필터에서 공유/개인 여부를 확인할 수 있다.
-- 신규 SQL: `supabase_franchise_schedule_visibility_migration.sql`은 기존 데이터를 공유로 보존하고 `visibility` 제약, 조회 인덱스, 개인 일정 RLS를 추가한다. **SQL 등록 필요**.
+- 신규 SQL: `supabase_franchise_schedule_visibility_migration.sql`은 기존 데이터를 공유로 보존하고 `visibility` 제약, 조회 인덱스, 개인 일정 RLS를 추가한다. 사용자 확인 기준 SQL 등록을 완료했다. **SQL 등록 완료 확인**.
+- 로컬 QA: `/dashboard/franchise-operations/schedule`에서 SQL 안내가 사라진 것을 확인했다. 개인 일정 등록 시 로그인 사용자로 담당자가 고정되고, `개인` 배지와 개인 일정 필터에 노출되는 것을 확인한 뒤 QA 일정을 삭제했다. 브라우저 console error는 0건이었다.

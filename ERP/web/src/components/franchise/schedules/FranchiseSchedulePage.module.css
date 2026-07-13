@@ -11,6 +11,8 @@
 .workspace,
 .dialogHeader,
 .dialogActions,
+.dayListHeader,
+.scheduleHeading,
 .rowMeta,
 .rowActions {
     display: flex;
@@ -30,8 +32,7 @@
 }
 
 .header p,
-.kpiCard p,
-.scheduleRow p {
+.kpiCard p {
     margin: 0;
     color: #6b7684;
     font-size: 13px;
@@ -47,8 +48,7 @@
 .primaryButton,
 .secondaryButton,
 .dangerButton,
-.iconButton,
-.rowActions button {
+.iconButton {
     border: 0;
     border-radius: 8px;
     cursor: pointer;
@@ -83,8 +83,7 @@
     color: #e42939;
 }
 
-.iconButton,
-.rowActions button {
+.iconButton {
     width: 40px;
     height: 40px;
     display: inline-flex;
@@ -104,8 +103,7 @@
 .kpiCard,
 .calendarColumn,
 .dayList,
-.statePanel,
-.scheduleRow {
+.statePanel {
     border: 1px solid #e5e8eb;
     border-radius: 8px;
     background: #ffffff;
@@ -327,58 +325,198 @@
 }
 
 .dayList {
-    flex: 0 0 360px;
-    padding: 16px;
+    flex: 0 0 380px;
+    overflow: hidden;
 }
 
-.dayList h2 {
-    margin: 0 0 12px;
+.dayListHeader {
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #e5e8eb;
+}
+
+.dayListHeader div {
+    min-width: 0;
+}
+
+.dayListHeader span {
+    display: block;
+    margin-bottom: 2px;
+    color: #6b7684;
+    font-size: 12px;
+}
+
+.dayListHeader h2 {
+    margin: 0;
     font-size: 18px;
+    line-height: 1.4;
+}
+
+.dayListHeader > strong {
+    flex: 0 0 auto;
+    min-width: 38px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #1b64da;
+    background: #e8f3ff;
+    font-size: 12px;
+    text-align: center;
 }
 
 .scheduleRow {
     position: relative;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    padding: 12px;
-    margin-bottom: 10px;
+    padding: 16px;
+}
+
+.scheduleRow + .scheduleRow {
+    border-top: 1px solid #e5e8eb;
 }
 
 .focusRow {
-    border-color: #3182f6;
     background: #f7fbff;
+    box-shadow: inset 3px 0 #3182f6;
 }
 
-.rowMeta {
-    align-items: flex-end;
-    flex-direction: column;
-    gap: 6px;
+.scheduleHeading {
+    align-items: center;
+    gap: 8px;
+}
+
+.scheduleHeading > strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.scheduleHeading > span {
+    flex: 0 0 auto;
+}
+
+.scheduleHeading > span,
+.rowMeta span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
+    white-space: nowrap;
+}
+
+.statusPlanned { color: #1b64da; background: #e8f3ff; }
+.statusActive { color: #9a5200; background: #fff3d6; }
+.statusDone { color: #087443; background: #e6f8f0; }
+.statusLate { color: #d22030; background: #fff1f2; }
+.statusCancelled { color: #6b7684; background: #f2f4f6; }
+
+.rowMeta {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
 }
 
 .rowMeta span {
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #f2f4f6;
     color: #4e5968;
+    background: #f2f4f6;
 }
 
 .rowMeta .sharedBadge {
-    background: #e8f3ff;
     color: #1b64da;
+    background: #e8f3ff;
 }
 
 .rowMeta .personalBadge {
-    background: #f2f4f6;
     color: #333d4b;
+    background: #f2f4f6;
+}
+
+.scheduleDetails {
+    display: grid;
+    gap: 8px;
+    margin: 14px 0 0;
+}
+
+.scheduleDetails div {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 8px;
+}
+
+.scheduleDetails dt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.scheduleDetails dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #333d4b;
+    font-size: 13px;
+    line-height: 1.54;
+}
+
+.scheduleDetails .emptyDetail {
+    color: #4e5968;
 }
 
 .rowActions {
-    grid-column: 1 / -1;
     justify-content: flex-end;
     gap: 6px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #f2f4f6;
+}
+
+.rowActions button,
+.dayEmpty button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    border: 0;
+    border-radius: 8px;
+    padding: 0 11px;
+    color: #4e5968;
+    background: #f2f4f6;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.rowActions .rowDeleteButton {
+    color: #c51b2b;
+    background: #fff1f2;
+}
+
+.dayEmpty {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    min-height: 220px;
+    padding: 44px 16px;
+    color: #6b7684;
+    text-align: center;
+}
+
+.dayEmpty strong {
+    color: #333d4b;
+    font-size: 14px;
+}
+
+.dayEmpty button {
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    background: #ffffff;
 }
 
 .statePanel {
@@ -565,6 +703,16 @@
 
     .calendarGrid {
         grid-template-rows: repeat(6, minmax(72px, 1fr));
+    }
+
+    .dayListHeader,
+    .scheduleRow {
+        padding: 14px;
+    }
+
+    .rowActions button,
+    .dayEmpty button {
+        min-height: 44px;
     }
 
     .monthBar {
