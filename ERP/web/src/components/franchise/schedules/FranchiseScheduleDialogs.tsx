@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from 'lucide-react';
-import type { FranchiseScheduleItem, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
+import type { FranchiseScheduleAssignee, FranchiseScheduleItem, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
 import styles from './FranchiseSchedulePage.module.css';
 
 export type ScheduleFormValue = {
@@ -9,13 +9,15 @@ export type ScheduleFormValue = {
     readonly title: string;
     readonly date: string;
     readonly status: FranchiseScheduleStatus;
-    readonly assigneeName: string;
-    readonly managerName: string;
+    readonly assigneeProfileId: string;
     readonly details: string;
 };
 
 type DialogProps = {
     readonly value: ScheduleFormValue;
+    readonly assignees: readonly FranchiseScheduleAssignee[];
+    readonly assigneesLoading: boolean;
+    readonly assigneesError: string;
     readonly mode: 'create' | 'edit';
     readonly saving: boolean;
     readonly onChange: (value: ScheduleFormValue) => void;
@@ -33,7 +35,7 @@ type ConfirmProps = {
 
 const STATUS_OPTIONS: readonly FranchiseScheduleStatus[] = ['예정', '진행중', '완료', '지연', '취소'];
 
-export function FranchiseScheduleDialog({ value, mode, saving, onChange, onClose, onSubmit }: DialogProps) {
+export function FranchiseScheduleDialog({ value, assignees, assigneesLoading, assigneesError, mode, saving, onChange, onClose, onSubmit }: DialogProps) {
     const update = (patch: Partial<ScheduleFormValue>) => onChange({ ...value, ...patch });
     const updateStatus = (nextStatus: string) => {
         const status = nextStatus === '진행중' || nextStatus === '완료' || nextStatus === '지연' || nextStatus === '취소' ? nextStatus : '예정';
@@ -52,13 +54,15 @@ export function FranchiseScheduleDialog({ value, mode, saving, onChange, onClose
                     <label>제목<input value={value.title} onChange={event => update({ title: event.currentTarget.value })} /></label>
                     <label>날짜<input type="date" value={value.date} onChange={event => update({ date: event.currentTarget.value })} /></label>
                     <label>상태<select value={value.status} onChange={event => updateStatus(event.currentTarget.value)}>{STATUS_OPTIONS.map(status => <option key={status}>{status}</option>)}</select></label>
-                    <label>담당자<input value={value.assigneeName} onChange={event => update({ assigneeName: event.currentTarget.value })} /></label>
-                    <label>관리자<input value={value.managerName} onChange={event => update({ managerName: event.currentTarget.value })} /></label>
+                    <label>담당자<select value={value.assigneeProfileId} disabled={assigneesLoading} onChange={event => update({ assigneeProfileId: event.currentTarget.value })}>
+                        <option value="">{assigneesLoading ? '담당자 불러오는 중' : '담당자 선택'}</option>
+                        {assignees.map(assignee => <option key={assignee.id} value={assignee.id}>{assignee.name}</option>)}
+                    </select>{assigneesError && <span className={styles.fieldError}>{assigneesError}</span>}</label>
                     <label className={styles.fullField}>메모<textarea value={value.details} onChange={event => update({ details: event.currentTarget.value })} /></label>
                 </div>
                 <footer className={styles.dialogActions}>
                     <button className={styles.secondaryButton} type="button" onClick={onClose}>취소</button>
-                    <button className={styles.primaryButton} type="button" disabled={saving || !value.title || !value.date} onClick={onSubmit}>
+                    <button className={styles.primaryButton} type="button" disabled={saving || !value.title || !value.date || !value.assigneeProfileId} onClick={onSubmit}>
                         {saving ? '저장 중' : '저장'}
                     </button>
                 </footer>

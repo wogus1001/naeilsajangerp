@@ -5,6 +5,7 @@ import {
     buildFranchiseScheduleViewModel,
     getFranchiseScheduleMutationPath,
     getMonthDays,
+    parseFranchiseScheduleAssignees,
     parseFranchiseScheduleItems
 } from './franchiseScheduleViewModel.js';
 import type { FranchiseScheduleFilters, FranchiseScheduleItem } from './franchiseScheduleViewModel.js';
@@ -12,9 +13,9 @@ import type { FranchiseScheduleFilters, FranchiseScheduleItem } from './franchis
 const filters: FranchiseScheduleFilters = { status: 'all', source: 'all', assignee: '' };
 
 const rows: readonly FranchiseScheduleItem[] = [
-    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'report', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
-    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
-    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '' }
+    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'report', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
+    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
+    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '' }
 ];
 
 test('Given API contract When reading client endpoint Then only franchise schedule API is used', () => {
@@ -63,6 +64,18 @@ test('Given the shared API envelope When parsing Then schedule rows are read fro
     assert.equal(items[0]?.id, 'manual-1');
 });
 
+test('Given company profile rows When parsing assignees Then only named profile options are returned', () => {
+    const assignees = parseFranchiseScheduleAssignees({
+        data: [
+            { id: 'staff-1', name: '김담당' },
+            { id: 'staff-2', name: '  ' },
+            { id: '', name: '누락' }
+        ]
+    });
+
+    assert.deepEqual(assignees, [{ id: 'staff-1', name: '김담당' }]);
+});
+
 test('Given schedule rows When building view model Then KPI meanings are mutually exclusive', () => {
     const model = buildFranchiseScheduleViewModel({
         items: rows,
@@ -74,6 +87,7 @@ test('Given schedule rows When building view model Then KPI meanings are mutuall
     });
 
     assert.deepEqual(model.kpis.map(kpi => kpi.label), ['오늘 일정', '승인 대기', '지연 일정', '이번 주']);
+    assert.equal(model.kpis.find(kpi => kpi.label === '이번 주')?.helper, '향후 7일 예정 일정');
     assert.equal(model.kpis.find(kpi => kpi.label === '오늘 일정')?.value, 1);
     assert.equal(model.kpis.find(kpi => kpi.label === '승인 대기')?.value, 1);
     assert.equal(model.kpis.find(kpi => kpi.label === '지연 일정')?.value, 1);

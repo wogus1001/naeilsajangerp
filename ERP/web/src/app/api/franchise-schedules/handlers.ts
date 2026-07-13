@@ -10,12 +10,16 @@ import {
     listSchedules,
     type FranchiseScheduleRouteDependencies
 } from './support';
+import { listScheduleAssignees } from './assignees';
 
 export async function handleFranchiseSchedulesGET(
     request: Request,
     dependencies: FranchiseScheduleRouteDependencies = createDefaultRouteDependencies()
 ): Promise<Response> {
     try {
+        if (new URL(request.url).searchParams.get('view') === 'assignees') {
+            return await listScheduleAssignees(request, dependencies);
+        }
         return await listSchedules(request, dependencies);
     } catch (error) {
         return handleFranchiseScheduleError(error, 'list');
