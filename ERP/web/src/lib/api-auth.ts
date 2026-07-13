@@ -7,12 +7,14 @@ export interface RequesterProfile {
     id: string;
     role: string | null;
     company_id: string | null;
+    status?: string | null;
 }
 
 type RequesterProfileRow = {
     readonly id: string;
     readonly role: string | null;
     readonly company_id: string | null;
+    readonly status: string | null;
 };
 
 function normalizeRawUser(rawUser: string | null | undefined): string | null {
@@ -82,7 +84,7 @@ async function fetchRequesterProfileById(
 ): Promise<RequesterProfile | null> {
     const { data: requester } = await supabaseAdmin
         .from('profiles')
-        .select('id, role, company_id')
+        .select('id, role, company_id, status')
         .eq('id', requesterId)
         .maybeSingle<RequesterProfileRow>();
 
@@ -91,7 +93,8 @@ async function fetchRequesterProfileById(
     return {
         id: requester.id,
         role: requester.role,
-        company_id: requester.company_id
+        company_id: requester.company_id,
+        status: requester.status
     };
 }
 

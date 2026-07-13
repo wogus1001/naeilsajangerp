@@ -458,3 +458,11 @@ The 1차 workflow supports:
 - Headquarters managing owner notices, notice attachments, owner-portal operation checklists, owner submissions, and owner-account settings from `가맹 운영 > 점주 소통`.
 - Owner-portal operation checklists are issued like notices from `가맹 운영 > 점주 소통 > 체크리스트`. Headquarters can send the same checklist to all stores or selected stores, then review each issued checklist's completed/incomplete store status. Store completion requests are tracked in checklist status and do not require approve/reject handling in the general submissions flow.
 - Owner-portal operation checklists are stored on `franchise_locations.data.ownerPortalChecklist`; they are separate from the pre-opening project checklist and do not mutate `franchise_opening_projects.tasks`.
+
+## Company Electronic Approval Setup
+
+Run `supabase_company_approvals_v2_migration.sql` after the existing franchise approval/calendar migration. **SQL 등록 필요**. The migration adds company organization units and memberships, approval roles and delegations, immutable template/document versions, multi-step approval targets, readers, attachments, and the transactional `perform_approval_document_action` RPC.
+
+The company electronic approval workspace is available at `/approvals`: `작성하기`, `결재 대기`, `내 문서함`, `부서 문서함`, `양식 관리`, and `조직·결재 설정`. System roles continue to control product access, while department, title, department-manager, and approval-role data are managed separately and captured when a document is submitted. Existing `/api/franchise-approvals/*` routes remain available during the module migration; new screens use `/api/approvals/*`.
+
+Approval attachments use the dedicated private `approval-documents` bucket under `approval-documents/{companyId}/{documentId}`. Downloads are permission-checked, blocked after the retention period, and served through short-lived signed URLs. The detail screen generates Korean PDFs through pdfme with the bundled Noto Sans KR OFL font.

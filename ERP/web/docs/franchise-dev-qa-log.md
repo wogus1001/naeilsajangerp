@@ -1239,3 +1239,14 @@
 - 화면: 수동 일정 등록/수정 모달에 일정 구분 선택을 추가했다. 개인 일정은 로그인한 본인을 담당자로 고정하며, 일정 목록과 필터에서 공유/개인 여부를 확인할 수 있다.
 - 신규 SQL: `supabase_franchise_schedule_visibility_migration.sql`은 기존 데이터를 공유로 보존하고 `visibility` 제약, 조회 인덱스, 개인 일정 RLS를 추가한다. 사용자 확인 기준 SQL 등록을 완료했다. **SQL 등록 완료 확인**.
 - 로컬 QA: `/dashboard/franchise-operations/schedule`에서 SQL 안내가 사라진 것을 확인했다. 개인 일정 등록 시 로그인 사용자로 담당자가 고정되고, `개인` 배지와 개인 일정 필터에 노출되는 것을 확인한 뒤 QA 일정을 삭제했다. 브라우저 console error는 0건이었다.
+
+## 2026-07-13 전사 전자결재·보고 v2 개발 QA
+
+- 데이터: 조직, 소속, 결재 역할, 위임, template/document version·step·reader·attachment 테이블과 회사 범위 RLS를 추가했다. `perform_approval_document_action` RPC가 제출, 승인, 합의, 반려, 회수, 수신 확인, 완료 처리와 감사 이벤트를 한 트랜잭션에서 처리한다.
+- API: `/api/approvals/templates`, `/documents`, `/inbox`, `/organization`, `/delegations`를 추가했다. 문서 상세는 현재 단계와 위임 스냅샷을 기준으로 가능한 액션을 계산하고 회사 구성원·소속·양식명을 표시한다.
+- UI: `/approvals` 전용 shell과 역할별 문서함, 공통 작성/검토 renderer, 기본 접힘 처리 이력, 조직·결재 설정, 구조화 양식 빌더, A4 미리보기, 결재선 편집을 추가했다. UUID 직접 입력 대신 활성 회사 구성원 선택 목록을 사용한다.
+- 파일/PDF: 최대 5개, 파일당 10MB의 이미지·PDF·업무 문서를 전용 비공개 `approval-documents` Storage에 업로드한다. 접근 권한과 보존 기한을 재검증한 뒤 signed URL로 다운로드하며 pdfme와 Noto Sans KR OFL 글꼴로 PDF 내려받기를 제공한다.
+- 일정/알림: 현재 결재 단계 대상자에게 중복 방지 인앱 알림과 결재 일정을 upsert하고 최종 승인·반려·회수·완료 시 일정을 완료한다. 병렬 단계 일정은 특정 1명에게 잘못 귀속하지 않고 대상자 목록을 metadata에 보관하며, 단계 이동 시 이전 단계 알림을 닫는다. 참조자와 수신 부서에도 문서 알림을 생성한다.
+- 코드리뷰 보정: 필드 타입·배치·편집 권한 metadata 보존, 필수값 API/RPC 이중 검증, 반려/비합의 사유 RPC 강제, 자기결재·비활성·파트너 대상 차단, `parallel_any` 부정 응답 즉시 종료, 기존 단일 결재 문서의 v2 version/step 변환, workflow 알림 자동정리 제외를 반영했다. 후속 보안 검토로 기존 결재 액션과 슈퍼바이징 보고서도 동일 RPC를 사용하게 통합하고, 직접 Storage 정책을 닫은 뒤 권한 검증을 통과한 서버만 signed URL을 발급하도록 바꿨다. 재상신은 현재 version 단계만 표시하고, 병렬 처리 완료자의 원결재자·대결자 알림을 함께 닫는다. 공개 문서 수정 API에서는 원천 식별자 변경을 차단하고, version이 없는 초안은 단계 조회 없이 상세를 반환한다. PDF는 제출 version 값과 pdfme의 다중 A4 base PDF를 사용한다.
+- 검증: 결재 도메인/API 테스트 29건, 실제 3개 본문 청크 PDF 생성 결과 3페이지 확인, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 최신 프로덕션 빌드에서 `/approvals` 7개 화면을 1440px/390px로 확인했고 페이지 가로 넘침과 최신 탭 console error는 0건이었다. SQL 미적용 상태에서는 중앙 알림과 화면 내 안내로 적용 파일명을 명확히 표시한다.
+- 신규 SQL: `supabase_company_approvals_v2_migration.sql`. **SQL 등록 필요**.
