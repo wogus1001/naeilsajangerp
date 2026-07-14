@@ -7,6 +7,7 @@ import type {
     ApprovalDocumentDetail,
     ApprovalDocumentSummary,
     ApprovalFieldValues,
+    ApprovalInboxCriteria,
     ApprovalInboxFilter,
     ApprovalLineSelections,
     ApprovalOrganization,
@@ -115,9 +116,14 @@ async function requestJson<Result>(url: string, init?: RequestInit): Promise<Res
 export function fetchApprovalInbox(
     filter: ApprovalInboxFilter,
     page = 1,
-    pageSize = 20
+    pageSize = 20,
+    criteria: ApprovalInboxCriteria = { query: '', status: 'all', from: '', to: '' }
 ): Promise<ApprovalInboxResult> {
     const params = new URLSearchParams({ filter, page: String(page), pageSize: String(pageSize) });
+    if (criteria.query) params.set('query', criteria.query);
+    if (criteria.status !== 'all') params.set('status', criteria.status);
+    if (criteria.from) params.set('from', criteria.from);
+    if (criteria.to) params.set('to', criteria.to);
     return requestJson<unknown>(`/api/approvals/inbox?${params.toString()}`).then(value => {
         if (!isApprovalRecord(value) || !Array.isArray(value.documents) || !isApprovalRecord(value.pagination)) {
             throw new Error('전자결재 문서함 응답 형식을 확인할 수 없습니다.');

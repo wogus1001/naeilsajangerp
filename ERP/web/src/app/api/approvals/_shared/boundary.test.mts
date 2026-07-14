@@ -32,16 +32,36 @@ test('Given approval actions When parsing Then only the standard action surface 
 });
 
 test('Given inbox filters and pagination When parsing Then bounds and defaults are deterministic', () => {
-    const parsed = parseInboxQuery(new URL('http://localhost/api/approvals/inbox?filter=received&page=2&pageSize=25').searchParams);
-    assert.deepEqual(parsed, { filter: 'received', page: 2, pageSize: 25 });
+    const parsed = parseInboxQuery(new URL('http://localhost/api/approvals/inbox?filter=received&page=2&pageSize=25&query=%EC%A7%80%EC%B6%9C&status=approved&from=2026-07-01&to=2026-07-31').searchParams);
+    assert.deepEqual(parsed, {
+        filter: 'received',
+        page: 2,
+        pageSize: 25,
+        query: '지출',
+        status: 'approved',
+        from: '2026-07-01',
+        to: '2026-07-31'
+    });
 
     assert.deepEqual(parseInboxQuery(new URL('http://localhost/api/approvals/inbox').searchParams), {
         filter: 'waiting',
         page: 1,
-        pageSize: 20
+        pageSize: 20,
+        query: '',
+        status: 'all',
+        from: '',
+        to: ''
     });
     assert.throws(
         () => parseInboxQuery(new URL('http://localhost/api/approvals/inbox?filter=all&pageSize=101').searchParams),
+        ApprovalInputError
+    );
+    assert.throws(
+        () => parseInboxQuery(new URL('http://localhost/api/approvals/inbox?status=unknown').searchParams),
+        ApprovalInputError
+    );
+    assert.throws(
+        () => parseInboxQuery(new URL('http://localhost/api/approvals/inbox?from=2026-07-31&to=2026-07-01').searchParams),
         ApprovalInputError
     );
 });

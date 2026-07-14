@@ -1266,3 +1266,13 @@
 - 사이드바 최상위 `전자결재` 메뉴에 18px Lucide `FileCheck2` 아이콘을 추가했다. 루트 `대시보드`는 정확히 `/dashboard`에서만 활성화되도록 경로 판정을 분리해 프랜차이즈 하위 메뉴와 동시에 선택되지 않게 했다.
 - 모객 DB 후보지 연결 대상 조회 cleanup의 AbortError는 일반 오류로 기록하지 않는다. dev의 기존 명시적 abort reason과 allSettled 취소 분기를 유지하고 회귀 테스트를 추가했다.
 - 추가 검증: `npx tsx --test src/components/franchise/leads/useLeadLocationLinks.test.mts src/components/layout/sidebarPathState.test.mts src/components/approvals/approvalsNavigation.test.mts`, TypeScript, lint, production build, `git diff --check`를 통과했다. 신규 SQL은 없다.
+
+## 2026-07-14 전자결재 문서함 전체 검색·필터 QA
+
+- 범위: `/approvals/pending`, `/approvals/mine`, `/approvals/department` 문서함에 전체 문서 기준 검색, 상태 필터, 제출·수정 기간 필터, 조건 초기화를 추가했다.
+- 검색 정확도: API가 접근 가능한 문서를 권한 기준으로 확정한 뒤 제목, 기안자, 소속 부서, 양식명, 문서번호를 검색하고 그 결과를 페이지네이션한다. 기존처럼 현재 페이지의 20건만 검색하지 않는다.
+- 날짜 기준: 제출 문서는 제출일, 임시저장 문서는 최종 수정일을 사용하며 날짜 경계는 KST로 판정한다.
+- 요청 안정성: 검색어 입력은 300ms 후 적용하고 필터 변경 시 1페이지로 이동한다. 이전 요청이 늦게 완료돼도 최신 요청 결과만 화면에 반영한다.
+- 신규 SQL: 없음.
+- 검증: 전체 `npx tsx --test` 699건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, Browserslist 경고만 출력했다.
+- 남은 live QA: 로그인된 실계정으로 1440px와 390px에서 검색·상태·기간 조합, 결과 0건, 검색 초기화, 2페이지 이상 이동을 확인한다. 로컬 자동 브라우저는 인증 세션이 없어 로그인 화면까지만 확인했다.

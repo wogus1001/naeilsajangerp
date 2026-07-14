@@ -12,6 +12,7 @@ import {
     type ApprovalDocumentStepRow
 } from '../_shared/documents';
 import { approvalErrorResponse, throwDatabaseError } from '../_shared/errors';
+import { filterApprovalInboxDocuments } from '../_shared/inbox-filtering';
 import { approvalDocumentViews } from '../_shared/presentation';
 import { visibleApprovalDocuments } from '../_shared/visibility';
 
@@ -114,18 +115,20 @@ export async function GET(request: Request) {
             receiverUnitIds
         }));
         const filtered = await visibleInBatches(context, matched);
-        const delayedTotal = filtered.filter(document => document.due_at && new Date(document.due_at).getTime() < Date.now()).length;
+        const views = await approvalDocumentViews(context, filtered);
+        const searched = filterApprovalInboxDocuments(views, parsed);
+        const delayedTotal = searched.filter(document => document.dueAt && new Date(document.dueAt).getTime() < Date.now()).length;
         const offset = (parsed.page - 1) * parsed.pageSize;
-        const pageDocuments = filtered.slice(offset, offset + parsed.pageSize);
+        const pageDocuments = searched.slice(offset, offset + parsed.pageSize);
         return ok({
             filter: parsed.filter,
-            documents: await approvalDocumentViews(context, pageDocuments),
+            documents: pageDocuments,
             summary: { delayedTotal },
             pagination: {
                 page: parsed.page,
                 pageSize: parsed.pageSize,
-                total: filtered.length,
-                totalPages: Math.ceil(filtered.length / parsed.pageSize)
+                total: searched.length,
+                totalPages: Math.ceil(searched.length / parsed.pageSize)
             }
         });
     } catch (error) {

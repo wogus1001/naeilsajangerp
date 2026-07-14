@@ -14,8 +14,16 @@ export const APPROVAL_ACTIONS = [
 
 export type ApprovalAction = (typeof APPROVAL_ACTIONS)[number];
 export type InboxFilter = 'waiting' | 'drafted' | 'rejected' | 'reference' | 'received' | 'mine' | 'department';
+export type InboxStatus = 'all' | 'draft' | 'in_review' | 'approved' | 'rejected' | 'withdrawn' | 'canceled' | 'completed';
 
-export type InboxQuery = {
+export type ApprovalInboxSearchCriteria = {
+    readonly query: string;
+    readonly status: InboxStatus;
+    readonly from: string;
+    readonly to: string;
+};
+
+export type InboxQuery = ApprovalInboxSearchCriteria & {
     readonly filter: InboxFilter;
     readonly page: number;
     readonly pageSize: number;
@@ -27,7 +35,9 @@ export type PageQuery = {
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const INBOX_FILTERS = ['waiting', 'drafted', 'rejected', 'reference', 'received', 'mine', 'department'] as const;
+const INBOX_STATUSES = ['all', 'draft', 'in_review', 'approved', 'rejected', 'withdrawn', 'canceled', 'completed'] as const;
 
 export class ApprovalInputError extends Error {
     readonly field: string;
@@ -136,14 +146,34 @@ function parseInteger(value: string | null, field: string, fallback: number, max
     return parsed;
 }
 
+function parseDate(value: string | null, field: string): string {
+    if (!value) return '';
+    if (!DATE_PATTERN.test(value)) throw new ApprovalInputError(field, `${field} must be a YYYY-MM-DD date`);
+    const date = new Date(`${value}T00:00:00.000Z`);
+    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+        throw new ApprovalInputError(field, `${field} must be a valid date`);
+    }
+    return value;
+}
+
 export function parseInboxQuery(searchParams: URLSearchParams): InboxQuery {
     const rawFilter = searchParams.get('filter') || 'waiting';
     const filter = INBOX_FILTERS.find(candidate => candidate === rawFilter);
     if (!filter) throw new ApprovalInputError('filter', 'filter is not supported');
+    const rawStatus = searchParams.get('status') || 'all';
+    const status = INBOX_STATUSES.find(candidate => candidate === rawStatus);
+    if (!status) throw new ApprovalInputError('status', 'status is not supported');
+    const from = parseDate(searchParams.get('from'), 'from');
+    const to = parseDate(searchParams.get('to'), 'to');
+    if (from && to && from > to) throw new ApprovalInputError('from', '조회 시작일은 종료일보다 늦을 수 없습니다.');
     return {
         filter,
         page: parseInteger(searchParams.get('page'), 'page', 1, 1_000_000),
-        pageSize: parseInteger(searchParams.get('pageSize'), 'pageSize', 20, 100)
+        pageSize: parseInteger(searchParams.get('pageSize'), 'pageSize', 20, 100),
+        query: parseOptionalText(searchParams.get('query'), 'query', 100),
+        status,
+        from,
+        to
     };
 }
 
