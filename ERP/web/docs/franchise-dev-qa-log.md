@@ -30,6 +30,8 @@
 - 사이드바 최상위 `전자결재` 메뉴에 다른 주요 메뉴와 동일한 18px Lucide `FileCheck2` 아이콘을 추가했다. 기존 메뉴 경로, 활성 상태, 회사별 기능 권한은 변경하지 않았다.
 - 검증: `npx tsx --test src/components/approvals/approvalsNavigation.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check`를 통과했다.
 - 이번 사이드바 아이콘 변경의 신규 SQL과 배포 영향은 없다.
+- 프랜차이즈 `/dashboard/...` 하위 메뉴에서 루트 `대시보드`까지 함께 활성화되던 경로 접두어 판정을 수정했다. 대시보드는 `/dashboard`에서만 활성화하고, 전자결재처럼 독립된 최상위 메뉴는 하위 상세 경로에서도 활성 상태를 유지한다.
+- 회귀 검증: `npx tsx --test src/components/layout/sidebarPathState.test.mts src/components/approvals/approvalsNavigation.test.mts` 3건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check`를 통과했다. 신규 SQL은 없다.
 
 ### 2026-07-09
 

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { CompanyMenuFeatureKey } from '@/lib/company-menu-features';
 import type { SidebarLinkIcon, SidebarMenuItem, SidebarMenuSection, SidebarSectionKey } from './SidebarMenuConfig';
+import { isSidebarItemActive } from './sidebarPathState';
 import styles from './Sidebar.module.css';
 
 type SidebarNavSectionProps = {
@@ -77,19 +78,6 @@ function renderLinkIcon(icon: SidebarLinkIcon | undefined) {
     }
 }
 
-function isItemPathMatch(item: SidebarMenuItem, pathname: string): boolean {
-    return Boolean(item.url && (pathname === item.url || pathname.startsWith(`${item.url}/`)));
-}
-
-function isItemActive(item: SidebarMenuItem, pathname: string, items: readonly SidebarMenuItem[]): boolean {
-    if (!isItemPathMatch(item, pathname)) return false;
-    const itemUrlLength = item.url?.length ?? 0;
-    return !items.some(candidate => {
-        const candidateUrlLength = candidate.url?.length ?? 0;
-        return candidateUrlLength > itemUrlLength && isItemPathMatch(candidate, pathname);
-    });
-}
-
 function getGroupChildren(items: readonly SidebarMenuItem[], groupIndex: number): readonly SidebarMenuItem[] {
     const children: SidebarMenuItem[] = [];
     for (let index = groupIndex + 1; index < items.length; index += 1) {
@@ -126,7 +114,7 @@ export function SidebarNavSection({
             <div className={styles.navGroup}>
                 <Link
                     href={item.url}
-                    className={`${styles.navGroupTitle} ${isItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
+                    className={`${styles.navGroupTitle} ${isSidebarItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
                     title={!isSidebarOpen ? section.collapsedTitle : undefined}
                 >
                     <div className={styles.navGroupLabel}>
@@ -157,7 +145,7 @@ export function SidebarNavSection({
                     {visibleItems.map((item, index) => {
                         const icon = renderLinkIcon(item.icon);
                         if (item.group || !item.url) {
-                            const isActiveGroup = getGroupChildren(visibleItems, index).some(child => isItemActive(child, pathname, visibleItems));
+                            const isActiveGroup = getGroupChildren(visibleItems, index).some(child => isSidebarItemActive(child, pathname, visibleItems));
                             return (
                                 <div
                                     key={`group-${item.title}`}
@@ -176,7 +164,7 @@ export function SidebarNavSection({
                             <Link
                                 key={item.url}
                                 href={item.url}
-                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${isItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
+                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${isSidebarItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
                             >
                                 {icon ? (
                                     <span className={styles.navSubLinkContent}>
