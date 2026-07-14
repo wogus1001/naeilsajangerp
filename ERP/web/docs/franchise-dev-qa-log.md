@@ -1276,3 +1276,15 @@
 - 신규 SQL: 없음.
 - 검증: 전체 `npx tsx --test` 699건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, Browserslist 경고만 출력했다.
 - 남은 live QA: 로그인된 실계정으로 1440px와 390px에서 검색·상태·기간 조합, 결과 0건, 검색 초기화, 2페이지 이상 이동을 확인한다. 로컬 자동 브라우저는 인증 세션이 없어 로그인 화면까지만 확인했다.
+
+## 2026-07-14 전자결재 알림·일정 수신자 보정 QA
+
+- 원인: 결재 일정 metadata가 현재 단계의 전체 원 결재자 ID를 계속 보관해 병렬 결재 처리자에게 승인 대기 일정이 남았고, 알림 수신 대상에는 포함된 대결자는 일정 대상에서 빠졌다.
+- 수정: workflow 동기화 함수가 미응답 원 결재자와 각 대상의 대결자를 중복 없이 다시 계산해 알림과 일정에 같은 대상 목록을 사용한다. 대상이 1명일 때만 일정 담당자를 단일 지정하고, 여러 명이면 `metadata.targetProfileIds`로 접근을 제한한다.
+- 대결 권한: 대결 등록 API와 DB trigger가 같은 회사의 활성 임직원인지 확인하고, 제출 시 결재선 스냅샷과 일정 동기화에서도 비활성 계정·협력업체 계정을 제외한다. 원 결재자나 대결자의 역할이 나중에 협력업체로 변경돼도 일정·결재 알림 API와 RLS에서 기존 대상을 차단한다.
+- 화면: 공용 일정의 결재 이벤트 클릭은 편집 모달 대신 결재 문서 상세로 이동한다. 가맹운영 일정은 별도 사용자·저장소 요구에 따라 전사 결재 일정과 연결하지 않는다.
+- 자동 검증: 일정 딥링크, 대결자 적격성, 병렬 처리자 제외, 역할 변경 후 stale 접근 차단, 가맹운영 일정 방어 필터를 포함한 관련 테스트 26건과 표준 자동 탐색 명령 `npx tsx --test` 전체 707건이 통과했다. TypeScript, lint, production build, `git diff --check`도 통과했고 기본 설치 SQL과 후속 migration의 workflow·대결 적격성 함수 본문이 동일한지 비교했다.
+- 브라우저 QA: mock-session production 서버에서 공용 일정을 1440px/390px로 열어 결재 문서 상세 이동과 `7월 지출 품의` 렌더링을 확인했다. 390px에서 `scrollWidth=innerWidth=390`이었고 최신 화면 console error는 0건이었다.
+- 보안 리뷰: 가맹운영 일정은 별도 저장소이므로 결재 일정 연동 주장을 제거했다. 다만 외부 연동 등으로 `approval-document` 행이 들어온 경우를 방어하기 위해 API와 최신 visibility RLS에서 현재 대상자와 관리자만 읽도록 제한했다. **SQL 재등록 필요**.
+- 신규 SQL: `supabase_company_approvals_workflow_schedule_fix_migration.sql`. 최신 `supabase_company_approvals_security_review_migration.sql`을 다시 적용한 후 실행한다. **SQL 등록 필요**.
+- 남은 live QA: SQL 적용 후 실계정으로 2명 순차 결재, 병렬 전원/1인 합의, 대결 시나리오를 실행해 단계별 알림·일정 교체와 stale 일정 제거를 확인한다.

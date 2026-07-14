@@ -25,6 +25,19 @@ export type ApprovalDelegationRow = {
 
 const ACTION_SCOPES = ['approval', 'agreement', 'acknowledgement'] as const;
 
+type EligibleApprovalProfile = {
+    readonly id: string;
+};
+
+export function delegationProfilesAreEligible(
+    profileIds: readonly string[],
+    eligibleProfiles: readonly EligibleApprovalProfile[]
+): boolean {
+    const expectedIds = new Set(profileIds);
+    const eligibleIds = new Set(eligibleProfiles.map(profile => profile.id));
+    return expectedIds.size === eligibleIds.size && [...expectedIds].every(id => eligibleIds.has(id));
+}
+
 function isoDateTime(value: unknown, field: string): string {
     const text = parseRequiredText(value, field, 40);
     const parsed = new Date(text);

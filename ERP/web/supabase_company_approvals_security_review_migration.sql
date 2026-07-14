@@ -244,6 +244,11 @@ as $$
     'delegate_profile_ids', coalesce((
       select jsonb_agg(delegation.delegate_profile_id::text order by delegation.delegate_profile_id::text)
       from public.approval_delegations delegation
+      join public.profiles delegate_profile
+        on delegate_profile.id = delegation.delegate_profile_id
+        and delegate_profile.company_id = target_company_id
+        and delegate_profile.status = 'active'
+        and delegate_profile.role <> 'partner_vendor'
       where delegation.company_id = target_company_id
         and delegation.delegator_profile_id = target.profile_id
         and delegation.active

@@ -398,6 +398,10 @@ export async function GET(request: Request) {
         if (companyId) unreadCountQuery = unreadCountQuery.eq('company_id', companyId);
         query = query.eq('recipient_profile_id', requester.id);
         unreadCountQuery = unreadCountQuery.eq('recipient_profile_id', requester.id);
+        if (requester.role === 'partner_vendor') {
+            query = query.neq('source_type', 'workflow-approval');
+            unreadCountQuery = unreadCountQuery.neq('source_type', 'workflow-approval');
+        }
 
         const [{ data, error }, { count, error: countError }] = await Promise.all([query, unreadCountQuery]);
         if (error) throw error;
@@ -434,6 +438,7 @@ export async function PATCH(request: Request) {
                 .is('dismissed_at', null)
                 .eq('recipient_profile_id', requester.id);
             if (companyId) query = query.eq('company_id', companyId);
+            if (requester.role === 'partner_vendor') query = query.neq('source_type', 'workflow-approval');
             const { error } = await query;
             if (error) throw error;
             return ok({ success: true });
@@ -448,6 +453,7 @@ export async function PATCH(request: Request) {
             .eq('id', notificationId)
             .eq('recipient_profile_id', requester.id);
         if (companyId) query = query.eq('company_id', companyId);
+        if (requester.role === 'partner_vendor') query = query.neq('source_type', 'workflow-approval');
 
         const { error } = await query;
         if (error) throw error;

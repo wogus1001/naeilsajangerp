@@ -22,6 +22,7 @@ export function canReadSchedule(requester: RequesterProfile, schedule: ScheduleA
     if (requester.role === 'admin') return true;
 
     if (schedule.sourceType === 'approval-document') {
+        if (requester.role === 'partner_vendor') return false;
         return schedule.userId === requester.id ||
             schedule.assigneeProfileId === requester.id ||
             targetProfileIds(schedule.metadata).includes(requester.id);

@@ -4,6 +4,7 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canReadSchedule } from '@/lib/schedule-access';
 import { getSupabaseAdmin as createSupabaseAdminClient } from '@/lib/supabase-admin';
 
 export type JsonRecord = Record<string, unknown>;
@@ -236,6 +237,14 @@ export async function listSchedules(
         if (!isRecord(row)) return false;
         const rowVisibility = cleanString(row.visibility) === 'personal' ? 'personal' : 'shared';
         if (rowVisibility === 'personal' && cleanString(row.creator_profile_id) !== requester.id) return false;
+        if (cleanString(row.source_type) === 'approval-document' && !canReadSchedule(requester, {
+            assigneeProfileId: cleanString(row.assignee_profile_id) || null,
+            companyId: cleanString(row.company_id) || null,
+            metadata: row.metadata,
+            scope: 'company',
+            sourceType: 'approval-document',
+            userId: null
+        })) return false;
         return !visibility || rowVisibility === visibility;
     });
     return ok(rows.map(transformSchedule));

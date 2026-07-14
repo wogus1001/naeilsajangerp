@@ -17,7 +17,7 @@
 - 최신 통합 릴리스: 플랫폼 코드리뷰 보정은 PR #4, main 릴리스 문서 동기화는 PR #6, 업무 접수 모바일 접근성 보정은 PR #7과 #8을 거쳐 `dev`에 반영했다. `dev -> main` PR #5를 병합한 운영 기준 커밋은 `7306723`이며, 병합 직후 `origin/dev`와 `origin/main`의 파일 트리가 같은 것을 확인했다.
 - 통합 코드 배포 기록: `naeilsajang` production 배포 `dpl_45fnu8CDmTTJpFhi6Jk2uVnX84sL`이 `READY`였으며 source URL은 `https://naeilsajang-lx0yaxcx4-jaehyuns-projects-b4d20c6f.vercel.app`이다. `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias와 `/login`, `/approvals`, `/dashboard/franchise-operations/schedule` 200 응답을 확인했다. 문서 커밋으로 후속 deployment가 생성될 수 있으므로 실제 최신 deployment ID는 운영 도메인 최종 inspect 결과를 기준으로 한다.
 - 최신 QA: 관련 자동 테스트 96건과 `tsc`, `lint`, `build`, `git diff --check`가 통과했다. 전자결재, 가맹운영 일정, 업무 접수 주요 화면을 1440px/390px에서 확인했고 가로 넘침과 console error는 0건이었다. 업무 접수 모바일 목록은 카드형으로 전환해 `확인/수정`, `삭제` 액션과 한글 줄바꿈을 보정했으며 독립 시각 QA를 통과했다.
-- SQL 적용 대기: 전자결재 v2 관련 SQL은 `supabase_company_approvals_v2_migration.sql` -> `supabase_company_approvals_organization_delete_safety_migration.sql` -> `supabase_company_approvals_document_line_override_migration.sql` -> `supabase_company_approvals_security_review_migration.sql` 순서로 적용한다. 가맹운영 개인 일정 보안 조건이 갱신된 `supabase_franchise_schedule_visibility_migration.sql`도 최신 파일로 다시 적용해야 한다. **SQL 등록 필요**.
+- SQL 적용 대기: 전자결재 v2 관련 SQL은 `supabase_company_approvals_v2_migration.sql` -> `supabase_company_approvals_organization_delete_safety_migration.sql` -> `supabase_company_approvals_document_line_override_migration.sql` -> `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` 순서로 적용한다. 가맹운영 개인 일정 보안 조건이 갱신된 `supabase_franchise_schedule_visibility_migration.sql`도 최신 파일로 다시 적용해야 한다. **SQL 등록 필요**.
 - 이번 복구 릴리즈 기준: 기능 브랜치 `codex/franchise-next-alerts-20260616`의 `955f42b feat(franchise): 공통 일정 결재 기반 추가`를 `main`의 `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`으로 통합했다. 점주 포털 회사별 단축 로그인, 공지/공문 첨부와 삭제 연동, 체크리스트 발송 이력 목록, 문의 알림톡, 공통 일정·결재 MVP를 포함한다. 이 main-first 통합은 이미 production에 직접 배포된 소스를 복구한 일회성 예외다.
 - 운영 기능 기준: main `b6d4559 fix(schedule): 보호 API 인증 헤더 보강` 소스를 `dpl_7am4D2Devjn3EQhGE8ZYhUQVekNW`에서 `naeilsajang` production에 배포했고 Vercel inspect `status=Ready`와 두 운영 도메인 alias를 확인했다. 이후 릴리즈 문서 전용 main 커밋은 애플리케이션 코드를 바꾸지 않으며 Vercel Git 연동의 후속 자동 배포가 생성될 수 있으므로, 실제 최신 deployment ID는 마지막 main push 이후 최종 inspect를 기준으로 확인한다. 이번 예외 릴리즈는 기능 브랜치 직접 배포 후 main/dev 기준점 복구까지 완료한 상태다.
 - SQL 상태: `supabase_franchise_approval_calendar_migration.sql`은 사용자 확인 기준 2026-07-10 운영 DB 적용 완료다. **SQL 등록 완료 확인**. dev와 production Supabase 프로젝트가 분리된 환경에서는 각 환경 적용 여부를 별도로 확인한다.
@@ -104,6 +104,7 @@
 - 기존 전자결재 조직 테이블을 적용한 환경은 이어서 `supabase_company_approvals_organization_delete_safety_migration.sql`을 적용한다. 조직 삭제 시 구성원 소속과 결재 담당자 연결이 함께 지워지지 않도록 외래 키를 제한 삭제로 전환한다. **SQL 등록 필요**.
 - 문서 작성 중 양식의 결재 단계별 실제 결재자와 참조자를 고를 수 있다. 순차 단계는 여러 결재자를 선택하고 순서를 바꿀 수 있으며, 상신 시 선택 순서대로 각각의 실제 결재 단계가 생성된다. 병렬 단계는 전원 또는 1인 처리 규칙을 유지한다. 최신 `supabase_company_approvals_document_line_override_migration.sql`을 적용하며 이전 단일 결재자 버전을 적용했다면 다시 실행한다. **SQL 등록 필요**.
 - 마지막으로 `supabase_company_approvals_security_review_migration.sql`을 적용한다. 결재 문서·양식이 참조하는 조직 삭제 차단, 필수 첨부파일의 실제 업로드 검증, 유효기간이 지난 소속 제외, 모든 다중 순차 결재 단계 분리, 재요청 시 중복 결재 진행 방지와 현재 버전·단계 검증을 포함한다. **SQL 등록 필요**.
+- 이어서 `supabase_company_approvals_workflow_schedule_fix_migration.sql`을 적용한다. 현재 단계에서 아직 응답하지 않은 원 결재자와 대결자만 일정 대상에 남기고, 병렬 결재에서 이미 처리한 사용자의 승인 대기 일정이 계속 보이지 않도록 동기화 함수를 보정한다. **SQL 등록 필요**.
 - 첨부파일 선택 영역은 실제 선택 버튼과 드래그 추가, 형식·10MB·최대 5개 검증, 파일명·용량·업로드 대기 상태를 제공한다. 저장 시 전용 비공개 버킷으로 업로드하고 상세 화면에서 권한을 확인한 뒤 내려받는다.
 
 ## 2026-07-14 전자결재 1단계 문서함 운영 보강
@@ -113,4 +114,13 @@
 - 검색 대상은 제목, 기안자, 소속 부서, 양식명, 문서번호이며 상태와 제출·수정 기간을 함께 적용할 수 있다.
 - 필터 변경 직후 이전 요청이 늦게 끝나 최신 결과를 덮지 않도록 최신 요청만 반영한다.
 - 신규 SQL은 없다. 기존 전자결재 v2 SQL 적용 순서는 유지한다.
-- 자동 검증은 전체 테스트 699건, TypeScript, lint, production build, `git diff --check`를 통과했다. 실계정 1440px/390px 문서함 QA는 남아 있다.
+
+## 2026-07-14 전자결재 1-6 알림·일정 운영 보강
+
+- 결재 단계 일정의 대상 목록을 전체 원 결재자 스냅샷이 아니라 아직 응답하지 않은 원 결재자와 활성 대결자로 다시 계산한다. 원 결재자와 대결자는 같은 회사의 활성 임직원만 일정·알림 대상이 되며 협력업체로 역할이 바뀐 계정은 기존 metadata가 남아 있어도 읽을 수 없다. 병렬 결재에서 처리한 사용자는 다음 동기화부터 승인 대기 일정 접근 대상에서 제외된다.
+- 공용 `/schedule`의 결재 일정은 `/approvals/documents/[id]` 상세로 이동한다. 가맹운영 일정은 별도 사용자와 `franchise_schedules` 저장소를 유지하며 전사 결재 일정과 연동하지 않는다.
+- 1440px와 390px mock-session production 브라우저 QA에서 공용 일정의 결재 문서 이동, 문서 상세 렌더링, 가로 넘침 0건, console error 0건을 확인했다.
+- 방어 보정으로 가맹운영 일정 API와 최신 visibility RLS는 외부 연동 등으로 `approval-document` 행이 존재하더라도 현재 결재 대상과 관리자 외 회사 구성원에게 노출하지 않는다. `supabase_franchise_schedule_visibility_migration.sql` 최신 파일 재적용이 필요하다. **SQL 재등록 필요**.
+- 신규 SQL: `supabase_company_approvals_workflow_schedule_fix_migration.sql`. 최신 전자결재 보안 리뷰 migration을 다시 적용한 다음 실행한다. **SQL 등록 필요**.
+- 남은 운영 QA: SQL 적용 후 실제 원 결재자·대결자 계정으로 2명 순차 결재와 병렬 전원/1인 합의를 끝까지 처리하고, 단계 이동 시 알림·일정 수신자가 교체되는지와 처리 완료 일정이 남지 않는지 확인한다.
+- 자동 검증은 표준 자동 탐색 명령 `npx tsx --test` 전체 707건, TypeScript, lint, production build, `git diff --check`를 통과했다. 실계정 다중 결재·대결 QA는 SQL 적용 후 진행한다.

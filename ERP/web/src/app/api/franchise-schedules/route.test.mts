@@ -381,6 +381,37 @@ test('Given shared and personal schedules When listing Then another users person
     assert.deepEqual(data.map(row => isRecord(row) ? row.id : '').sort(), ['own', 'shared']);
 });
 
+test('Given mirrored approval schedules When listing Then only current targets can read them', async () => {
+    const state = createState({
+        schedules: {
+            visible: scheduleRow({
+                assignee_profile_id: null,
+                creator_profile_id: null,
+                id: 'visible',
+                metadata: { targetProfileIds: ['staff-1'] },
+                source_id: 'document-1',
+                source_type: 'approval-document',
+                visibility: 'shared'
+            }),
+            hidden: scheduleRow({
+                assignee_profile_id: null,
+                creator_profile_id: 'staff-1',
+                id: 'hidden',
+                metadata: { targetProfileIds: ['manager-1'] },
+                source_id: 'document-2',
+                source_type: 'approval-document',
+                visibility: 'shared'
+            })
+        }
+    });
+    const response = await handleFranchiseSchedulesGET(request('GET'), createDependencies(state, staff));
+    const payload = await json(response);
+    const data = Array.isArray(payload.data) ? payload.data : [];
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(data.map(row => isRecord(row) ? row.id : ''), ['visible']);
+});
+
 test('Given calendar date aliases When listing schedules Then from and to bounds are applied', async () => {
     const state = createState();
     const response = await handleFranchiseSchedulesGET(

@@ -113,3 +113,10 @@ export function sourceBadgeLabel(sourceType: string | null | undefined): string 
             return '수동';
     }
 }
+
+export function scheduleEventHref(event: ScheduleEvent): string {
+    const sourceId = cleanText(event.sourceId);
+    return cleanText(event.sourceType) === 'approval-document' && sourceId
+        ? `/approvals/documents/${encodeURIComponent(sourceId)}`
+        : '';
+}

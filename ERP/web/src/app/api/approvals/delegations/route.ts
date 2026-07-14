@@ -3,6 +3,7 @@ import { canManageApprovals } from '../_shared/policy';
 import { resolveApprovalContext } from '../_shared/access';
 import { parseRequiredUuid, readJsonRecord } from '../_shared/boundary';
 import {
+    delegationProfilesAreEligible,
     delegationView,
     parseDelegationInsert,
     type ApprovalDelegationRow
@@ -42,6 +43,19 @@ export async function POST(request: Request) {
         if (insert.delegator_profile_id !== context.requester.id &&
             !canManageApprovals(context.requester, context.approvalAdmin)) {
             throw new ApprovalRouteError(403, 'FORBIDDEN', 'Only approval administrators may delegate for another user');
+        }
+        const profileIds = [insert.delegator_profile_id, insert.delegate_profile_id];
+        const { data: eligibleProfiles, error: profileError } = await context.supabase
+            .from('profiles')
+            .select('id')
+            .eq('company_id', context.companyId)
+            .eq('status', 'active')
+            .neq('role', 'partner_vendor')
+            .in('id', profileIds)
+            .returns<Array<{ readonly id: string }>>();
+        throwDatabaseError(profileError);
+        if (!delegationProfilesAreEligible(profileIds, eligibleProfiles || [])) {
+            throw new ApprovalRouteError(400, 'VALIDATION_ERROR', '대결자는 회사의 사용 가능한 구성원이어야 합니다.');
         }
         const { data, error } = await context.supabase
             .from('approval_delegations')
