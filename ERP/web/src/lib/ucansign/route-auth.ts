@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import {
@@ -78,4 +79,11 @@ export function readUcansignReturnPath(state: string | null): string {
     } catch {
         return DEFAULT_UCANSIGN_RETURN_PATH;
     }
+}
+
+export function isMatchingUcansignState(received: string | null, expected: string | null): boolean {
+    if (!received || !expected) return false;
+    const receivedBytes = Buffer.from(received);
+    const expectedBytes = Buffer.from(expected);
+    return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
 }

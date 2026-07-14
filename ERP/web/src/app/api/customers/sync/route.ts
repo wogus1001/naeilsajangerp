@@ -11,22 +11,27 @@ export async function POST(request: Request) {
         const adminGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
         if (!adminGuard.ok) return adminGuard.response;
 
-        const { companyId } = await request.json(); // Optional security scope
+        const body: unknown = await request.json();
+        const requestedCompanyId = typeof body === 'object' && body !== null && 'companyId' in body && typeof body.companyId === 'string'
+            ? body.companyId.trim()
+            : '';
+        const companyId = adminGuard.requester.company_id;
+        if (!companyId) return NextResponse.json({ error: '회사 소속을 확인할 수 없습니다.' }, { status: 403 });
+        if (requestedCompanyId && requestedCompanyId !== companyId) {
+            return NextResponse.json({ error: '다른 회사 데이터는 동기화할 수 없습니다.' }, { status: 403 });
+        }
 
         // Fetch all customers (Optimize: Filter by company if provided)
-        let query = supabaseAdmin.from('customers').select('id, name, data, manager_id, mobile');
-        if (companyId) {
-            // If customers table has company_id (it does)
-            query = query.eq('company_id', companyId);
-        }
+        const query = supabaseAdmin.from('customers').select('id, name, data, manager_id, mobile')
+            .eq('company_id', companyId);
 
         const { data: customers, error } = await query;
         if (error) throw error;
 
         // 0. Pre-fetch Company Properties for Validation & Linking
         // We fetch ALL properties for this company to ensure we validate links correctly.
-        let propQuery = supabaseAdmin.from('properties').select('id, name, data, company_id');
-        if (companyId) propQuery = propQuery.eq('company_id', companyId);
+        const propQuery = supabaseAdmin.from('properties').select('id, name, data, company_id')
+            .eq('company_id', companyId);
 
         // Limit to prevent OOM
         const { data: properties } = await propQuery.limit(5000);
@@ -58,7 +63,8 @@ export async function POST(request: Request) {
             const managerId = customer.manager_id;
             let userInfo = managerMap.get(managerId);
             if (managerId && !userInfo) {
-                const { data: u } = await supabaseAdmin.from('profiles').select('id, company_id, name').eq('id', managerId).single();
+                const { data: u } = await supabaseAdmin.from('profiles').select('id, company_id, name')
+                    .eq('id', managerId).eq('company_id', companyId).eq('status', 'active').single();
                 if (u) {
                     userInfo = { userId: u.id, companyId: u.company_id, userName: u.name };
                     managerMap.set(managerId, userInfo);
@@ -76,39 +82,8 @@ export async function POST(request: Request) {
                 const { data: existingSchedules } = await supabaseAdmin
                     .from('schedules')
                     .select('date, title')
-                    .eq('businessCardId', customer.id) // reusing column or using a new one?
-                    // customers usually don't link to 'businessCardId'. 
-                    // We need a 'customerId' column in schedules? 
-                    // Or reuse 'businessCardId' if it's generic?
-                    // Let's check 'schedules' schema. 
-                    // If 'customerId' doesn't exist, we might have to use 'details' or mix.
-                    // Implementation plan didn't specify adding 'customerId' to schedules.
-                    // Assuming 'businessCardId' is used generically or I should check schema.
-                    // But 'CustomerCard.tsx' createScheduleSync uses `businessCardId: cardId`.
-                    // Wait, `CustomerCard.tsx` in `src/components/customers/CustomerCard.tsx`?
-                    // Let's check `CustomerCard.tsx` line 208 logic again.
-                    // Ah, `CustomerCard` code I viewed EARLIER was `BusinessCard.tsx`?
-                    // The file path was `src/components/business/BusinessCard.tsx` which I viewed.
-                    // I did NOT view `src/components/customers/CustomerCard.tsx` fully for sync logic.
-                    // I assumed `CustomerCard` has same logic.
-                    // Let's assume `schedules` has `customerId` OR I use `businessCardId` as generic ID column (UUID).
-                    // Or `details` to store ID.
-                    // Safe bet: Use `businessCardId` column if it allows UUID, or `customerId` if exists.
-                    // Given I cannot check schema instantly, I'll assume `businessCardId` or `customerId`.
-                    // I will try `customerId` first, if error, fallback? No, DB schema is strict.
-                    // I'll check `schedules` schema via `view_file` on `schedules` related file if I can?
-                    // Or just use `businessCardId` as the link key since it's likely a generic FK or loose UUID.
-                    // Actually, if I look at `BusinessCard.tsx` Sync, it uses `businessCardId`.
-                    // `CustomerCard` usually uses `customerId`.
-                    // I'll assume `customerId` column exists or I use `businessCardId`.
-                    // Let's blindly use `customerId` (it's cleaner). If it fails, user will report.
-                    // RATIONALE: `schedules` likely has `customer_id`.
-
-                    // Correcting self: I'll use `businessCardId` but label it 'customer' in metadata or title? 
-                    // No, that's messy.
-                    // Let's check `api/schedules/route.ts` if possible?
-                    // Skipping verification to save time. I'll use `customerId`.
-
+                    .eq('company_id', companyId)
+                    .eq('customer_id', customer.id)
                     .eq('type', 'work');
 
                 const existingSet = new Set(existingSchedules?.map(s => `${s.date}_${s.title}`) || []);
@@ -127,9 +102,9 @@ export async function POST(request: Request) {
                             details: h.details || '',
                             type: 'work',
                             color: '#ff922b', // Orange for Customer Work
-                            customerId: customer.id, // Using customerId
-                            userId: userInfo?.userId || null,
-                            companyName: userInfo?.companyId || null // Schema usually stores companyName or ID? BusinessCard uses `companyName`.
+                            customer_id: customer.id,
+                            user_id: userInfo?.userId || null,
+                            company_id: companyId
                         });
                         existingSet.add(key); // Prevent dups in batch
                     }
@@ -186,7 +161,7 @@ export async function POST(request: Request) {
                                 await supabaseAdmin
                                     .from('properties')
                                     .update({ data: { ...pData, workHistory: [...pHistory, newWorkHistory] } })
-                                    .eq('id', prop.id);
+                                    .eq('id', prop.id).eq('company_id', companyId);
                             }
                         }
                     }
@@ -195,7 +170,7 @@ export async function POST(request: Request) {
                     await supabaseAdmin
                         .from('customers')
                         .update({ data: customer.data })
-                        .eq('id', customer.id);
+                        .eq('id', customer.id).eq('company_id', companyId);
                 }
             }
 
@@ -257,10 +232,11 @@ export async function POST(request: Request) {
 
                         if (existsIndex === -1) {
                             // Add new
-                            await supabaseAdmin
-                                .from('properties')
-                                .update({ data: { ...pData, promotedCustomers: [...pList, newPromo] } })
-                                .eq('id', targetProp.id);
+                                await supabaseAdmin
+                                    .from('properties')
+                                    .update({ data: { ...pData, promotedCustomers: [...pList, newPromo] } })
+                                    .eq('id', targetProp.id)
+                                    .eq('company_id', companyId);
                         } else {
                             // Update existing (Fix missing data or fields) - OPTIONAL but good for "Consistency"
                             // Only update if critical fields are missing to avoid overwriting manual edits?
@@ -283,7 +259,8 @@ export async function POST(request: Request) {
                                 await supabaseAdmin
                                     .from('properties')
                                     .update({ data: { ...pData, promotedCustomers: pList } })
-                                    .eq('id', targetProp.id);
+                                    .eq('id', targetProp.id)
+                                    .eq('company_id', companyId);
                             }
                         }
                     }
@@ -295,7 +272,8 @@ export async function POST(request: Request) {
                 await supabaseAdmin
                     .from('customers')
                     .update({ data: customer.data })
-                    .eq('id', customer.id);
+                    .eq('id', customer.id)
+                    .eq('company_id', companyId);
             }
         }
 
@@ -347,7 +325,8 @@ export async function POST(request: Request) {
                                 await supabaseAdmin
                                     .from('customers')
                                     .update({ data: cData })
-                                    .eq('id', customer.id);
+                                    .eq('id', customer.id)
+                                    .eq('company_id', companyId);
 
                                 historySynced++;
                             }

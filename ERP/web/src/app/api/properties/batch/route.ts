@@ -129,23 +129,6 @@ const parseDate = (val: any) => {
 };
 
 // Start of Main Logic
-async function resolveIds(legacyCompany: string | null, legacyManager: string | null, supabaseAdmin: any) {
-    let companyId = null;
-    let managerId = null;
-
-    if (legacyCompany) {
-        const { data: c } = await supabaseAdmin.from('companies').select('id').eq('name', legacyCompany).single();
-        if (c) companyId = c.id;
-    }
-
-    if (legacyManager) {
-        const email = legacyManager.includes('@') ? legacyManager : `${legacyManager}@example.com`;
-        const { data: u } = await supabaseAdmin.from('profiles').select('id').eq('email', email).single();
-        if (u) managerId = u.id;
-    }
-    return { companyId, managerId };
-}
-
 // Helper to parse Python-style list string from Excel
 const parsePythonList = (str: any): any[] => {
     if (!str || typeof str !== 'string') return [];
@@ -200,16 +183,19 @@ export async function POST(request: Request) {
     try {
         const adminGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
         if (!adminGuard.ok) return adminGuard.response;
+        const companyId = adminGuard.requester.company_id;
+        if (!companyId) return NextResponse.json({ error: '회사 소속을 확인할 수 없습니다.' }, { status: 403 });
 
         const body = await request.json();
         const { main = [], work = [], price = [], contracts = [], meta = {} } = body;
-        const { userCompanyName, managerId } = meta;
+        const managerId = adminGuard.requester.id;
 
         // 1. 기존 매물 전체 조회 (백엔드에서 Supabase까지의 통신은 413 제한 없음)
         // 413 오류는 클라이언트→Vercel 요청 크기 문제이므로, 백엔드 조회는 원래대로 유지
         const { data: allProps, error: fetchError } = await supabaseAdmin
             .from('properties')
-            .select('id, data, created_at');
+            .select('id, data, created_at')
+            .eq('company_id', companyId);
 
         if (fetchError) throw fetchError;
 
@@ -229,38 +215,23 @@ export async function POST(request: Request) {
         const processedLegacyIds = new Set<string>(); // Track processed IDs
 
         // [Manager Logic] Prepare Company & Colleague Map
-        let uploaderCompanyId: string | null = null;
+        const uploaderCompanyId = companyId;
         const managerNameMap = new Map<string, string>(); // Name -> UUID
 
-        if (managerId) {
-            // Get Uploader's Company
-            const { data: uploaderProfile } = await supabaseAdmin
-                .from('profiles')
-                .select('company_id')
-                .eq('id', managerId)
-                .single();
-
-            if (uploaderProfile?.company_id) {
-                uploaderCompanyId = uploaderProfile.company_id;
-
-                // Fetch all colleagues in the same company
-                const { data: colleagues } = await supabaseAdmin
-                    .from('profiles')
-                    .select('id, name')
-                    .eq('company_id', uploaderCompanyId);
-
-                colleagues?.forEach((col: any) => {
-                    if (col.name) {
-                        const n = col.name.trim().normalize('NFC');
-                        managerNameMap.set(n, col.id);
-                        // Also map without spaces for fuzzy match
-                        managerNameMap.set(n.replace(/\s+/g, ''), col.id);
-                    }
-                });
+        const { data: colleagues } = await supabaseAdmin
+            .from('profiles')
+            .select('id, name')
+            .eq('company_id', companyId)
+            .eq('status', 'active');
+        colleagues?.forEach((col: any) => {
+            if (col.name) {
+                const normalizedName = col.name.trim().normalize('NFC');
+                managerNameMap.set(normalizedName, col.id);
+                managerNameMap.set(normalizedName.replace(/\s+/g, ''), col.id);
             }
-        }
+        });
 
-        const { companyId: defaultCompanyId } = await resolveIds(userCompanyName, null, supabaseAdmin);
+        const defaultCompanyId = companyId;
 
         for (const row of main) {
             // Find ID
@@ -465,12 +436,12 @@ export async function POST(request: Request) {
         // PRE-FETCH FOR SYNC: Fetch Customers & Business Cards (Scoped to Company & High Limit)
         // Note: Default Supabase limit is 1000. We bump to 10000 to cover typical small-medium biz.
         // For larger scales, we would need pagination, but this quick fix solves the "cutoff" issue.
-        let custQuery = supabaseAdmin.from('customers').select('id, name, mobile');
-        if (defaultCompanyId) custQuery = custQuery.eq('company_id', defaultCompanyId);
+        const custQuery = supabaseAdmin.from('customers').select('id, name, mobile')
+            .eq('company_id', companyId);
         const { data: allCustomers } = await custQuery.limit(10000);
 
-        let cardQuery = supabaseAdmin.from('business_cards').select('id, name, company_name, mobile');
-        if (defaultCompanyId) cardQuery = cardQuery.eq('company_id', defaultCompanyId);
+        const cardQuery = supabaseAdmin.from('business_cards').select('id, name, company_name, mobile')
+            .eq('company_id', companyId);
         const { data: allBusinessCards } = await cardQuery.limit(10000);
 
         const customerMap = new Map<string, string>(); // Name -> ID
@@ -722,7 +693,8 @@ export async function POST(request: Request) {
             return supabaseAdmin
                 .from('properties')
                 .update({ data, updated_at: new Date().toISOString() })
-                .eq('id', id);
+                .eq('id', id)
+                .eq('company_id', companyId);
         });
 
         const updateResults = await Promise.allSettled(updatePromises);
