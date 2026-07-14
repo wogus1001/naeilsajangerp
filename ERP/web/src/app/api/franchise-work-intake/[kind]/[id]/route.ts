@@ -4,6 +4,7 @@ import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead
 import { FRANCHISE_MATCHING_REQUEST_SOURCE, normalizeLeadGrade, normalizeLeadPhone, normalizeLeadStatus } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { canManageWorkIntakeRecord, type WorkIntakeAccessRow } from '@/lib/work-intake-access';
+import { missingWorkIntakeEditFields } from '@/lib/work-intake-edit-validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -149,6 +150,10 @@ export async function PUT(request: Request, context: RouteContext) {
         const kind = resolveKind(params.kind);
         if (!kind) return fail(400, 'VALIDATION_ERROR', 'Unsupported work intake kind');
         const body = await parseBody(request);
+        const missingFields = missingWorkIntakeEditFields(kind, body);
+        if (missingFields.length > 0) {
+            return fail(400, 'VALIDATION_ERROR', `필수 항목을 확인해주세요: ${missingFields.join(', ')}`);
+        }
         const supabaseAdmin = getSupabaseAdmin();
         const requester = await getRequesterProfile(supabaseAdmin, request, cleanString(body.requesterId));
         if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
@@ -164,6 +169,7 @@ export async function PUT(request: Request, context: RouteContext) {
             .from(target.table)
             .update(updates)
             .eq('id', params.id)
+            .eq('company_id', target.row.company_id)
             .select()
             .single();
         if (error) throw error;
@@ -189,7 +195,9 @@ export async function DELETE(request: Request, context: RouteContext) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
         }
 
-        const { error } = await supabaseAdmin.from(target.table).delete().eq('id', params.id);
+        const { error } = await supabaseAdmin.from(target.table).delete()
+            .eq('id', params.id)
+            .eq('company_id', target.row.company_id);
         if (error) throw error;
         return ok({ success: true });
     } catch (error) {

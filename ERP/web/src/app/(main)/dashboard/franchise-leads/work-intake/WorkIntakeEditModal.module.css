@@ -36,6 +36,13 @@
     line-height: 1.4;
 }
 
+.modalForm {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+}
+
 .modalBody {
     flex: 1 1 auto;
     min-height: 0;
