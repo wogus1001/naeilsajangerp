@@ -1283,8 +1283,37 @@
 - 수정: workflow 동기화 함수가 미응답 원 결재자와 각 대상의 대결자를 중복 없이 다시 계산해 알림과 일정에 같은 대상 목록을 사용한다. 대상이 1명일 때만 일정 담당자를 단일 지정하고, 여러 명이면 `metadata.targetProfileIds`로 접근을 제한한다.
 - 대결 권한: 대결 등록 API와 DB trigger가 같은 회사의 활성 임직원인지 확인하고, 제출 시 결재선 스냅샷과 일정 동기화에서도 비활성 계정·협력업체 계정을 제외한다. 원 결재자나 대결자의 역할이 나중에 협력업체로 변경돼도 일정·결재 알림 API와 RLS에서 기존 대상을 차단한다.
 - 화면: 공용 일정의 결재 이벤트 클릭은 편집 모달 대신 결재 문서 상세로 이동한다. 가맹운영 일정은 별도 사용자·저장소 요구에 따라 전사 결재 일정과 연결하지 않는다.
-- 자동 검증: 일정 딥링크, 대결자 적격성, 병렬 처리자 제외, 역할 변경 후 stale 접근 차단, 가맹운영 일정 방어 필터를 포함한 관련 테스트 26건과 표준 자동 탐색 명령 `npx tsx --test` 전체 707건이 통과했다. TypeScript, lint, production build, `git diff --check`도 통과했고 기본 설치 SQL과 후속 migration의 workflow·대결 적격성 함수 본문이 동일한지 비교했다.
+- 자동 검증: 일정 딥링크, 대결자 적격성, 병렬 처리자 제외, 역할 변경 후 stale 접근 차단, 가맹운영 일정 방어 필터를 포함한 관련 테스트 26건과 표준 자동 탐색 명령 `npx tsx --test` 전체 716건이 통과했다. TypeScript, lint, production build, `git diff --check`도 통과했고 기본 설치 SQL과 후속 migration의 workflow·대결 적격성 함수 본문이 동일한지 비교했다.
 - 브라우저 QA: mock-session production 서버에서 공용 일정을 1440px/390px로 열어 결재 문서 상세 이동과 `7월 지출 품의` 렌더링을 확인했다. 390px에서 `scrollWidth=innerWidth=390`이었고 최신 화면 console error는 0건이었다.
-- 보안 리뷰: 가맹운영 일정은 별도 저장소이므로 결재 일정 연동 주장을 제거했다. 다만 외부 연동 등으로 `approval-document` 행이 들어온 경우를 방어하기 위해 API와 최신 visibility RLS에서 현재 대상자와 관리자만 읽도록 제한했다. **SQL 재등록 필요**.
-- 신규 SQL: `supabase_company_approvals_workflow_schedule_fix_migration.sql`. 최신 `supabase_company_approvals_security_review_migration.sql`을 다시 적용한 후 실행한다. **SQL 등록 필요**.
-- 남은 live QA: SQL 적용 후 실계정으로 2명 순차 결재, 병렬 전원/1인 합의, 대결 시나리오를 실행해 단계별 알림·일정 교체와 stale 일정 제거를 확인한다.
+- 보안 리뷰: 가맹운영 일정은 별도 저장소이므로 결재 일정 연동 주장을 제거했다. 다만 외부 연동 등으로 `approval-document` 행이 들어온 경우를 방어하기 위해 API와 최신 visibility RLS에서 현재 대상자와 관리자만 읽도록 제한했고 최신 SQL 적용을 완료했다. **SQL 등록 완료 확인**.
+- SQL 적용 확인: 사용자 재적용 후 `perform_approval_document_action_idempotent` RPC를 직접 호출해 제출 상태와 첫 결재 단계 생성까지 확인했다. `approval_delegations`, `approval_document_steps`, `schedules`, `franchise_notifications`, `franchise_schedules`도 읽기 가능 상태다. **SQL 등록 완료 확인**.
+- 실계정 브라우저 QA: QA 회사와 기안자, 1·2차 결재자, 합의자 2명, 대결자 계정을 별도로 생성했다. 2명 순차 결재는 1차 처리 후 일정 담당자와 알림이 2차 결재자로 교체되고 최종 승인 후 일정이 완료됐다. 병렬 전원 합의는 첫 응답 후 진행 상태를 유지하고 두 번째 응답에서 승인됐으며, 병렬 1인 합의는 첫 응답 즉시 승인되고 다른 합의자의 stale 알림이 종료됐다. 대결자는 결재 대기 문서를 조회·승인했고 이벤트에는 실제 처리자와 원 결재자가 각각 기록됐다. 기안자 완료 처리까지 정상 동작했다.
+- 운영 데이터 검증: 결재 일정 4건은 모두 완료됐고 단계 알림은 모두 `dismissed_at`이 기록됐다. 기안자 결과 알림만 활성 상태로 남았으며 일정 ID와 `수신자 + source_id` 기준 중복은 각각 0건이었다. 병렬 결재선 상세가 첫 대상자만 표시하던 UI를 전체 대상자 이름 표시로 수정하고 390px에서 `scrollWidth=innerWidth=390`, console error 0건을 확인했다.
+- 추가 자동 검증: 결재 문서 adapter 회귀 테스트를 추가했고 결재 관련 자동 테스트 65건, TypeScript, lint, production build가 통과했다. 신규 SQL은 없다.
+- QA 데이터 정리: 제출본 불변성 trigger가 제출된 문서 버전 삭제를 정상 차단해 감사 데이터를 강제 삭제하지 않았다. 대신 QA 회사와 프로필 6개를 비활성화하고 Auth 계정 로그인을 차단했으며, 일정 4건, 알림 13건, 위임·역할·조직 소속·조직 단위는 제거했다.
+
+## 2026-07-14 전자결재 위임 권한 후속 보안 QA
+
+- 보안 리뷰에서 idempotent 결재 RPC가 동일 요청의 캐시를 반환할 때 실제 로그인 사용자와 `p_actor_profile_id` 일치를 먼저 확인하지 않는 문제를 발견했다. 최신 migration은 캐시 조회 전에 인증 사용자와 활성 회사 임직원 여부를 확인한다.
+- 제출 시 저장된 `delegate_profile_ids`는 감사 스냅샷으로만 사용한다. 결재 대기, 상세 액션, 문서/PDF/첨부 열람, 전사·가맹운영 일정은 현재 활성 기간과 action scope가 일치하는 위임을 추가 확인하며, 만료·해제된 대결자의 단계 알림은 헤더 조회 시 종료한다.
+- RLS도 동일 기준으로 `can_access_approval_document`, `can_act_on_approval_document`, 결재 일정과 단계 알림 조회를 제한한다. `can_act_on_approval_document`를 인증 사용자가 직접 호출해도 본인 ID만 확인할 수 있고, 서비스 역할 외 호출자가 다른 사용자의 결재 대상 여부를 추측할 수 없게 했다. 가맹운영 일정 visibility RLS는 저장 metadata 대신 현재 결재 가능 여부를 사용한다.
+- 실패 테스트에서 캐시 선반환, 현재 위임 없는 대결자 접근, stale 일정·알림 노출을 재현한 뒤 보정했다. 보안 집중 테스트 35건과 표준 자동 탐색 명령 `npx tsx --test` 전체 716건, TypeScript, lint, production build, `git diff --check`가 통과했다.
+- 적용 순서: 최신 `supabase_company_approvals_security_review_migration.sql`을 다시 실행한 뒤 최신 `supabase_franchise_schedule_visibility_migration.sql`을 실행한다. 이후 다른 로그인 사용자의 캐시 재호출 거절과 위임 해제 직후 결재함·일정·알림 미노출을 실호출로 확인한다. **SQL 재등록 필요**.
+
+## 2026-07-14 대시보드 일정·전자결재 알림 분리 QA
+
+- 분류 기준: 전자결재 요청은 날짜가 있더라도 업무 알림과 결재 대기 대상이며, 루트 대시보드 `예정된 일정`과 D+2 일정 건수에는 포함하지 않는다. 결재 알림과 `/approvals/pending` 목록은 유지한다.
+- 구현: 대시보드 일정 응답에서 `source_type=approval-document`만 제외하는 순수 selector를 추가했다. 공유 일정, 로그인 사용자의 개인 일정, 회의·방문·마감 등 일반 일정의 기존 노출 규칙은 유지한다.
+- 보안 보정: 알림 PATCH도 조회와 동일하게 현재 결재 가능 대상을 재확인하고, 만료·해제된 대결자의 단계 알림을 먼저 종료한 뒤 활성 알림만 읽음 처리한다.
+- SQL 순서: `supabase_franchise_schedule_visibility_migration.sql`의 정책이 보안 migration의 `can_act_on_approval_document`를 사용하므로 최신 `supabase_company_approvals_security_review_migration.sql`과 workflow 일정 보정 SQL 뒤에 적용하도록 README 순서를 수정했다. **SQL 재등록 필요**.
+- 검증: 대시보드 분류와 위임 알림 집중 테스트 9건, 전체 `npx tsx --test` 720건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`를 통과했다. 화면 구조와 스타일은 변경하지 않았다.
+- 로그인 QA: 결재 일정 25건과 일반 일정 1건을 함께 등록한 상태에서 루트 대시보드 `예정된 일정`에는 일반 일정만 표시되고 헤더 알림에는 결재 결과 알림이 유지되는 것을 확인했다. `모두 읽음` 처리 시 유효한 결과 알림은 읽음으로 바뀌고 만료된 단계 알림은 읽음 처리 전에 종료됐다. 브라우저 console error는 0건이었다.
+- 회귀 가설 검증: 결재 일정이 일반 일정을 밀어내는 문제는 DB 조회의 20건 제한 전에 `approval-document`를 제외해 방지했다. 이전 DB 스키마의 `source_type` 누락은 기존 조회로 안전하게 폴백한다. 결재 알림 접근은 문서 ID뿐 아니라 현재 단계 번호와 활성 위임을 함께 확인해 이전 단계 알림의 재노출을 차단한다.
+
+## 2026-07-14 전자결재 PDF 저장 복구 QA
+
+- 재현: 로그인된 문서 작성자가 `/approvals/documents/[id]`에서 `PDF 내려받기`를 실행하면 로컬 응답은 200이지만 생성 파일이 약 5.4MB였고, 같은 응답은 Vercel Function의 4.5MB buffered request/response 제한을 넘는다. 기존 WOFF2 파일로 만든 PDF는 텍스트 추출은 가능하지만 Poppler 렌더 결과가 빈 페이지였다.
+- 보정: PDF 응답을 64KB 단위 `ReadableStream`으로 전환해 `Content-Length` 없이 전달한다. PDF 글꼴은 공식 Google Fonts Noto Sans KR TrueType 파일로 교체하고, 기존 PDF 비호환 WOFF2 파일은 제거했다.
+- 자동 검증: PDF 전용 테스트 7건에서 5,000,000바이트 응답의 스트리밍, Content-Length 미설정, PDF 시그니처 보존, 번들 폰트의 TrueType 시그니처, 특수문자 포함 파일명의 RFC 8187 인코딩을 확인했다. 전체 `npx tsx --test` 725건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 브라우저·파일 QA: 로컬 실계정 임시저장 문서에서 `PDF 내려받기`를 실행해 다운로드 이벤트와 파일명 `전자결재 PDF 저장 QA.pdf`를 확인했다. 내려받은 파일은 A4 1페이지, 약 7.6KB이며 한글 제목·본문·푸터가 표시되고 비백색 픽셀이 존재해 빈 페이지가 아님을 확인했다. 브라우저 console error는 0건이었다.
+- SQL 상태: PDF 저장 보정 자체의 신규 SQL은 없다. 같은 릴리즈에서 문서·하위 테이블 RLS와 알림 조회·읽음 처리가 현재 유효한 위임 및 결재 단계만 허용하도록 보강됐으므로 최신 `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` -> `supabase_franchise_schedule_visibility_migration.sql` 순서로 다시 적용해야 한다. **SQL 재등록 필요**.

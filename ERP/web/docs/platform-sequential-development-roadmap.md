@@ -63,11 +63,13 @@ FC ERP의 다음 개발을 아래 순서로만 진행한다.
 - 문서함 검색을 현재 페이지 한정 방식에서 회사 전체 조회 결과 기준 서버 검색으로 전환했다.
 - 제목, 기안자, 소속 부서, 양식명, 문서번호를 함께 검색하고 상태 및 제출·수정 기간을 조합해 조회한다.
 - 검색 조건 변경 시 첫 페이지로 이동하며, 늦게 끝난 이전 요청이 최신 검색 결과를 덮지 않도록 요청 순서를 보호한다.
-- 표준 자동 탐색 명령 `npx tsx --test` 전체 707건, TypeScript, lint, production build를 통과했다.
+- 표준 자동 탐색 명령 `npx tsx --test` 전체 725건, TypeScript, lint, production build를 통과했다.
 - 실계정 브라우저에서 문서함 검색·상태·기간·페이지네이션과 390px/1440px 배치를 확인한 뒤 1-5 완료 여부를 판정한다.
 - 1-6 보정으로 결재 일정 수신자를 미처리 원 결재자와 같은 회사의 활성 임직원 대결자로 다시 계산하고, 처리 완료한 병렬 결재자의 일정 노출을 제거했다.
 - 공용 `/schedule`에서 결재 일정을 누르면 결재 문서 상세로 이동한다. 1440px/390px mock-session 브라우저 QA에서 이동과 가로 넘침 0건을 확인했다. 가맹운영 일정은 별도 사용자·저장소 정책에 따라 결재 일정과 연동하지 않는다.
-- 최신 보안 리뷰 migration과 신규 `supabase_company_approvals_workflow_schedule_fix_migration.sql` 적용 후 2명 순차 결재, 병렬 합의, 대결 실계정 QA를 수행해야 1-6을 완료로 판정한다. **SQL 등록 필요**.
+- 최신 보안 리뷰 migration과 `supabase_company_approvals_workflow_schedule_fix_migration.sql` 적용 후 2명 순차 결재, 병렬 전원/1인 합의, 대결, 기안자 완료 처리까지 실계정 브라우저 QA를 통과했다. 단계별 일정·알림 교체, stale 알림 종료, 일정 완료, 중복 0건을 확인해 1-6을 완료로 판정한다. **SQL 등록 완료 확인**.
+- 후속 권한 리뷰에서 idempotent RPC의 캐시 반환 전 호출자 검증과 만료·해제 위임자의 결재함·문서·첨부·일정·알림 접근 차단을 보강했다. 최신 `supabase_company_approvals_security_review_migration.sql`과 `supabase_franchise_schedule_visibility_migration.sql` 재적용 후 보안 경계를 다시 실호출한다. **SQL 재등록 필요**.
+- 전체 1단계는 1-5 문서함 검색·상태·기간·페이지네이션 실계정 QA가 남아 있어 `개발 중`을 유지한다.
 
 ### 목표
 
@@ -167,7 +169,7 @@ FC ERP의 다음 개발을 아래 순서로만 진행한다.
 
 ### 1-6. 전자결재 알림·일정 운영 QA
 
-현재 상태: 코드 보정 및 일정 딥링크 브라우저 QA 완료, 신규 SQL 적용과 다중 사용자 실계정 QA 대기.
+현재 상태: 기능 QA 완료. 후속 권한 보강 SQL 재적용과 보안 실호출 재확인 대기.
 
 구현 범위:
 
