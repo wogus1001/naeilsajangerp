@@ -38,6 +38,7 @@ npm run start -- -p 3000
 - `docs/release-management.md`: 브랜치, 커밋, dev/main 반영, 배포 이력 관리 규칙.
 - `docs/supabase-service-role-incident-response.md`: Git 이력에 노출된 Supabase 관리자 키의 폐기, 교체, 로그 조사, 이력 정화 절차.
 - `docs/franchise-growth-roadmap.md`: 프랜차이즈 고도화 우선순위, API 정책, 다음 작업 목록.
+- `docs/platform-sequential-development-roadmap.md`: 전자결재, 일정·알림, 점주 포털 자동화, 안정화를 순서대로 완료하기 위한 단계별 실행 계획과 전환 게이트.
 - `docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크.
 - `docs/fdam-reference.md`: FDAM ERP 레퍼런스 분석.
 - `docs/documentation-agent.md`: Docs Steward 권한, 금지 범위, 보고 형식.
