@@ -32,6 +32,8 @@
 - 이번 사이드바 아이콘 변경의 신규 SQL과 배포 영향은 없다.
 - 프랜차이즈 `/dashboard/...` 하위 메뉴에서 루트 `대시보드`까지 함께 활성화되던 경로 접두어 판정을 수정했다. 대시보드는 `/dashboard`에서만 활성화하고, 전자결재처럼 독립된 최상위 메뉴는 하위 상세 경로에서도 활성 상태를 유지한다.
 - 회귀 검증: `npx tsx --test src/components/layout/sidebarPathState.test.mts src/components/approvals/approvalsNavigation.test.mts` 3건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check`를 통과했다. 신규 SQL은 없다.
+- 모객 DB 후보지 연결 대상 조회 effect가 cleanup될 때 `Promise.allSettled`의 취소 결과를 일반 오류로 기록해 개발 콘솔에 `AbortError`가 표시되던 문제를 수정했다. abort된 effect는 결과·상태 처리를 중단하고 실제 네트워크 실패만 오류로 남긴다.
+- 검증: `npx tsx --test src/components/franchise/leads/useLeadLocationLinks.test.mts src/components/layout/sidebarPathState.test.mts src/components/approvals/approvalsNavigation.test.mts` 4건과 TypeScript, lint, `git diff --check`를 통과했다. 신규 SQL은 없다.
 
 ### 2026-07-09
 

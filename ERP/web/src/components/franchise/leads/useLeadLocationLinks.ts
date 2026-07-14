@@ -15,6 +15,10 @@ import type { ExternalPropertyListing, FranchiseLead, FranchiseLocation, LeadAct
 
 type LeadAlertType = 'success' | 'error' | 'info';
 
+export function isLeadLocationRequestAbort(error: unknown): boolean {
+    return error instanceof Error && error.name === 'AbortError';
+}
+
 type UseLeadLocationLinksParams = {
     readonly userId: string;
     readonly userName?: string;
@@ -68,22 +72,24 @@ export function useLeadLocationLinks({
                     })
             ]))
             .then(([locationResult, listingResult]) => {
+                if (controller.signal.aborted) return;
+
                 if (locationResult.status === 'fulfilled') {
                     setFranchiseLocations(locationResult.value.locations || []);
-                } else {
+                } else if (!isLeadLocationRequestAbort(locationResult.reason)) {
                     console.error('Failed to fetch franchise locations for lead links:', locationResult.reason);
                     setFranchiseLocations([]);
                 }
 
                 if (listingResult.status === 'fulfilled') {
                     setExternalListings(listingResult.value.listings || []);
-                } else {
+                } else if (!isLeadLocationRequestAbort(listingResult.reason)) {
                     console.error('Failed to fetch external listings for lead links:', listingResult.reason);
                     setExternalListings([]);
                 }
             })
             .catch(error => {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
+                if (isLeadLocationRequestAbort(error)) return;
                 console.error('Failed to fetch lead location link targets:', error);
                 setFranchiseLocations([]);
                 setExternalListings([]);
