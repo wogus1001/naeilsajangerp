@@ -1258,4 +1258,4 @@
 - 가맹 운영: 수동 일정의 잘못된 공개 범위 입력을 차단하고 12월 조회 기간 계산을 보정했다. 업무 접수 수정은 실제 입력값과 필수값을 검증하며 첨부 업로드 실패를 사용자에게 명확히 알린다.
 - UI 안정성: 결재 확인창과 결재선 선택창에 포커스 트랩을 적용하고, A4 미리보기의 페이지 분할과 반쪽 너비 필드 정렬을 보정했다.
 - 신규 SQL: 기존 전자결재 SQL 적용 후 `supabase_company_approvals_security_review_migration.sql`을 마지막에 적용한다. **SQL 등록 필요**.
-- 검증: 관련 자동 테스트 95건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Next.js는 16.2.10, jsPDF는 4.2.1로 갱신했다.
+- 검증: 관련 자동 테스트 96건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Next.js는 16.2.10, jsPDF는 4.2.1로 갱신했다.
