@@ -193,6 +193,12 @@ export type ApprovalPerson = {
 };
 
 export type ApprovalInboxFilter = 'waiting' | 'drafted' | 'rejected' | 'reference' | 'received' | 'mine' | 'department';
+export type ApprovalInboxCriteria = {
+    readonly query: string;
+    readonly status: ApprovalDocumentStatus | 'all';
+    readonly from: string;
+    readonly to: string;
+};
 
 export const STATUS_LABELS: Readonly<Record<ApprovalDocumentStatus, string>> = {
     draft: '임시저장',

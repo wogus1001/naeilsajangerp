@@ -633,6 +633,37 @@ create trigger approval_role_assignments_company_profiles before insert or updat
 drop trigger if exists approval_delegations_company_profiles on public.approval_delegations;
 create trigger approval_delegations_company_profiles before insert or update on public.approval_delegations
   for each row execute function public.ensure_approval_profiles_match_company('delegator_profile_id', 'delegate_profile_id', 'created_by');
+
+create or replace function public.ensure_approval_delegation_profiles_eligible()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+    from public.profiles p
+    where p.id = new.delegator_profile_id
+      and p.company_id = new.company_id
+      and p.status = 'active'
+      and p.role <> 'partner_vendor'
+  ) or not exists (
+    select 1
+    from public.profiles p
+    where p.id = new.delegate_profile_id
+      and p.company_id = new.company_id
+      and p.status = 'active'
+      and p.role <> 'partner_vendor'
+  ) then
+    raise exception using errcode = '23514', message = 'approval delegation profiles must be active company employees';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists approval_delegations_eligible_profiles on public.approval_delegations;
+create trigger approval_delegations_eligible_profiles before insert or update on public.approval_delegations
+  for each row execute function public.ensure_approval_delegation_profiles_eligible();
 drop trigger if exists approval_document_readers_company_profiles on public.approval_document_readers;
 create trigger approval_document_readers_company_profiles before insert or update on public.approval_document_readers
   for each row execute function public.ensure_approval_profiles_match_company('profile_id', 'granted_by');
@@ -774,6 +805,11 @@ as $$
     'delegate_profile_ids', coalesce((
       select jsonb_agg(d.delegate_profile_id::text order by d.delegate_profile_id::text)
       from public.approval_delegations d
+      join public.profiles delegate_profile
+        on delegate_profile.id = d.delegate_profile_id
+        and delegate_profile.company_id = target_company_id
+        and delegate_profile.status = 'active'
+        and delegate_profile.role <> 'partner_vendor'
       where d.company_id = target_company_id
         and d.delegator_profile_id = t.profile_id
         and d.active
@@ -963,6 +999,73 @@ create policy "Company members can view franchise_supervision_report_events" on 
 drop policy if exists "Company members can insert franchise_supervision_report_events" on public.franchise_supervision_report_events;
 
 drop policy if exists "Company members can view schedules" on public.schedules;
+drop policy if exists "Users can view own franchise notifications" on public.franchise_notifications;
+create policy "Users can view own franchise notifications"
+  on public.franchise_notifications
+  for select
+  using (
+    (
+      recipient_profile_id = auth.uid()
+      and (
+        source_type is distinct from 'workflow-approval'
+        or exists (
+          select 1 from public.profiles p
+          where p.id = auth.uid()
+            and p.company_id = franchise_notifications.company_id
+            and p.status = 'active'
+            and p.role <> 'partner_vendor'
+        )
+      )
+    )
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+drop policy if exists "Users can update own franchise notifications" on public.franchise_notifications;
+create policy "Users can update own franchise notifications"
+  on public.franchise_notifications
+  for update
+  using (
+    (
+      recipient_profile_id = auth.uid()
+      and (
+        source_type is distinct from 'workflow-approval'
+        or exists (
+          select 1 from public.profiles p
+          where p.id = auth.uid()
+            and p.company_id = franchise_notifications.company_id
+            and p.status = 'active'
+            and p.role <> 'partner_vendor'
+        )
+      )
+    )
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  )
+  with check (
+    (
+      recipient_profile_id = auth.uid()
+      and (
+        source_type is distinct from 'workflow-approval'
+        or exists (
+          select 1 from public.profiles p
+          where p.id = auth.uid()
+            and p.company_id = franchise_notifications.company_id
+            and p.status = 'active'
+            and p.role <> 'partner_vendor'
+        )
+      )
+    )
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
 create policy "Company members can view schedules" on public.schedules
   for select using (
     public.is_approval_company_member(company_id)
@@ -1286,8 +1389,8 @@ as $$
 declare
   document_row public.approval_documents%rowtype;
   active_step record;
-  target jsonb;
   recipient_id uuid;
+  pending_recipient_ids uuid[] := array[]::uuid[];
   event_source_id text;
   action_time timestamptz := clock_timestamp();
 begin
@@ -1297,11 +1400,64 @@ begin
   if not found then return; end if;
 
   if document_row.status = '제출' and document_row.current_version_id is not null then
-    select s.step_order, s.targets, s.responses into active_step
+    select s.step_order, s.action_kind, s.targets, s.responses into active_step
     from public.approval_document_steps s
     where s.document_version_id = document_row.current_version_id
       and s.step_order = document_row.current_step_order
       and s.status = 'active';
+    select coalesce(array_agg(distinct candidate.recipient_id order by candidate.recipient_id), array[]::uuid[])
+    into pending_recipient_ids
+    from (
+      select nullif(step_target.value ->> 'profile_id', '')::uuid as recipient_id
+      from jsonb_array_elements(coalesce(active_step.targets, '[]'::jsonb)) step_target(value)
+      join public.profiles recipient_profile
+        on recipient_profile.id = nullif(step_target.value ->> 'profile_id', '')::uuid
+        and recipient_profile.company_id = target_company_id
+        and recipient_profile.status = 'active'
+        and recipient_profile.role <> 'partner_vendor'
+      where not exists (
+        select 1
+        from jsonb_array_elements(coalesce(active_step.responses, '[]'::jsonb)) response(value)
+        where response.value ->> 'target_profile_id' = step_target.value ->> 'profile_id'
+      )
+      union
+      select nullif(delegate_id.value, '')::uuid as recipient_id
+      from jsonb_array_elements(coalesce(active_step.targets, '[]'::jsonb)) step_target(value)
+      cross join lateral jsonb_array_elements_text(
+        coalesce(step_target.value -> 'delegate_profile_ids', '[]'::jsonb)
+      ) delegate_id(value)
+      join public.profiles delegator_profile
+        on delegator_profile.id = nullif(step_target.value ->> 'profile_id', '')::uuid
+        and delegator_profile.company_id = target_company_id
+        and delegator_profile.status = 'active'
+        and delegator_profile.role <> 'partner_vendor'
+      where not exists (
+        select 1
+        from jsonb_array_elements(coalesce(active_step.responses, '[]'::jsonb)) response(value)
+        where response.value ->> 'target_profile_id' = step_target.value ->> 'profile_id'
+      )
+        and exists (
+          select 1
+          from public.approval_delegations delegation
+          join public.profiles delegate_profile
+            on delegate_profile.id = delegation.delegate_profile_id
+            and delegate_profile.company_id = target_company_id
+            and delegate_profile.status = 'active'
+            and delegate_profile.role <> 'partner_vendor'
+          where delegation.company_id = target_company_id
+            and delegation.delegator_profile_id = nullif(step_target.value ->> 'profile_id', '')::uuid
+            and delegation.delegate_profile_id = nullif(delegate_id.value, '')::uuid
+            and delegation.active
+            and delegation.starts_at <= action_time
+            and delegation.ends_at >= action_time
+            and active_step.action_kind = any(delegation.action_scope)
+        )
+    ) candidate
+    where candidate.recipient_id is not null
+      and (
+        active_step.action_kind <> 'approval'
+        or candidate.recipient_id is distinct from document_row.author_profile_id
+      );
     event_source_id := document_row.id::text || ':step-' || coalesce(active_step.step_order, document_row.current_step_order)::text;
     update public.franchise_notifications
     set dismissed_at = action_time, updated_at = action_time
@@ -1310,33 +1466,26 @@ begin
       and source_id like document_row.id::text || ':step-%'
       and source_id <> event_source_id
       and dismissed_at is null;
-    for target in select value from jsonb_array_elements(coalesce(active_step.targets, '[]'::jsonb))
+    update public.franchise_notifications
+    set dismissed_at = action_time, updated_at = action_time
+    where company_id = target_company_id
+      and source_type = 'workflow-approval'
+      and source_id = event_source_id
+      and not (recipient_profile_id = any(pending_recipient_ids))
+      and dismissed_at is null;
+    foreach recipient_id in array pending_recipient_ids
     loop
-      if not exists (
-        select 1 from jsonb_array_elements(coalesce(active_step.responses, '[]'::jsonb)) response
-        where response ->> 'target_profile_id' = target ->> 'profile_id'
-      ) then
-        for recipient_id in
-          select nullif(target ->> 'profile_id', '')::uuid
-          union
-          select nullif(value, '')::uuid
-          from jsonb_array_elements_text(coalesce(target -> 'delegate_profile_ids', '[]'::jsonb))
-        loop
-          if recipient_id is not null and recipient_id <> document_row.author_profile_id then
-          insert into public.franchise_notifications (
-          company_id, recipient_profile_id, source_type, source_id, severity,
-          title, body, action_url, due_at, delivery_channel, data, updated_at
-        ) values (
-          target_company_id, recipient_id, 'workflow-approval', event_source_id, 'info',
-          '결재 요청', document_row.title || ' 문서의 결재 순서가 도착했습니다.',
-          '/approvals/documents/' || document_row.id::text, document_row.due_at,
-          'in_app', jsonb_build_object('documentId', document_row.id, 'stepOrder', active_step.step_order), action_time
-        ) on conflict (company_id, recipient_profile_id, source_type, source_id)
-          do update set title = excluded.title, body = excluded.body, action_url = excluded.action_url,
-            due_at = excluded.due_at, dismissed_at = null, updated_at = excluded.updated_at;
-          end if;
-        end loop;
-      end if;
+      insert into public.franchise_notifications (
+        company_id, recipient_profile_id, source_type, source_id, severity,
+        title, body, action_url, due_at, delivery_channel, data, updated_at
+      ) values (
+        target_company_id, recipient_id, 'workflow-approval', event_source_id, 'info',
+        '결재 요청', document_row.title || ' 문서의 결재 순서가 도착했습니다.',
+        '/approvals/documents/' || document_row.id::text, document_row.due_at,
+        'in_app', jsonb_build_object('documentId', document_row.id, 'stepOrder', active_step.step_order), action_time
+      ) on conflict (company_id, recipient_profile_id, source_type, source_id)
+        do update set title = excluded.title, body = excluded.body, action_url = excluded.action_url,
+          due_at = excluded.due_at, dismissed_at = null, updated_at = excluded.updated_at;
     end loop;
 
     insert into public.schedules (
@@ -1344,22 +1493,17 @@ begin
       source_type, source_id, assignee_profile_id, due_at, metadata, updated_at
     ) values (
       'approval-' || document_row.id::text, target_company_id,
-      case when jsonb_array_length(coalesce(active_step.targets, '[]'::jsonb)) = 1
-        then nullif(active_step.targets -> 0 ->> 'profile_id', '')::uuid else null end,
+      case when cardinality(pending_recipient_ids) = 1 then pending_recipient_ids[1] else null end,
       '결재 검토: ' || document_row.title,
       to_char(coalesce(document_row.due_at, action_time) at time zone 'Asia/Seoul', 'YYYY-MM-DD'),
       'company', '진행중', '결재', '#3182f6', '현재 결재 단계 문서 검토',
       'approval-document', document_row.id::text,
-      case when jsonb_array_length(coalesce(active_step.targets, '[]'::jsonb)) = 1
-        then nullif(active_step.targets -> 0 ->> 'profile_id', '')::uuid else null end,
+      case when cardinality(pending_recipient_ids) = 1 then pending_recipient_ids[1] else null end,
       document_row.due_at,
       jsonb_build_object(
         'documentId', document_row.id,
         'stepOrder', active_step.step_order,
-        'targetProfileIds', coalesce((
-          select jsonb_agg(value ->> 'profile_id')
-          from jsonb_array_elements(coalesce(active_step.targets, '[]'::jsonb))
-        ), '[]'::jsonb)
+        'targetProfileIds', to_jsonb(pending_recipient_ids)
       ), action_time
     ) on conflict (company_id, source_type, source_id)
       where source_type is not null and source_id is not null

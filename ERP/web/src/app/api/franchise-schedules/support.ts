@@ -4,6 +4,8 @@ import {
     type RequesterProfile
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canReadSchedule } from '@/lib/schedule-access';
+import { loadActionableApprovalDocumentIds } from '@/lib/approval-delegation-access';
 import { getSupabaseAdmin as createSupabaseAdminClient } from '@/lib/supabase-admin';
 
 export type JsonRecord = Record<string, unknown>;
@@ -232,10 +234,31 @@ export async function listSchedules(
     if (visibilityInput && visibilityInput !== 'all' && !visibility) {
         return fail(400, 'VALIDATION_ERROR', 'visibility must be shared or personal');
     }
-    const rows = (Array.isArray(data) ? data : []).filter(row => {
-        if (!isRecord(row)) return false;
+    const sourceRows = (Array.isArray(data) ? data : []).filter(isRecord);
+    const approvalDocumentIds = sourceRows
+        .filter(row => cleanString(row.source_type) === 'approval-document')
+        .map(row => cleanString(row.source_id))
+        .filter(Boolean);
+    const actionableApprovalDocumentIds = requester.role === 'admin'
+        ? new Set<string>()
+        : await loadActionableApprovalDocumentIds(
+            supabaseAdmin,
+            companyId,
+            requester.id,
+            approvalDocumentIds
+        );
+    const rows = sourceRows.filter(row => {
         const rowVisibility = cleanString(row.visibility) === 'personal' ? 'personal' : 'shared';
         if (rowVisibility === 'personal' && cleanString(row.creator_profile_id) !== requester.id) return false;
+        if (cleanString(row.source_type) === 'approval-document' && !canReadSchedule(requester, {
+            approvalAccessGranted: actionableApprovalDocumentIds.has(cleanString(row.source_id)),
+            assigneeProfileId: cleanString(row.assignee_profile_id) || null,
+            companyId: cleanString(row.company_id) || null,
+            metadata: row.metadata,
+            scope: 'company',
+            sourceType: 'approval-document',
+            userId: null
+        })) return false;
         return !visibility || rowVisibility === visibility;
     });
     return ok(rows.map(transformSchedule));

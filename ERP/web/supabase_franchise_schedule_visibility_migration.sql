@@ -119,7 +119,29 @@ drop policy if exists "Company members can view franchise schedules" on public.f
 create policy "Company members can view franchise schedules" on public.franchise_schedules
   for select using (
     public.is_active_franchise_schedule_member(company_id)
-    and (visibility = 'shared' or creator_profile_id = auth.uid())
+    and (
+      (
+        source_type = 'approval-document'
+        and (
+          public.can_act_on_approval_document(company_id, source_id, auth.uid())
+          or exists (
+            select 1
+            from public.profiles p
+            where p.id = auth.uid()
+              and p.company_id = franchise_schedules.company_id
+              and p.status = 'active'
+              and p.role = 'admin'
+          )
+        )
+      )
+      or (
+        source_type is distinct from 'approval-document'
+        and (
+          creator_profile_id = auth.uid()
+          or visibility = 'shared'
+        )
+      )
+    )
   );
 
 drop policy if exists "Company members can insert manual franchise schedules" on public.franchise_schedules;

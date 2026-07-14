@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAccessCompanyScope, getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
+import { isMissingDashboardScheduleSourceType, selectDashboardUpcomingSchedules } from '@/lib/dashboard-schedules';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isUcansignNotConnectedError } from '@/lib/ucansign/client';
 
@@ -41,14 +42,26 @@ export async function GET(request: Request) {
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth(); // 0-indexed
 
+        const createScheduleQuery = (excludeApprovalDocuments: boolean) => {
+            let query = supabaseAdmin.from('schedules').select('*');
+            if (companyId) query = query.eq('company_id', companyId);
+            let datedQuery = query.gte('date', todayStr);
+            if (excludeApprovalDocuments) {
+                datedQuery = datedQuery.or('source_type.is.null,source_type.neq.approval-document');
+            }
+            return datedQuery
+                .not('type', 'in', '("work","completed","canceled","postponed")')
+                .order('date', { ascending: true })
+                .order('title', { ascending: true })
+                .limit(20);
+        };
+
         // Prepare Queries
-        let scheduleQuery = supabaseAdmin.from('schedules').select('*');
         let contractQuery = supabaseAdmin.from('contracts').select('*');
         let propertyQuery = supabaseAdmin.from('properties').select('id, created_at');
         let customerQuery = supabaseAdmin.from('customers').select('id', { count: 'exact', head: true });
 
         if (companyId) {
-            scheduleQuery = scheduleQuery.eq('company_id', companyId);
             contractQuery = contractQuery.eq('company_id', companyId);
             propertyQuery = propertyQuery.eq('company_id', companyId);
             customerQuery = customerQuery.eq('company_id', companyId);
@@ -56,12 +69,7 @@ export async function GET(request: Request) {
 
         const queries = [
             // A. Schedules
-            scheduleQuery
-                .gte('date', todayStr)
-                .not('type', 'in', '("work","completed","canceled","postponed")') // Exclude work logs & finished
-                .order('date', { ascending: true })
-                .order('title', { ascending: true }) // fallback sort
-                .limit(20),
+            createScheduleQuery(true),
 
             // B. Contracts (Project)
             contractQuery
@@ -75,13 +83,21 @@ export async function GET(request: Request) {
         ];
 
         const [
-            { data: schedules, error: schedError },
+            { data: initialSchedules, error: initialScheduleError },
             { data: contracts, error: contractError },
             { data: properties, error: propError },
             { count: customerCount, error: custError }
         ] = await Promise.all(queries);
 
-        if (schedError) console.error('Error fetching schedules:', schedError);
+        let schedules = initialSchedules;
+        let scheduleError = initialScheduleError;
+        if (isMissingDashboardScheduleSourceType(scheduleError)) {
+            const fallbackResult = await createScheduleQuery(false);
+            schedules = fallbackResult.data;
+            scheduleError = fallbackResult.error;
+        }
+
+        if (scheduleError) console.error('Error fetching schedules:', scheduleError);
         if (contractError) console.error('Error fetching contracts:', contractError);
         if (propError) console.error('Error fetching properties:', propError);
         if (custError) console.error('Error fetching customers:', custError);
@@ -89,24 +105,18 @@ export async function GET(request: Request) {
         // 3. Process Data
 
         // A. Schedules
-        const validSchedules = (schedules || []).filter((s: any) => {
-            // Additional filtering if needed (e.g., private logic)
-            // Assuming DB policy/query handles mostly correct data.
-            // Check Scope if 'private' (personal)
-            if (s.scope === 'personal' && s.user_id !== requesterProfile.id) return false;
-            return true;
-        });
+        const validSchedules = selectDashboardUpcomingSchedules(schedules, requesterProfile.id);
 
         // Upcoming Count (Today ~ D+2)
-        const shortTermCount = validSchedules.filter((s: any) => s.date <= dPlus2Str).length;
+        const shortTermCount = validSchedules.filter(schedule => schedule.date <= dPlus2Str).length;
 
         // Top 5 for Widget
-        const widgetSchedules = validSchedules.slice(0, 5).map((s: any) => ({
-            id: s.id,
-            time: `${s.date.slice(5)} ${s.time?.slice(0, 5) || ''}`.trim(), // MM-DD HH:mm
-            title: s.title,
-            location: s.location || '',
-            type: s.type || 'schedule'
+        const widgetSchedules = validSchedules.slice(0, 5).map(schedule => ({
+            id: schedule.id,
+            time: `${schedule.date.slice(5)} ${schedule.time?.slice(0, 5) || ''}`.trim(), // MM-DD HH:mm
+            title: schedule.title,
+            location: schedule.location,
+            type: schedule.type
         }));
 
 

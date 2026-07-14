@@ -38,6 +38,7 @@ npm run start -- -p 3000
 - `docs/release-management.md`: 브랜치, 커밋, dev/main 반영, 배포 이력 관리 규칙.
 - `docs/supabase-service-role-incident-response.md`: Git 이력에 노출된 Supabase 관리자 키의 폐기, 교체, 로그 조사, 이력 정화 절차.
 - `docs/franchise-growth-roadmap.md`: 프랜차이즈 고도화 우선순위, API 정책, 다음 작업 목록.
+- `docs/platform-sequential-development-roadmap.md`: 전자결재, 일정·알림, 점주 포털 자동화, 안정화를 순서대로 완료하기 위한 단계별 실행 계획과 전환 게이트.
 - `docs/franchise-dev-qa-log.md`: 개발 과정, QA 결과, 미검증 리스크.
 - `docs/fdam-reference.md`: FDAM ERP 레퍼런스 분석.
 - `docs/documentation-agent.md`: Docs Steward 권한, 금지 범위, 보고 형식.
@@ -82,6 +83,11 @@ supabase_franchise_alimtalk_operations_migration.sql
 supabase_franchise_supervision_migration.sql
 supabase_franchise_supervision_v2_migration.sql
 supabase_franchise_approval_calendar_migration.sql
+supabase_company_approvals_v2_migration.sql
+supabase_company_approvals_organization_delete_safety_migration.sql
+supabase_company_approvals_document_line_override_migration.sql
+supabase_company_approvals_security_review_migration.sql
+supabase_company_approvals_workflow_schedule_fix_migration.sql
 supabase_franchise_schedule_visibility_migration.sql
 supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_portal_migration.sql
@@ -94,7 +100,7 @@ supabase_realty_import_migration.sql
 
 `franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, `franchise_supervisor_assignments`, `approval_templates`, `approval_documents`, `approval_document_events`, `franchise_labor_settings`, `franchise_owner_accounts`, 또는 `franchise_owner_notices.attachments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. 점주 포털 알림톡 3종은 `supabase_franchise_alimtalk_operations_migration.sql` 적용 후 `supabase_franchise_owner_portal_alimtalk_templates_migration.sql`로 seed를 추가하고, `/admin/alimtalk`에서 승인 템플릿의 SOLAPI template/channel ID를 저장한다. 공통 일정/결재 MVP는 `supabase_franchise_approval_calendar_migration.sql`로 기존 `schedules` 확장과 결재 테이블을 추가한 뒤 확인한다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
-가맹운영 전용 일정의 공유/개인 구분은 `franchise_schedules` 생성 SQL 적용 후 `supabase_franchise_schedule_visibility_migration.sql`을 실행한다. 기존 일정과 시스템 생성 일정은 공유로 유지되고, 개인 일정은 생성자 본인에게만 조회·수정·삭제가 허용된다. 전자결재 보안 리뷰에서 비활성 계정의 직접 RLS 접근을 차단하도록 정책을 보강했으므로 기존 적용 환경도 최신 파일을 다시 실행한다. **SQL 재등록 필요**.
+가맹운영 전용 일정의 공유/개인 구분은 `franchise_schedules` 생성 SQL과 최신 `supabase_company_approvals_security_review_migration.sql`을 먼저 적용한 뒤 `supabase_franchise_schedule_visibility_migration.sql`을 실행한다. 일정 정책이 보안 리뷰 migration의 `can_act_on_approval_document` 함수를 사용하므로 순서를 바꾸면 안 된다. 기존 일정과 시스템 생성 일정은 공유로 유지되고, 개인 일정은 생성자 본인에게만 조회·수정·삭제가 허용된다. 전자결재 보안 리뷰에서 비활성 계정의 직접 RLS 접근을 차단하도록 정책을 보강했으므로 기존 적용 환경도 최신 파일을 다시 실행한다. **SQL 재등록 필요**.
 
 ## Franchise Supervision Setup
 
@@ -470,8 +476,12 @@ For an existing database, apply `supabase_company_approvals_organization_delete_
 
 Then apply the latest `supabase_company_approvals_document_line_override_migration.sql` to let authors choose one or more actual approvers for each template step while writing a document. Multiple people selected for a sequential step become separate approval stages in the selected order; parallel steps keep their all-or-any completion rule. The selected people are validated against active company profiles and captured in the submitted document version. Re-run this migration if an earlier single-approver version was applied. **SQL 등록 필요**.
 
-Finally apply `supabase_company_approvals_security_review_migration.sql`. It blocks deleting organizations referenced by approval documents or templates, requires real uploaded files for mandatory attachment fields, ignores expired or not-yet-effective memberships, expands every multi-person sequential step into ordered stages, and makes approval actions idempotent with stale-version and stale-step checks. **SQL 등록 필요**.
+Finally apply `supabase_company_approvals_security_review_migration.sql`. It blocks deleting organizations referenced by approval documents or templates, requires real uploaded files for mandatory attachment fields, ignores expired or not-yet-effective memberships, expands every multi-person sequential step into ordered stages, and makes approval actions idempotent with stale-version and stale-step checks. Document and child-table RLS also rechecks that a captured delegate still has an active, in-scope delegation. **SQL 등록 필요**.
+
+After the security review migration, apply `supabase_company_approvals_workflow_schedule_fix_migration.sql`. It rebuilds approval schedule recipients from only the targets that have not responded yet, includes only active employee delegates, and prevents completed parallel approvers from retaining a stale approval schedule. Its final notification policies apply the same current-step access check to both viewing and read-state updates. Reapply the latest security review migration first so delegate snapshots use the same eligibility rule. **SQL 등록 필요**.
+
+If `franchise_schedules` is enabled, apply the latest `supabase_franchise_schedule_visibility_migration.sql` only after the security review and workflow schedule fix migrations. Its approval visibility policies call `can_act_on_approval_document`, which is defined by the security review migration. **SQL 등록 필요**.
 
 The company electronic approval workspace is available at `/approvals`: `작성하기`, `결재 대기`, `내 문서함`, `부서 문서함`, `양식 관리`, and `조직·결재 설정`. System roles continue to control product access, while department, title, department-manager, and approval-role data are managed separately and captured when a document is submitted. Existing `/api/franchise-approvals/*` routes remain available during the module migration; new screens use `/api/approvals/*`.
 
-Approval attachments use the dedicated private `approval-documents` bucket under `approval-documents/{companyId}/{documentId}`. The writer can select or drag up to five image, PDF, or business-document files, including files already saved on the draft; each file is limited to 10MB. Downloads are permission-checked, blocked after the retention period, and served through short-lived signed URLs. The detail screen generates Korean PDFs through pdfme with the bundled Noto Sans KR OFL font.
+Approval attachments use the dedicated private `approval-documents` bucket under `approval-documents/{companyId}/{documentId}`. The writer can select or drag up to five image, PDF, or business-document files, including files already saved on the draft; each file is limited to 10MB. Downloads are permission-checked, blocked after the retention period, and served through short-lived signed URLs. The detail screen generates Korean PDFs through pdfme with the bundled Noto Sans KR OFL TrueType font. The PDF endpoint streams the generated bytes without a fixed content length so documents larger than the Vercel buffered response limit can still be saved.
