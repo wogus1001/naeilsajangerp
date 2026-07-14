@@ -14,12 +14,9 @@ import {
     type ApprovalDocumentAction
 } from '@/lib/franchise-workflow';
 import {
-    buildWorkflowNotification,
-    createWorkflowNotifications,
     fetchWorkflowManagerProfileIds,
     insertApprovalDocumentEvent,
     upsertApprovalDocumentForSource,
-    upsertWorkflowSchedule,
     type ApprovalDocumentEventRow,
     type ApprovalDocumentRow,
     type JsonRecord
@@ -43,7 +40,7 @@ function cleanText(value: unknown): string {
 }
 
 function canManageApprovals(requester: RequesterProfile): boolean {
-    return requester.role === 'admin' || requester.role === 'manager';
+    return requester.role === 'admin';
 }
 
 function recordOrEmpty(value: unknown): JsonRecord {
@@ -104,7 +101,7 @@ async function resolveCompanyId(
 
 function schemaFailure(error: unknown): Response {
     if (isMissingWorkflowSchemaError(error)) {
-        return fail(500, 'INTERNAL_ERROR', '결재 문서 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 등록이 필요합니다.');
+        return fail(500, 'INTERNAL_ERROR', '결재 문서 SQL이 아직 적용되지 않았습니다. supabase_company_approvals_v2_migration.sql 등록이 필요합니다.');
     }
     return fail(500, 'INTERNAL_ERROR', '결재 문서를 처리하지 못했습니다.');
 }
@@ -194,7 +191,7 @@ export async function POST(request: Request) {
         const sourceId = randomUUID();
         const sourceType = 'manual-approval';
         const requestedAuthorProfileId = cleanText(body.authorProfileId);
-        if (requestedAuthorProfileId && !canManageApprovals(requester) && requestedAuthorProfileId !== requester.id) {
+        if (requestedAuthorProfileId && requestedAuthorProfileId !== requester.id) {
             return fail(403, 'FORBIDDEN', '다른 작성자로 결재 문서를 작성할 권한이 없습니다.');
         }
 
@@ -214,7 +211,13 @@ export async function POST(request: Request) {
             return fail(403, 'FORBIDDEN', '결재자를 지정할 권한이 없습니다.');
         }
 
-        const approverProfileId = requestedApproverProfileId || null;
+        const managerProfileIds = transition.status === '제출'
+            ? (await fetchWorkflowManagerProfileIds(supabaseAdmin, companyId)).filter(profileId => profileId !== authorProfileId)
+            : [];
+        const approverProfileId = requestedApproverProfileId || managerProfileIds[0] || null;
+        if (transition.status === '제출' && !approverProfileId) {
+            return fail(400, 'VALIDATION_ERROR', '결재 요청을 받을 회사 팀장을 먼저 등록해 주세요.');
+        }
         if (approverProfileId && approverProfileId === authorProfileId) {
             return fail(400, 'VALIDATION_ERROR', '작성자와 결재자는 달라야 합니다.');
         }
@@ -241,56 +244,43 @@ export async function POST(request: Request) {
             sourceType,
             sourceId,
             title,
-            status: transition.status,
+            status: transition.status === '제출' ? '임시저장' : transition.status,
             authorProfileId,
             approverProfileId,
             values: recordOrEmpty(body.values),
             data: recordOrEmpty(body.data),
             actorProfileId: requester.id
         });
-        await insertApprovalDocumentEvent(supabaseAdmin, {
-            companyId,
-            documentId: document.id,
-            eventType: transition.eventType,
-            actorProfileId: requester.id,
-            fromStatus: null,
-            toStatus: transition.status,
-            data: { sourceType, sourceId }
-        });
-
         if (transition.status === '제출') {
-            const managerIds = (await fetchWorkflowManagerProfileIds(supabaseAdmin, companyId))
-                .filter(profileId => profileId !== authorProfileId);
-            await createWorkflowNotifications(
-                supabaseAdmin,
-                managerIds.map(profileId => buildWorkflowNotification({
-                    companyId,
-                    recipientProfileId: profileId,
-                    sourceType: 'workflow-approval',
-                    sourceId: document.id,
-                    eventKey: 'submit',
-                    severity: 'info',
-                    title: '결재 요청',
-                    body: `${document.title} 문서가 승인 대기 상태입니다.`,
-                    actionUrl: `/schedule?approvalDocumentId=${encodeURIComponent(document.id)}`,
-                    data: { documentId: document.id, sourceType, sourceId }
-                }))
-            );
-            await upsertWorkflowSchedule(supabaseAdmin, {
+            const { error: actionError } = await supabaseAdmin.rpc('perform_approval_document_action', {
+                p_document_id: document.id,
+                p_company_id: companyId,
+                p_action: 'submit',
+                p_actor_profile_id: requester.id,
+                p_memo: ''
+            });
+            if (actionError) {
+                const { error: cleanupError } = await supabaseAdmin.from('approval_documents')
+                    .delete().eq('id', document.id).eq('company_id', companyId);
+                throw cleanupError || actionError;
+            }
+        } else {
+            await insertApprovalDocumentEvent(supabaseAdmin, {
                 companyId,
-                sourceType: 'approval-document',
-                sourceId: document.id,
-                title: `결재 검토: ${document.title}`,
-                status: '진행중',
-                type: '결재',
-                details: '승인 대기 문서 검토',
-                managerProfileId: managerIds[0] || null,
-                dueAt: new Date().toISOString(),
-                metadata: { documentId: document.id, sourceType, sourceId }
+                documentId: document.id,
+                eventType: transition.eventType,
+                actorProfileId: requester.id,
+                fromStatus: null,
+                toStatus: transition.status,
+                data: { sourceType, sourceId }
             });
         }
 
-        return ok(transformDocument(document), 201);
+        const { data: savedDocument, error: savedError } = await supabaseAdmin.from('approval_documents')
+            .select('*').eq('id', document.id).eq('company_id', companyId)
+            .single<ApprovalDocumentRow>();
+        if (savedError || !savedDocument) throw savedError || new TypeError('결재 문서 저장 결과를 확인할 수 없습니다.');
+        return ok(transformDocument(savedDocument), 201);
     } catch (error) {
         console.error('Approval documents POST error:', error);
         return schemaFailure(error);

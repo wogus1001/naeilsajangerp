@@ -1388,6 +1388,69 @@ button.listItem {
     font-weight: 700;
 }
 
+.timelineAccordion {
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: #fbfcfe;
+}
+
+.timelineSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 12px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.timelineSummary::-webkit-details-marker {
+    display: none;
+}
+
+.timelineSummary:focus-visible {
+    outline: 2px solid #3182f6;
+    outline-offset: 2px;
+}
+
+.timelineSummaryTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: #191f28;
+    font-size: 13px;
+}
+
+.timelineSummary > span:last-child {
+    flex: 0 0 auto;
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.timelineChevron {
+    flex: 0 0 auto;
+    color: #6b7684;
+    transition: transform 160ms ease;
+}
+
+.timelineAccordion[open] .timelineChevron {
+    transform: rotate(180deg);
+}
+
+.timelineContent {
+    display: grid;
+    gap: 8px;
+    padding: 0 12px 12px;
+    border-top: 1px solid #eef2f7;
+}
+
+.timelineContent .timelineItem:first-child {
+    margin-top: 12px;
+}
+
 @media (max-width: 1180px) {
     .layout {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

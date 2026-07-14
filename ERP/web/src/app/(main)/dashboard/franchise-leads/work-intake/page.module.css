@@ -48,6 +48,8 @@
     margin: 0;
     color: #6b7684;
     font-size: 14px;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .toolbar {
@@ -300,6 +302,83 @@
     .toolbar {
         display: grid;
         grid-template-columns: 1fr;
+    }
+
+    .panel {
+        overflow: visible;
+        border: 0;
+        background: transparent;
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .table {
+        min-width: 0;
+    }
+
+    .table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        clip-path: inset(50%);
+    }
+
+    .table tr {
+        margin-bottom: 10px;
+        overflow: hidden;
+        border: 1px solid #e5e8eb;
+        border-radius: 8px;
+        background: #ffffff;
+    }
+
+    .table td {
+        display: grid;
+        grid-template-columns: minmax(76px, 28%) minmax(0, 1fr);
+        gap: 12px;
+        padding: 11px 12px;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+
+    .table td::before {
+        content: attr(data-label);
+        color: #6b7684;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .table td:last-child {
+        border-bottom: 0;
+    }
+
+    .actionGroup {
+        flex-wrap: nowrap;
+    }
+
+    .actionButton,
+    .deleteButton {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .emptyCell {
+        display: block !important;
+        height: auto;
+        padding: 32px 16px !important;
+    }
+
+    .emptyCell::before {
+        content: none !important;
     }
 
     .editGrid {

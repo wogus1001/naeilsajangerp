@@ -43,6 +43,7 @@ function parseFlagMap(value: unknown): CompanyMenuFlagMap | null {
 
     return {
         dashboard: flags.dashboard !== false,
+        approvals: flags.approvals !== false,
         franchiseLeads: flags.franchiseLeads !== false,
         franchiseWorkIntake: flags.franchiseWorkIntake !== false,
         franchiseMatchingRequest: flags.franchiseMatchingRequest !== false,

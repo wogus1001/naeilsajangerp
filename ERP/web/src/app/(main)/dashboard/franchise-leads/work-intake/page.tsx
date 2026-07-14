@@ -137,12 +137,12 @@ export default function FranchiseWorkIntakePage() {
                         <tbody>
                             {data.properties.map(item => (
                                 <tr key={item.id}>
-                                    <td><strong>{item.name}</strong><small>{formatWorkIntakePropertyMeta(item)}</small></td>
-                                    <td><span>{joinParts([item.desiredBrand, item.desiredCategory])}</span></td>
-                                    <td><span>{item.region || '-'}</span><small>{item.address || '-'}</small></td>
-                                    <td><span>{joinParts([item.deposit ? `보증금 ${formatManwon(item.deposit)}` : '', item.monthlyRent ? `월세 ${formatManwon(item.monthlyRent)}` : ''])}</span></td>
-                                    <td>{formatDate(item.createdAt)}</td>
-                                    <td>
+                                    <td data-label="물건"><strong>{item.name}</strong><small>{formatWorkIntakePropertyMeta(item)}</small></td>
+                                    <td data-label="희망 조건"><span>{joinParts([item.desiredBrand, item.desiredCategory])}</span></td>
+                                    <td data-label="주소"><span>{item.region || '-'}</span><small>{item.address || '-'}</small></td>
+                                    <td data-label="임대 조건"><span>{joinParts([item.deposit ? `보증금 ${formatManwon(item.deposit)}` : '', item.monthlyRent ? `월세 ${formatManwon(item.monthlyRent)}` : ''])}</span></td>
+                                    <td data-label="등록일">{formatDate(item.createdAt)}</td>
+                                    <td data-label="관리">
                                         <div className={styles.actionGroup}>
                                             {item.canEdit ? (
                                                 <button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'properties', item })}>
@@ -171,12 +171,12 @@ export default function FranchiseWorkIntakePage() {
                         <tbody>
                             {data.matchingRequests.map(item => (
                                 <tr key={item.id}>
-                                    <td><strong>{item.name}</strong><small>{joinParts([item.mobile, item.email])}</small></td>
-                                    <td><span>{joinParts([item.desiredCategory, item.interestedBrand])}</span><small>{item.desiredRegion || '-'}</small></td>
-                                    <td><span>총예산 {formatManwon(item.totalBudget)}</span><small>{item.ownedPropertyStatus || '-'}</small></td>
-                                    <td><span>{joinParts([item.matchPriority, item.urgency])}</span><small>{item.memo || '-'}</small></td>
-                                    <td><span>{item.managerName || '-'}</span><small>{formatDate(item.createdAt)}</small></td>
-                                    <td>
+                                    <td data-label="신청자"><strong>{item.name}</strong><small>{joinParts([item.mobile, item.email])}</small></td>
+                                    <td data-label="희망 조건"><span>{joinParts([item.desiredCategory, item.interestedBrand])}</span><small>{item.desiredRegion || '-'}</small></td>
+                                    <td data-label="예산/물건"><span>총예산 {formatManwon(item.totalBudget)}</span><small>{item.ownedPropertyStatus || '-'}</small></td>
+                                    <td data-label="매칭 조건"><span>{joinParts([item.matchPriority, item.urgency])}</span><small>{item.memo || '-'}</small></td>
+                                    <td data-label="담당/등록일"><span>{item.managerName || '-'}</span><small>{formatDate(item.createdAt)}</small></td>
+                                    <td data-label="관리">
                                         <div className={styles.actionGroup}>
                                             {item.canEdit ? (
                                                 <button className={styles.actionButton} onClick={() => setEditTarget({ kind: 'matchingRequests', item })}>

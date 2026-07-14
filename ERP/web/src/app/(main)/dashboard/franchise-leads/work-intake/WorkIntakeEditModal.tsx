@@ -1,18 +1,15 @@
 "use client";
 
 import React from 'react';
-import { FileText, Image as ImageIcon } from 'lucide-react';
+import { useDialogFocusTrap } from '@/components/common/useDialogFocusTrap';
 import {
     updatePropertyRegistrationAttachments,
-    type PropertyRegistrationFileAttachment,
     type PropertyRegistrationForm
 } from '@/lib/franchise-property-registration';
-import {
-    isOpenablePropertyAttachment,
-    isPreviewablePropertyAttachment,
-    uploadPropertyRegistrationAttachments
-} from '@/lib/franchise-property-registration-uploads';
-import { formatByteSize } from '@/lib/franchise-property-registration-format';
+import { uploadPropertyRegistrationAttachments } from '@/lib/franchise-property-registration-uploads';
+import { formatMoneyText } from '@/lib/franchise-property-registration-format';
+import { PropertyAddressMap } from './PropertyAddressMap';
+import { PropertyAttachmentGallery } from './PropertyAttachmentGallery';
 import { WorkIntakeEditFields } from './WorkIntakeEditFields';
 import { buildInitialEditForm, saveWorkIntakeEdit, type WorkIntakeEditForm } from './requests';
 import type { WorkIntakeEditTarget } from './types';
@@ -36,32 +33,6 @@ function displayValue(value: string): string {
     return value.trim() || '-';
 }
 
-function isImageAttachment(attachment: PropertyRegistrationFileAttachment): boolean {
-    return attachment.type.startsWith('image/');
-}
-
-function PropertyAttachmentPreview({ attachment }: { readonly attachment: PropertyRegistrationFileAttachment }) {
-    return (
-        <li className={styles.previewFile}>
-            {isPreviewablePropertyAttachment(attachment) ? (
-                <img src={attachment.publicUrl || ''} alt={`${attachment.name} 미리보기`} />
-            ) : (
-                <span className={styles.previewFileIcon}>
-                    {isImageAttachment(attachment) ? <ImageIcon size={16} /> : <FileText size={16} />}
-                </span>
-            )}
-            <div>
-                {isOpenablePropertyAttachment(attachment) ? (
-                    <a href={attachment.publicUrl} target="_blank" rel="noreferrer">{attachment.name}</a>
-                ) : (
-                    <strong>{attachment.name}</strong>
-                )}
-                <small>{formatByteSize(attachment.size)}</small>
-            </div>
-        </li>
-    );
-}
-
 function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationForm }) {
     const operatingDetails: readonly (readonly [string, string])[] = form.currentStatus === '영업중'
         ? [['현재 영업중 상호/매장명', form.operatingStoreName]]
@@ -74,9 +45,10 @@ function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationFo
         ['업태/업종', [form.desiredBusinessType, form.desiredCategory].filter(Boolean).join(' / ')],
         ['주소', [form.propertyAddress, form.detailAddress].filter(Boolean).join(' ')],
         ['임대 조건', [
-            form.deposit ? `보증금 ${form.deposit}만원` : '',
-            form.monthlyRent ? `월세 ${form.monthlyRent}만원` : '',
-            form.maintenanceFee ? `관리비 ${form.maintenanceFee}만원` : ''
+            form.deposit ? `보증금 ${formatMoneyText(form.deposit)}만원` : '',
+            form.monthlyRent ? `월세 ${formatMoneyText(form.monthlyRent)}만원` : '',
+            form.maintenanceFee ? `관리비 ${formatMoneyText(form.maintenanceFee)}만원` : '',
+            form.premium ? `권리금 ${formatMoneyText(form.premium)}만원` : ''
         ].filter(Boolean).join(' / ')],
         ['상담 메모', form.consultationMemo],
         ['리스크 메모', form.riskMemo]
@@ -96,16 +68,8 @@ function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationFo
                     </div>
                 ))}
             </dl>
-            {form.fileAttachments.length > 0 && (
-                <ul className={styles.previewFiles}>
-                    {form.fileAttachments.map(attachment => (
-                        <PropertyAttachmentPreview
-                            key={`${attachment.name}:${attachment.size}:${attachment.storagePath || ''}`}
-                            attachment={attachment}
-                        />
-                    ))}
-                </ul>
-            )}
+            <PropertyAddressMap address={form.propertyAddress} detailAddress={form.detailAddress} />
+            <PropertyAttachmentGallery attachments={form.fileAttachments} />
         </section>
     );
 }
@@ -114,6 +78,14 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
     const [form, setForm] = React.useState<WorkIntakeEditForm>(() => buildInitialEditForm(target));
     const [pendingPropertyFiles, setPendingPropertyFiles] = React.useState<readonly File[]>([]);
     const [isSaving, setIsSaving] = React.useState(false);
+    const cancelButtonRef = React.useRef<HTMLButtonElement>(null);
+    const isSavingRef = React.useRef(isSaving);
+    const titleId = React.useId();
+    isSavingRef.current = isSaving;
+    const closeModal = React.useCallback(() => {
+        if (!isSavingRef.current) onCloseAction();
+    }, [onCloseAction]);
+    const dialogRef = useDialogFocusTrap<HTMLElement>(true, closeModal, cancelButtonRef);
 
     const save = async () => {
         setIsSaving(true);
@@ -142,24 +114,26 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
     };
 
     return (
-        <div className={styles.modalBackdrop}>
-            <section className={styles.modal}>
+        <div className={styles.modalBackdrop} onMouseDown={event => { if (event.currentTarget === event.target) closeModal(); }}>
+            <section aria-labelledby={titleId} aria-modal="true" className={styles.modal} ref={dialogRef} role="dialog" tabIndex={-1}>
                 <div className={styles.modalHeader}>
-                    <h2>{titleFor(target)}</h2>
+                    <h2 id={titleId}>{titleFor(target)}</h2>
                 </div>
-                <div className={styles.modalBody}>
-                    {form.kind === 'properties' && <PropertyDetailSummary form={form.value} />}
-                    <WorkIntakeEditFields
-                        form={form}
-                        pendingPropertyFiles={pendingPropertyFiles}
-                        onChangeAction={setForm}
-                        onPendingPropertyFilesChangeAction={setPendingPropertyFiles}
-                    />
-                </div>
-                <div className={styles.modalActions}>
-                    <button className={styles.secondaryButton} onClick={onCloseAction} disabled={isSaving}>취소</button>
-                    <button className={styles.primaryButton} onClick={save} disabled={isSaving}>{isSaving ? '저장 중' : '수정 저장'}</button>
-                </div>
+                <form className={styles.modalForm} onSubmit={event => { event.preventDefault(); void save(); }}>
+                    <div className={styles.modalBody}>
+                        {form.kind === 'properties' && <PropertyDetailSummary form={form.value} />}
+                        <WorkIntakeEditFields
+                            form={form}
+                            pendingPropertyFiles={pendingPropertyFiles}
+                            onChangeAction={setForm}
+                            onPendingPropertyFilesChangeAction={setPendingPropertyFiles}
+                        />
+                    </div>
+                    <div className={styles.modalActions}>
+                        <button className={styles.secondaryButton} onClick={closeModal} disabled={isSaving} ref={cancelButtonRef} type="button">취소</button>
+                        <button className={styles.primaryButton} disabled={isSaving} type="submit">{isSaving ? '저장 중' : '수정 저장'}</button>
+                    </div>
+                </form>
             </section>
         </div>
     );

@@ -85,13 +85,13 @@ test('Given vendor contract upload path When parsing Then company and contract s
 
 test('Given supervision report upload path When parsing Then company and report scope are extracted', () => {
     assert.deepEqual(parseUploadStorageTarget({
-        bucket: 'property-documents',
+        bucket: 'franchise-supervision-private',
         companyId: 'company-1',
         path: 'franchise-supervision/company-1/report-1/photo.jpg'
     }), {
         ok: true,
         target: {
-            bucket: 'property-documents',
+            bucket: 'franchise-supervision-private',
             companyId: 'company-1',
             kind: 'supervisionReport',
             path: 'franchise-supervision/company-1/report-1/photo.jpg',
@@ -100,7 +100,7 @@ test('Given supervision report upload path When parsing Then company and report 
     });
 
     assert.deepEqual(parseUploadStorageTarget({
-        bucket: 'property-documents',
+        bucket: 'franchise-supervision-private',
         companyId: 'company-2',
         path: 'franchise-supervision/company-1/report-1/photo.jpg'
     }), {
@@ -120,6 +120,22 @@ test('Given unsafe upload targets When parsing Then the target is rejected befor
     assert.deepEqual(parseUploadStorageTarget({
         bucket: 'property-documents',
         path: 'franchise-lead-documents/company-1/lead-1/../other.pdf'
+    }), {
+        ok: false,
+        error: 'Invalid upload path'
+    });
+    assert.deepEqual(parseUploadStorageTarget({
+        bucket: 'franchise-supervision-private',
+        companyId: 'company-1',
+        path: 'franchise-supervision/company-1/report-1/%2e%2e/private.jpg'
+    }), {
+        ok: false,
+        error: 'Invalid upload path'
+    });
+    assert.deepEqual(parseUploadStorageTarget({
+        bucket: 'franchise-supervision-private',
+        companyId: 'company-1',
+        path: 'franchise-supervision/company-1/report-1/%252e%252e/private.jpg'
     }), {
         ok: false,
         error: 'Invalid upload path'

@@ -11,11 +11,13 @@
 - 긴 명령 출력, 브라우저 QA 상세, 코드 변경 이력은 이 문서에 누적하지 않고 관련 문서로 링크한다.
 - `ERP/web/handoff.md`는 단일 작성자 규칙 때문에 수정하지 않는다.
 
-## 2026-07-10 기준 현재 상태
+## 2026-07-13 기준 현재 상태
 
-- 릴리즈 기준: 기능 브랜치 `codex/franchise-next-alerts-20260616`의 `955f42b feat(franchise): 공통 일정 결재 기반 추가`를 `main`의 `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`으로 통합했다. 점주 포털 회사별 단축 로그인, 공지/공문 첨부와 삭제 연동, 체크리스트 발송 이력 목록, 문의 알림톡, 공통 일정·결재 MVP를 포함한다.
-- 운영 기능 기준: main `b6d4559 fix(schedule): 보호 API 인증 헤더 보강` 소스를 `dpl_7am4D2Devjn3EQhGE8ZYhUQVekNW`에서 `naeilsajang` production에 배포했고 Vercel inspect `status=Ready`와 두 운영 도메인 alias를 확인했다. 이후 릴리즈 문서 전용 main 커밋은 애플리케이션 코드를 바꾸지 않으며 Vercel Git 연동의 후속 자동 배포가 생성될 수 있으므로, 실제 최신 deployment ID는 마지막 main push 이후 최종 inspect를 기준으로 확인한다. 기능 브랜치 직접 배포 후 main 통합과 dev 선형 동기화까지 완료해 Git과 운영 기능 기준점을 정렬했다.
+- 기본 배포 절차: 일반 기능은 최신 dev에서 브랜치를 만들고 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 승격한다. dev 전체가 운영 준비 상태가 아니면 dev PR의 최종 반영 커밋만 `origin/main` 기반 release 브랜치로 선별하고, 해당 release preview에서 smoke와 회귀 QA를 다시 통과한 뒤 main PR을 만든다.
+- 이번 복구 릴리즈 기준: 기능 브랜치 `codex/franchise-next-alerts-20260616`의 `955f42b feat(franchise): 공통 일정 결재 기반 추가`를 `main`의 `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`으로 통합했다. 점주 포털 회사별 단축 로그인, 공지/공문 첨부와 삭제 연동, 체크리스트 발송 이력 목록, 문의 알림톡, 공통 일정·결재 MVP를 포함한다. 이 main-first 통합은 이미 production에 직접 배포된 소스를 복구한 일회성 예외다.
+- 운영 기능 기준: main `b6d4559 fix(schedule): 보호 API 인증 헤더 보강` 소스를 `dpl_7am4D2Devjn3EQhGE8ZYhUQVekNW`에서 `naeilsajang` production에 배포했고 Vercel inspect `status=Ready`와 두 운영 도메인 alias를 확인했다. 이후 릴리즈 문서 전용 main 커밋은 애플리케이션 코드를 바꾸지 않으며 Vercel Git 연동의 후속 자동 배포가 생성될 수 있으므로, 실제 최신 deployment ID는 마지막 main push 이후 최종 inspect를 기준으로 확인한다. 이번 예외 릴리즈는 기능 브랜치 직접 배포 후 main/dev 기준점 복구까지 완료한 상태다.
 - SQL 상태: `supabase_franchise_approval_calendar_migration.sql`은 사용자 확인 기준 2026-07-10 운영 DB 적용 완료다. **SQL 등록 완료 확인**. dev와 production Supabase 프로젝트가 분리된 환경에서는 각 환경 적용 여부를 별도로 확인한다.
+- 진행현황 입점 요청 상세: 등록 주소를 Kakao 지도와 `카카오맵에서 보기` 링크로 연결하고, 여러 첨부 이미지는 큰 사진·썸네일·좌우 이동 버튼으로 연속 확인한다. 임대 조건 요약과 보증금·월세·관리비·권리금 입력은 천 단위 쉼표를 표시하되 저장 payload의 기존 숫자 정규화는 유지한다. 이번 변경의 신규 SQL은 없다.
 - 공개 진입점: `/landing` 상단 메뉴에 `로그인` 링크를 추가했고, 로그인/가입/개인정보처리방침/metadata 브랜드 문구를 `프랜차이즈 본부 ERP`로 정리했다. Kakao 비즈니스 심사 대응을 위해 `/landing`, `/login`, `/signup`, `/privacy` 하단에 주식회사 내일사장 사업자정보 푸터를 노출한다. 신규 도메인 `https://www.fcerp.co.kr` 기준 영상 촬영과 OAuth/Kakao 심사 준비에 맞춘다.
 - 최근 작업 범위: 회원가입 화면을 `회사명 -> 아이디 -> 이메일 -> 비밀번호 -> 비밀번호 확인 -> 이름 -> 휴대폰 번호` 순서로 정리하고, 이메일 `@` 누락, 비밀번호 확인 불일치, 휴대폰 자동 하이픈 정책을 추가했다. 브랜드 임직원 가입은 백엔드에서 회사 팀장 유무에 따라 팀장 또는 매니저 권한으로 자동 접수한다. 직원 관리는 `sub_manager` 매니저를 회사 직원 그룹에 포함하도록 보정했고, 개인정보 수정은 등록 이메일/휴대폰 수정과 팀장 전용 회사 로고 등록으로 정리했다. 개인정보 저장 핫픽스로 최종 프로필 재조회 company 관계를 `company_id` FK 명시 방식으로 보강했다. 진행현황의 입점 요청 목록은 회사명 옆에 작성자 표시를 추가했고, 입점 요청/예비 창업자 등록의 수정·삭제는 작성자, 같은 회사 팀장, 관리자만 가능하게 정리했다. 진행현황의 `수정` 액션은 `확인/수정`으로 바꾸고, 입점요청/예비 창업자 등록 상세 모달에서 등록 요약과 첨부 자료를 먼저 확인한 뒤 기존 권한 정책 그대로 수정할 수 있게 보강했다. 입점요청 등록은 현재 상태가 `영업중`일 때 `현재 영업중 상호/매장명`을 `properties.data.operatingStoreName`에 저장한다. 새 첨부는 이미지/PDF를 Storage에 업로드해 열람/다운로드 링크를 제공하고, 과거처럼 URL 없이 파일명/용량만 저장된 첨부는 원본이 없어 `재첨부 필요`로 안내한다. 어드민 관리 홈은 전자계약 사용량과 회사별 메뉴 관리를 전용 관리 메뉴로 분리했고, 전자계약 사용량과 회원 및 권한 관리는 검색/필터/정렬/페이지네이션을 지원한다. 2026-07-01 플랫폼 코드리뷰로 legacy requester/admin fallback, UCanSign unsigned state, 서비스-role 주요 mutation route를 세션 기반 권한 검사로 보강했다. 이후 모객 DB/고객/명함/점포개발 화면의 legacy service route 호출부에 Supabase 세션 header를 붙이고, `BusinessCard`와 `PropertyCard`의 정적 순환 import를 동적 import로 끊어 명함 신규입력 client-side exception을 보강했다.
 - 알림 연동: Solapi SDK를 추가하고 회원가입 요청 시 관리자 문자, 승인 완료 시 신청자 문자를 발송한다. 문구 prefix는 `[ERP]`로 통일했다. 입점요청과 예비 창업자 등록이 저장되면 `FRANCHISE_INTAKE_ALERT_PHONES` 수신 번호로 등록 완료 문자를 발송하고, 해당 env가 비어 있으면 `SIGNUP_ADMIN_ALERT_PHONES`를 fallback으로 사용한다. Solapi env가 없거나 수신 번호가 없으면 발송만 skip하고 가입/승인/인입 등록 본 흐름은 막지 않는다. 알림톡 1차 운영 관리를 위해 `/admin/alimtalk`을 추가했다. 어드민은 1,2,3,4,5,8번 발송 시나리오의 템플릿 검수 상태, SOLAPI template/channel ID, 시나리오 사용 여부, 회사별 월 발송량·한도·주의 기준, 최근 발송 로그를 관리한다. 시나리오 관리는 전체 발송 플로우 보드와 개별 시나리오 카드로 분리해 운영자가 전체 흐름과 개별 ON/OFF·대체 발송 설정을 함께 확인한다. 실제 Kakao/SOLAPI 템플릿 신청은 provider 콘솔에서 진행하고 ERP에는 승인 상태와 ID를 기록한다. 승인된 알림톡은 회원가입 승인 요청/완료, 정보공개서 수령 확인 완료, 가맹계약 가능 상태, 업체 계약 D-30/D-7, 점주 공지/공문 발행, 점주 시설/고장 문의 접수, 점주 포털 계정 발급 이벤트에 연결했다. 검수중인 정보공개서 확인 안내 템플릿은 승인 전까지 실제 발송 훅에서 제외한다. 3차는 사용량/실패 분석과 수동 재발송·provider 상태 점검으로 분리한다.
@@ -37,6 +39,7 @@
 - 신규 SQL: 가맹 운영 슈퍼바이징용 `supabase_franchise_supervision_migration.sql`을 추가했다. 이 SQL은 SV 배정, 방문 일정, 점검 보고서, 시정요청 테이블과 상태 제약/인덱스/RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 가맹 운영 슈퍼바이징 2차용 `supabase_franchise_supervision_v2_migration.sql`을 추가했다. 이 SQL은 회사별 점검 템플릿, 보고서 이벤트, 시정요청 이벤트, 보고서 `template_id`, 내부 알림톡 4개 draft 템플릿/시나리오 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 공통 일정/결재 MVP용 `supabase_franchise_approval_calendar_migration.sql`을 추가했다. 이 SQL은 기존 `schedules` 확장과 `approval_templates`, `approval_documents`, `approval_document_events` 테이블, source 중복 방지 인덱스, 회사 범위 RLS를 포함한다. 사용자 확인 기준 2026-07-10 운영 DB 적용을 완료했다. **SQL 등록 완료 확인**.
+- 신규 SQL: 가맹운영 전용 일정의 공유/개인 구분용 `supabase_franchise_schedule_visibility_migration.sql`을 추가했다. 기존 일정과 자동 생성 일정은 공유로 유지하고, 개인 일정은 생성자 본인만 조회·수정·삭제하도록 컬럼 제약과 RLS를 추가한다. 2026-07-13 전자결재 보안 리뷰에서 비활성 프로필 차단 조건을 추가했으므로 최신 파일 재적용이 필요하다. **SQL 재등록 필요**.
 - 신규 SQL: 가맹 운영 인력 세팅용 `supabase_franchise_labor_planning_migration.sql`을 추가했다. 이 SQL은 회사별 노무 계산 기준, 운영점별 인력 세팅안, 역할별 추천 인력 행을 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 점주 포털용 `supabase_franchise_owner_portal_migration.sql`을 추가했다. 이 SQL은 점주 계정, 점주 전용 세션, 공지/읽음 기록, 제출 이력, 업로드 파일 메타 테이블과 RLS 정책을 포함한다. 기존 적용 DB는 회사별 점주 로그인 ID 중복 허용을 위해 `supabase_franchise_owner_company_login_scope.sql`도 추가 적용해야 한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 점주 공지/공문 첨부용 `supabase_franchise_owner_notice_attachments_migration.sql`을 추가했다. 이 SQL은 기존 `franchise_owner_notices`에 `attachments jsonb` 컬럼을 추가한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
@@ -84,3 +87,17 @@
 - `ERP/web/docs/franchise-dev-qa-log.md`: 상세 개발/QA 이력과 미검증 리스크.
 - `ERP/web/docs/franchise-growth-roadmap.md`: 제품 방향, API 정책, 다음 작업 목록.
 - `ERP/web/docs/documentation-agent.md`: Docs Steward 권한과 문서 갱신 규칙.
+
+## 2026-07-13 전사 전자결재 v2 구현 상태
+
+- 상위 메뉴 `/approvals`에 전자결재 홈, 작성하기, 결재 대기, 내 문서함, 부서 문서함, 양식 관리, 조직·결재 설정을 추가했다.
+- 시스템 접근 권한과 조직 직책을 분리했다. 활성 회사 구성원을 이름으로 선택해 부서 소속, 직책, 부서장, 결재 역할, 기간형 위임을 설정하며 제출 시점 조직과 결재선을 문서 버전에 보관한다.
+- 순차 결재, 전원 병렬 합의, 그룹 1인 처리, 참조·수신, 반려 사유, 첫 처리 전 회수, 재상신 버전을 지원한다. 현재 단계 대상자만 처리할 수 있고 자기 결재와 교차 회사 접근을 차단한다.
+- 작성 화면과 결재 상세는 같은 구조화 필드 renderer를 사용한다. 작성 화면에서 참조자와 수신 부서를 선택할 수 있고 기존 문서를 수정할 때 선택값을 복원한다. 첨부는 전용 비공개 `approval-documents` Storage에 저장하고 권한·보존 기한 확인 후 내려받으며, 상세 화면에서 Noto Sans KR을 포함한 pdfme PDF를 생성한다.
+- 결재 단계가 시작되면 실제 대상자에게 인앱 알림과 `approval-document` 일정이 생성된다. 단계 이동 시 대상을 갱신하고 반려·최종 승인·회수·완료 시 일정을 완료한다.
+- 기존 단일 결재 API와 문서는 전환 기간 동안 유지한다. migration은 과거 제출·승인·반려 문서를 1단계 version/step 구조로 변환해 새 상세 링크에서도 조회와 처리가 이어지게 한다.
+- 신규 SQL: `supabase_company_approvals_v2_migration.sql`. 기존 공통 일정/결재 migration 적용 후 사용자가 직접 등록해야 한다. 리뷰 보정으로 슈퍼바이징 보고서와 결재 전이를 한 트랜잭션으로 묶고, 보고서 직접 쓰기 RLS를 닫았으며, 조회도 작성자·담당 SV·같은 회사 관리자 범위로 제한했다. 사진은 전용 비공개 `franchise-supervision-private` 버킷에서만 저장·서명하며 레거시 공용 버킷 메타데이터는 API에서 제외한다. 비활성 계정 및 과도한 관리자 공개 범위 차단까지 포함한 최신 파일 기준으로 적용하고, 기존 `property-documents/franchise-supervision/` 객체는 비공개 버킷 대체본 확인 후 Storage API 또는 대시보드에서 삭제한다. **SQL 등록 필요**.
+- 기존 전자결재 조직 테이블을 적용한 환경은 이어서 `supabase_company_approvals_organization_delete_safety_migration.sql`을 적용한다. 조직 삭제 시 구성원 소속과 결재 담당자 연결이 함께 지워지지 않도록 외래 키를 제한 삭제로 전환한다. **SQL 등록 필요**.
+- 문서 작성 중 양식의 결재 단계별 실제 결재자와 참조자를 고를 수 있다. 순차 단계는 여러 결재자를 선택하고 순서를 바꿀 수 있으며, 상신 시 선택 순서대로 각각의 실제 결재 단계가 생성된다. 병렬 단계는 전원 또는 1인 처리 규칙을 유지한다. 최신 `supabase_company_approvals_document_line_override_migration.sql`을 적용하며 이전 단일 결재자 버전을 적용했다면 다시 실행한다. **SQL 등록 필요**.
+- 마지막으로 `supabase_company_approvals_security_review_migration.sql`을 적용한다. 결재 문서·양식이 참조하는 조직 삭제 차단, 필수 첨부파일의 실제 업로드 검증, 유효기간이 지난 소속 제외, 모든 다중 순차 결재 단계 분리, 재요청 시 중복 결재 진행 방지와 현재 버전·단계 검증을 포함한다. **SQL 등록 필요**.
+- 첨부파일 선택 영역은 실제 선택 버튼과 드래그 추가, 형식·10MB·최대 5개 검증, 파일명·용량·업로드 대기 상태를 제공한다. 저장 시 전용 비공개 버킷으로 업로드하고 상세 화면에서 권한을 확인한 뒤 내려받는다.

@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { AlertCircle, HelpCircle } from 'lucide-react';
+import styles from './ConfirmModal.module.css';
+import { useDialogFocusTrap } from './useDialogFocusTrap';
 
 interface ConfirmModalProps {
     isOpen: boolean;
@@ -24,40 +26,52 @@ export function ConfirmModal({
     cancelText = '취소',
     isDanger = false
 }: ConfirmModalProps) {
+    const cancelButtonRef = React.useRef<HTMLButtonElement>(null);
+    const titleId = React.useId();
+    const descriptionId = React.useId();
+    const dialogRef = useDialogFocusTrap<HTMLDivElement>(isOpen, onClose, cancelButtonRef);
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4 animate-in fade-in duration-200">
+        <div className={styles.overlay} onMouseDown={event => { if (event.currentTarget === event.target) onClose(); }}>
             <div
-                className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center transform transition-all scale-100 animate-in zoom-in-95 duration-200"
-                onClick={(e) => e.stopPropagation()}
+                aria-describedby={descriptionId}
+                aria-labelledby={titleId}
+                aria-modal="true"
+                className={styles.dialog}
+                ref={dialogRef}
+                role="alertdialog"
+                tabIndex={-1}
             >
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 mb-4">
-                    <HelpCircle className="h-6 w-6 text-indigo-600" />
+                <div className={`${styles.icon} ${isDanger ? styles.dangerIcon : ''}`}>
+                    {isDanger ? <AlertCircle aria-hidden="true" /> : <HelpCircle aria-hidden="true" />}
                 </div>
 
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                <h3 id={titleId}>
                     {title}
                 </h3>
 
-                <p className="text-gray-600 mb-8 whitespace-pre-wrap text-sm leading-relaxed">
+                <p id={descriptionId}>
                     {message}
                 </p>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className={styles.actions}>
                     <button
+                        className={styles.cancelButton}
                         onClick={onClose}
-                        className="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                        ref={cancelButtonRef}
+                        type="button"
                     >
                         {cancelText}
                     </button>
                     <button
+                        className={isDanger ? styles.dangerButton : styles.confirmButton}
                         onClick={() => {
                             onConfirm();
                             onClose();
                         }}
-                        className={`w-full py-3 text-white font-bold rounded-xl transition-colors shadow-md active:scale-[0.98] ${isDanger ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'
-                            }`}
+                        type="button"
                     >
                         {confirmText}
                     </button>

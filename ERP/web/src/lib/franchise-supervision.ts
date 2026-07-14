@@ -24,6 +24,7 @@ export type SupervisionInspectionItem = {
 export type SupervisionPhotoAttachment = {
     readonly name: string;
     readonly path: string;
+    readonly storageBucket: string;
     readonly publicUrl?: string;
     readonly size: number;
     readonly contentType: string;

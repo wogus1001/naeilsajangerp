@@ -56,6 +56,9 @@ type NotificationCronCompanyRow = {
     readonly company_id: string | null;
 };
 const DUE_NOTIFICATION_SOURCE_TYPES = new Set(['disclosure-due', 'vendor-contract-due']);
+const RECONCILED_NOTIFICATION_SOURCE_TYPES = FRANCHISE_NOTIFICATION_SOURCE_TYPES.filter(sourceType => (
+    !sourceType.startsWith('workflow-') && !sourceType.startsWith('supervision-')
+));
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
@@ -256,7 +259,7 @@ async function syncAutomaticNotifications(
         .from('franchise_notifications')
         .select('id, source_id')
         .is('dismissed_at', null)
-        .in('source_type', [...FRANCHISE_NOTIFICATION_SOURCE_TYPES].filter(sourceType => !DUE_NOTIFICATION_SOURCE_TYPES.has(sourceType)));
+        .in('source_type', RECONCILED_NOTIFICATION_SOURCE_TYPES.filter(sourceType => !DUE_NOTIFICATION_SOURCE_TYPES.has(sourceType)));
 
     if (scope.companyId) query = query.eq('company_id', scope.companyId);
     if (!scope.requesterIsAdmin) query = query.eq('recipient_profile_id', scope.requesterId);

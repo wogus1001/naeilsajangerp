@@ -1,0 +1,123 @@
+.workspace {
+    --approval-blue: #3182f6;
+    --approval-blue-hover: #2272eb;
+    --approval-blue-soft: #e8f3ff;
+    --approval-canvas: #ffffff;
+    --approval-bg: #f2f4f6;
+    --approval-border: #e5e8eb;
+    --approval-text: #191f28;
+    --approval-muted: #6b7684;
+    min-width: 0;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: var(--approval-text);
+}
+
+.moduleHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 20px;
+}
+
+.moduleHeader h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.moduleHeader p {
+    margin: 6px 0 0;
+    color: var(--approval-muted);
+    font-size: 14px;
+    line-height: 1.57;
+    word-break: keep-all;
+}
+
+.localNav a:focus-visible {
+    outline: 2px solid var(--approval-blue);
+    outline-offset: 2px;
+}
+
+.localNav {
+    display: flex;
+    max-width: 100%;
+    gap: 4px;
+    padding: 4px;
+    overflow-x: auto;
+    border: 1px solid var(--approval-border);
+    border-radius: 8px;
+    background: var(--approval-canvas);
+    scrollbar-width: thin;
+}
+
+.localNav a {
+    display: inline-flex;
+    min-height: 40px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    border-radius: 6px;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.localNav a:hover {
+    background: var(--approval-bg);
+}
+
+.localNav a.active {
+    background: var(--approval-blue-soft);
+    color: var(--approval-blue);
+}
+
+.content {
+    min-width: 0;
+    padding-top: 24px;
+}
+
+@media (max-width: 720px) {
+    .workspace {
+        box-sizing: border-box;
+        padding-left: 16px;
+    }
+
+    .moduleHeader {
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .moduleHeader h1 {
+        font-size: 24px;
+    }
+
+    .moduleHeader p {
+        display: none;
+    }
+
+    .localNav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: visible;
+    }
+
+    .localNav a {
+        justify-content: flex-start;
+        min-height: 44px;
+        min-width: 0;
+    }
+
+    .content {
+        padding-top: 20px;
+    }
+}
+
+@media (max-width: 420px) {
+    .moduleHeader { flex-direction: column; }
+}

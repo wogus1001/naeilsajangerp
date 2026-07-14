@@ -10,19 +10,21 @@ export async function POST(request: Request) {
         const supabaseAdmin = getSupabaseAdmin();
         const adminGuard = await requireCompanyOperatorRequester(supabaseAdmin, request);
         if (!adminGuard.ok) return adminGuard.response;
+        if (!adminGuard.requester.company_id) {
+            return NextResponse.json({ error: '회사 소속을 확인할 수 없습니다.' }, { status: 403 });
+        }
 
         const payload = await request.json();
-        return handleBatchUpload(payload);
+        return handleBatchUpload(payload, adminGuard.requester.company_id);
     } catch (error) {
         console.error('Batch error:', error);
         return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
     }
 }
 
-async function handleBatchUpload(payload: any) {
+async function handleBatchUpload(payload: any, companyId: string) {
     const supabaseAdmin = getSupabaseAdmin();
     const { main, promoted, history, meta } = payload;
-    const { userCompanyName, managerId } = meta || {};
 
     const now = new Date().toISOString();
     let createdCount = 0;
@@ -53,6 +55,8 @@ async function handleBatchUpload(payload: any) {
         const { data: profiles } = await supabaseAdmin
             .from('profiles')
             .select('id, email')
+            .eq('company_id', companyId)
+            .eq('status', 'active')
             .in('email', Array.from(uniqueEmails));
 
         profiles?.forEach((p: any) => {
@@ -70,6 +74,8 @@ async function handleBatchUpload(payload: any) {
         const { data: profiles } = await supabaseAdmin
             .from('profiles')
             .select('id, name, email')
+            .eq('company_id', companyId)
+            .eq('status', 'active')
             .in('name', Array.from(uniqueNames));
 
         profiles?.forEach((p: any) => {
@@ -111,12 +117,7 @@ async function handleBatchUpload(payload: any) {
         return { min: str, max: '' };
     };
 
-    // Resolve Company ID from Uploader
-    let uploaderCompanyId: string | null = null;
-    if (managerId) {
-        const { data: uploader } = await supabaseAdmin.from('profiles').select('company_id').eq('id', managerId).single();
-        if (uploader) uploaderCompanyId = uploader.company_id;
-    }
+    const uploaderCompanyId = companyId;
 
     for (const row of main) {
         const legacyId = row['관리번호'];
@@ -375,6 +376,15 @@ async function handleBatchUpload(payload: any) {
 
     // 5. Perform Upsert with complete data (ONCE)
     if (customersToUpsert.length > 0) {
+        const customerIds = customersToUpsert.map(customer => customer.id);
+        const { data: existingCustomers, error: existingError } = await supabaseAdmin
+            .from('customers')
+            .select('id, company_id')
+            .in('id', customerIds);
+        if (existingError) throw existingError;
+        if ((existingCustomers || []).some(customer => customer.company_id !== companyId)) {
+            return NextResponse.json({ error: '다른 회사의 고객 관리번호와 중복됩니다.' }, { status: 409 });
+        }
         // Chunking to avoid request size limits
         const UPSERT_CHUNK_SIZE = 100;
         for (let i = 0; i < customersToUpsert.length; i += UPSERT_CHUNK_SIZE) {

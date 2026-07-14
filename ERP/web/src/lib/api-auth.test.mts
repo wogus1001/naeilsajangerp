@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { extractBearerToken, getRequesterProfile, resolveUserUuid } from './api-auth.js';
+import { extractBearerToken, getRequesterProfile, isActiveRequester, resolveUserUuid } from './api-auth.js';
 
 test('extractBearerToken reads the bearer authorization token first', () => {
     const request = new Request('https://example.test/api', {
@@ -50,4 +50,11 @@ test('getRequesterProfile rejects unsigned requester identity fallbacks', async 
     const request = new Request('https://example.test/api?requesterId=admin');
 
     assert.equal(await getRequesterProfile(supabase, request), null);
+});
+
+test('isActiveRequester rejects deactivated and status-less profiles', () => {
+    assert.equal(isActiveRequester({ id: 'active', role: 'admin', company_id: 'company', status: 'active' }), true);
+    assert.equal(isActiveRequester({ id: 'inactive', role: 'admin', company_id: 'company', status: 'inactive' }), false);
+    assert.equal(isActiveRequester({ id: 'legacy', role: 'admin', company_id: 'company' }), false);
+    assert.equal(isActiveRequester(null), false);
 });
