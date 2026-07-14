@@ -24,6 +24,10 @@ type UseLeadLocationLinksParams = {
     readonly showAlertAction: (message: string, type?: LeadAlertType, title?: string) => void;
 };
 
+export function isLeadLocationTargetAbort(error: unknown): boolean {
+    return error instanceof Error && error.name === 'AbortError';
+}
+
 export function useLeadLocationLinks({
     userId,
     userName,
@@ -68,22 +72,24 @@ export function useLeadLocationLinks({
                     })
             ]))
             .then(([locationResult, listingResult]) => {
+                if (controller.signal.aborted) return;
+
                 if (locationResult.status === 'fulfilled') {
                     setFranchiseLocations(locationResult.value.locations || []);
-                } else {
+                } else if (!isLeadLocationTargetAbort(locationResult.reason)) {
                     console.error('Failed to fetch franchise locations for lead links:', locationResult.reason);
                     setFranchiseLocations([]);
                 }
 
                 if (listingResult.status === 'fulfilled') {
                     setExternalListings(listingResult.value.listings || []);
-                } else {
+                } else if (!isLeadLocationTargetAbort(listingResult.reason)) {
                     console.error('Failed to fetch external listings for lead links:', listingResult.reason);
                     setExternalListings([]);
                 }
             })
             .catch(error => {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
+                if (isLeadLocationTargetAbort(error)) return;
                 console.error('Failed to fetch lead location link targets:', error);
                 setFranchiseLocations([]);
                 setExternalListings([]);
@@ -92,7 +98,7 @@ export function useLeadLocationLinks({
                 if (!controller.signal.aborted) setIsLocationMatchLoading(false);
             });
 
-        return () => controller.abort();
+        return () => controller.abort(new DOMException('Lead location link target request cancelled.', 'AbortError'));
     }, [companyName, userId]);
 
     const getLinkTargetName = (targetType: LeadLocationTargetType, targetId: string) => {
