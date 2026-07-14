@@ -15,6 +15,10 @@ import type { ExternalPropertyListing, FranchiseLead, FranchiseLocation, LeadAct
 
 type LeadAlertType = 'success' | 'error' | 'info';
 
+export function createLeadLocationRequestAbort(): DOMException {
+    return new DOMException('Lead location link target request cancelled.', 'AbortError');
+}
+
 export function isLeadLocationRequestAbort(error: unknown): boolean {
     return error instanceof Error && error.name === 'AbortError';
 }
@@ -98,7 +102,7 @@ export function useLeadLocationLinks({
                 if (!controller.signal.aborted) setIsLocationMatchLoading(false);
             });
 
-        return () => controller.abort();
+        return () => controller.abort(createLeadLocationRequestAbort());
     }, [companyName, userId]);
 
     const getLinkTargetName = (targetType: LeadLocationTargetType, targetId: string) => {
