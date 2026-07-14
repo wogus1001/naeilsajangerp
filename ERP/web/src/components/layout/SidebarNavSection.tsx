@@ -7,6 +7,7 @@ import {
     ChevronRight,
     ClipboardCheck,
     Contact,
+    FileCheck2,
     FileSignature,
     FileText,
     LayoutDashboard,
@@ -34,6 +35,8 @@ function renderSectionIcon(key: SidebarSectionKey) {
     switch (key) {
         case 'dashboard':
             return <LayoutDashboard size={18} />;
+        case 'approvals':
+            return <FileCheck2 size={18} />;
         case 'franchise':
             return <Store size={18} />;
         case 'franchiseWork':

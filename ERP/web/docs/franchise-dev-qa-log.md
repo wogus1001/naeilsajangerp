@@ -25,6 +25,12 @@
 
 ## 개발 과정 로그
 
+### 2026-07-14
+
+- 사이드바 최상위 `전자결재` 메뉴에 다른 주요 메뉴와 동일한 18px Lucide `FileCheck2` 아이콘을 추가했다. 기존 메뉴 경로, 활성 상태, 회사별 기능 권한은 변경하지 않았다.
+- 검증: `npx tsx --test src/components/approvals/approvalsNavigation.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `git diff --check`를 통과했다.
+- 이번 사이드바 아이콘 변경의 신규 SQL과 배포 영향은 없다.
+
 ### 2026-07-09
 
 - 점주 포털 로그인 링크를 회사명 query가 붙은 긴 URL에서 `/owner/login/{companyId}` 형태의 회사별 단축 링크로 변경했다. 본사 `점주 소통 > 점주 계정 설정`은 이 링크를 복사하게 하고, 점주 로그인 화면은 회사명 입력/표시 필드를 숨겨 아이디와 비밀번호만 입력한다. 기존 `?companyId=` 링크는 호환용으로 유지한다.
