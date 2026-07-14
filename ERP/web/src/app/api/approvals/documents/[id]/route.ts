@@ -29,6 +29,7 @@ import { approvalErrorResponse, throwDatabaseError } from '../../_shared/errors'
 import { validateDocumentReferences } from '../../_shared/document-references';
 import { requireVisibleApprovalDocument } from '../../_shared/visibility';
 import { approvalDocumentViews } from '../../_shared/presentation';
+import { loadCurrentApprovalDelegations } from '@/lib/approval-delegation-access';
 import {
     templateVersionView,
     type ApprovalTemplateStepRow,
@@ -68,7 +69,7 @@ async function detailData(
             .eq('document_version_id', document.current_version_id)
             .order('step_order', { ascending: true }).returns<ApprovalDocumentStepRow[]>()
         : Promise.resolve({ data: [] as ApprovalDocumentStepRow[], error: null });
-    const [version, steps, readers, events, attachments] = await Promise.all([
+    const [version, steps, readers, events, attachments, delegations] = await Promise.all([
         versionQuery,
         stepsQuery,
         context.supabase.from('approval_document_readers').select(DOCUMENT_READER_SELECT)
@@ -80,7 +81,8 @@ async function detailData(
         context.supabase.from('approval_attachments')
             .select('id, file_name, mime_type, size_bytes, created_at')
             .eq('document_id', document.id).eq('company_id', context.companyId)
-            .order('created_at', { ascending: true })
+            .order('created_at', { ascending: true }),
+        loadCurrentApprovalDelegations(context.supabase, context.companyId, context.requester.id)
     ]);
     throwDatabaseError(version.error);
     throwDatabaseError(steps.error);
@@ -108,8 +110,14 @@ async function detailData(
     const activeStep = stepRows.find(step => step.status === 'active' && step.step_order === document.current_step_order);
     const eligibleActions: string[] = [];
     if (document.status === '제출' && activeStep
-        && actorAppearsInTargets(activeStep.targets, context.requester.id)
-        && !actorAlreadyResponded(activeStep.targets, activeStep.responses, context.requester.id)) {
+        && actorAppearsInTargets(activeStep.targets, context.requester.id, activeStep.action_kind, delegations)
+        && !actorAlreadyResponded(
+            activeStep.targets,
+            activeStep.responses,
+            context.requester.id,
+            activeStep.action_kind,
+            delegations
+        )) {
         if (activeStep.action_kind === 'approval') eligibleActions.push('approve', 'reject');
         if (activeStep.action_kind === 'agreement') eligibleActions.push('agree', 'disagree');
         if (activeStep.action_kind === 'acknowledgement') eligibleActions.push('acknowledge');

@@ -38,21 +38,42 @@
 
 .toolbar {
     display: flex;
-    min-height: 64px;
-    align-items: center;
-    justify-content: space-between;
+    min-height: 112px;
+    align-items: stretch;
+    flex-direction: column;
     gap: 12px;
     padding: 12px 16px;
     border-bottom: 1px solid #e5e8eb;
 }
 
-.toolbar strong {
+.resultSummary {
+    display: flex;
+    min-height: 24px;
+    align-items: center;
+    gap: 8px;
+}
+
+.resultSummary strong {
     font-size: 14px;
+}
+
+.resultSummary span {
+    color: #6b7684;
+    font-size: 12px;
+}
+
+.filterControls {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .search {
     display: flex;
-    width: min(360px, 100%);
+    min-width: 260px;
+    flex: 1 1 360px;
     min-height: 40px;
     align-items: center;
     gap: 8px;
@@ -75,6 +96,71 @@
     background: transparent;
     color: #191f28;
     font-size: 13px;
+}
+
+.search button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b7684;
+}
+
+.search button:hover {
+    background: #f2f4f6;
+    color: #191f28;
+}
+
+.filterControls > select,
+.dateRange input {
+    min-height: 40px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    font-size: 13px;
+}
+
+.filterControls > select {
+    min-width: 124px;
+    padding: 0 32px 0 12px;
+}
+
+.dateRange {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #8b95a1;
+}
+
+.dateRange input {
+    width: 142px;
+    padding: 0 8px;
+}
+
+.resetButton {
+    display: inline-flex;
+    min-width: 82px;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.resetButton:disabled {
+    background: #f9fafb;
+    color: #b0b8c1;
 }
 
 .tableScroll {
@@ -260,12 +346,34 @@
 }
 
 @media (max-width: 720px) {
-    .toolbar {
+    .filterControls {
         align-items: stretch;
         flex-direction: column;
     }
 
     .search {
+        width: 100%;
+        min-width: 0;
+        flex: 0 0 auto;
+        min-height: 44px;
+    }
+
+    .filterControls > select,
+    .resetButton {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .dateRange {
+        width: 100%;
+    }
+
+    .dateRange label {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .dateRange input {
         width: 100%;
         min-height: 44px;
     }

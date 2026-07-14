@@ -49,6 +49,7 @@ export async function approvalDocumentViews(
         const membership = document.author_profile_id ? membershipMap.get(document.author_profile_id) : null;
         return {
             ...documentView(document),
+            documentNumber: `DOC-${document.id.slice(0, 8).toUpperCase()}`,
             authorName: profile?.name?.trim() || profile?.email?.trim() || '',
             departmentName: membership ? unitMap.get(membership.unit_id) || '' : '',
             templateName: document.template_id ? templateMap.get(document.template_id) || '' : ''

@@ -14,6 +14,7 @@ import {
     buildScheduleDashboard,
     isScheduleEventCanceled,
     isScheduleEventDone,
+    scheduleEventHref,
     scheduleEventDateKey,
     sourceBadgeLabel,
     type ScheduleEvent
@@ -224,6 +225,11 @@ export default function SchedulePage() {
     };
 
     const handleEventClick = (event: ScheduleEvent) => {
+        const detailHref = scheduleEventHref(event);
+        if (detailHref) {
+            router.push(detailHref);
+            return;
+        }
         setSelectedScheduleId(event.id);
         setFormData({
             title: event.title,

@@ -9,6 +9,11 @@ import {
     parseUuidArray,
     type JsonRecord
 } from './boundary';
+export {
+    actorAlreadyResponded,
+    actorAppearsInTargets,
+    type ActiveApprovalDelegationGrant
+} from '@/lib/approval-target-access';
 
 export const DOCUMENT_SELECT = 'id, company_id, template_id, source_type, source_id, title, status, author_profile_id, approver_profile_id, reviewer_profile_id, values, reject_reason, category, security_level, retention_until, current_version_id, current_step_order, due_at, submitted_at, reviewed_at, completed_at, withdrawn_at, data, created_by, updated_by, created_at, updated_at';
 export const DOCUMENT_VERSION_SELECT = 'id, document_id, version_number, template_version_id, title, values, body, organization_snapshot, steps_snapshot, submitted_at, created_at';
@@ -195,25 +200,6 @@ export function documentView(row: ApprovalDocumentRow) {
         reviewedAt: row.reviewed_at, completedAt: row.completed_at, withdrawnAt: row.withdrawn_at,
         createdBy: row.created_by, updatedBy: row.updated_by, createdAt: row.created_at, updatedAt: row.updated_at
     };
-}
-
-export function actorAppearsInTargets(targets: unknown, actorId: string): boolean {
-    if (!Array.isArray(targets)) return false;
-    return targets.some(target => isRecord(target) && (
-        target.profile_id === actorId ||
-        (Array.isArray(target.delegate_profile_ids) && target.delegate_profile_ids.includes(actorId))
-    ));
-}
-
-export function actorAlreadyResponded(targets: unknown, responses: unknown, actorId: string): boolean {
-    if (!Array.isArray(targets) || !Array.isArray(responses)) return false;
-    const target = targets.find(item => isRecord(item) && (
-        item.profile_id === actorId ||
-        (Array.isArray(item.delegate_profile_ids) && item.delegate_profile_ids.includes(actorId))
-    ));
-    return isRecord(target) && typeof target.profile_id === 'string' && responses.some(response => (
-        isRecord(response) && response.target_profile_id === target.profile_id
-    ));
 }
 
 export function receiverIds(data: unknown): { readonly profileIds: readonly string[]; readonly unitIds: readonly string[] } {

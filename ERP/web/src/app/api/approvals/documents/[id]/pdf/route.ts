@@ -7,7 +7,12 @@ import { DOCUMENT_SELECT, isApprovalRetentionExpired, type ApprovalDocumentRow }
 import { approvalErrorResponse, throwDatabaseError } from '../../../_shared/errors';
 import { requireVisibleApprovalDocument } from '../../../_shared/visibility';
 import { canDownloadApprovalDocument } from '../../../_shared/download-access';
-import { createApprovalPdfInput, createApprovalPdfTemplate, paginateApprovalBody } from '@/lib/approvals/pdf-template';
+import {
+    createApprovalPdfDownloadResponse,
+    createApprovalPdfInput,
+    createApprovalPdfTemplate,
+    paginateApprovalBody
+} from '@/lib/approvals/pdf-template';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +89,7 @@ export async function GET(request: Request, routeContext: RouteContext) {
             import('@pdfme/generator'),
             import('@pdfme/schemas')
         ]);
-        const font = await readFile(path.join(process.cwd(), 'public/fonts/noto-sans-kr-400.woff2'));
+        const font = await readFile(path.join(process.cwd(), 'public', 'fonts', 'noto-sans-kr-400.ttf'));
         const documentTitle = versionResult.data?.title || document.title;
         const body = documentBody(versionResult.data?.values ?? document.values, templateResult.data?.fields, eventResult.data || []);
         const chunks = paginateApprovalBody(body);
@@ -100,16 +105,7 @@ export async function GET(request: Request, routeContext: RouteContext) {
             plugins: { text },
             options: { font: { NotoSansKR: { data: font, fallback: true } } }
         });
-        const asciiName = `approval-${document.id.slice(0, 8)}.pdf`;
-        const encodedName = encodeURIComponent(`${documentTitle}.pdf`);
-        return new Response(pdf, {
-            headers: {
-                'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
-                'Content-Length': String(pdf.byteLength),
-                'Content-Type': 'application/pdf',
-                'Cache-Control': 'private, no-store'
-            }
-        });
+        return createApprovalPdfDownloadResponse(pdf, document.id, documentTitle);
     } catch (error) {
         return approvalErrorResponse(error, 'Failed to generate approval PDF');
     }
