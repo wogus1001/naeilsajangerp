@@ -10,7 +10,7 @@ type OrganizationUnitsSectionProps = {
     readonly disabled: boolean;
     readonly units: readonly ApprovalOrganizationUnit[];
     readonly onDelete: (unitId: string) => void;
-    readonly onSave: (unit: Partial<ApprovalOrganizationUnit>) => void;
+    readonly onSave: (unit: Partial<ApprovalOrganizationUnit>) => Promise<boolean>;
     readonly people: readonly ApprovalPerson[];
 };
 
@@ -36,11 +36,11 @@ export function OrganizationUnitsSection({ disabled, units, onDelete, onSave, pe
                 ))}
                 {units.length === 0 && <p className={styles.empty}>등록된 부서나 팀이 없습니다.</p>}
             </div>
-            <form className={styles.formBand} onSubmit={event => {
+            <form className={styles.formBand} onSubmit={async event => {
                 event.preventDefault();
                 if (!name.trim()) return;
-                onSave({ active: true, code: code.trim(), managerProfileId: managerProfileId.trim() || null, name: name.trim(), parentId: parentId || null, sortOrder: units.length });
-                setName(''); setCode(''); setManagerProfileId('');
+                const saved = await onSave({ active: true, code: code.trim(), managerProfileId: managerProfileId.trim() || null, name: name.trim(), parentId: parentId || null, sortOrder: units.length });
+                if (saved) { setName(''); setCode(''); setManagerProfileId(''); }
             }}>
                 <label><span>부서·팀 이름</span><input onChange={event => setName(event.target.value)} placeholder="예: 운영본부" value={name} /></label>
                 <label><span>내부 코드 (선택)</span><input onChange={event => setCode(event.target.value)} placeholder="예: OPS" value={code} /></label>

@@ -29,6 +29,11 @@ import { approvalErrorResponse, throwDatabaseError } from '../../_shared/errors'
 import { validateDocumentReferences } from '../../_shared/document-references';
 import { requireVisibleApprovalDocument } from '../../_shared/visibility';
 import { approvalDocumentViews } from '../../_shared/presentation';
+import {
+    templateVersionView,
+    type ApprovalTemplateStepRow,
+    type ApprovalTemplateVersionRow
+} from '../../_shared/template-rows';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,12 +87,23 @@ async function detailData(
     throwDatabaseError(readers.error);
     throwDatabaseError(events.error);
     throwDatabaseError(attachments.error);
-    const templateFields = version.data?.template_version_id
-        ? await context.supabase.from('approval_template_versions').select('fields')
+    const templateVersion = version.data?.template_version_id
+        ? await context.supabase.from('approval_template_versions')
+            .select('id, company_id, template_id, version_number, status, name, description, category, security_level, retention_years, fields, created_by, published_at, created_at')
             .eq('id', version.data.template_version_id).eq('company_id', context.companyId)
-            .maybeSingle<{ readonly fields: unknown }>()
+            .maybeSingle<ApprovalTemplateVersionRow>()
         : { data: null, error: null };
-    throwDatabaseError(templateFields.error);
+    throwDatabaseError(templateVersion.error);
+    const templateSteps = templateVersion.data
+        ? await context.supabase.from('approval_template_steps')
+            .select('id, template_version_id, step_order, step_key, name, action_kind, completion_mode, target_type, target_config, due_hours')
+            .eq('template_version_id', templateVersion.data.id).eq('company_id', context.companyId)
+            .order('step_order', { ascending: true }).returns<ApprovalTemplateStepRow[]>()
+        : { data: [] as ApprovalTemplateStepRow[], error: null };
+    throwDatabaseError(templateSteps.error);
+    const templateDefinition = templateVersion.data
+        ? templateVersionView(templateVersion.data, templateSteps.data || [])
+        : null;
     const stepRows = steps.data || [];
     const activeStep = stepRows.find(step => step.status === 'active' && step.step_order === document.current_step_order);
     const eligibleActions: string[] = [];
@@ -108,7 +124,8 @@ async function detailData(
     return {
         document: presentedDocument || documentView(document),
         editable: document.author_profile_id === context.requester.id && ['임시저장', '반려', '회수'].includes(document.status),
-        fields: templateFields.data?.fields || [],
+        fields: templateDefinition?.fields || [],
+        templateSteps: templateDefinition?.steps || [],
         version: version.data ? {
             id: version.data.id, version: version.data.version_number,
             templateVersionId: version.data.template_version_id, title: version.data.title,

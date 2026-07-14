@@ -11,7 +11,7 @@ type OrganizationMembershipsSectionProps = {
     readonly memberships: readonly ApprovalMembership[];
     readonly units: readonly ApprovalOrganizationUnit[];
     readonly onDelete: (membershipId: string) => void;
-    readonly onSave: (membership: Partial<ApprovalMembership>) => void;
+    readonly onSave: (membership: Partial<ApprovalMembership>) => Promise<boolean>;
     readonly people: readonly ApprovalPerson[];
 };
 
@@ -37,11 +37,11 @@ export function OrganizationMembershipsSection({ disabled, memberships, units, o
                 ))}
                 {memberships.length === 0 && <p className={styles.empty}>등록된 조직 구성원이 없습니다.</p>}
             </div>
-            <form className={styles.formBand} onSubmit={event => {
+            <form className={styles.formBand} onSubmit={async event => {
                 event.preventDefault();
                 if (!profileId || !unitId) return;
-                onSave({ active: true, jobTitle: jobTitle.trim(), positionRank: 0, primary: true, profileId: profileId.trim(), unitId });
-                setProfileId(''); setJobTitle('');
+                const saved = await onSave({ active: true, jobTitle: jobTitle.trim(), positionRank: 0, primary: true, profileId: profileId.trim(), unitId });
+                if (saved) { setProfileId(''); setJobTitle(''); }
             }}>
                 <label><span>구성원</span><select onChange={event => setProfileId(event.target.value)} value={profileId}><option value="">구성원 선택</option>{people.map(person => <option key={person.id} value={person.id}>{person.name}{person.email ? ` · ${person.email}` : ''}</option>)}</select></label>
                 <label><span>소속 조직</span><select onChange={event => setUnitId(event.target.value)} value={unitId}><option value="">조직 선택</option>{units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>

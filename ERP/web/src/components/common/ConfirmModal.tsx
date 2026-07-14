@@ -3,6 +3,7 @@
 import React from 'react';
 import { AlertCircle, HelpCircle } from 'lucide-react';
 import styles from './ConfirmModal.module.css';
+import { useDialogFocusTrap } from './useDialogFocusTrap';
 
 interface ConfirmModalProps {
     isOpen: boolean;
@@ -28,20 +29,7 @@ export function ConfirmModal({
     const cancelButtonRef = React.useRef<HTMLButtonElement>(null);
     const titleId = React.useId();
     const descriptionId = React.useId();
-
-    React.useEffect(() => {
-        if (!isOpen) return;
-        const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        cancelButtonRef.current?.focus();
-        function handleKeyDown(event: KeyboardEvent) {
-            if (event.key === 'Escape') onClose();
-        }
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-            previousFocus?.focus();
-        };
-    }, [isOpen, onClose]);
+    const dialogRef = useDialogFocusTrap<HTMLDivElement>(isOpen, onClose, cancelButtonRef);
 
     if (!isOpen) return null;
 
@@ -52,7 +40,9 @@ export function ConfirmModal({
                 aria-labelledby={titleId}
                 aria-modal="true"
                 className={styles.dialog}
+                ref={dialogRef}
                 role="alertdialog"
+                tabIndex={-1}
             >
                 <div className={`${styles.icon} ${isDanger ? styles.dangerIcon : ''}`}>
                     {isDanger ? <AlertCircle aria-hidden="true" /> : <HelpCircle aria-hidden="true" />}

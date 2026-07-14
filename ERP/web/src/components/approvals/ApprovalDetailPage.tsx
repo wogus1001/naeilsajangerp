@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileDown, FileText, Paperclip, Pencil } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
-import { downloadApprovalAttachment, fetchApprovalDocument, runApprovalAction } from './approvalApi';
+import { downloadApprovalAttachment, downloadApprovalPdf, fetchApprovalDocument, runApprovalAction } from './approvalApi';
 import { ApprovalDocumentActions } from './ApprovalDocumentActions';
 import { ApprovalFieldRenderer } from './ApprovalFieldRenderer';
 import { formatApprovalDate } from './approvalFormatting';
@@ -46,7 +46,10 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
     async function handleAction(action: ApprovalAction, comment: string) {
         setSaving(true);
         try {
-            const updated = await runApprovalAction(documentId, action, comment);
+            const updated = await runApprovalAction(documentId, action, comment, {
+                versionId: document?.currentVersionId ?? '',
+                stepOrder: document?.currentStepOrder ?? null
+            });
             setDocument(updated);
             setResult({ message: '문서 처리를 완료했습니다.', type: 'success' });
         } catch (caught) {
@@ -62,6 +65,18 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
             await downloadApprovalAttachment(attachment);
         } catch (caught) {
             setResult({ message: caught instanceof Error ? caught.message : '첨부파일을 내려받지 못했습니다.', type: 'error' });
+        } finally {
+            setDownloadingId('');
+        }
+    }
+
+    async function handlePdfDownload() {
+        if (!document) return;
+        setDownloadingId('pdf');
+        try {
+            await downloadApprovalPdf(document.id, document.title);
+        } catch (caught) {
+            setResult({ message: caught instanceof Error ? caught.message : 'PDF를 내려받지 못했습니다.', type: 'error' });
         } finally {
             setDownloadingId('');
         }
@@ -87,7 +102,7 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
                 </div>
                 <div className={styles.detailHeaderActions}>
                     {document.editable && <Link className={styles.pdfLink} href={`/approvals/write?documentId=${encodeURIComponent(document.id)}`}><Pencil size={17} aria-hidden="true" />수정</Link>}
-                    <a className={styles.pdfLink} href={`/api/approvals/documents/${encodeURIComponent(document.id)}/pdf`}><FileDown size={17} aria-hidden="true" />PDF 내려받기</a>
+                    <button className={styles.pdfLink} disabled={downloadingId === 'pdf'} onClick={() => void handlePdfDownload()} type="button"><FileDown size={17} aria-hidden="true" />{downloadingId === 'pdf' ? 'PDF 생성 중' : 'PDF 내려받기'}</button>
                 </div>
             </div>
             <div className={styles.detailLayout}>

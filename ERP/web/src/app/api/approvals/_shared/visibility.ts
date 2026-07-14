@@ -7,6 +7,7 @@ import {
 } from './documents';
 import { throwDatabaseError } from './errors';
 import { canViewApprovalDocument } from './policy';
+import { isCurrentOrganizationMembership } from './download-access';
 
 type ReaderAccessRow = {
     readonly document_id: string;
@@ -14,6 +15,8 @@ type ReaderAccessRow = {
 
 type MembershipAccessRow = {
     readonly unit_id: string;
+    readonly starts_on: string | null;
+    readonly ends_on: string | null;
 };
 
 export async function visibleApprovalDocuments(
@@ -38,7 +41,7 @@ export async function visibleApprovalDocuments(
             .returns<ReaderAccessRow[]>(),
         context.supabase
             .from('organization_memberships')
-            .select('unit_id')
+            .select('unit_id, starts_on, ends_on')
             .eq('company_id', context.companyId)
             .eq('profile_id', context.requester.id)
             .eq('active', true)
@@ -48,7 +51,9 @@ export async function visibleApprovalDocuments(
     throwDatabaseError(readers.error);
     throwDatabaseError(memberships.error);
     const readerDocumentIds = new Set((readers.data || []).map(row => row.document_id));
-    const requesterUnitIds = new Set((memberships.data || []).map(row => row.unit_id));
+    const requesterUnitIds = new Set((memberships.data || [])
+        .filter(row => isCurrentOrganizationMembership(row))
+        .map(row => row.unit_id));
     return documents.filter(document => {
         const receivers = receiverIds(document.data);
         return canViewApprovalDocument({

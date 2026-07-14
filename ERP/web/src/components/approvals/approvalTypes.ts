@@ -67,6 +67,12 @@ export type ApprovalEvent = {
     readonly createdAt: string;
 };
 
+export type ApprovalAttachment = {
+    readonly id: string;
+    readonly name: string;
+    readonly url?: string;
+};
+
 export type ApprovalDocumentSummary = {
     readonly id: string;
     readonly documentNumber: string;
@@ -82,14 +88,18 @@ export type ApprovalDocumentSummary = {
 
 export type ApprovalDocumentDetail = ApprovalDocumentSummary & {
     readonly editable: boolean;
+    readonly currentVersionId: string;
+    readonly currentStepOrder: number | null;
     readonly templateId: string;
     readonly securityLevel: string;
     readonly retentionPeriod: string;
     readonly documentBox: string;
     readonly fields: readonly ApprovalField[];
+    readonly templateVersionId: string;
+    readonly templateSteps: readonly ApprovalTemplateStep[];
     readonly values: ApprovalFieldValues;
     readonly approvalLine: readonly ApprovalLineStep[];
-    readonly attachments: readonly { readonly id: string; readonly name: string; readonly url?: string }[];
+    readonly attachments: readonly ApprovalAttachment[];
     readonly events: readonly ApprovalEvent[];
     readonly eligibleActions: readonly ApprovalAction[];
     readonly readerProfileIds: readonly string[];

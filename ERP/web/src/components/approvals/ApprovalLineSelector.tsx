@@ -15,6 +15,7 @@ import type {
     ApprovalTemplateStep
 } from './approvalTypes';
 import styles from './ApprovalLineSelector.module.css';
+import { useDialogFocusTrap } from '@/components/common/useDialogFocusTrap';
 
 type ApprovalLineSelectorProps = {
     readonly organization: ApprovalOrganization | null;
@@ -56,15 +57,8 @@ export function ApprovalLineSelector({
         return organization.memberships.some(membership => membership.profileId === person.id && membership.unitId === unitId && membership.active !== false);
     }) ?? [];
 
-    React.useEffect(() => {
-        if (!open) return;
-        closeButtonRef.current?.focus();
-        function closeOnEscape(event: KeyboardEvent) {
-            if (event.key === 'Escape') setOpen(false);
-        }
-        document.addEventListener('keydown', closeOnEscape);
-        return () => document.removeEventListener('keydown', closeOnEscape);
-    }, [open]);
+    const closeSelector = React.useCallback(() => setOpen(false), []);
+    const dialogRef = useDialogFocusTrap<HTMLElement>(open, closeSelector, closeButtonRef);
 
     function openSelector() {
         setDraftSelections(selections);
@@ -90,7 +84,7 @@ export function ApprovalLineSelector({
             </div>
             {open && organization && (
                 <div className={styles.overlay} onMouseDown={event => { if (event.currentTarget === event.target) setOpen(false); }}>
-                    <section aria-labelledby={dialogTitleId} aria-modal="true" className={styles.dialog} role="dialog">
+                    <section aria-labelledby={dialogTitleId} aria-modal="true" className={styles.dialog} ref={dialogRef} role="dialog" tabIndex={-1}>
                         <header>
                             <div><strong id={dialogTitleId}>결재선 설정</strong><span>결재 단계와 참조자를 문서에 맞게 선택합니다.</span></div>
                             <button aria-label="닫기" onClick={() => setOpen(false)} ref={closeButtonRef} type="button"><X size={20} /></button>

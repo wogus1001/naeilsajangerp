@@ -40,5 +40,6 @@ test('Given a long approval line When preview pages are calculated Then every st
 
     assert.ok(pages.length > 1);
     assert.deepEqual(pages.flatMap(page => page.steps.map(item => item.id)), steps.map(item => item.id));
-    assert.deepEqual(pages.filter(page => page.steps.length > 0).map(page => page.stepOffset), [0, 4, 9]);
+    assert.ok(pages.every(page => page.steps.length <= 4));
+    assert.deepEqual(pages.filter(page => page.steps.length > 0).map(page => page.stepOffset), [0, 4, 8]);
 });

@@ -7,7 +7,7 @@ export type ApprovalPreviewPage = {
 };
 
 const FIRST_PAGE_CAPACITY = 4;
-const CONTINUATION_PAGE_CAPACITY = 5;
+const CONTINUATION_PAGE_CAPACITY = 4;
 
 function fieldWeight(field: ApprovalField): number {
     const base = (() => {

@@ -18,10 +18,10 @@ test('Given a company approval-admin assignment When checking management Then st
     assert.equal(canManageApprovals(requester('admin'), false), true);
 });
 
-test('Given an organization setting request When checking management Then only administrators, managers, and assigned unit managers can edit', () => {
+test('Given an organization setting request When checking management Then only system administrators and managers can edit', () => {
     assert.equal(canManageApprovalOrganization(requester('admin'), false), true);
     assert.equal(canManageApprovalOrganization(requester('manager'), false), true);
-    assert.equal(canManageApprovalOrganization(requester('staff'), true), true);
+    assert.equal(canManageApprovalOrganization(requester('staff'), true), false);
     assert.equal(canManageApprovalOrganization(requester('staff'), false), false);
 });
 

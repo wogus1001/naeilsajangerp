@@ -10,7 +10,7 @@ import styles from './ApprovalSettings.module.css';
 type ApprovalDelegationsSectionProps = {
     readonly delegations: readonly ApprovalDelegation[];
     readonly disabled: boolean;
-    readonly onCreate: (input: ApprovalDelegationInput) => void;
+    readonly onCreate: (input: ApprovalDelegationInput) => Promise<boolean>;
     readonly onDelete: (id: string) => void;
     readonly people: readonly ApprovalPerson[];
     readonly requesterProfileId: string;
@@ -51,13 +51,13 @@ export function ApprovalDelegationsSection({ delegations, disabled, onCreate, on
                 ))}
                 {delegations.length === 0 && <p className={styles.empty}>현재 적용 중인 결재 위임이 없습니다.</p>}
             </div>
-            <form className={styles.formBand} onSubmit={event => {
+            <form className={styles.formBand} onSubmit={async event => {
                 event.preventDefault();
                 const start = new Date(startsAt);
                 const end = new Date(endsAt);
                 if (!delegateProfileId || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
-                onCreate({ actionScope, delegateProfileId: delegateProfileId.trim(), endsAt: end.toISOString(), reason: reason.trim(), startsAt: start.toISOString() });
-                setDelegateProfileId(''); setReason('');
+                const saved = await onCreate({ actionScope, delegateProfileId: delegateProfileId.trim(), endsAt: end.toISOString(), reason: reason.trim(), startsAt: start.toISOString() });
+                if (saved) { setDelegateProfileId(''); setReason(''); }
             }}>
                 <label><span>대리자</span><select onChange={event => setDelegateProfileId(event.target.value)} value={delegateProfileId}><option value="">대리자 선택</option>{people.filter(person => person.id !== requesterProfileId).map(person => <option key={person.id} value={person.id}>{person.name}{person.email ? ` · ${person.email}` : ''}</option>)}</select></label>
                 <label><span>시작</span><input onChange={event => setStartsAt(event.target.value)} type="datetime-local" value={startsAt} /></label>

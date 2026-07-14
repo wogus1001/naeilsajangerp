@@ -2,6 +2,7 @@ import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, readApiJson } from '@/utils/apiResponse';
 import type {
     ApprovalAction,
+    ApprovalAttachment,
     ApprovalDelegation,
     ApprovalDocumentDetail,
     ApprovalDocumentSummary,
@@ -41,6 +42,8 @@ export type SaveApprovalDocumentInput = {
     readonly documentId?: string;
     readonly readerProfileIds: readonly string[];
     readonly receiverUnitIds: readonly string[];
+    readonly onDocumentSaved?: (documentId: string) => void;
+    readonly onAttachmentUploaded?: (file: File, attachment: ApprovalAttachment) => void;
 };
 
 export type SaveApprovalTemplateInput = {
@@ -167,6 +170,20 @@ export async function downloadApprovalAttachment(attachment: {
     URL.revokeObjectURL(objectUrl);
 }
 
+export async function downloadApprovalPdf(documentId: string, title: string): Promise<void> {
+    return downloadApprovalAttachment({
+        name: `${title || '전자결재 문서'}.pdf`,
+        url: `/api/approvals/documents/${encodeURIComponent(documentId)}/pdf`
+    });
+}
+
+export async function deleteApprovalAttachment(documentId: string, attachmentId: string): Promise<void> {
+    const params = new URLSearchParams({ attachmentId });
+    await requestJson(`/api/approvals/documents/${encodeURIComponent(documentId)}/attachments?${params.toString()}`, {
+        method: 'DELETE'
+    });
+}
+
 export function fetchApprovalTemplates(includeArchived = false): Promise<readonly ApprovalTemplate[]> {
     const params = new URLSearchParams();
     if (includeArchived) params.set('includeInactive', 'true');
@@ -221,19 +238,28 @@ export function saveApprovalDocument(input: SaveApprovalDocumentInput): Promise<
             receiverUnitIds: input.receiverUnitIds
         })
     }).then(async result => {
+        input.onDocumentSaved?.(result.document.id);
         for (const file of input.attachments) {
             const form = new FormData();
             form.set('file', file);
-            await requestJson(`/api/approvals/documents/${encodeURIComponent(result.document.id)}/attachments`, {
+            const uploaded = await requestJson<{ readonly attachment: {
+                readonly id: string;
+                readonly file_name: string;
+            } }>(`/api/approvals/documents/${encodeURIComponent(result.document.id)}/attachments`, {
                 method: 'POST',
                 body: form
+            });
+            input.onAttachmentUploaded?.(file, {
+                id: uploaded.attachment.id,
+                name: uploaded.attachment.file_name,
+                url: `/api/approvals/documents/${encodeURIComponent(result.document.id)}/attachments?attachmentId=${encodeURIComponent(uploaded.attachment.id)}`
             });
         }
         if (input.action === 'submit') {
             await requestJson(`/api/approvals/documents/${encodeURIComponent(result.document.id)}/actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'submit' })
+                body: JSON.stringify({ action: 'submit', requestId: crypto.randomUUID() })
             });
         }
         return fetchApprovalDocument(result.document.id);
@@ -243,12 +269,19 @@ export function saveApprovalDocument(input: SaveApprovalDocumentInput): Promise<
 export function runApprovalAction(
     documentId: string,
     action: ApprovalAction,
-    comment: string
+    comment: string,
+    expected?: { readonly versionId: string; readonly stepOrder: number | null }
 ): Promise<ApprovalDocumentDetail> {
     return requestJson<unknown>(`/api/approvals/documents/${encodeURIComponent(documentId)}/actions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, reason: comment })
+        body: JSON.stringify({
+            action,
+            reason: comment,
+            requestId: crypto.randomUUID(),
+            expectedVersionId: expected?.versionId || undefined,
+            expectedStepOrder: expected?.stepOrder
+        })
     }).then(() => fetchApprovalDocument(documentId));
 }
 

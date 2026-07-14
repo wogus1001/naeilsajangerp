@@ -10,12 +10,10 @@ import { resolveApprovalContext } from '../../../_shared/access';
 import { parseRequiredUuid } from '../../../_shared/boundary';
 import {
     DOCUMENT_SELECT,
-    actorAppearsInTargets,
     isApprovalRetentionExpired,
-    receiverIds,
-    type ApprovalDocumentRow,
-    type ApprovalDocumentStepRow
+    type ApprovalDocumentRow
 } from '../../../_shared/documents';
+import { canDownloadApprovalDocument } from '../../../_shared/download-access';
 import { approvalErrorResponse, throwDatabaseError } from '../../../_shared/errors';
 import { requireVisibleApprovalDocument } from '../../../_shared/visibility';
 
@@ -55,32 +53,6 @@ async function documentRow(
         .eq('id', id).eq('company_id', context.companyId).maybeSingle<ApprovalDocumentRow>();
     throwDatabaseError(error);
     return data;
-}
-
-async function canDownload(
-    context: Awaited<ReturnType<typeof resolveApprovalContext>>,
-    document: ApprovalDocumentRow
-): Promise<boolean> {
-    if (context.requester.role === 'admin' || context.approvalAdmin || document.author_profile_id === context.requester.id) return true;
-    const receivers = receiverIds(document.data);
-    if (receivers.profileIds.includes(context.requester.id)) return true;
-    const [steps, reader, memberships] = await Promise.all([
-        context.supabase.from('approval_document_steps')
-            .select('id, document_id, document_version_id, step_order, step_key, name, action_kind, completion_mode, status, targets, responses, started_at, completed_at')
-            .eq('document_id', document.id).eq('company_id', context.companyId).returns<ApprovalDocumentStepRow[]>(),
-        context.supabase.from('approval_document_readers').select('can_download')
-            .eq('document_id', document.id).eq('company_id', context.companyId)
-            .eq('profile_id', context.requester.id).maybeSingle<{ readonly can_download: boolean }>(),
-        context.supabase.from('organization_memberships').select('unit_id')
-            .eq('company_id', context.companyId).eq('profile_id', context.requester.id).eq('active', true)
-            .returns<Array<{ readonly unit_id: string }>>()
-    ]);
-    throwDatabaseError(steps.error);
-    throwDatabaseError(reader.error);
-    throwDatabaseError(memberships.error);
-    return (steps.data || []).some(step => actorAppearsInTargets(step.targets, context.requester.id))
-        || reader.data?.can_download === true
-        || (memberships.data || []).some(membership => receivers.unitIds.includes(membership.unit_id));
 }
 
 export async function POST(request: Request, routeContext: RouteContext) {
@@ -147,7 +119,7 @@ export async function GET(request: Request, routeContext: RouteContext) {
         if (isApprovalRetentionExpired(document.retention_until)) {
             return fail(403, 'FORBIDDEN', '보존 기간이 만료된 문서는 다운로드할 수 없습니다.');
         }
-        if (!await canDownload(context, document)) return fail(403, 'FORBIDDEN', '첨부 파일 다운로드 권한이 없습니다.');
+        if (!await canDownloadApprovalDocument(context, document)) return fail(403, 'FORBIDDEN', '첨부 파일 다운로드 권한이 없습니다.');
         const { data, error } = await context.supabase.from('approval_attachments')
             .select('id, company_id, document_id, file_name, storage_bucket, storage_path, mime_type, size_bytes')
             .eq('id', attachmentId).eq('document_id', documentId).eq('company_id', context.companyId)
@@ -161,5 +133,34 @@ export async function GET(request: Request, routeContext: RouteContext) {
         return Response.redirect(signed.signedUrl, 302);
     } catch (error) {
         return approvalErrorResponse(error, 'Failed to download approval attachment');
+    }
+}
+
+export async function DELETE(request: Request, routeContext: RouteContext) {
+    try {
+        const context = await resolveApprovalContext(request);
+        const documentId = parseRequiredUuid((await routeContext.params).id, 'id');
+        const attachmentId = parseRequiredUuid(new URL(request.url).searchParams.get('attachmentId'), 'attachmentId');
+        const document = await documentRow(context, documentId);
+        if (!document || document.author_profile_id !== context.requester.id) {
+            return fail(404, 'NOT_FOUND', 'Approval document not found');
+        }
+        if (!['임시저장', '반려', '회수'].includes(document.status)) {
+            return fail(409, 'CONFLICT', 'Submitted approval document attachments cannot be deleted');
+        }
+        const { data, error } = await context.supabase.from('approval_attachments')
+            .select('id, company_id, document_id, file_name, storage_bucket, storage_path, mime_type, size_bytes')
+            .eq('id', attachmentId).eq('document_id', documentId).eq('company_id', context.companyId)
+            .maybeSingle<ApprovalAttachmentRow>();
+        throwDatabaseError(error);
+        if (!data) return fail(404, 'NOT_FOUND', '첨부 파일을 찾을 수 없습니다.');
+        const { error: deleteError } = await context.supabase.from('approval_attachments').delete()
+            .eq('id', attachmentId).eq('document_id', documentId).eq('company_id', context.companyId);
+        throwDatabaseError(deleteError);
+        const { error: storageError } = await getSupabaseAdmin().storage.from(data.storage_bucket).remove([data.storage_path]);
+        if (storageError) console.error('Approval attachment orphan cleanup failed:', storageError);
+        return ok({ success: true });
+    } catch (error) {
+        return approvalErrorResponse(error, 'Failed to delete approval attachment');
     }
 }

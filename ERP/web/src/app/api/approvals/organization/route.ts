@@ -1,5 +1,5 @@
 import { fail, ok } from '@/lib/api-response';
-import { resolveApprovalContext, requireApprovalOrganizationManager, type ApprovalContext } from '../_shared/access';
+import { resolveApprovalContext, requireApprovalManager, requireApprovalOrganizationManager, type ApprovalContext } from '../_shared/access';
 import { parseRequiredUuid, readJsonRecord } from '../_shared/boundary';
 import { approvalErrorResponse, ApprovalRouteError, throwDatabaseError } from '../_shared/errors';
 import { organizationDeleteBlockerMessage, parseOrganizationDeleteEntity } from '../_shared/organization-deletion';
@@ -90,7 +90,6 @@ export async function PATCH(request: Request) {
     try {
         const body = await readJsonRecord(request);
         const context = await resolveApprovalContext(request, body);
-        requireApprovalOrganizationManager(context);
         const patch = parseOrganizationPatch(body, context.companyId, context.requester.id);
         if (patch.units === null && patch.memberships === null && patch.roleAssignments === null) {
             return fail(400, 'VALIDATION_ERROR', 'No organization changes were provided');
@@ -99,6 +98,8 @@ export async function PATCH(request: Request) {
         if (suppliedGroups > 1) {
             return fail(400, 'VALIDATION_ERROR', 'Update one organization setting group per request');
         }
+        if (patch.roleAssignments !== null) requireApprovalManager(context);
+        else requireApprovalOrganizationManager(context);
         if (patch.units !== null && patch.units.length > 0) {
             await requireScopedIds(context, 'organization_units', patch.units);
             const { error } = await context.supabase.from('organization_units').upsert(patch.units);
@@ -123,10 +124,11 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
     try {
         const context = await resolveApprovalContext(request);
-        requireApprovalOrganizationManager(context);
         const searchParams = new URL(request.url).searchParams;
         const entity = parseOrganizationDeleteEntity(searchParams.get('entity'));
         if (!entity) throw new ApprovalRouteError(400, 'VALIDATION_ERROR', '삭제할 설정 종류를 확인해 주세요.');
+        if (entity === 'role') requireApprovalManager(context);
+        else requireApprovalOrganizationManager(context);
         const recordId = parseRequiredUuid(searchParams.get('id'), 'id');
 
         if (entity === 'membership') {

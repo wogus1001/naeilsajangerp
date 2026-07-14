@@ -55,20 +55,6 @@ async function hasApprovalAdminAssignment(
     return (data || []).some(row => row.unit_id === null && activeAt(row, now));
 }
 
-async function hasOrganizationManagerAssignment(
-    supabase: ApprovalSupabase,
-    requester: RequesterProfile,
-    companyId: string
-): Promise<boolean> {
-    if (requester.role === 'admin' || requester.role === 'manager') return true;
-    const { count, error } = await supabase.from('organization_units').select('id', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('manager_profile_id', requester.id)
-        .eq('active', true);
-    throwDatabaseError(error);
-    return (count ?? 0) > 0;
-}
-
 export async function resolveApprovalContext(request: Request, parsedBody?: unknown): Promise<ApprovalContext> {
     const supabase = getSupabaseAdmin();
     const requester = await getAuthenticatedRequesterProfile(supabase, request);
@@ -82,16 +68,13 @@ export async function resolveApprovalContext(request: Request, parsedBody?: unkn
     if (!canAccessCompanyScope(requester, companyId)) {
         throw new ApprovalRouteError(403, 'FORBIDDEN', 'Cross-company approval access is denied');
     }
-    const [approvalAdmin, organizationManager] = await Promise.all([
-        hasApprovalAdminAssignment(supabase, requester, companyId),
-        hasOrganizationManagerAssignment(supabase, requester, companyId)
-    ]);
+    const approvalAdmin = await hasApprovalAdminAssignment(supabase, requester, companyId);
     return {
         supabase,
         requester,
         companyId,
         approvalAdmin,
-        organizationManager
+        organizationManager: requester.role === 'admin' || requester.role === 'manager'
     };
 }
 
@@ -103,7 +86,7 @@ export function requireApprovalManager(context: ApprovalContext): void {
 
 
 export function requireApprovalOrganizationManager(context: ApprovalContext): void {
-    if (!canManageApprovalOrganization(context.requester, context.organizationManager)) {
+    if (!canManageApprovalOrganization(context.requester)) {
         throw new ApprovalRouteError(403, 'FORBIDDEN', '부서와 구성원 설정은 팀장만 변경할 수 있습니다.');
     }
 }

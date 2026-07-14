@@ -15,6 +15,7 @@ import {
     type ApprovalTemplateVersionRow
 } from '../../../_shared/template-rows';
 import { parseTemplateDefinition, templateStepInserts } from '../../../_shared/template';
+import { canManageApprovals } from '../../../_shared/policy';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,13 +50,19 @@ export async function GET(request: Request, routeContext: RouteContext) {
     try {
         const context = await resolveApprovalContext(request);
         const templateId = parseRequiredUuid((await routeContext.params).id, 'id');
-        if (!await templateForCompany(context, templateId)) return fail(404, 'NOT_FOUND', 'Approval template not found');
-        const { data, error } = await context.supabase
+        const template = await templateForCompany(context, templateId);
+        if (!template) return fail(404, 'NOT_FOUND', 'Approval template not found');
+        let versionQuery = context.supabase
             .from('approval_template_versions')
             .select(VERSION_SELECT)
             .eq('company_id', context.companyId)
-            .eq('template_id', templateId)
-            .order('version_number', { ascending: false })
+            .eq('template_id', templateId);
+        if (!canManageApprovals(context.requester, context.approvalAdmin)) {
+            versionQuery = versionQuery
+                .eq('status', 'published')
+                .eq('id', template.current_version_id || '00000000-0000-0000-0000-000000000000');
+        }
+        const { data, error } = await versionQuery.order('version_number', { ascending: false })
             .returns<ApprovalTemplateVersionRow[]>();
         throwDatabaseError(error);
         const versions = data || [];

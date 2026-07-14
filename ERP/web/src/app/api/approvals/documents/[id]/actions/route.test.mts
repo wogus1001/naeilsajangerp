@@ -8,6 +8,7 @@ const companyId = '11111111-1111-4111-8111-111111111111';
 const actorId = '22222222-2222-4222-8222-222222222222';
 const authorId = '33333333-3333-4333-8333-333333333333';
 const documentId = '44444444-4444-4444-8444-444444444444';
+const requestId = '55555555-5555-4555-8555-555555555555';
 
 function documentRow(authorProfileId = authorId, status = '제출') {
     return {
@@ -63,17 +64,18 @@ async function payload(response: Response): Promise<Record<string, unknown>> {
 test('Given a valid approval action When posting Then the migration RPC receives the scoped actor atomically', async () => {
     const fake = fakeContext();
     const response = await handleApprovalActionPOST(
-        request({ action: 'approve', memo: '확인' }),
+        request({ action: 'approve', memo: '확인', requestId, expectedStepOrder: 1 }),
         { params: Promise.resolve({ id: documentId }) },
         { resolveContext: async () => fake.context }
     );
 
     assert.equal(response.status, 200);
     assert.deepEqual(fake.calls, [{
-        name: 'perform_approval_document_action',
+        name: 'perform_approval_document_action_idempotent',
         args: {
             p_action: 'approve', p_actor_profile_id: actorId, p_company_id: companyId,
-            p_document_id: documentId, p_memo: '확인'
+            p_document_id: documentId, p_memo: '확인', p_request_id: requestId,
+            p_expected_version_id: null, p_expected_step_order: 1
         }
     }]);
 });
@@ -81,7 +83,7 @@ test('Given a valid approval action When posting Then the migration RPC receives
 test('Given reject without a reason When posting Then validation blocks the RPC', async () => {
     const fake = fakeContext();
     const response = await handleApprovalActionPOST(
-        request({ action: 'reject' }),
+        request({ action: 'reject', requestId }),
         { params: Promise.resolve({ id: documentId }) },
         { resolveContext: async () => fake.context }
     );
@@ -95,7 +97,7 @@ test('Given reject without a reason When posting Then validation blocks the RPC'
 test('Given the author attempts approval When posting Then self approval is denied before the RPC', async () => {
     const fake = fakeContext({ authorProfileId: actorId });
     const response = await handleApprovalActionPOST(
-        request({ action: 'approve' }),
+        request({ action: 'approve', requestId }),
         { params: Promise.resolve({ id: documentId }) },
         { resolveContext: async () => fake.context }
     );

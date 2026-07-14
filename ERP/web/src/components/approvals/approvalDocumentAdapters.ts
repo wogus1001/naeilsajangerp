@@ -11,6 +11,7 @@ import type {
     ApprovalLineStep
 } from './approvalTypes';
 import { approvalCategoryLabel } from './approvalLabels';
+import { templateSteps } from './approvalTemplateAdapters';
 
 export function isApprovalRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -158,12 +159,16 @@ export function approvalDetailFromWire(value: unknown, fields: readonly Approval
     return {
         ...summary,
         editable: value.editable === true,
+        currentVersionId: text(value.document.currentVersionId),
+        currentStepOrder: typeof value.document.currentStepOrder === 'number' ? value.document.currentStepOrder : null,
         templateId: text(value.document.templateId),
         templateName: text(body.templateName, summary.templateName),
         securityLevel: text(value.document.securityLevel, 'company'),
         retentionPeriod: text(body.retentionPeriod, text(value.document.retentionUntil, '-')),
         documentBox: text(body.documentBox, text(value.document.category, 'general')),
         fields,
+        templateVersionId: text(version.templateVersionId),
+        templateSteps: templateSteps(value.templateSteps),
         values: fieldValues(version.values ?? value.document.values),
         approvalLine: lineSteps(value.steps),
         attachments: wireAttachments.flatMap((attachment, index) => {

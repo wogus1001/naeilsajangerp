@@ -546,14 +546,15 @@
     display: grid;
     width: 100%;
     gap: 16px;
+    container-type: inline-size;
 }
 
 .previewPage {
     position: relative;
     width: 100%;
-    min-height: 620px;
-    aspect-ratio: 210 / 297;
+    min-height: max(620px, calc(100cqw * 297 / 210));
     padding: 28px;
+    overflow: visible;
     background: #ffffff;
     color: #191f28;
     box-shadow: 0 8px 24px rgba(25, 31, 40, .08);
@@ -696,8 +697,7 @@
     }
 
     .previewPage {
-        min-height: auto;
-        aspect-ratio: 210 / 297;
+        min-height: calc(100cqw * 297 / 210);
         padding: 20px;
         box-shadow: none;
     }

@@ -6,14 +6,27 @@ import { ArrowLeft, FilePenLine, Save, Send } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { ApprovalAttachments } from './ApprovalAttachments';
-import { fetchApprovalDocument, fetchApprovalOrganization, fetchApprovalTemplates, saveApprovalDocument } from './approvalApi';
+import {
+    deleteApprovalAttachment,
+    fetchApprovalDocument,
+    fetchApprovalOrganization,
+    fetchApprovalTemplates,
+    saveApprovalDocument
+} from './approvalApi';
 import { ApprovalFieldRenderer } from './ApprovalFieldRenderer';
 import { ApprovalLineSelector } from './ApprovalLineSelector';
 import { ApprovalPageHeader } from './ApprovalPageHeader';
 import { ApprovalRecipientsPanel } from './ApprovalRecipientsPanel';
 import { approvalCategoryLabel } from './approvalLabels';
 import { ApprovalTemplatePicker } from './ApprovalTemplatePicker';
-import type { ApprovalFieldValue, ApprovalFieldValues, ApprovalLineSelections, ApprovalOrganization, ApprovalTemplate } from './approvalTypes';
+import type {
+    ApprovalAttachment,
+    ApprovalFieldValue,
+    ApprovalFieldValues,
+    ApprovalLineSelections,
+    ApprovalOrganization,
+    ApprovalTemplate
+} from './approvalTypes';
 import { hasApprovalValue } from './approvalValidation';
 import { approvalDocumentHref } from './approvalsNavigation';
 import { ApprovalWriteMeta, type ApprovalWriteMetaValue } from './ApprovalWriteMeta';
@@ -47,7 +60,8 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
     const [confirmSubmit, setConfirmSubmit] = React.useState(false);
     const [resultModal, setResultModal] = React.useState<ResultModal | null>(null);
     const [savedDocumentId, setSavedDocumentId] = React.useState('');
-    const [existingAttachmentCount, setExistingAttachmentCount] = React.useState(0);
+    const [existingAttachments, setExistingAttachments] = React.useState<readonly ApprovalAttachment[]>([]);
+    const [deletingAttachmentId, setDeletingAttachmentId] = React.useState('');
     const [organization, setOrganization] = React.useState<ApprovalOrganization | null>(null);
     const [readerProfileIds, setReaderProfileIds] = React.useState<readonly string[]>([]);
     const [approvalLineSelections, setApprovalLineSelections] = React.useState<ApprovalLineSelections>({});
@@ -58,7 +72,7 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
     React.useEffect(() => {
         let active = true;
         Promise.all([
-            fetchApprovalTemplates(Boolean(documentId)),
+            fetchApprovalTemplates(false),
             documentId ? fetchApprovalDocument(documentId) : Promise.resolve(null),
             fetchApprovalOrganization()
         ])
@@ -73,10 +87,10 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                         version: 0,
                         status: 'archived' as const,
                         fields: document.fields,
-                        steps: []
+                        steps: document.templateSteps
                     }, ...result]
                     : result.map(template => document && template.id === document.templateId
-                        ? { ...template, fields: document.fields }
+                        ? { ...template, fields: document.fields, steps: document.templateSteps }
                         : template);
                 setTemplates(documentTemplate);
                 setTemplateId(document?.templateId || '');
@@ -84,7 +98,7 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                 if (document) {
                     setTitle(document.title);
                     setValues(document.values);
-                    setExistingAttachmentCount(document.attachments.length);
+                    setExistingAttachments(document.attachments);
                     setReaderProfileIds(document.readerProfileIds);
                     setApprovalLineSelections(document.approvalLineSelections);
                     setReceiverUnitIds(document.receiverUnitIds);
@@ -123,8 +137,29 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
         if (!selectedTemplate) return '사용할 결재 양식을 선택해 주세요.';
         if (action === 'saveDraft') return '';
         if (!title.trim()) return '문서 제목을 입력해 주세요.';
-        const missing = selectedTemplate.fields.find(field => field.required && !hasApprovalValue(values[field.id]));
+        const attachmentCount = existingAttachments.length + files.length;
+        const missing = selectedTemplate.fields.find(field => field.required && (
+            field.type === 'attachment' ? attachmentCount === 0 : !hasApprovalValue(values[field.id])
+        ));
         return missing ? `${missing.label} 항목을 입력해 주세요.` : '';
+    }
+
+    async function removeExistingAttachment(attachment: ApprovalAttachment) {
+        const activeDocumentId = documentId || savedDocumentId;
+        if (!activeDocumentId || deletingAttachmentId) return;
+        setDeletingAttachmentId(attachment.id);
+        try {
+            await deleteApprovalAttachment(activeDocumentId, attachment.id);
+            setExistingAttachments(current => current.filter(item => item.id !== attachment.id));
+        } catch (caught) {
+            setResultModal({
+                title: '첨부파일을 삭제하지 못했습니다',
+                message: caught instanceof Error ? caught.message : '잠시 후 다시 시도해 주세요.',
+                type: 'error'
+            });
+        } finally {
+            setDeletingAttachmentId('');
+        }
     }
 
     async function save(action: 'saveDraft' | 'submit') {
@@ -145,12 +180,21 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                 securityLevel: meta.securityLevel,
                 templateId: selectedTemplate.id,
                 title: title.trim() || `${selectedTemplate.name} 임시 문서`,
-                documentId: documentId || undefined,
+                documentId: documentId || savedDocumentId || undefined,
                 readerProfileIds,
                 receiverUnitIds,
-                approvalLineSelections
+                approvalLineSelections,
+                onDocumentSaved: setSavedDocumentId,
+                onAttachmentUploaded: (file, attachment) => {
+                    setFiles(current => current.filter(item => item !== file));
+                    setExistingAttachments(current => current.some(item => item.id === attachment.id)
+                        ? current
+                        : [...current, attachment]);
+                }
             });
             setSavedDocumentId(document.id);
+            setExistingAttachments(document.attachments);
+            setFiles([]);
             setResultModal({
                 title: action === 'submit' ? '결재를 요청했습니다' : '임시저장했습니다',
                 message: action === 'submit' ? '첫 결재자에게 처리 요청이 전달됐습니다.' : '내 문서함에서 이어서 작성할 수 있습니다.',
@@ -203,8 +247,14 @@ export function ApprovalWritePage({ documentId = '' }: ApprovalWritePageProps) {
                     {!loading && !selectedTemplate && (
                         <div className={styles.emptyDocument}>사용 중인 양식이 없습니다. 양식 관리에서 양식 사용을 시작해 주세요.</div>
                     )}
-                    <ApprovalAttachments disabled={saving} existingCount={existingAttachmentCount} files={files} onChange={setFiles} />
-                    {existingAttachmentCount > 0 && <p className={styles.existingAttachmentNote}>기존 첨부파일 {existingAttachmentCount}개는 유지됩니다.</p>}
+                    <ApprovalAttachments
+                        deletingAttachmentId={deletingAttachmentId}
+                        disabled={saving}
+                        existing={existingAttachments}
+                        files={files}
+                        onChange={setFiles}
+                        onDeleteExisting={attachment => void removeExistingAttachment(attachment)}
+                    />
                 </div>
                 <aside className={styles.writeSidebar}>
                     <div className={styles.sidePanel}>

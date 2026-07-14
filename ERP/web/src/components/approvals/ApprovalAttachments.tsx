@@ -4,23 +4,33 @@ import {
     formatApprovalAttachmentSize,
     mergeApprovalAttachmentFiles
 } from './approvalAttachmentFiles';
+import type { ApprovalAttachment } from './approvalTypes';
 import styles from './ApprovalDocument.module.css';
 
 type ApprovalAttachmentsProps = {
     readonly disabled?: boolean;
-    readonly existingCount?: number;
+    readonly deletingAttachmentId?: string;
+    readonly existing?: readonly ApprovalAttachment[];
     readonly files: readonly File[];
+    readonly onDeleteExisting?: (attachment: ApprovalAttachment) => void;
     readonly onChange: (files: readonly File[]) => void;
 };
 
 const ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.jpg,.jpeg,.png,.webp';
 
-export function ApprovalAttachments({ disabled = false, existingCount = 0, files, onChange }: ApprovalAttachmentsProps) {
+export function ApprovalAttachments({
+    deletingAttachmentId = '',
+    disabled = false,
+    existing = [],
+    files,
+    onChange,
+    onDeleteExisting
+}: ApprovalAttachmentsProps) {
     const [message, setMessage] = React.useState('');
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     function addFiles(selected: readonly File[]) {
-        const result = mergeApprovalAttachmentFiles({ current: files, existingCount, selected });
+        const result = mergeApprovalAttachmentFiles({ current: files, existingCount: existing.length, selected });
         onChange(result.files);
         setMessage(result.message);
         if (inputRef.current) inputRef.current.value = '';
@@ -30,7 +40,7 @@ export function ApprovalAttachments({ disabled = false, existingCount = 0, files
         <div className={styles.attachments}>
             <div className={styles.sectionHeading}>
                 <span><Paperclip size={18} aria-hidden="true" /><strong>첨부파일</strong></span>
-                <small>{existingCount + files.length}개</small>
+                <small>{existing.length + files.length}개</small>
             </div>
             {!disabled && (
                 <div
@@ -55,8 +65,23 @@ export function ApprovalAttachments({ disabled = false, existingCount = 0, files
                 </div>
             )}
             {message && <p className={styles.fileError} role="alert">{message}</p>}
-            {files.length > 0 && (
+            {(existing.length > 0 || files.length > 0) && (
                 <ul className={styles.fileList}>
+                    {existing.map(attachment => (
+                        <li key={attachment.id}>
+                            <span><Paperclip size={15} aria-hidden="true" /><span><strong>{attachment.name}</strong><small>저장된 파일</small></span></span>
+                            {!disabled && onDeleteExisting && (
+                                <button
+                                    aria-label={`${attachment.name} 삭제`}
+                                    disabled={deletingAttachmentId === attachment.id}
+                                    onClick={() => onDeleteExisting(attachment)}
+                                    type="button"
+                                >
+                                    <X size={15} aria-hidden="true" />
+                                </button>
+                            )}
+                        </li>
+                    ))}
                     {files.map((file, index) => (
                         <li key={`${file.name}-${index}`}>
                             <span><Paperclip size={15} aria-hidden="true" /><span><strong>{file.name}</strong><small>{formatApprovalAttachmentSize(file.size)} · 업로드 대기</small></span></span>

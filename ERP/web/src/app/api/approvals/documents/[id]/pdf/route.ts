@@ -6,6 +6,7 @@ import { parseRequiredUuid } from '../../../_shared/boundary';
 import { DOCUMENT_SELECT, isApprovalRetentionExpired, type ApprovalDocumentRow } from '../../../_shared/documents';
 import { approvalErrorResponse, throwDatabaseError } from '../../../_shared/errors';
 import { requireVisibleApprovalDocument } from '../../../_shared/visibility';
+import { canDownloadApprovalDocument } from '../../../_shared/download-access';
 import { createApprovalPdfInput, createApprovalPdfTemplate, paginateApprovalBody } from '@/lib/approvals/pdf-template';
 
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,9 @@ export async function GET(request: Request, routeContext: RouteContext) {
         if (!document) return fail(404, 'NOT_FOUND', 'Approval document not found');
         if (isApprovalRetentionExpired(document.retention_until)) {
             return fail(403, 'FORBIDDEN', '보존 기간이 만료된 문서는 PDF로 출력할 수 없습니다.');
+        }
+        if (!await canDownloadApprovalDocument(context, document)) {
+            return fail(403, 'FORBIDDEN', 'PDF 다운로드 권한이 없습니다.');
         }
         const [versionResult, eventResult] = await Promise.all([
             document.current_version_id

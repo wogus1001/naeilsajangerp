@@ -3,7 +3,9 @@ import { resolveApprovalContext } from '../../../_shared/access';
 import {
     hasOwn,
     parseAction,
+    parseIntegerValue,
     parseOptionalText,
+    parseOptionalUuid,
     parseRecord,
     parseRequiredText,
     parseRequiredUuid,
@@ -92,6 +94,11 @@ export async function handleApprovalActionPOST(
         const document = await documentForAction(context, id);
         if (!document) return fail(404, 'NOT_FOUND', 'Approval document not found');
         if (action === 'saveDraft') return saveDraft(context, document, body);
+        const requestId = parseRequiredUuid(body.requestId, 'requestId');
+        const expectedVersionId = parseOptionalUuid(body.expectedVersionId, 'expectedVersionId');
+        const expectedStepOrder = body.expectedStepOrder === undefined || body.expectedStepOrder === null
+            ? null
+            : parseIntegerValue(body.expectedStepOrder, 'expectedStepOrder', 1, 10_000);
         const memo = parseOptionalText(body.reason ?? body.memo, 'memo', 2_000);
         if (action === 'reject' && !memo) {
             return fail(400, 'VALIDATION_ERROR', 'A rejection reason is required');
@@ -130,12 +137,15 @@ export async function handleApprovalActionPOST(
         if (action === 'approve' && document.author_profile_id === context.requester.id) {
             return fail(403, 'FORBIDDEN', 'Self approval is not allowed');
         }
-        const { data, error } = await context.supabase.rpc('perform_approval_document_action', {
+        const { data, error } = await context.supabase.rpc('perform_approval_document_action_idempotent', {
             p_document_id: id,
             p_company_id: context.companyId,
             p_action: action,
             p_actor_profile_id: context.requester.id,
-            p_memo: memo
+            p_memo: memo,
+            p_request_id: requestId,
+            p_expected_version_id: expectedVersionId,
+            p_expected_step_order: expectedStepOrder
         });
         throwDatabaseError(error);
         return ok({ action, result: data });
