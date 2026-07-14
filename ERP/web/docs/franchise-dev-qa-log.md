@@ -1259,3 +1259,7 @@
 - UI 안정성: 결재 확인창과 결재선 선택창에 포커스 트랩을 적용하고, A4 미리보기의 페이지 분할과 반쪽 너비 필드 정렬을 보정했다.
 - 신규 SQL: 기존 전자결재 SQL 적용 후 `supabase_company_approvals_security_review_migration.sql`을 마지막에 적용한다. **SQL 등록 필요**.
 - 검증: 관련 자동 테스트 96건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Next.js는 16.2.10, jsPDF는 4.2.1로 갱신했다.
+- 모바일 보정: `/dashboard/franchise-leads/work-intake`의 데스크톱 표를 모바일에서 카드형 행으로 표시해 제목, 등록자, 상태, 날짜와 `확인/수정`, `삭제` 액션을 한 화면에서 사용할 수 있게 했다. 헤더 설명과 카드 텍스트의 한글 단어 중간 줄바꿈을 방지했다.
+- 브라우저 QA: production build에서 `/approvals`, `/approvals/write`, `/approvals/templates`, `/approvals/settings`, `/dashboard/franchise-operations/schedule`, `/dashboard/franchise-leads/work-intake`를 1440x900과 390x844로 확인했다. page-level horizontal overflow 0건, console error 0건이었고 모바일 업무 접수 카드는 모든 관리 버튼이 화면 안에 표시됐다. 최종 독립 시각 QA 결과는 PASS다.
+- 릴리스 검증: PR #4, #6, #7, #8의 Vercel 체크 통과 후 `dev -> main` PR #5를 병합했다. main `7306723`을 `naeilsajang` production deployment `dpl_45fnu8CDmTTJpFhi6Jk2uVnX84sL`로 배포했고 `READY`, 운영 도메인 2개 alias, `/login`, `/approvals`, `/dashboard/franchise-operations/schedule` 200 응답을 확인했다.
+- SQL 순서: `supabase_company_approvals_v2_migration.sql`, `supabase_company_approvals_organization_delete_safety_migration.sql`, `supabase_company_approvals_document_line_override_migration.sql`, `supabase_company_approvals_security_review_migration.sql` 순으로 적용한다. `supabase_franchise_schedule_visibility_migration.sql`은 최신 파일 재적용이 필요하다. **SQL 등록 필요**.
