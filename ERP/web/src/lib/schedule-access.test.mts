@@ -21,7 +21,8 @@ test('Given an approval schedule When the requester is an explicit target Then t
         companyId,
         metadata: { targetProfileIds: [requesterId] },
         scope: 'company',
-        sourceType: 'approval-document'
+        sourceType: 'approval-document',
+        approvalAccessGranted: true
     }), true);
 });
 
@@ -31,8 +32,19 @@ test('Given a pending approval delegate When the delegate is included in target 
         companyId,
         metadata: { targetProfileIds: [requesterId] },
         scope: 'company',
-        sourceType: 'approval-document'
+        sourceType: 'approval-document',
+        approvalAccessGranted: true
     }), true);
+});
+
+test('Given a revoked delegate remains in schedule metadata When current access is denied Then the stale schedule is hidden', () => {
+    assert.equal(canReadSchedule(requester, {
+        companyId,
+        metadata: { targetProfileIds: [requesterId] },
+        scope: 'company',
+        sourceType: 'approval-document',
+        approvalAccessGranted: false
+    }), false);
 });
 
 test('Given a parallel approval response When the responder is removed from pending targets Then the stale schedule is hidden', () => {

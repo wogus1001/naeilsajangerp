@@ -38,21 +38,24 @@ create policy "Users can view own franchise notifications"
   using (
     (
       recipient_profile_id = auth.uid()
+      and exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid()
+          and p.company_id = franchise_notifications.company_id
+          and p.status = 'active'
+          and p.role <> 'partner_vendor'
+      )
       and (
         source_type is distinct from 'workflow-approval'
-        or exists (
-          select 1 from public.profiles p
-          where p.id = auth.uid()
-            and p.company_id = franchise_notifications.company_id
-            and p.status = 'active'
-            and p.role <> 'partner_vendor'
+        or not (coalesce(data, '{}'::jsonb) ? 'stepOrder')
+        or public.can_act_on_approval_document(
+          company_id,
+          coalesce(data ->> 'documentId', ''),
+          auth.uid()
         )
       )
     )
-    or exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
+    or public.can_manage_company_approvals(company_id)
   );
 
 drop policy if exists "Users can update own franchise notifications" on public.franchise_notifications;
@@ -62,40 +65,46 @@ create policy "Users can update own franchise notifications"
   using (
     (
       recipient_profile_id = auth.uid()
+      and exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid()
+          and p.company_id = franchise_notifications.company_id
+          and p.status = 'active'
+          and p.role <> 'partner_vendor'
+      )
       and (
         source_type is distinct from 'workflow-approval'
-        or exists (
-          select 1 from public.profiles p
-          where p.id = auth.uid()
-            and p.company_id = franchise_notifications.company_id
-            and p.status = 'active'
-            and p.role <> 'partner_vendor'
+        or not (coalesce(data, '{}'::jsonb) ? 'stepOrder')
+        or public.can_act_on_approval_document(
+          company_id,
+          coalesce(data ->> 'documentId', ''),
+          auth.uid()
         )
       )
     )
-    or exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
+    or public.can_manage_company_approvals(company_id)
   )
   with check (
     (
       recipient_profile_id = auth.uid()
+      and exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid()
+          and p.company_id = franchise_notifications.company_id
+          and p.status = 'active'
+          and p.role <> 'partner_vendor'
+      )
       and (
         source_type is distinct from 'workflow-approval'
-        or exists (
-          select 1 from public.profiles p
-          where p.id = auth.uid()
-            and p.company_id = franchise_notifications.company_id
-            and p.status = 'active'
-            and p.role <> 'partner_vendor'
+        or not (coalesce(data, '{}'::jsonb) ? 'stepOrder')
+        or public.can_act_on_approval_document(
+          company_id,
+          coalesce(data ->> 'documentId', ''),
+          auth.uid()
         )
       )
     )
-    or exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
+    or public.can_manage_company_approvals(company_id)
   );
 
 create or replace function public.sync_approval_document_workflow(

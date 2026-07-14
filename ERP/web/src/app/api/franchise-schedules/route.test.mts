@@ -17,7 +17,7 @@ type HandlerExports = {
 type UnknownFunction = (...args: readonly unknown[]) => unknown;
 type QueryFilter = {
     readonly column: string;
-    readonly operator: 'eq' | 'gte' | 'is' | 'lte';
+    readonly operator: 'eq' | 'gte' | 'in' | 'is' | 'lte';
     readonly value: unknown;
 };
 type MutationLog = {
@@ -26,6 +26,7 @@ type MutationLog = {
     readonly table: string;
 };
 type FakeState = {
+    readonly approvalSteps: Record<string, JsonRecord>;
     readonly filters: QueryFilter[];
     readonly mutations: MutationLog[];
     readonly profiles: Record<string, JsonRecord>;
@@ -76,6 +77,7 @@ const inactiveRequester: RequesterProfile = { company_id: 'company-1', id: 'inac
 
 function createState(overrides: Partial<FakeState> = {}): FakeState {
     return {
+        approvalSteps: {},
         filters: [],
         mutations: [],
         profiles: {
@@ -132,12 +134,16 @@ function matches(row: JsonRecord, filter: QueryFilter): boolean {
             return String(rowValue ?? '') >= String(filter.value ?? '');
         case 'is':
             return rowValue === filter.value;
+        case 'in':
+            return Array.isArray(filter.value) && filter.value.includes(rowValue);
         case 'lte':
             return String(rowValue ?? '') <= String(filter.value ?? '');
     }
 }
 
 function rowsForTable(state: FakeState, table: string): readonly JsonRecord[] {
+    if (table === 'approval_delegations') return [];
+    if (table === 'approval_document_steps') return Object.values(state.approvalSteps);
     if (table === 'profiles') return Object.values(state.profiles);
     if (table === 'franchise_schedules') return Object.values(state.schedules);
     return [];
@@ -187,6 +193,11 @@ class FakeSelectQuery {
         return this;
     }
 
+    in(column: string, value: readonly unknown[]): this {
+        this.filters.push({ column, operator: 'in', value });
+        return this;
+    }
+
     lte(column: string, value: unknown): this {
         this.filters.push({ column, operator: 'lte', value });
         this.state.filters.push({ column, operator: 'lte', value });
@@ -194,6 +205,10 @@ class FakeSelectQuery {
     }
 
     order(): this {
+        return this;
+    }
+
+    returns(): this {
         return this;
     }
 
@@ -383,6 +398,24 @@ test('Given shared and personal schedules When listing Then another users person
 
 test('Given mirrored approval schedules When listing Then only current targets can read them', async () => {
     const state = createState({
+        approvalSteps: {
+            visible: {
+                action_kind: 'approval',
+                company_id: 'company-1',
+                document_id: 'document-1',
+                responses: [],
+                status: 'active',
+                targets: [{ profile_id: 'staff-1', delegate_profile_ids: [] }]
+            },
+            hidden: {
+                action_kind: 'approval',
+                company_id: 'company-1',
+                document_id: 'document-2',
+                responses: [],
+                status: 'active',
+                targets: [{ profile_id: 'manager-1', delegate_profile_ids: [] }]
+            }
+        },
         schedules: {
             visible: scheduleRow({
                 assignee_profile_id: null,
@@ -420,7 +453,9 @@ test('Given calendar date aliases When listing schedules Then from and to bounds
     );
 
     assert.equal(response.status, 200);
-    assert.deepEqual(state.filters.filter(filter => filter.operator === 'gte' || filter.operator === 'lte'), [
+    assert.deepEqual(state.filters.filter(filter => (
+        filter.column === 'date' && (filter.operator === 'gte' || filter.operator === 'lte')
+    )), [
         { column: 'date', operator: 'gte', value: '2026-07-01' },
         { column: 'date', operator: 'lte', value: '2026-07-31' }
     ]);

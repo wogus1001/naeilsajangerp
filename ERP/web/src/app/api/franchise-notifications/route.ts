@@ -18,6 +18,7 @@ import {
     type VendorContractNotificationRecipient
 } from '@/lib/franchise-vendor-contract-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dismissStaleApprovalNotifications } from '@/lib/approval-notification-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -369,6 +370,9 @@ export async function GET(request: Request) {
             requesterId: requester.id,
             requesterIsAdmin
         });
+        if (requester.role !== 'partner_vendor') {
+            await dismissStaleApprovalNotifications(supabaseAdmin, companyId, requester.id);
+        }
         if (canDispatchFranchiseNotificationAlimtalk({ companyId, requesterIsAdmin })) {
             try {
                 await notifyAlimtalkFranchiseNotificationCandidates(supabaseAdmin, notificationCandidates);
@@ -431,6 +435,10 @@ export async function PATCH(request: Request) {
         const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
         const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;
 
+        if (requester.role !== 'partner_vendor') {
+            await dismissStaleApprovalNotifications(supabaseAdmin, companyId, requester.id);
+        }
+
         if (body.markAllRead === true) {
             let query = supabaseAdmin
                 .from('franchise_notifications')
@@ -451,6 +459,7 @@ export async function PATCH(request: Request) {
             .from('franchise_notifications')
             .update({ read_at: now, updated_at: now })
             .eq('id', notificationId)
+            .is('dismissed_at', null)
             .eq('recipient_profile_id', requester.id);
         if (companyId) query = query.eq('company_id', companyId);
         if (requester.role === 'partner_vendor') query = query.neq('source_type', 'workflow-approval');

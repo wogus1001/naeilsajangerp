@@ -8,6 +8,7 @@ import {
 import { throwDatabaseError } from './errors';
 import { canViewApprovalDocument } from './policy';
 import { isCurrentOrganizationMembership } from './download-access';
+import { loadCurrentApprovalDelegations } from '@/lib/approval-delegation-access';
 
 type ReaderAccessRow = {
     readonly document_id: string;
@@ -25,7 +26,7 @@ export async function visibleApprovalDocuments(
 ): Promise<readonly ApprovalDocumentRow[]> {
     if (documents.length === 0 || context.requester.role === 'admin' || context.approvalAdmin) return documents;
     const documentIds = documents.map(document => document.id);
-    const [steps, readers, memberships] = await Promise.all([
+    const [steps, readers, memberships, delegations] = await Promise.all([
         context.supabase
             .from('approval_document_steps')
             .select('id, document_id, document_version_id, step_order, step_key, name, action_kind, completion_mode, status, targets, responses, started_at, completed_at')
@@ -45,7 +46,8 @@ export async function visibleApprovalDocuments(
             .eq('company_id', context.companyId)
             .eq('profile_id', context.requester.id)
             .eq('active', true)
-            .returns<MembershipAccessRow[]>()
+            .returns<MembershipAccessRow[]>(),
+        loadCurrentApprovalDelegations(context.supabase, context.companyId, context.requester.id)
     ]);
     throwDatabaseError(steps.error);
     throwDatabaseError(readers.error);
@@ -60,7 +62,12 @@ export async function visibleApprovalDocuments(
             requesterId: context.requester.id,
             authorProfileId: document.author_profile_id,
             pastOrActiveAssignee: document.approver_profile_id === context.requester.id || (steps.data || []).some(step =>
-                step.document_id === document.id && actorAppearsInTargets(step.targets, context.requester.id)),
+                step.document_id === document.id && actorAppearsInTargets(
+                    step.targets,
+                    context.requester.id,
+                    step.action_kind,
+                    delegations
+                )),
             reader: readerDocumentIds.has(document.id),
             organizationReceiver: (
                 receivers.profileIds.includes(context.requester.id) ||

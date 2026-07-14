@@ -279,6 +279,184 @@ $$;
 
 revoke all on function public.resolve_approval_step_targets(uuid, uuid, text, jsonb, text, timestamptz) from public;
 
+create or replace function public.can_access_approval_document(target_company_id uuid, target_document_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.is_approval_company_member(target_company_id)
+    and exists (
+      select 1
+      from public.approval_documents document
+      where document.id = target_document_id
+        and document.company_id = target_company_id
+        and (
+          public.can_manage_company_approvals(target_company_id)
+          or document.author_profile_id = auth.uid()
+          or document.approver_profile_id = auth.uid()
+          or exists (
+            select 1
+            from public.approval_document_readers reader
+            where reader.document_id = document.id
+              and reader.company_id = document.company_id
+              and reader.profile_id = auth.uid()
+          )
+          or exists (
+            select 1
+            from public.approval_document_steps step
+            cross join lateral jsonb_array_elements(step.targets) target
+            where step.document_id = document.id
+              and step.company_id = document.company_id
+              and (
+                target ->> 'profile_id' = auth.uid()::text
+                or (
+                  coalesce(target -> 'delegate_profile_ids', '[]'::jsonb) ? auth.uid()::text
+                  and exists (
+                    select 1
+                    from public.approval_delegations delegation
+                    where delegation.company_id = document.company_id
+                      and delegation.delegator_profile_id = nullif(target ->> 'profile_id', '')::uuid
+                      and delegation.delegate_profile_id = auth.uid()
+                      and delegation.active
+                      and step.action_kind = any(delegation.action_scope)
+                      and delegation.starts_at <= clock_timestamp()
+                      and delegation.ends_at >= clock_timestamp()
+                  )
+                )
+              )
+          )
+        )
+    );
+$$;
+
+create or replace function public.can_read_approval_document(target_document_id uuid, target_company_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.can_access_approval_document(target_company_id, target_document_id);
+$$;
+
+revoke all on function public.can_access_approval_document(uuid, uuid) from public;
+revoke all on function public.can_read_approval_document(uuid, uuid) from public;
+grant execute on function public.can_read_approval_document(uuid, uuid) to authenticated, service_role;
+
+create or replace function public.can_act_on_approval_document(
+  target_company_id uuid,
+  target_document_id text,
+  target_actor_profile_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (
+    (coalesce(auth.role(), '') = 'service_role' or auth.uid() = target_actor_profile_id)
+    and exists (
+      select 1
+      from public.profiles actor
+      where actor.id = target_actor_profile_id
+        and actor.company_id = target_company_id
+        and actor.status = 'active'
+        and actor.role <> 'partner_vendor'
+    )
+    and exists (
+      select 1
+      from public.approval_documents document
+      join public.approval_document_steps step
+        on step.document_id = document.id
+        and step.company_id = document.company_id
+        and step.document_version_id = document.current_version_id
+        and step.step_order = document.current_step_order
+        and step.status = 'active'
+      cross join lateral jsonb_array_elements(step.targets) target
+      where document.id::text = target_document_id
+        and document.company_id = target_company_id
+        and document.status = '제출'
+        and not exists (
+          select 1
+          from jsonb_array_elements(coalesce(step.responses, '[]'::jsonb)) response
+          where response ->> 'target_profile_id' = target ->> 'profile_id'
+        )
+        and (
+          target ->> 'profile_id' = target_actor_profile_id::text
+          or (
+            coalesce(target -> 'delegate_profile_ids', '[]'::jsonb) ? target_actor_profile_id::text
+            and exists (
+              select 1
+              from public.approval_delegations delegation
+              where delegation.company_id = document.company_id
+                and delegation.delegator_profile_id = nullif(target ->> 'profile_id', '')::uuid
+                and delegation.delegate_profile_id = target_actor_profile_id
+                and delegation.active
+                and step.action_kind = any(delegation.action_scope)
+                and delegation.starts_at <= clock_timestamp()
+                and delegation.ends_at >= clock_timestamp()
+            )
+          )
+        )
+    )
+  );
+$$;
+
+revoke all on function public.can_act_on_approval_document(uuid, text, uuid) from public;
+grant execute on function public.can_act_on_approval_document(uuid, text, uuid) to authenticated, service_role;
+
+drop policy if exists "Company members can view schedules" on public.schedules;
+create policy "Company members can view schedules" on public.schedules
+  for select using (
+    public.is_approval_company_member(company_id)
+    and (
+      source_type is distinct from 'approval-document'
+      or public.can_act_on_approval_document(company_id, source_id, auth.uid())
+      or exists (
+        select 1 from public.profiles profile
+        where profile.id = auth.uid()
+          and profile.company_id = schedules.company_id
+          and profile.status = 'active'
+          and profile.role = 'admin'
+      )
+    )
+  );
+
+drop policy if exists "Users can view own franchise notifications" on public.franchise_notifications;
+create policy "Users can view own franchise notifications"
+  on public.franchise_notifications
+  for select
+  using (
+    (
+      recipient_profile_id = auth.uid()
+      and exists (
+        select 1 from public.profiles profile
+        where profile.id = auth.uid()
+          and profile.company_id = franchise_notifications.company_id
+          and profile.status = 'active'
+          and profile.role <> 'partner_vendor'
+      )
+      and (
+        source_type is distinct from 'workflow-approval'
+        or not (coalesce(data, '{}'::jsonb) ? 'stepOrder')
+        or public.can_act_on_approval_document(
+          company_id,
+          coalesce(data ->> 'documentId', ''),
+          auth.uid()
+        )
+      )
+    )
+    or exists (
+      select 1 from public.profiles profile
+      where profile.id = auth.uid()
+        and profile.status = 'active'
+        and profile.role = 'admin'
+    )
+  );
+
 -- Keep action retries from applying the same approval transition more than once.
 create table if not exists public.approval_action_requests (
   id uuid primary key default gen_random_uuid(),
@@ -316,6 +494,21 @@ declare
 begin
   if p_request_id is null then
     raise exception using errcode = '22023', message = 'approval action request id is required';
+  end if;
+
+  if coalesce(auth.role(), '') <> 'service_role'
+    and (auth.uid() is null or auth.uid() <> p_actor_profile_id) then
+    raise exception using errcode = '42501', message = 'approval action actor does not match authenticated user';
+  end if;
+
+  if not exists (
+    select 1 from public.profiles actor
+    where actor.id = p_actor_profile_id
+      and actor.company_id = p_company_id
+      and actor.status = 'active'
+      and actor.role <> 'partner_vendor'
+  ) then
+    raise exception using errcode = '42501', message = 'approval action actor is not an active company employee';
   end if;
 
   select document.* into document_row

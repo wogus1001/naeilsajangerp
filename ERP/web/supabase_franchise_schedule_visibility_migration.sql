@@ -123,8 +123,7 @@ create policy "Company members can view franchise schedules" on public.franchise
       (
         source_type = 'approval-document'
         and (
-          assignee_profile_id = auth.uid()
-          or coalesce(metadata -> 'targetProfileIds', '[]'::jsonb) ? auth.uid()::text
+          public.can_act_on_approval_document(company_id, source_id, auth.uid())
           or exists (
             select 1
             from public.profiles p

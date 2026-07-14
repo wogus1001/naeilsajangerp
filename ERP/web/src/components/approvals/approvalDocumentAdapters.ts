@@ -75,8 +75,9 @@ function lineSteps(value: unknown): readonly ApprovalLineStep[] {
     if (!Array.isArray(value)) return [];
     return value.flatMap((item, index) => {
         if (!isApprovalRecord(item)) return [];
-        const targets = Array.isArray(item.targets) ? item.targets : [];
-        const target = targets.find(isApprovalRecord);
+        const targets = Array.isArray(item.targets) ? item.targets.filter(isApprovalRecord) : [];
+        const assigneeNames = targets.map(target => text(target.profile_name)).filter(Boolean);
+        const assigneeDepartments = [...new Set(targets.map(target => text(target.unit_name)).filter(Boolean))];
         const action = text(item.action);
         const kind = action === 'agreement' ? 'agreement' : action === 'acknowledgement' ? 'recipient' : 'approval';
         const stepStatus = text(item.status);
@@ -87,8 +88,8 @@ function lineSteps(value: unknown): readonly ApprovalLineStep[] {
             id: text(item.id, `step-${index + 1}`),
             kind,
             order: typeof item.order === 'number' ? item.order : index + 1,
-            assigneeName: target ? text(target.profile_name, text(item.name, `${index + 1}단계`)) : text(item.name, `${index + 1}단계`),
-            assigneeDepartment: target ? text(target.unit_name, '조직 자동 지정') : '조직 자동 지정',
+            assigneeName: assigneeNames.join(', ') || text(item.name, `${index + 1}단계`),
+            assigneeDepartment: assigneeDepartments.join(', ') || '조직 자동 지정',
             status: mappedStatus,
             actedAt: text(item.completedAt) || null
         }];

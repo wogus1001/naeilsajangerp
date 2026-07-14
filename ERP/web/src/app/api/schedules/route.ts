@@ -11,6 +11,7 @@ import {
 import { fail, ok } from '@/lib/api-response';
 import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
 import { canReadSchedule } from '@/lib/schedule-access';
+import { loadActionableApprovalDocumentIds } from '@/lib/approval-delegation-access';
 import {
     completeWorkflowSchedule,
     upsertWorkflowSchedule,
@@ -222,7 +223,21 @@ export async function GET(request: Request) {
         const { data, error } = await query;
         if (error) throw error;
 
+        const approvalDocumentIds = (data || [])
+            .filter((row: ScheduleRow) => row.source_type === 'approval-document' && row.source_id)
+            .map((row: ScheduleRow) => row.source_id || '');
+        const actionableApprovalDocumentIds = isAdmin(requesterProfile) || !requesterProfile.company_id
+            ? new Set<string>()
+            : await loadActionableApprovalDocumentIds(
+                supabaseAdmin,
+                requesterProfile.company_id,
+                requesterProfile.id,
+                approvalDocumentIds
+            );
         let result = (data || []).filter((row: ScheduleRow) => canReadSchedule(requesterProfile, {
+            approvalAccessGranted: row.source_type === 'approval-document'
+                ? actionableApprovalDocumentIds.has(row.source_id || '')
+                : undefined,
             assigneeProfileId: row.assignee_profile_id,
             companyId: row.company_id,
             metadata: row.metadata,

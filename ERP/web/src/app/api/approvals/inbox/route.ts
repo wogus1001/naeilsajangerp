@@ -15,6 +15,7 @@ import { approvalErrorResponse, throwDatabaseError } from '../_shared/errors';
 import { filterApprovalInboxDocuments } from '../_shared/inbox-filtering';
 import { approvalDocumentViews } from '../_shared/presentation';
 import { visibleApprovalDocuments } from '../_shared/visibility';
+import { loadCurrentApprovalDelegations } from '@/lib/approval-delegation-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
     try {
         const context = await resolveApprovalContext(request);
         const parsed = parseInboxQuery(new URL(request.url).searchParams);
-        const [documents, steps, readers, memberships] = await Promise.all([
+        const [documents, steps, readers, memberships, delegations] = await Promise.all([
             allRows<ApprovalDocumentRow>((from, to) => context.supabase.from('approval_documents').select(DOCUMENT_SELECT)
                 .eq('company_id', context.companyId).order('updated_at', { ascending: false })
                 .range(from, to).returns<ApprovalDocumentRow[]>()),
@@ -98,11 +99,22 @@ export async function GET(request: Request) {
                 .range(from, to).returns<ReaderRow[]>()),
             allRows<MembershipRow>((from, to) => context.supabase.from('organization_memberships').select('unit_id')
                 .eq('company_id', context.companyId).eq('profile_id', context.requester.id).eq('active', true)
-                .range(from, to).returns<MembershipRow[]>())
+                .range(from, to).returns<MembershipRow[]>()),
+            loadCurrentApprovalDelegations(context.supabase, context.companyId, context.requester.id)
         ]);
         const waitingDocumentIds = new Set(steps
-            .filter(step => actorAppearsInTargets(step.targets, context.requester.id)
-                && !actorAlreadyResponded(step.targets, step.responses, context.requester.id))
+            .filter(step => actorAppearsInTargets(
+                step.targets,
+                context.requester.id,
+                step.action_kind,
+                delegations
+            ) && !actorAlreadyResponded(
+                step.targets,
+                step.responses,
+                context.requester.id,
+                step.action_kind,
+                delegations
+            ))
             .map(step => step.document_id));
         const readerDocumentIds = new Set(readers.map(reader => reader.document_id));
         const receiverUnitIds = new Set(memberships.map(membership => membership.unit_id));
