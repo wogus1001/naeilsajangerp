@@ -38,6 +38,13 @@ export async function GET(request: Request) {
         path: '/',
         maxAge: 60 * 5 // 5 minutes
     });
+    cookieStore.set('ucansign_oauth_state', state, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 5
+    });
 
     const authUrl = `https://app.ucansign.com/user/oauth/login?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 

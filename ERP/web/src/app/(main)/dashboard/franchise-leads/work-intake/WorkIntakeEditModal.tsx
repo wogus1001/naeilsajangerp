@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useDialogFocusTrap } from '@/components/common/useDialogFocusTrap';
 import {
     updatePropertyRegistrationAttachments,
     type PropertyRegistrationForm
@@ -77,6 +78,14 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
     const [form, setForm] = React.useState<WorkIntakeEditForm>(() => buildInitialEditForm(target));
     const [pendingPropertyFiles, setPendingPropertyFiles] = React.useState<readonly File[]>([]);
     const [isSaving, setIsSaving] = React.useState(false);
+    const cancelButtonRef = React.useRef<HTMLButtonElement>(null);
+    const isSavingRef = React.useRef(isSaving);
+    const titleId = React.useId();
+    isSavingRef.current = isSaving;
+    const closeModal = React.useCallback(() => {
+        if (!isSavingRef.current) onCloseAction();
+    }, [onCloseAction]);
+    const dialogRef = useDialogFocusTrap<HTMLElement>(true, closeModal, cancelButtonRef);
 
     const save = async () => {
         setIsSaving(true);
@@ -105,24 +114,26 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
     };
 
     return (
-        <div className={styles.modalBackdrop}>
-            <section className={styles.modal}>
+        <div className={styles.modalBackdrop} onMouseDown={event => { if (event.currentTarget === event.target) closeModal(); }}>
+            <section aria-labelledby={titleId} aria-modal="true" className={styles.modal} ref={dialogRef} role="dialog" tabIndex={-1}>
                 <div className={styles.modalHeader}>
-                    <h2>{titleFor(target)}</h2>
+                    <h2 id={titleId}>{titleFor(target)}</h2>
                 </div>
-                <div className={styles.modalBody}>
-                    {form.kind === 'properties' && <PropertyDetailSummary form={form.value} />}
-                    <WorkIntakeEditFields
-                        form={form}
-                        pendingPropertyFiles={pendingPropertyFiles}
-                        onChangeAction={setForm}
-                        onPendingPropertyFilesChangeAction={setPendingPropertyFiles}
-                    />
-                </div>
-                <div className={styles.modalActions}>
-                    <button className={styles.secondaryButton} onClick={onCloseAction} disabled={isSaving}>취소</button>
-                    <button className={styles.primaryButton} onClick={save} disabled={isSaving}>{isSaving ? '저장 중' : '수정 저장'}</button>
-                </div>
+                <form className={styles.modalForm} onSubmit={event => { event.preventDefault(); void save(); }}>
+                    <div className={styles.modalBody}>
+                        {form.kind === 'properties' && <PropertyDetailSummary form={form.value} />}
+                        <WorkIntakeEditFields
+                            form={form}
+                            pendingPropertyFiles={pendingPropertyFiles}
+                            onChangeAction={setForm}
+                            onPendingPropertyFilesChangeAction={setPendingPropertyFiles}
+                        />
+                    </div>
+                    <div className={styles.modalActions}>
+                        <button className={styles.secondaryButton} onClick={closeModal} disabled={isSaving} ref={cancelButtonRef} type="button">취소</button>
+                        <button className={styles.primaryButton} disabled={isSaving} type="submit">{isSaving ? '저장 중' : '수정 저장'}</button>
+                    </div>
+                </form>
             </section>
         </div>
     );

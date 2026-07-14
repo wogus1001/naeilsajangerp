@@ -17,6 +17,12 @@ type FranchiseLeadUploadAccessRow = {
     readonly manager_id: string | null;
 };
 
+type SupervisionReportUploadAccessRow = {
+    readonly company_id: string | null;
+    readonly created_by: string | null;
+    readonly status: string | null;
+};
+
 type MaybeSingleQuery = {
     readonly maybeSingle: <T>() => PromiseLike<{ readonly data: T | null }>;
 };
@@ -62,6 +68,26 @@ async function canUploadToLeadTarget(
     return canAccessFranchiseLead(requester, lead);
 }
 
+async function canUploadToSupervisionReport(
+    supabaseAdmin: UploadAccessSupabase,
+    requester: RequesterProfile,
+    target: Extract<UploadStorageTarget, { readonly kind: 'supervisionReport' }>
+): Promise<boolean> {
+    const { data: report } = await supabaseAdmin
+        .from('franchise_inspection_reports')
+        .select('company_id, created_by, status')
+        .eq('id', target.reportId)
+        .maybeSingle<SupervisionReportUploadAccessRow>();
+
+    return Boolean(
+        report &&
+        report.company_id === target.companyId &&
+        requester.company_id === target.companyId &&
+        report.created_by === requester.id &&
+        (report.status === '임시저장' || report.status === '반려')
+    );
+}
+
 export async function canUploadToTarget(
     supabaseAdmin: UploadAccessSupabase,
     requester: RequesterProfile,
@@ -75,7 +101,8 @@ export async function canUploadToTarget(
             return canUploadToLeadTarget(supabaseAdmin, requester, target);
         case 'disclosure':
         case 'vendorContract':
-        case 'supervisionReport':
             return canAccessCompanyScope(requester, target.companyId);
+        case 'supervisionReport':
+            return canUploadToSupervisionReport(supabaseAdmin, requester, target);
     }
 }

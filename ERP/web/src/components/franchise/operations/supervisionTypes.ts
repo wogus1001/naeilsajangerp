@@ -69,6 +69,7 @@ export type SupervisionReport = {
     readonly photoAttachments: readonly SupervisionPhotoAttachment[];
     readonly specialNote: string;
     readonly rejectReason: string;
+    readonly createdBy: string | null;
     readonly submittedAt: string | null;
     readonly reviewedAt: string | null;
     readonly updatedAt: string | null;

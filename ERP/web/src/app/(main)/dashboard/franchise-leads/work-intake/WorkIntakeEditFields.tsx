@@ -103,7 +103,7 @@ function LeadRegistrationEditFields({ value, onChange }: {
             <section className={styles.section}>
                 <h3 className={styles.sectionTitle}>기본 정보</h3>
                 <div className={styles.editGrid}>
-                    <label className={styles.field}>가맹 희망자명 *<input value={value.name} onChange={event => onChange({ ...value, name: event.target.value })} /></label>
+                    <label className={styles.field}>가맹 희망자명 *<input value={value.name} onChange={event => onChange({ ...value, name: event.target.value })} required /></label>
                     <label className={styles.field}>연락처<input value={value.mobile} onChange={event => onChange({ ...value, mobile: formatLeadPhoneInput(event.target.value) })} /></label>
                     <label className={styles.field}>상태<select value={value.status} onChange={event => onChange({ ...value, status: normalizeLeadStatus(event.target.value) })}>{FRANCHISE_LEAD_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select></label>
                     <label className={styles.field}>등급<select value={value.grade} onChange={event => onChange({ ...value, grade: event.target.value })}><option value="">미지정</option>{FRANCHISE_LEAD_GRADES.map(grade => <option key={grade} value={grade}>{getFranchiseLeadGradeLabel(grade)}</option>)}</select></label>

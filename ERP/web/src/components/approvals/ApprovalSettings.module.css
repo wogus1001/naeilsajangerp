@@ -1,0 +1,293 @@
+.page {
+    display: grid;
+    min-width: 0;
+    gap: 20px;
+}
+
+.page :global(.approval-page-header h2) {
+    margin: 0;
+    color: #191f28;
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+.page :global(.approval-page-header p) {
+    margin: 4px 0 0;
+    color: #6b7684;
+    font-size: 14px;
+    line-height: 1.57;
+    word-break: keep-all;
+}
+
+.settingsGrid {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.singleColumn {
+    grid-template-columns: minmax(0, 760px);
+}
+
+.panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.panel > header {
+    display: flex;
+    min-height: 56px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid #e5e8eb;
+}
+
+.panel > header > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #333d4b;
+    font-size: 14px;
+}
+
+.panel > header > small {
+    color: #8b95a1;
+    font-size: 12px;
+}
+
+.rows {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.row {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f2f4f6;
+}
+
+.row > span:first-child {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.row strong {
+    color: #333d4b;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.row small {
+    color: #8b95a1;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.rowActions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+}
+
+.activeBadge,
+.inactiveBadge,
+.primaryBadge {
+    display: inline-flex;
+    min-height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.activeBadge {
+    background: #e7f8f1;
+    color: #087c4b;
+}
+
+.inactiveBadge {
+    background: #f2f4f6;
+    color: #6b7684;
+}
+
+.primaryBadge {
+    background: #e8f3ff;
+    color: #2272eb;
+}
+
+.empty {
+    margin: 0;
+    padding: 32px 16px;
+    color: #8b95a1;
+    font-size: 13px;
+    text-align: center;
+}
+
+.formBand {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px;
+    background: #f9fafb;
+}
+
+.formBand > label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.formBand label > span,
+.scopeField legend {
+    color: #4e5968;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.fieldHelp {
+    color: #8b95a1;
+    font-size: 11px;
+    line-height: 1.45;
+    word-break: keep-all;
+}
+
+.formBand input:not([type='checkbox']),
+.formBand select {
+    width: 100%;
+    min-height: 40px;
+    padding: 7px 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    outline: 0;
+    background: #ffffff;
+    color: #191f28;
+    font: inherit;
+    font-size: 12px;
+}
+
+.formBand input:focus,
+.formBand select:focus {
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px #e8f3ff;
+}
+
+.formBand > button {
+    display: inline-flex;
+    min-height: 40px;
+    align-self: end;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #3182f6;
+    border-radius: 8px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.formBand > button:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
+.scopeField {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.scopeField legend {
+    padding: 0 4px;
+}
+
+.scopeField label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #4e5968;
+    font-size: 12px;
+}
+
+.scopeField input {
+    width: 16px;
+    height: 16px;
+    accent-color: #3182f6;
+}
+
+.deleteButton {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #8b95a1;
+    cursor: pointer;
+}
+
+.deleteButton:hover {
+    background: #fff1f2;
+    color: #e42939;
+}
+
+.loading {
+    display: flex;
+    min-height: 280px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #6b7684;
+    font-size: 14px;
+}
+
+@media (max-width: 1040px) {
+    .settingsGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .formBand {
+        grid-template-columns: 1fr;
+    }
+
+    .scopeField {
+        grid-column: 1;
+    }
+
+    .formBand input:not([type='checkbox']),
+    .formBand select,
+    .formBand > button {
+        min-height: 44px;
+    }
+}

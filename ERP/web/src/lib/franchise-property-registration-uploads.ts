@@ -104,16 +104,21 @@ export async function uploadPropertyRegistrationAttachments(input: {
     readonly files: readonly File[];
     readonly attachments: readonly PropertyRegistrationFileAttachment[];
 }): Promise<readonly PropertyRegistrationFileAttachment[]> {
-    const uploadableFiles = input.files.filter(file => Boolean(getPropertyRegistrationUploadBucket(file)));
-    if (uploadableFiles.length === 0) return input.attachments;
+    if (input.files.length === 0) return input.attachments;
+    const unsupportedFile = input.files.find(file => !getPropertyRegistrationUploadBucket(file));
+    if (unsupportedFile) {
+        throw new Error(`${unsupportedFile.name} 파일 형식은 업로드할 수 없습니다.`);
+    }
 
     const uploadedByKey = new Map<string, PropertyRegistrationFileAttachment>();
-    for (const file of uploadableFiles) {
+    for (const file of input.files) {
         const storageBucket = getPropertyRegistrationUploadBucket(file);
         const uploadResult = await uploadPropertyAttachment(input.propertyId, file, storageBucket);
         const storagePath = uploadResult.path || '';
         const publicUrl = uploadResult.publicUrl || '';
-        if (!storagePath || !publicUrl) continue;
+        if (!storagePath || !publicUrl) {
+            throw new Error(`${file.name} 파일의 저장 정보를 확인하지 못했습니다.`);
+        }
         const attachment = fileAttachmentFor(file);
         uploadedByKey.set(getFranchiseAttachmentKey(attachment), {
             ...attachment,

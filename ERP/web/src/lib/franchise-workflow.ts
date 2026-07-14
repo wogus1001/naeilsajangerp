@@ -14,7 +14,7 @@ export type ApprovalTransitionResult =
         readonly reason: string;
     };
 
-const WORKFLOW_SCHEMA_PATTERN = /source_type|source_id|assignee_profile_id|manager_profile_id|due_at|remind_at|completed_at|metadata|approval_templates|approval_documents|approval_document_events/i;
+const WORKFLOW_SCHEMA_PATTERN = /source_type|source_id|assignee_profile_id|manager_profile_id|due_at|remind_at|completed_at|metadata|approval_templates|approval_documents|approval_document_events|perform_approval_document_action|sync_supervision_report_approval|save_supervision_report_with_approval/i;
 
 function cleanText(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
@@ -117,5 +117,5 @@ export function isMissingWorkflowSchemaError(error: unknown): boolean {
     if (!isRecord(error)) return false;
     const code = cleanText(error.code);
     const message = cleanText(error.message);
-    return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code) && WORKFLOW_SCHEMA_PATTERN.test(message);
+    return ['PGRST202', 'PGRST204', 'PGRST205', '42P01', '42703', '42883'].includes(code) && WORKFLOW_SCHEMA_PATTERN.test(message);
 }

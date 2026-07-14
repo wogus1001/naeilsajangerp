@@ -39,6 +39,7 @@
 - 신규 SQL: 가맹 운영 슈퍼바이징용 `supabase_franchise_supervision_migration.sql`을 추가했다. 이 SQL은 SV 배정, 방문 일정, 점검 보고서, 시정요청 테이블과 상태 제약/인덱스/RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 가맹 운영 슈퍼바이징 2차용 `supabase_franchise_supervision_v2_migration.sql`을 추가했다. 이 SQL은 회사별 점검 템플릿, 보고서 이벤트, 시정요청 이벤트, 보고서 `template_id`, 내부 알림톡 4개 draft 템플릿/시나리오 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 공통 일정/결재 MVP용 `supabase_franchise_approval_calendar_migration.sql`을 추가했다. 이 SQL은 기존 `schedules` 확장과 `approval_templates`, `approval_documents`, `approval_document_events` 테이블, source 중복 방지 인덱스, 회사 범위 RLS를 포함한다. 사용자 확인 기준 2026-07-10 운영 DB 적용을 완료했다. **SQL 등록 완료 확인**.
+- 신규 SQL: 가맹운영 전용 일정의 공유/개인 구분용 `supabase_franchise_schedule_visibility_migration.sql`을 추가했다. 기존 일정과 자동 생성 일정은 공유로 유지하고, 개인 일정은 생성자 본인만 조회·수정·삭제하도록 컬럼 제약과 RLS를 추가한다. 2026-07-13 전자결재 보안 리뷰에서 비활성 프로필 차단 조건을 추가했으므로 최신 파일 재적용이 필요하다. **SQL 재등록 필요**.
 - 신규 SQL: 가맹 운영 인력 세팅용 `supabase_franchise_labor_planning_migration.sql`을 추가했다. 이 SQL은 회사별 노무 계산 기준, 운영점별 인력 세팅안, 역할별 추천 인력 행을 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 점주 포털용 `supabase_franchise_owner_portal_migration.sql`을 추가했다. 이 SQL은 점주 계정, 점주 전용 세션, 공지/읽음 기록, 제출 이력, 업로드 파일 메타 테이블과 RLS 정책을 포함한다. 기존 적용 DB는 회사별 점주 로그인 ID 중복 허용을 위해 `supabase_franchise_owner_company_login_scope.sql`도 추가 적용해야 한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 신규 SQL: 점주 공지/공문 첨부용 `supabase_franchise_owner_notice_attachments_migration.sql`을 추가했다. 이 SQL은 기존 `franchise_owner_notices`에 `attachments jsonb` 컬럼을 추가한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
@@ -86,3 +87,17 @@
 - `ERP/web/docs/franchise-dev-qa-log.md`: 상세 개발/QA 이력과 미검증 리스크.
 - `ERP/web/docs/franchise-growth-roadmap.md`: 제품 방향, API 정책, 다음 작업 목록.
 - `ERP/web/docs/documentation-agent.md`: Docs Steward 권한과 문서 갱신 규칙.
+
+## 2026-07-13 전사 전자결재 v2 구현 상태
+
+- 상위 메뉴 `/approvals`에 전자결재 홈, 작성하기, 결재 대기, 내 문서함, 부서 문서함, 양식 관리, 조직·결재 설정을 추가했다.
+- 시스템 접근 권한과 조직 직책을 분리했다. 활성 회사 구성원을 이름으로 선택해 부서 소속, 직책, 부서장, 결재 역할, 기간형 위임을 설정하며 제출 시점 조직과 결재선을 문서 버전에 보관한다.
+- 순차 결재, 전원 병렬 합의, 그룹 1인 처리, 참조·수신, 반려 사유, 첫 처리 전 회수, 재상신 버전을 지원한다. 현재 단계 대상자만 처리할 수 있고 자기 결재와 교차 회사 접근을 차단한다.
+- 작성 화면과 결재 상세는 같은 구조화 필드 renderer를 사용한다. 작성 화면에서 참조자와 수신 부서를 선택할 수 있고 기존 문서를 수정할 때 선택값을 복원한다. 첨부는 전용 비공개 `approval-documents` Storage에 저장하고 권한·보존 기한 확인 후 내려받으며, 상세 화면에서 Noto Sans KR을 포함한 pdfme PDF를 생성한다.
+- 결재 단계가 시작되면 실제 대상자에게 인앱 알림과 `approval-document` 일정이 생성된다. 단계 이동 시 대상을 갱신하고 반려·최종 승인·회수·완료 시 일정을 완료한다.
+- 기존 단일 결재 API와 문서는 전환 기간 동안 유지한다. migration은 과거 제출·승인·반려 문서를 1단계 version/step 구조로 변환해 새 상세 링크에서도 조회와 처리가 이어지게 한다.
+- 신규 SQL: `supabase_company_approvals_v2_migration.sql`. 기존 공통 일정/결재 migration 적용 후 사용자가 직접 등록해야 한다. 리뷰 보정으로 슈퍼바이징 보고서와 결재 전이를 한 트랜잭션으로 묶고, 보고서 직접 쓰기 RLS를 닫았으며, 조회도 작성자·담당 SV·같은 회사 관리자 범위로 제한했다. 사진은 전용 비공개 `franchise-supervision-private` 버킷에서만 저장·서명하며 레거시 공용 버킷 메타데이터는 API에서 제외한다. 비활성 계정 및 과도한 관리자 공개 범위 차단까지 포함한 최신 파일 기준으로 적용하고, 기존 `property-documents/franchise-supervision/` 객체는 비공개 버킷 대체본 확인 후 Storage API 또는 대시보드에서 삭제한다. **SQL 등록 필요**.
+- 기존 전자결재 조직 테이블을 적용한 환경은 이어서 `supabase_company_approvals_organization_delete_safety_migration.sql`을 적용한다. 조직 삭제 시 구성원 소속과 결재 담당자 연결이 함께 지워지지 않도록 외래 키를 제한 삭제로 전환한다. **SQL 등록 필요**.
+- 문서 작성 중 양식의 결재 단계별 실제 결재자와 참조자를 고를 수 있다. 순차 단계는 여러 결재자를 선택하고 순서를 바꿀 수 있으며, 상신 시 선택 순서대로 각각의 실제 결재 단계가 생성된다. 병렬 단계는 전원 또는 1인 처리 규칙을 유지한다. 최신 `supabase_company_approvals_document_line_override_migration.sql`을 적용하며 이전 단일 결재자 버전을 적용했다면 다시 실행한다. **SQL 등록 필요**.
+- 마지막으로 `supabase_company_approvals_security_review_migration.sql`을 적용한다. 결재 문서·양식이 참조하는 조직 삭제 차단, 필수 첨부파일의 실제 업로드 검증, 유효기간이 지난 소속 제외, 모든 다중 순차 결재 단계 분리, 재요청 시 중복 결재 진행 방지와 현재 버전·단계 검증을 포함한다. **SQL 등록 필요**.
+- 첨부파일 선택 영역은 실제 선택 버튼과 드래그 추가, 형식·10MB·최대 5개 검증, 파일명·용량·업로드 대기 상태를 제공한다. 저장 시 전용 비공개 버킷으로 업로드하고 상세 화면에서 권한을 확인한 뒤 내려받는다.
