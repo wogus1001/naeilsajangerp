@@ -48,6 +48,8 @@
     margin: 0;
     color: #6b7684;
     font-size: 14px;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .toolbar {
