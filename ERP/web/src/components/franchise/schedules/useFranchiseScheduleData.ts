@@ -33,6 +33,21 @@ export async function getFranchiseScheduleResponseFailure(response: Response): P
     return getFranchiseScheduleFailure(response.status, serverMessage);
 }
 
+export function franchiseScheduleMonthRange(monthDate: Date): { readonly from: string; readonly to: string } {
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const format = (date: Date) => [
+        date.getUTCFullYear(),
+        String(date.getUTCMonth() + 1).padStart(2, '0'),
+        String(date.getUTCDate()).padStart(2, '0')
+    ].join('-');
+
+    return {
+        from: format(new Date(Date.UTC(year, month, 1))),
+        to: format(new Date(Date.UTC(year, month + 1, 7)))
+    };
+}
+
 export function useFranchiseScheduleData(monthDate: Date) {
     const [items, setItems] = React.useState<readonly FranchiseScheduleItem[]>([]);
     const [assignees, setAssignees] = React.useState<readonly FranchiseScheduleAssignee[]>([]);
@@ -46,8 +61,9 @@ export function useFranchiseScheduleData(monthDate: Date) {
         setState('loading');
         setMessage('');
         const params = new URLSearchParams();
-        params.set('from', `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}-01`);
-        params.set('to', `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 2).padStart(2, '0')}-07`);
+        const range = franchiseScheduleMonthRange(monthDate);
+        params.set('from', range.from);
+        params.set('to', range.to);
         const response = await fetch(`${FRANCHISE_SCHEDULES_API_PATH}?${params.toString()}`, {
             cache: 'no-store',
             headers: await getApiAuthHeaders()

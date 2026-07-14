@@ -514,6 +514,27 @@ test('Given personal schedule When creating Then it is owned and assigned to the
     assert.equal(state.mutations[0]?.payload.visibility, 'personal');
 });
 
+test('Given an unsupported visibility When listing creating or updating Then validation rejects it without mutation', async () => {
+    const state = createState();
+    const deps = createDependencies(state);
+    const listed = await handleFranchiseSchedulesGET(
+        request('GET', {}, 'http://localhost/api/franchise-schedules?visibility=company'),
+        deps
+    );
+    const created = await handleFranchiseSchedulesPOST(request('POST', {
+        date: '2026-07-13',
+        title: 'Invalid visibility',
+        visibility: 'company'
+    }), deps);
+    const updated = await handleFranchiseSchedulesPATCH(request('PATCH', {
+        id: 'manual-1',
+        visibility: 'company'
+    }), deps);
+
+    assert.deepEqual([listed.status, created.status, updated.status], [400, 400, 400]);
+    assert.equal(state.mutations.length, 0);
+});
+
 test('Given another users personal schedule When manager mutates it Then access is denied', async () => {
     const state = createState({
         schedules: {

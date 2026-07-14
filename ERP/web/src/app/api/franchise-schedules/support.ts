@@ -51,6 +51,12 @@ export function cleanString(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+export function parseScheduleVisibility(value: unknown): 'shared' | 'personal' | null {
+    const visibility = cleanString(value);
+    if (visibility === 'shared' || visibility === 'personal') return visibility;
+    return null;
+}
+
 export function hasOwn(record: JsonRecord, key: string): boolean {
     return Object.prototype.hasOwnProperty.call(record, key);
 }
@@ -219,12 +225,18 @@ export async function listSchedules(
 
     const { data, error } = await query;
     if (error) throw error;
-    const visibility = cleanString(searchParams.get('visibility'));
+    const visibilityInput = cleanString(searchParams.get('visibility'));
+    const visibility = visibilityInput && visibilityInput !== 'all'
+        ? parseScheduleVisibility(visibilityInput)
+        : null;
+    if (visibilityInput && visibilityInput !== 'all' && !visibility) {
+        return fail(400, 'VALIDATION_ERROR', 'visibility must be shared or personal');
+    }
     const rows = (Array.isArray(data) ? data : []).filter(row => {
         if (!isRecord(row)) return false;
         const rowVisibility = cleanString(row.visibility) === 'personal' ? 'personal' : 'shared';
         if (rowVisibility === 'personal' && cleanString(row.creator_profile_id) !== requester.id) return false;
-        return !visibility || visibility === 'all' || rowVisibility === visibility;
+        return !visibility || rowVisibility === visibility;
     });
     return ok(rows.map(transformSchedule));
 }
@@ -245,7 +257,9 @@ export async function createSchedule(
     const companyId = cleanString(valueFor(body, 'companyId', 'company_id')) || requester.company_id;
     if (companyId !== requester.company_id) return fail(403, 'FORBIDDEN', 'cross-company create denied');
     const canAssign = isManagerRole(requester.role);
-    const visibility = cleanString(body.visibility) === 'personal' ? 'personal' : 'shared';
+    const visibilityInput = hasOwn(body, 'visibility') ? body.visibility : 'shared';
+    const visibility = parseScheduleVisibility(visibilityInput);
+    if (!visibility) return fail(400, 'VALIDATION_ERROR', 'visibility must be shared or personal');
     const creatorId = visibility === 'personal'
         ? requester.id
         : cleanString(valueFor(body, 'creatorProfileId', 'creator_profile_id')) || requester.id;

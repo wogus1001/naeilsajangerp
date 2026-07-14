@@ -7,6 +7,7 @@ import {
     isManagerRole,
     isManualSchedule,
     isRecord,
+    parseScheduleVisibility,
     readBody,
     transformSchedule,
     valueFor,
@@ -109,8 +110,9 @@ export async function updateSchedule(
     const canAssign = isManagerRole(target.requester.role);
     const companyId = target.row.company_id || '';
     const visibility = hasOwn(body, 'visibility')
-        ? cleanString(body.visibility) === 'personal' ? 'personal' : 'shared'
-        : target.row.visibility === 'personal' ? 'personal' : 'shared';
+        ? parseScheduleVisibility(body.visibility)
+        : parseScheduleVisibility(target.row.visibility) || 'shared';
+    if (!visibility) return fail(400, 'VALIDATION_ERROR', 'visibility must be shared or personal');
     if (visibility === 'personal' && target.row.creator_profile_id !== target.requester.id) {
         return fail(403, 'FORBIDDEN', 'only the creator can make a schedule personal');
     }
