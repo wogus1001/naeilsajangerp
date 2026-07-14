@@ -20,6 +20,7 @@
 - DB migration, API, UI가 한 기능을 이루면 같은 기능 커밋에 묶되, unrelated 정리는 분리한다.
 - `ERP/web/handoff.md`, `.env*`, provider token, service-role key, 개인 인증 정보는 커밋하지 않는다.
 - 커밋 전에는 `git diff --check`, `git status --short`, 관련 검증 결과를 확인한다.
+- staged diff와 새 파일을 대상으로 비밀값 패턴을 확인한다. 키 이름만 있는 환경변수 참조는 허용하지만 실제 값, JWT, `sb_secret_` 값은 차단한다.
 - 사용자 설명 방식에 영향을 주는 기능은 `/landing`과 `/demo`의 프랜차이즈 데모 시나리오, 딤드 설명 단계, 샘플 데이터 갱신 여부도 함께 확인한다.
 - 직원용 보호 API를 호출하는 client 코드는 `requesterId`를 인증으로 간주하지 않고 `getApiAuthHeaders()`로 Supabase 세션 header를 붙인다. 새 보호 API를 추가하거나 인증 정책을 강화할 때는 기존 호출부를 전수 검색해 함께 점검한다.
 
@@ -36,6 +37,8 @@
 8. 운영 배포 후 Vercel READY 상태, 주요 URL, API 상태, known env gap을 기록한다.
 
 ## Fast Release Runbook
+
+과거 Git 이력에서 확인된 Supabase service-role key 사고가 종결되기 전에는 `docs/supabase-service-role-incident-response.md`의 P0 체크리스트를 먼저 확인한다. 이전 키가 활성 상태라면 일반 배포보다 폐기·교체·재배포를 우선한다.
 
 문서 작성, 커밋, 푸시, 배포 요청이 반복될 때는 아래 순서를 기본값으로 사용한다. 요청 범위가 작은 문구 수정이어도 순서는 유지하되, 검증 범위만 축소한다.
 
