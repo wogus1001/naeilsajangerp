@@ -1,5 +1,5 @@
-import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, readApiJson } from '@/utils/apiResponse';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import type {
     ApprovalAction,
     ApprovalDelegation,
@@ -139,32 +139,6 @@ export async function fetchApprovalDocument(documentId: string): Promise<Approva
     const templates = versionFields.length === 0 && templateId ? await fetchApprovalTemplates(true) : [];
     const fields = versionFields.length > 0 ? versionFields : templates.find(template => template.id === templateId)?.fields ?? [];
     return approvalDetailFromWire(wire, fields);
-}
-
-export async function downloadApprovalAttachment(attachment: {
-    readonly name: string;
-    readonly url?: string;
-}): Promise<void> {
-    if (!attachment.url) throw new Error('첨부파일 주소를 확인할 수 없습니다.');
-    const headers = await getApiAuthHeaders();
-    const response = await fetch(attachment.url, { cache: 'no-store', headers });
-    if (!response.ok) {
-        let payload: unknown = null;
-        try {
-            payload = await response.json();
-        } catch {
-            payload = null;
-        }
-        throw new Error(payload ? readApiError(payload) : '첨부파일을 내려받지 못했습니다.');
-    }
-    const objectUrl = URL.createObjectURL(await response.blob());
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = attachment.name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(objectUrl);
 }
 
 export function fetchApprovalTemplates(includeArchived = false): Promise<readonly ApprovalTemplate[]> {

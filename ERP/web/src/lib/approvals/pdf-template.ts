@@ -94,3 +94,23 @@ export function createApprovalPdfInput(
     });
     return input;
 }
+
+export function createApprovalPdfDownloadResponse(
+    pdf: Uint8Array,
+    documentId: string,
+    documentTitle: string
+): Response {
+    const asciiName = `approval-${documentId.slice(0, 8)}.pdf`;
+    const encodedName = encodeURIComponent(`${documentTitle}.pdf`).replace(
+        /[!'()*]/g,
+        character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+    );
+    return new Response(Uint8Array.from(pdf), {
+        headers: {
+            'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
+            'Content-Type': 'application/pdf',
+            'Cache-Control': 'private, no-store',
+            'X-Content-Type-Options': 'nosniff'
+        }
+    });
+}
