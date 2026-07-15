@@ -18,6 +18,14 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { readonly params: Promise<{ readonly id: string }> };
 
+let approvalPdfFontPromise: Promise<Uint8Array<ArrayBuffer>> | null = null;
+
+function loadApprovalPdfFont(): Promise<Uint8Array<ArrayBuffer>> {
+    approvalPdfFontPromise ??= readFile(path.join(process.cwd(), 'public', 'fonts', 'noto-sans-kr-400.ttf'))
+        .then(font => Uint8Array.from(font));
+    return approvalPdfFontPromise;
+}
+
 function valueText(value: unknown): string {
     if (value === null || value === undefined || value === '') return '-';
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -89,7 +97,7 @@ export async function GET(request: Request, routeContext: RouteContext) {
             import('@pdfme/generator'),
             import('@pdfme/schemas')
         ]);
-        const font = await readFile(path.join(process.cwd(), 'public', 'fonts', 'noto-sans-kr-400.ttf'));
+        const font = await loadApprovalPdfFont();
         const documentTitle = versionResult.data?.title || document.title;
         const body = documentBody(versionResult.data?.values ?? document.values, templateResult.data?.fields, eventResult.data || []);
         const chunks = paginateApprovalBody(body);
