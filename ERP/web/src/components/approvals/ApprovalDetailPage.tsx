@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileDown, FileText, Paperclip, Pencil } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
-import { downloadApprovalAttachment, downloadApprovalPdf, fetchApprovalDocument, runApprovalAction } from './approvalApi';
+import { fetchApprovalDocument, runApprovalAction } from './approvalApi';
+import { downloadApprovalFile } from './approvalDownloads';
 import { ApprovalDocumentActions } from './ApprovalDocumentActions';
 import { ApprovalFieldRenderer } from './ApprovalFieldRenderer';
 import { formatApprovalDate } from './approvalFormatting';
@@ -62,7 +63,7 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
     async function handleAttachmentDownload(attachment: ApprovalDocumentDetail['attachments'][number]) {
         setDownloadingId(attachment.id);
         try {
-            await downloadApprovalAttachment(attachment);
+            await downloadApprovalFile(attachment);
         } catch (caught) {
             setResult({ message: caught instanceof Error ? caught.message : '첨부파일을 내려받지 못했습니다.', type: 'error' });
         } finally {
@@ -74,7 +75,10 @@ export function ApprovalDetailPage({ documentId }: ApprovalDetailPageProps) {
         if (!document) return;
         setDownloadingId('pdf');
         try {
-            await downloadApprovalPdf(document.id, document.title);
+            await downloadApprovalFile({
+                name: `${document.title || '전자결재 문서'}.pdf`,
+                url: `/api/approvals/documents/${encodeURIComponent(document.id)}/pdf`
+            });
         } catch (caught) {
             setResult({ message: caught instanceof Error ? caught.message : 'PDF를 내려받지 못했습니다.', type: 'error' });
         } finally {

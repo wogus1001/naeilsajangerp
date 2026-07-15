@@ -11,14 +11,14 @@
 - 긴 명령 출력, 브라우저 QA 상세, 코드 변경 이력은 이 문서에 누적하지 않고 관련 문서로 링크한다.
 - `ERP/web/handoff.md`는 단일 작성자 규칙 때문에 수정하지 않는다.
 
-## 2026-07-14 기준 현재 상태
+## 2026-07-15 기준 현재 상태
 
 - 기본 배포 절차: 일반 기능은 최신 dev에서 브랜치를 만들고 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 승격한다. dev 전체가 운영 준비 상태가 아니면 dev PR의 최종 반영 커밋만 `origin/main` 기반 release 브랜치로 선별하고, 해당 release preview에서 smoke와 회귀 QA를 다시 통과한 뒤 main PR을 만든다.
 - 최신 통합 릴리스: 플랫폼 코드리뷰 보정은 PR #4, main 릴리스 문서 동기화는 PR #6, 업무 접수 모바일 접근성 보정은 PR #7과 #8을 거쳐 `dev`에 반영했다. `dev -> main` PR #5를 병합한 운영 기준 커밋은 `7306723`이며, 병합 직후 `origin/dev`와 `origin/main`의 파일 트리가 같은 것을 확인했다.
 - 통합 코드 배포 기록: `naeilsajang` production 배포 `dpl_45fnu8CDmTTJpFhi6Jk2uVnX84sL`이 `READY`였으며 source URL은 `https://naeilsajang-lx0yaxcx4-jaehyuns-projects-b4d20c6f.vercel.app`이다. `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias와 `/login`, `/approvals`, `/dashboard/franchise-operations/schedule` 200 응답을 확인했다. 문서 커밋으로 후속 deployment가 생성될 수 있으므로 실제 최신 deployment ID는 운영 도메인 최종 inspect 결과를 기준으로 한다.
-- 최신 QA: PDF 집중 테스트 7건과 전체 자동 테스트 725건, `tsc`, `lint`, `build`, `git diff --check`가 통과했다. 전자결재 PDF 실다운로드·A4 한글 렌더링, 전자결재, 가맹운영 일정, 업무 접수 주요 화면을 확인했고 해당 브라우저 QA의 console error는 0건이었다.
+- 최신 QA: PDF 다운로드 집중 테스트 9건과 전체 자동 테스트 727건, `tsc`, `lint`, `build`, `git diff --check`가 통과했다. 전자결재 PDF 실다운로드·A4 한글 렌더링, 전자결재, 가맹운영 일정, 업무 접수 주요 화면을 확인했고 해당 브라우저 QA의 console error는 0건이었다.
 - 대시보드 일정·알림 분리: 전자결재 요청은 헤더 알림과 `/approvals/pending` 결재 대기에서 처리하고, 루트 대시보드의 `예정된 일정` 목록과 단기 일정 건수에서는 제외한다. 회의, 방문, 마감 등 실제 캘린더 일정과 개인 일정의 기존 노출 규칙은 유지한다.
-- 전자결재 PDF 저장: `/api/approvals/documents/[id]/pdf`는 고정 길이 응답 대신 64KB 단위 스트리밍으로 내려보내 Vercel의 buffered payload 제한을 피한다. PDF 뷰어에서 한글이 보이지 않던 WOFF2 웹폰트는 Google Fonts 공식 Noto Sans KR TrueType 파일로 교체했다. 로컬 실계정 문서 다운로드, A4 1페이지, 한글 제목·본문·푸터 렌더링, 빈 페이지 아님을 확인했다. 이 보정 자체의 신규 SQL은 없다.
+- 전자결재 PDF 저장: 문서 상세는 Supabase bearer 세션을 포함한 fetch로 PDF와 첨부파일을 받은 뒤 Blob 다운로드를 실행한다. API는 Noto Sans KR TrueType 글꼴을 서버 인스턴스에서 재사용하고 완성된 PDF 바이트를 내려준다. 로컬 실계정에서 10,343바이트 PDF를 내려받아 A4 1페이지의 한글 제목·본문·푸터가 보이고 빈 페이지가 아님을 확인했다. 이 보정 자체의 신규 SQL은 없다.
 - SQL 적용 상태: 사용자 확인 기준 전자결재 SQL 기본 적용과 REST schema 접근 점검은 완료했다. 이후 캐시 호출자 검증과 만료·해제 위임 접근 차단을 추가한 최신 `supabase_company_approvals_security_review_migration.sql`, `supabase_company_approvals_workflow_schedule_fix_migration.sql`, `supabase_franchise_schedule_visibility_migration.sql`은 아래 순서로 다시 적용해야 한다. **SQL 재등록 필요**.
 - 이번 복구 릴리즈 기준: 기능 브랜치 `codex/franchise-next-alerts-20260616`의 `955f42b feat(franchise): 공통 일정 결재 기반 추가`를 `main`의 `12ba4fb merge: 공통 일정과 점주 소통 운영 반영`으로 통합했다. 점주 포털 회사별 단축 로그인, 공지/공문 첨부와 삭제 연동, 체크리스트 발송 이력 목록, 문의 알림톡, 공통 일정·결재 MVP를 포함한다. 이 main-first 통합은 이미 production에 직접 배포된 소스를 복구한 일회성 예외다.
 - 운영 기능 기준: main `b6d4559 fix(schedule): 보호 API 인증 헤더 보강` 소스를 `dpl_7am4D2Devjn3EQhGE8ZYhUQVekNW`에서 `naeilsajang` production에 배포했고 Vercel inspect `status=Ready`와 두 운영 도메인 alias를 확인했다. 이후 릴리즈 문서 전용 main 커밋은 애플리케이션 코드를 바꾸지 않으며 Vercel Git 연동의 후속 자동 배포가 생성될 수 있으므로, 실제 최신 deployment ID는 마지막 main push 이후 최종 inspect를 기준으로 확인한다. 이번 예외 릴리즈는 기능 브랜치 직접 배포 후 main/dev 기준점 복구까지 완료한 상태다.

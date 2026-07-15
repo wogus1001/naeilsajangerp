@@ -150,39 +150,6 @@ export async function fetchApprovalDocument(documentId: string): Promise<Approva
     return approvalDetailFromWire(wire, fields);
 }
 
-export async function downloadApprovalAttachment(attachment: {
-    readonly name: string;
-    readonly url?: string;
-}): Promise<void> {
-    if (!attachment.url) throw new Error('첨부파일 주소를 확인할 수 없습니다.');
-    const headers = await getApiAuthHeaders();
-    const response = await fetch(attachment.url, { cache: 'no-store', headers });
-    if (!response.ok) {
-        let payload: unknown = null;
-        try {
-            payload = await response.json();
-        } catch {
-            payload = null;
-        }
-        throw new Error(payload ? readApiError(payload) : '첨부파일을 내려받지 못했습니다.');
-    }
-    const objectUrl = URL.createObjectURL(await response.blob());
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = attachment.name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(objectUrl);
-}
-
-export async function downloadApprovalPdf(documentId: string, title: string): Promise<void> {
-    return downloadApprovalAttachment({
-        name: `${title || '전자결재 문서'}.pdf`,
-        url: `/api/approvals/documents/${encodeURIComponent(documentId)}/pdf`
-    });
-}
-
 export async function deleteApprovalAttachment(documentId: string, attachmentId: string): Promise<void> {
     const params = new URLSearchParams({ attachmentId });
     await requestJson(`/api/approvals/documents/${encodeURIComponent(documentId)}/attachments?${params.toString()}`, {
