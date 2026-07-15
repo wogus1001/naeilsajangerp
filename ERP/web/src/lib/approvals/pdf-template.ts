@@ -15,7 +15,6 @@ type TextSchema = {
 const FIRST_PAGE_BODY_LINES = 34;
 const CONTINUATION_BODY_LINES = 44;
 const BODY_LINE_WIDTH = 45;
-const PDF_STREAM_CHUNK_BYTES = 64 * 1024;
 
 function characterWidth(character: string): number {
     return /^[\u0000-\u00ff]$/.test(character) ? 0.55 : 1;
@@ -101,24 +100,12 @@ export function createApprovalPdfDownloadResponse(
     documentId: string,
     documentTitle: string
 ): Response {
-    let offset = 0;
-    const body = new ReadableStream<Uint8Array>({
-        pull(controller) {
-            if (offset >= pdf.byteLength) {
-                controller.close();
-                return;
-            }
-            const nextOffset = Math.min(offset + PDF_STREAM_CHUNK_BYTES, pdf.byteLength);
-            controller.enqueue(pdf.subarray(offset, nextOffset));
-            offset = nextOffset;
-        }
-    });
     const asciiName = `approval-${documentId.slice(0, 8)}.pdf`;
     const encodedName = encodeURIComponent(`${documentTitle}.pdf`).replace(
         /[!'()*]/g,
         character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
     );
-    return new Response(body, {
+    return new Response(Uint8Array.from(pdf), {
         headers: {
             'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
             'Content-Type': 'application/pdf',

@@ -739,13 +739,13 @@ YYYY-MM-DD
 - 검증: 관련 자동 테스트 96건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 1440px/390px 브라우저 QA에서 전자결재, 가맹운영 일정, 업무 접수의 가로 넘침과 console error가 0건이었고, 업무 접수 모바일 카드와 한글 줄바꿈은 독립 시각 QA를 통과했다.
 - 배포 체크: GitHub의 필수 Vercel 체크는 통과했다. 저장소의 필수 체크로 지정되지 않은 Netlify preview는 실패했으나 Vercel production 승격을 막는 조건은 아니었다.
 - SQL 적용 순서: `supabase_company_approvals_v2_migration.sql` -> `supabase_company_approvals_organization_delete_safety_migration.sql` -> `supabase_company_approvals_document_line_override_migration.sql` -> 최신 `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` -> 최신 `supabase_franchise_schedule_visibility_migration.sql` 순서로 적용한다. 일정 수신자 보정 파일은 대결자 적격성 보정이 포함된 보안 리뷰 migration 뒤에, visibility 파일은 `can_act_on_approval_document` 함수가 준비된 뒤에 적용해야 한다. **SQL 등록 필요**.
-- 보안 후속: 현재 추적 소스는 환경변수만 사용하지만 과거 Git 이력에 포함됐던 Supabase service-role key는 즉시 폐기·재발급하고 접근 로그를 점검한다. 이력 재작성은 별도 승인 후 진행한다.
+- 보안 후속: 과거 Git 이력에 포함됐던 Supabase service-role key 폐기·재발급, 배포 환경 교체, 접근 로그 점검과 GitHub Secret scanning 경고 종결을 2026-07-14 완료했다. Git 이력 재작성은 보호 브랜치와 여러 worktree 영향을 고려해 별도 유지보수 창에서 결정한다.
 - 알려진 의존성 잔여: `npm audit --omit=dev` 기준 3건(보통 2, 높음 1)이 남아 있다. `xlsx`는 upstream 수정 버전이 없고 Next/PostCSS의 강제 수정은 호환되지 않는 다운그레이드를 제안하므로 이번 릴리스에서 `--force`는 사용하지 않았다.
 
-## 2026-07-14 전자결재 운영 보안·일정·PDF 저장 릴리스
+## 2026-07-15 전자결재 운영 보안·일정·PDF 저장 릴리스
 
 - 범위: 만료·해제된 대결자의 문서·첨부·PDF·일정·알림 접근 차단, 병렬 결재 완료자의 stale 일정·알림 정리, 루트 대시보드의 전자결재 일정 제외, 전자결재 PDF 저장 복구를 한 운영 릴리스로 승격한다.
-- PDF 보정: 약 5.4MB 고정 길이 응답을 64KB 단위 스트리밍으로 바꾸고, PDF 뷰어에서 빈 페이지를 만들던 WOFF2 대신 공식 Noto Sans KR TrueType 글꼴을 번들한다. 로컬 실계정 다운로드 결과는 A4 1페이지·약 7.6KB이며 한글 제목·본문·푸터 렌더링을 확인했다.
-- 검증: PDF 집중 테스트 7건, 전체 자동 테스트 725건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 문서 상세에서 실제 다운로드 이벤트와 console error 0건을 확인하고, Poppler로 최신 PDF를 렌더링해 빈 페이지가 아님을 확인했다.
-- 승격: 기능 브랜치 `codex/approvals-operations-phase1-20260714`를 dev PR에서 먼저 검증한 뒤 main PR로 승격하고, `naeilsajang` production을 Fast Release Runbook으로 배포한다. 최종 PR, 커밋, deployment ID와 운영 도메인 smoke 결과는 배포 보고에 남긴다.
+- PDF 보정: 문서 상세의 PDF·첨부 다운로드를 Supabase bearer 세션을 포함한 fetch/Blob 방식으로 통일하고, PDF 뷰어에서 빈 페이지를 만들던 WOFF2 대신 공식 Noto Sans KR TrueType 글꼴을 번들한다. 서버 인스턴스에서는 글꼴 바이트를 재사용한다. 로컬 실계정 다운로드 결과는 A4 1페이지·10,343바이트이며 한글 제목·본문·푸터 렌더링을 확인했다.
+- 검증: PDF 집중 테스트 9건, 전체 자동 테스트 727건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 문서 상세에서 실제 다운로드와 console error 0건을 확인하고, macOS 미리보기와 PDF 렌더링으로 최신 파일이 빈 페이지가 아님을 확인했다.
+- 승격: 최신 `dev`의 보안·일정 보정을 유지한 상태에서 PDF 다운로드 최종 리뷰 사항과 릴리즈 문서를 반영하고, protected branch PR/check 절차로 `main`에 승격한 뒤 `naeilsajang` production을 Fast Release Runbook으로 배포한다. 최종 커밋, deployment ID와 운영 도메인 smoke 결과는 배포 보고에 남긴다.
 - SQL 적용 순서: 최신 `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` -> 최신 `supabase_franchise_schedule_visibility_migration.sql`. 문서·첨부 RLS와 알림 조회·읽음 처리도 현재 유효한 위임 및 결재 단계만 허용하도록 마지막 두 파일을 보강했다. PDF 보정 자체의 신규 SQL은 없지만 같은 릴리즈의 권한 정책 변경 때문에 최신 파일 기준으로 다시 적용한다. **SQL 재등록 필요**.
