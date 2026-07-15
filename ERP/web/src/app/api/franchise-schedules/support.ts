@@ -128,8 +128,8 @@ export async function fetchActiveRequester(
         .eq('id', resolved.id)
         .maybeSingle<ProfileRow>();
     if (error) throw error;
-    if (!data || data.status !== 'active') {
-        return { requester: null, response: fail(403, 'FORBIDDEN', 'active requester is required') };
+    if (!data || data.status !== 'active' || data.role === 'partner_vendor') {
+        return { requester: null, response: fail(403, 'FORBIDDEN', 'active franchise staff requester is required') };
     }
     return { requester: data, response: null };
 }

@@ -74,6 +74,7 @@ const {
 const manager: RequesterProfile = { company_id: 'company-1', id: 'manager-1', role: 'manager' };
 const staff: RequesterProfile = { company_id: 'company-1', id: 'staff-1', role: 'staff' };
 const inactiveRequester: RequesterProfile = { company_id: 'company-1', id: 'inactive-requester', role: 'manager' };
+const partnerVendor: RequesterProfile = { company_id: 'company-1', id: 'partner-1', role: 'partner_vendor' };
 
 function createState(overrides: Partial<FakeState> = {}): FakeState {
     return {
@@ -85,6 +86,7 @@ function createState(overrides: Partial<FakeState> = {}): FakeState {
             'inactive-target': { company_id: 'company-1', id: 'inactive-target', role: 'staff', status: 'inactive' },
             'manager-1': { company_id: 'company-1', id: 'manager-1', role: 'manager', status: 'active' },
             'manager-2': { company_id: 'company-2', id: 'manager-2', role: 'manager', status: 'active' },
+            'partner-1': { company_id: 'company-1', id: 'partner-1', role: 'partner_vendor', status: 'active' },
             'staff-1': { company_id: 'company-1', id: 'staff-1', role: 'staff', status: 'active' }
         },
         schedules: {
@@ -357,6 +359,20 @@ test('Given inactive requester When using every method Then all reads and mutati
     ]);
 
     assert.deepEqual(responses.map(response => response.status), [403, 403, 403, 403, 403]);
+    assert.equal(state.mutations.length, 0);
+});
+
+test('Given partner vendor requester When using every method Then franchise staff schedules remain inaccessible', async () => {
+    const state = createState();
+    const deps = createDependencies(state, partnerVendor);
+    const responses = await Promise.all([
+        handleFranchiseSchedulesGET(request('GET'), deps),
+        handleFranchiseSchedulesPOST(request('POST', { date: '2026-07-12', title: 'x' }), deps),
+        handleFranchiseSchedulesPATCH(request('PATCH', { id: 'manual-1', title: 'x' }), deps),
+        handleFranchiseSchedulesDELETE(request('DELETE', {}, 'http://localhost/api/franchise-schedules?id=manual-1'), deps)
+    ]);
+
+    assert.deepEqual(responses.map(response => response.status), [403, 403, 403, 403]);
     assert.equal(state.mutations.length, 0);
 });
 

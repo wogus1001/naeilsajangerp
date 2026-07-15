@@ -15,9 +15,9 @@ import type { FranchiseScheduleFilters, FranchiseScheduleItem } from './franchis
 const filters: FranchiseScheduleFilters = { status: 'all', source: 'all', visibility: 'all', assignee: '' };
 
 const rows: readonly FranchiseScheduleItem[] = [
-    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'report', visibility: 'shared', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
-    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', visibility: 'personal', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
-    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', visibility: 'shared', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '' }
+    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'supervision-report', visibility: 'shared', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '/dashboard/franchise-supervision' },
+    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', visibility: 'personal', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '' },
+    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', visibility: 'shared', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '', actionUrl: '' }
 ];
 
 test('Given API contract When reading client endpoint Then only franchise schedule API is used', () => {
@@ -70,6 +70,35 @@ test('Given franchise source schedules When parsing Then contract and disclosure
         '업체 계약',
         '정보공개서'
     ]);
+});
+
+test('Given an operational source with a safe action URL When parsing Then its navigation is retained', () => {
+    const [item] = parseFranchiseScheduleItems({
+        data: [{
+            id: 'report-1',
+            title: '점검 보고서 검토',
+            date: '2026-07-15',
+            sourceType: 'supervision-report',
+            metadata: { actionUrl: '/dashboard/franchise-supervision' }
+        }]
+    });
+
+    assert.equal(item?.source, 'supervision-report');
+    assert.equal(item?.actionUrl, '/dashboard/franchise-supervision');
+});
+
+test('Given an action URL that escapes the dashboard When parsing Then navigation is rejected', () => {
+    const [item] = parseFranchiseScheduleItems({
+        data: [{
+            id: 'report-1',
+            title: '점검 보고서 검토',
+            date: '2026-07-15',
+            sourceType: 'supervision-report',
+            metadata: { actionUrl: '/dashboard/../schedule' }
+        }]
+    });
+
+    assert.equal(item?.actionUrl, '');
 });
 
 test('Given the shared API envelope When parsing Then schedule rows are read from data', () => {

@@ -11,7 +11,7 @@ for (let index = 2; index < process.argv.length; index += 2) {
 const port = Number(args.get('--port') || '3172');
 const mode = args.get('--mode') || 'mocked';
 const readyTimeoutMs = Number(args.get('--ready-timeout-ms') || '120000');
-const baseUrl = `http://127.0.0.1:${port}`;
+const baseUrl = `http://localhost:${port}`;
 const evidenceDir = resolve(process.cwd(), '.omo/evidence/task-7-franchise-independent-schedule');
 
 if (mode !== 'mocked') {
@@ -91,9 +91,14 @@ function authFixture() {
 function scheduleFixture() {
     return {
         schedules: [
-            { id: 'manual-1', title: '점주 정기 미팅', date: '2026-07-10', status: '예정', sourceType: 'manual', assigneeName: '김SV', managerName: '운영팀', details: '오픈 후 1개월 운영 점검' },
-            { id: 'approval-1', title: '방문 보고 결재', date: '2026-07-12', status: '진행중', sourceType: 'approval-document', assigneeName: '이SV', managerName: '박매니저', approvalDocumentId: 'doc-1' },
-            { id: 'visit-1', title: '위생 점검 방문', date: '2026-07-14', status: '지연', sourceType: 'supervision-visit', assigneeName: '김SV', managerName: '박매니저' }
+            { id: 'manual-1', title: '점주 정기 미팅', date: '2026-07-15', status: '예정', sourceType: 'manual', assigneeName: '김SV', managerName: '운영팀', details: '오픈 후 1개월 운영 점검' },
+            { id: 'approval-1', title: '방문 보고 결재', date: '2026-07-15', status: '진행중', sourceType: 'approval-document', assigneeName: '이SV', managerName: '박매니저', approvalDocumentId: 'doc-1' },
+            { id: 'visit-1', title: '위생 점검 방문', date: '2026-07-15', status: '지연', sourceType: 'supervision-visit', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?visitId=visit-1' } },
+            { id: 'report-1', title: '점검 보고서 검토', date: '2026-07-15', status: '진행중', sourceType: 'supervision-report', assigneeName: '박매니저', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?reportId=report-1' } },
+            { id: 'action-1', title: '냉장고 온도 시정조치', date: '2026-07-15', status: '완료', sourceType: 'supervision-corrective-action', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?actionId=action-1' } },
+            { id: 'opening-1', title: '강남점 오픈 준비', date: '2026-07-15', status: '진행중', sourceType: 'opening-project', assigneeName: '오픈 담당자', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-leads?leadId=lead-1&mode=contractChecklist' } },
+            { id: 'request-1', title: '강남점 시설 문의', date: '2026-07-15', status: '지연', sourceType: 'owner-facility-request', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1' } },
+            { id: 'checklist-1', title: '강남점 체크리스트 완료', date: '2026-07-15', status: '완료', sourceType: 'owner-checklist-completion', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status' } }
         ]
     };
 }
@@ -115,6 +120,82 @@ async function installMocks(page, scenario) {
     }));
     await page.route('**/api/system/settings', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ features: { electronicContracts: true }, announcement: null, maintenance: null }) }));
     await page.route('**/api/franchise-notifications**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ notifications: [] }) }));
+    await page.route('**/api/franchise-supervision**', route => {
+        const pathname = new URL(route.request().url()).pathname;
+        if (pathname !== '/api/franchise-supervision') return route.continue();
+        return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ data: {
+                schemaReady: true,
+                canManage: true,
+                companyId: 'company-1',
+                locations: [],
+                supervisors: [],
+                assignments: [],
+                visits: [],
+                reports: [],
+                reportTemplates: [],
+                reportEvents: [],
+                correctiveActions: [{
+                    id: 'action-1',
+                    companyId: 'company-1',
+                    reportId: null,
+                    locationId: 'location-1',
+                    locationName: '강남점',
+                    assigneeProfileId: 'user-1',
+                    assigneeName: '김SV',
+                    status: '완료',
+                    title: '냉장고 온도 시정조치',
+                    memo: '온도계를 교체했습니다.',
+                    dueDate: '2026-07-15',
+                    completedAt: '2026-07-15T03:00:00.000Z'
+                }],
+                correctiveActionEvents: [],
+                operationQueue: [],
+                summary: {
+                    todayVisitCount: 0,
+                    weekVisitCount: 0,
+                    missingReportCount: 0,
+                    pendingApprovalCount: 0,
+                    activeCorrectiveActionCount: 0
+                }
+            } })
+        });
+    });
+    await page.route('**/api/franchise-locations**', route => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { locations: [{
+            id: 'location-1',
+            companyId: 'company-1',
+            name: '강남점',
+            status: '운영중'
+        }] } })
+    }));
+    await page.route('**/api/franchise-owner-portal/**', route => {
+        const pathname = new URL(route.request().url()).pathname;
+        if (pathname.endsWith('/submissions')) {
+            return route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: { submissions: [{
+                    id: 'submission-1',
+                    location_id: 'location-1',
+                    submission_type: 'facility_request',
+                    title: '냉장고 고장',
+                    body: '냉장고 온도를 확인해주세요.',
+                    payload: {},
+                    status: 'submitted',
+                    review_note: null,
+                    created_at: '2026-07-15T01:00:00.000Z',
+                    files: []
+                }] } })
+            });
+        }
+        const key = pathname.endsWith('/accounts') ? 'accounts' : pathname.endsWith('/notices') ? 'notices' : 'checklists';
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { [key]: [] } }) });
+    });
     await page.route('**/api/company-menu-features**', route => route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -127,6 +208,13 @@ async function installMocks(page, scenario) {
         if (scenario === 'forbidden') {
             return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'FORBIDDEN' }) });
         }
+        if (route.request().method() === 'GET' && new URL(route.request().url()).searchParams.get('view') === 'assignees') {
+            return route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: { assignees: [{ id: 'user-1', name: '김SV' }], requesterProfileId: 'user-1' } })
+            });
+        }
         if (route.request().method() === 'GET') {
             return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(scheduleFixture()) });
         }
@@ -135,14 +223,20 @@ async function installMocks(page, scenario) {
 }
 
 async function waitForRoot(page) {
-    await page.goto(`${baseUrl}/dashboard/franchise-operations/schedule?approvalDocumentId=doc-1`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/dashboard/franchise-operations/schedule`, { waitUntil: 'domcontentloaded' });
     if (page.url().includes('/login')) throw new Error('Redirected to /login during mocked visual QA');
     try {
         await page.getByTestId('franchise-schedule-root').waitFor({ timeout: readyTimeoutMs });
     } catch (error) {
         if (page.url().includes('/login')) throw new Error('Redirected to /login during mocked visual QA');
-        throw error;
+        const bodyText = (await page.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 500);
+        throw new Error(`Schedule root did not render at ${page.url()}. Body: ${bodyText}`, { cause: error });
     }
+}
+
+async function waitForScheduleData(page) {
+    await page.waitForFunction(() => Array.from(document.querySelectorAll('select option'))
+        .some(option => option instanceof HTMLOptionElement && option.value === 'supervision-visit'), undefined, { timeout: readyTimeoutMs });
 }
 
 async function assertNoOverflow(page) {
@@ -163,12 +257,49 @@ async function runScenario(browser, scenario) {
     page.on('pageerror', error => consoleErrors.push(error.message));
     await installMocks(page, scenario);
     await waitForRoot(page);
+    if (scenario === 'desktop' || scenario === 'mobile') await waitForScheduleData(page);
     await assertNoOverflow(page);
     if (scenario === 'desktop') {
+        for (const label of ['SV 방문', '보고서', '시정조치', '오픈 준비', '점주 시설 문의', '점주 체크리스트']) {
+            const optionCount = await page.locator('option').filter({ hasText: label }).count();
+            if (optionCount === 0) throw new Error(`Missing schedule source filter option: ${label}`);
+        }
+        const sourceLinks = await page.getByRole('link', { name: '업무 열기' }).count();
+        if (sourceLinks !== 6) throw new Error(`Expected 6 source detail links, received ${sourceLinks}`);
+        const ownerDetailPath = '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1';
+        await page.locator(`a[href="${ownerDetailPath}"]`).click();
+        await page.waitForURL(url => `${url.pathname}${url.search}` === ownerDetailPath, { timeout: 10000 });
+        await page.locator('article[aria-current="true"] details[open]').waitFor({ timeout: 10000 });
+        await page.goBack({ waitUntil: 'domcontentloaded' });
+        await page.getByTestId('franchise-schedule-root').waitFor({ timeout: readyTimeoutMs });
+        await waitForScheduleData(page);
+        const checklistDetailPath = '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status';
+        await page.locator(`a[href="${checklistDetailPath}"]`).click();
+        await page.waitForURL(url => `${url.pathname}${url.search}` === checklistDetailPath, { timeout: 10000 });
+        const checklistStatusTab = page.getByRole('tab', { name: /발송 현황/ });
+        await checklistStatusTab.waitFor({ timeout: 10000 });
+        if (await checklistStatusTab.getAttribute('aria-selected') !== 'true') {
+            throw new Error('Checklist completion deep link did not open the status tab');
+        }
+        await page.goBack({ waitUntil: 'domcontentloaded' });
+        await page.getByTestId('franchise-schedule-root').waitFor({ timeout: readyTimeoutMs });
+        await waitForScheduleData(page);
+        const actionDetailPath = '/dashboard/franchise-supervision?actionId=action-1';
+        await page.locator(`a[href="${actionDetailPath}"]`).click();
+        await page.waitForURL(url => `${url.pathname}${url.search}` === actionDetailPath, { timeout: 10000 });
+        const focusedAction = page.locator('tr[aria-current="true"]');
+        await focusedAction.waitFor({ timeout: 10000 });
+        if (!(await focusedAction.innerText()).includes('냉장고 온도 시정조치')) {
+            throw new Error('Corrective action deep link did not focus the expected row');
+        }
+        await page.goBack({ waitUntil: 'domcontentloaded' });
+        await page.getByTestId('franchise-schedule-root').waitFor({ timeout: readyTimeoutMs });
+        await waitForScheduleData(page);
         await page.getByRole('button', { name: /수동 일정 등록/ }).click();
         await page.getByLabel('제목').fill('QA 수동 일정');
+        await page.getByLabel('담당자').selectOption('user-1');
         await page.getByRole('button', { name: '저장' }).click();
-        await page.getByRole('status').waitFor({ timeout: 10000 });
+        await page.getByRole('alertdialog', { name: '처리 완료' }).waitFor({ timeout: 10000 });
     }
     if (scenario === 'sql') await page.getByText('프랜차이즈 일정 SQL 등록 필요').waitFor({ timeout: 10000 });
     if (scenario === 'forbidden') await page.getByText('가맹 운영 일정 접근 권한이 없습니다.').waitFor({ timeout: 10000 });

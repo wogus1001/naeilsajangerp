@@ -464,6 +464,7 @@
 }
 
 .rowActions button,
+.rowActions a,
 .dayEmpty button {
     display: inline-flex;
     align-items: center;
@@ -478,6 +479,7 @@
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .rowActions .rowDeleteButton {

@@ -30,8 +30,11 @@ const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = [
     'all',
     'manual',
     'supervision-visit',
-    'report',
-    'corrective-action',
+    'supervision-report',
+    'supervision-corrective-action',
+    'opening-project',
+    'owner-facility-request',
+    'owner-checklist-completion',
     'vendor-contract-renewal',
     'disclosure-contract-eligible'
 ];
@@ -50,8 +53,11 @@ function getSelectedStatusFilter(value: string): 'all' | FranchiseScheduleStatus
 function getSelectedSourceFilter(value: string): 'all' | FranchiseScheduleSource {
     if (
         value === 'supervision-visit'
-        || value === 'report'
-        || value === 'corrective-action'
+        || value === 'supervision-report'
+        || value === 'supervision-corrective-action'
+        || value === 'opening-project'
+        || value === 'owner-facility-request'
+        || value === 'owner-checklist-completion'
         || value === 'vendor-contract-renewal'
         || value === 'disclosure-contract-eligible'
     ) return value;
@@ -124,7 +130,7 @@ export function FranchiseSchedulePage() {
                 <div>
                     <span className={styles.eyebrow}>가맹 운영</span>
                     <h1>일정관리</h1>
-                    <p>슈퍼바이징과 수동 운영 일정을 한 달 단위로 확인합니다. 전자결재 요청은 상단 알림에서 확인할 수 있습니다.</p>
+                    <p>가맹운영 일정을 한 달 단위로 확인합니다. 전자결재는 상단 알림에서 확인하세요.</p>
                 </div>
                 <button className={styles.primaryButton} type="button" onClick={() => setForm({ ...EMPTY_FORM, date: model.selectedDate })}>
                     <Plus size={16} /> 수동 일정 등록

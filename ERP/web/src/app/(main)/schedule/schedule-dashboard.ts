@@ -1,3 +1,5 @@
+import { isFranchiseOperationsScheduleSource } from '@/lib/franchise-schedule-source-types';
+
 export type ScheduleEvent = {
     readonly id: string;
     readonly title: string;
@@ -81,7 +83,10 @@ export function isScheduleEventApprovalPending(event: ScheduleEvent): boolean {
 export function buildScheduleDashboard(events: readonly ScheduleEvent[], today: Date = new Date()): ScheduleDashboard {
     const todayKey = keyFromDate(today);
     const weekEndKey = keyFromDate(addDays(today, 6));
-    const activeEvents = events.filter(event => !isScheduleEventCanceled(event));
+    const activeEvents = events.filter(event => (
+        !isScheduleEventCanceled(event)
+        && !isFranchiseOperationsScheduleSource(event.sourceType)
+    ));
     return {
         today: activeEvents.filter(event => scheduleEventDateKey(event) === todayKey),
         week: activeEvents.filter(event => {

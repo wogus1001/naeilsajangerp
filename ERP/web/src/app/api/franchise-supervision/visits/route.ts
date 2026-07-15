@@ -1,9 +1,8 @@
 import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
-import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
-import { upsertWorkflowSchedule } from '@/lib/franchise-workflow-store';
+import { buildSupervisionVisitSourceSchedule } from '@/lib/franchise-phase2-source-schedules';
+import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -18,10 +17,8 @@ import {
     resolveSupervisionCompanyId
 } from '@/lib/franchise-supervision-api';
 import {
-    buildSupervisionScheduleInsert,
     normalizeVisitPurpose,
-    normalizeVisitStatus,
-    type SupervisionVisitPurpose
+    normalizeVisitStatus
 } from '@/lib/franchise-supervision';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +29,6 @@ type VisitAccessRow = {
     readonly location?: { readonly name: string | null } | null;
     readonly location_id: string | null;
     readonly purpose: string | null;
-    readonly schedule_id: string | null;
     readonly status: string | null;
     readonly supervisor_profile_id: string | null;
     readonly visit_date: string | null;
@@ -88,48 +84,17 @@ async function syncSchedule(input: {
     readonly nextVisitDate: string | null;
     readonly supabaseAdmin: SupabaseClient;
 }) {
-    if (!input.existing.schedule_id) return;
     const nextVisitDate = input.nextVisitDate || input.existing.visit_date || '';
-    await upsertWorkflowSchedule(input.supabaseAdmin, {
+    const schedule = buildSupervisionVisitSourceSchedule({
         companyId: input.existing.company_id || '',
-        scheduleId: input.existing.schedule_id,
-        sourceType: 'supervision-visit',
-        sourceId: input.existing.id,
-        title: `${input.nextLocationName || readLocationName(input.existing.location)} ${input.nextPurpose}`,
-        date: nextVisitDate,
-        status: input.nextStatus === '취소' ? '취소' : '예정',
-        type: '슈퍼바이징',
-        details: '슈퍼바이징 방문 일정',
-        assigneeProfileId: input.nextSupervisorProfileId || input.existing.supervisor_profile_id || null,
-        userId: input.nextSupervisorProfileId || input.existing.supervisor_profile_id || null,
-        dueAt: nextVisitDate ? `${nextVisitDate}T00:00:00+09:00` : null,
-        metadata: { visitId: input.existing.id }
+        locationName: input.nextLocationName || readLocationName(input.existing.location),
+        purpose: input.nextPurpose,
+        status: input.nextStatus,
+        supervisorProfileId: input.nextSupervisorProfileId || input.existing.supervisor_profile_id || '',
+        visitDate: nextVisitDate,
+        visitId: input.existing.id
     });
-}
-
-async function createSchedule(input: {
-    readonly companyId: string;
-    readonly locationName: string;
-    readonly supervisorProfileId: string;
-    readonly supabaseAdmin: SupabaseClient;
-    readonly visitDate: string;
-    readonly purpose: SupervisionVisitPurpose;
-}) {
-    const scheduleId = randomUUID();
-    const { data, error } = await input.supabaseAdmin
-        .from('schedules')
-        .insert(buildSupervisionScheduleInsert({
-            companyId: input.companyId,
-            locationName: input.locationName,
-            purpose: input.purpose,
-            scheduleId,
-            supervisorProfileId: input.supervisorProfileId,
-            visitDate: input.visitDate
-        }))
-        .select('id')
-        .maybeSingle<{ readonly id: string }>();
-    if (error) throw error;
-    return data?.id || null;
+    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 async function notifyVisitDue(input: {
@@ -160,32 +125,25 @@ async function notifyVisitDue(input: {
     }
 }
 
-async function attachVisitScheduleSource(input: {
+async function createVisitScheduleSource(input: {
     readonly companyId: string;
     readonly locationName: string;
     readonly purpose: string;
-    readonly scheduleId: string | null;
     readonly supervisorProfileId: string;
     readonly supabaseAdmin: SupabaseClient;
     readonly visitDate: string;
     readonly visitId: string;
 }) {
-    if (!input.scheduleId) return;
-    await upsertWorkflowSchedule(input.supabaseAdmin, {
+    const schedule = buildSupervisionVisitSourceSchedule({
         companyId: input.companyId,
-        scheduleId: input.scheduleId,
-        sourceType: 'supervision-visit',
-        sourceId: input.visitId,
-        title: `${input.locationName} ${input.purpose}`,
-        date: input.visitDate,
+        locationName: input.locationName,
+        purpose: input.purpose,
         status: '예정',
-        type: '슈퍼바이징',
-        details: '슈퍼바이징 방문 일정',
-        assigneeProfileId: input.supervisorProfileId,
-        userId: input.supervisorProfileId,
-        dueAt: `${input.visitDate}T00:00:00+09:00`,
-        metadata: { visitId: input.visitId }
+        supervisorProfileId: input.supervisorProfileId,
+        visitDate: input.visitDate,
+        visitId: input.visitId
     });
+    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 async function readMutationScope(request: Request) {
@@ -233,15 +191,6 @@ export async function POST(request: Request) {
             supervisorProfileId: supervisor.profileId,
             supabaseAdmin: scope.auth.supabaseAdmin
         });
-        const scheduleId = await createSchedule({
-            companyId: scope.companyId,
-            locationName: location.location.name || '운영점',
-            purpose,
-            supervisorProfileId: supervisor.profileId,
-            supabaseAdmin: scope.auth.supabaseAdmin,
-            visitDate
-        });
-
         const { data, error } = await scope.auth.supabaseAdmin
             .from('franchise_store_visits')
             .insert({
@@ -249,7 +198,7 @@ export async function POST(request: Request) {
                 location_id: location.location.id,
                 supervisor_profile_id: supervisor.profileId,
                 assignment_id: assignmentId,
-                schedule_id: scheduleId,
+                schedule_id: null,
                 visit_date: visitDate,
                 purpose,
                 status: normalizeVisitStatus(getFirst(scope.body, ['status'])),
@@ -260,11 +209,10 @@ export async function POST(request: Request) {
             .select('id')
             .single<{ readonly id: string }>();
         if (error) throw error;
-        await runOptionalWorkflowSync(() => attachVisitScheduleSource({
+        await runOptionalWorkflowSync(() => createVisitScheduleSource({
                 companyId: scope.companyId,
                 locationName: location.location.name || '운영점',
                 purpose,
-                scheduleId,
                 supervisorProfileId: supervisor.profileId,
                 supabaseAdmin: scope.auth.supabaseAdmin,
                 visitDate,
@@ -288,9 +236,6 @@ export async function POST(request: Request) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
         }
-        if (isMissingWorkflowSchemaError(error)) {
-            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
-        }
         console.error('Franchise supervision visit POST error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 저장하지 못했습니다.');
     }
@@ -306,7 +251,7 @@ export async function PATCH(request: Request) {
 
         const { data: existing, error: findError } = await scope.auth.supabaseAdmin
             .from('franchise_store_visits')
-            .select('id, company_id, location_id, supervisor_profile_id, schedule_id, visit_date, purpose, status, created_by, location:franchise_locations(name)')
+            .select('id, company_id, location_id, supervisor_profile_id, visit_date, purpose, status, created_by, location:franchise_locations(name)')
             .eq('id', id)
             .maybeSingle<VisitAccessRow>();
         if (findError) throw findError;
@@ -380,9 +325,6 @@ export async function PATCH(request: Request) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
         }
-        if (isMissingWorkflowSchemaError(error)) {
-            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
-        }
         console.error('Franchise supervision visit PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 수정하지 못했습니다.');
     }
@@ -398,7 +340,7 @@ export async function DELETE(request: Request) {
 
         const { data: existing, error: findError } = await scope.auth.supabaseAdmin
             .from('franchise_store_visits')
-            .select('id, company_id, location_id, supervisor_profile_id, schedule_id, visit_date, purpose, status, created_by, location:franchise_locations(name)')
+            .select('id, company_id, location_id, supervisor_profile_id, visit_date, purpose, status, created_by, location:franchise_locations(name)')
             .eq('id', id)
             .maybeSingle<VisitAccessRow>();
         if (findError) throw findError;
@@ -430,9 +372,6 @@ export async function DELETE(request: Request) {
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
-        }
-        if (isMissingWorkflowSchemaError(error)) {
-            return fail(424, 'VALIDATION_ERROR', '공통 일정/결재 SQL이 아직 적용되지 않았습니다. supabase_franchise_approval_calendar_migration.sql 적용 후 다시 확인해주세요.');
         }
         console.error('Franchise supervision visit DELETE error:', error);
         return fail(500, 'INTERNAL_ERROR', '방문 일정을 삭제하지 못했습니다.');

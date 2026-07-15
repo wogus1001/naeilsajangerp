@@ -208,6 +208,7 @@ export async function PATCH(request: Request) {
         if (error) throw error;
 
         await syncVendorContractScheduleSafely({
+            previousContractEndDate: existing.contract_end_date,
             requester: auth.requester,
             row: data,
             supabaseAdmin: auth.supabaseAdmin

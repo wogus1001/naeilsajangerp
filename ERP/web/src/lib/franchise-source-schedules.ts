@@ -73,7 +73,12 @@ export function buildVendorContractRenewalSchedule(
         details: `${vendorName} ${contractTitle} 계약의 갱신 여부를 확인합니다.`,
         dueAt: `${contractEndDate}T23:59:59+09:00`,
         managerProfileId: cleanText(context.managerProfileId) || null,
-        metadata: { contractId, contractTitle, vendorName },
+        metadata: {
+            actionUrl: '/dashboard/franchise-vendors',
+            contractId,
+            contractTitle,
+            vendorName
+        },
         sourceId: contractId,
         sourceType: VENDOR_CONTRACT_RENEWAL_SOURCE_TYPE,
         status,
@@ -110,6 +115,7 @@ export function buildDisclosureEligibilitySchedule(
         dueAt: eligibleAt,
         managerProfileId,
         metadata: {
+            actionUrl: `/dashboard/franchise-leads?leadId=${encodeURIComponent(leadId)}`,
             deliveryId: eligibility.latestDeliveryId,
             leadId,
             leadName

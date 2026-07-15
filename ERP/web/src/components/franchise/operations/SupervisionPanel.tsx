@@ -158,7 +158,13 @@ const QUEUE_FILTER_BY_TYPE: Record<SupervisionOperationQueueItem['type'], Superv
     actionOverdue: 'activeActions'
 } as const;
 
-export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
+type SupervisionPanelProps = SupervisionScope & {
+    readonly initialActionId?: string;
+    readonly initialReportId?: string;
+    readonly initialVisitId?: string;
+};
+
+export function SupervisionPanel({ userId, companyName, initialActionId = '', initialReportId = '', initialVisitId = '' }: SupervisionPanelProps) {
     const { showAlert, showConfirm } = useAppDialog();
     const [data, setData] = React.useState<SupervisionPayload>(EMPTY_PAYLOAD);
     const [activeView, setActiveView] = React.useState<SupervisionView>('dashboard');
@@ -187,13 +193,29 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
             setData(nextData);
             setAssignmentForm(makeAssignmentForm(nextData));
             setVisitForm(makeVisitForm(nextData));
-            setSelectedVisitId(current => current || nextData.visits[0]?.id || '');
+            const linkedAction = initialActionId
+                ? nextData.correctiveActions.find(action => action.id === initialActionId)
+                : null;
+            const linkedReportId = initialReportId || linkedAction?.reportId || '';
+            const linkedReport = linkedReportId
+                ? nextData.reports.find(report => report.id === linkedReportId)
+                : null;
+            const linkedVisitId = initialVisitId || linkedReport?.visitId || '';
+            setSelectedVisitId(current => linkedVisitId || current || nextData.visits[0]?.id || '');
+            if (initialActionId) {
+                setActiveView('review');
+                setActiveFilter(linkedAction && (linkedAction.status === '요청' || linkedAction.status === '진행중') ? 'activeActions' : 'all');
+            } else if (linkedReportId) {
+                setActiveView('reports');
+            } else if (linkedVisitId) {
+                setActiveView('visits');
+            }
         } catch (error) {
             void showAlert({ message: error instanceof Error ? error.message : '슈퍼바이징 정보를 불러오지 못했습니다.', type: 'error' });
         } finally {
             setIsLoading(false);
         }
-    }, [scope, showAlert]);
+    }, [initialActionId, initialReportId, initialVisitId, scope, showAlert]);
 
     React.useEffect(() => {
         void load();
@@ -576,7 +598,12 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                 onApprove={report => void submitReport('approve', report)}
                                 onReject={(report, reason) => void submitReport('reject', report, reason)}
                             />
-                            <CorrectiveActionList actions={visibleActions} disabled={isSaving} onStatusChange={changeActionStatus} />
+                            <CorrectiveActionList
+                                actions={visibleActions}
+                                disabled={isSaving}
+                                selectedActionId={initialActionId}
+                                onStatusChange={changeActionStatus}
+                            />
                         </div>
                     </section>
                 </div>

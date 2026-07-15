@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import { cleanString, getFirst, isRecord } from '@/lib/franchise-supervision-api';
+import {
+    buildSupervisionCorrectiveActionSourceSchedule,
+    buildSupervisionReportSourceSchedule
+} from '@/lib/franchise-phase2-source-schedules';
+import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import { kstDateKey } from '@/lib/franchise-workflow';
 import { isSupervisionReportStoragePath, SUPERVISION_REPORT_BUCKET } from '@/lib/upload-storage-policy';
 import {
     fetchWorkflowManagerProfileIds
@@ -47,8 +53,11 @@ export type ReportRow = {
 };
 
 type CorrectiveActionRow = {
+    readonly assignee_profile_id: string | null;
+    readonly due_date: string | null;
     readonly id: string;
     readonly inspection_item_id: string | null;
+    readonly status: string | null;
     readonly title?: string | null;
 };
 
@@ -153,35 +162,63 @@ export async function insertCorrectiveActions(input: {
     const seeds = buildCorrectiveActionSeeds(input.reportId, input.items);
     if (seeds.length === 0) return;
     const now = new Date().toISOString();
+    const dueAt = new Date();
+    dueAt.setDate(dueAt.getDate() + 7);
+    const dueDate = kstDateKey(dueAt);
     const seedItemIds = seeds.map(seed => seed.itemId);
     const { data: existingRows, error: existingError } = await input.supabaseAdmin
         .from('franchise_corrective_actions')
-        .select('id, inspection_item_id')
+        .select('id, assignee_profile_id, due_date, inspection_item_id, status, title')
         .eq('report_id', input.reportId)
         .in('inspection_item_id', seedItemIds)
         .returns<CorrectiveActionRow[]>();
     if (existingError) throw existingError;
     const existingItemIds = new Set((existingRows || []).map(row => row.inspection_item_id).filter(Boolean));
-    const { data, error } = await input.supabaseAdmin
-        .from('franchise_corrective_actions')
-        .upsert(seeds.map(seed => ({
-            company_id: input.companyId,
-            report_id: input.reportId,
-            inspection_item_id: seed.itemId,
-            location_id: input.locationId,
-            assignee_profile_id: input.assigneeProfileId,
-            title: seed.title,
-            memo: seed.memo || null,
-            status: '요청',
-            created_by: input.createdBy,
-            updated_by: input.createdBy,
-            created_at: now,
-            updated_at: now
-        })), { onConflict: 'report_id,inspection_item_id' })
-        .select('id, inspection_item_id, title')
-        .returns<CorrectiveActionRow[]>();
-    if (error) throw error;
-    const newRows = (data || []).filter(row => row.inspection_item_id && !existingItemIds.has(row.inspection_item_id));
+    const newSeeds = seeds.filter(seed => !existingItemIds.has(seed.itemId));
+    let insertedRows: readonly CorrectiveActionRow[] = [];
+    if (newSeeds.length > 0) {
+        const { data, error } = await input.supabaseAdmin
+            .from('franchise_corrective_actions')
+            .upsert(newSeeds.map(seed => ({
+                company_id: input.companyId,
+                report_id: input.reportId,
+                inspection_item_id: seed.itemId,
+                location_id: input.locationId,
+                assignee_profile_id: input.assigneeProfileId,
+                title: seed.title,
+                memo: seed.memo || null,
+                status: '요청',
+                due_date: dueDate,
+                created_by: input.createdBy,
+                updated_by: input.createdBy,
+                created_at: now,
+                updated_at: now
+            })), { onConflict: 'report_id,inspection_item_id' })
+            .select('id, assignee_profile_id, due_date, inspection_item_id, status, title')
+            .returns<CorrectiveActionRow[]>();
+        if (error) throw error;
+        insertedRows = data || [];
+    }
+    const syncedRows = [...(existingRows || []), ...insertedRows];
+    await Promise.all(syncedRows.map(async row => {
+        const schedule = buildSupervisionCorrectiveActionSourceSchedule({
+            actionId: row.id,
+            assigneeProfileId: row.assignee_profile_id || input.assigneeProfileId,
+            companyId: input.companyId,
+            dueDate: row.due_date,
+            locationName: input.locationName,
+            status: row.status || '요청',
+            title: row.title || '시정요청'
+        });
+        if (!schedule) return;
+        try {
+            await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+        } catch (error) {
+            console.warn('Optional generated corrective action franchise schedule sync skipped:', error);
+        }
+    }));
+
+    const newRows = insertedRows.filter(row => row.inspection_item_id && !existingItemIds.has(row.inspection_item_id));
     if (newRows.length === 0) return;
     const { error: eventError } = await input.supabaseAdmin
         .from('franchise_corrective_action_events')
@@ -207,7 +244,7 @@ export async function insertCorrectiveActions(input: {
                 variables: {
                     운영점명: input.locationName,
                     시정항목: row.title || '시정요청',
-                    기한: '-'
+                    기한: row.due_date || dueDate
                 }
             });
         } catch (error) {
@@ -310,6 +347,22 @@ export async function syncSupervisionReportWorkflow(input: {
         p_visit_id: input.visitId || null
     });
     if (error) throw error;
+    const schedule = buildSupervisionReportSourceSchedule({
+        companyId: input.companyId,
+        locationName: input.locationName,
+        managerProfileId: approverProfileId || input.reportWrite.reviewedBy,
+        reportId: input.reportId,
+        status: input.reportWrite.status,
+        supervisorProfileId: input.supervisorProfileId,
+        taskDate: input.reportWrite.reviewedAt || input.reportWrite.submittedAt
+    });
+    if (schedule) {
+        try {
+            await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+        } catch (scheduleError) {
+            console.warn('Optional supervision report franchise schedule sync skipped:', scheduleError);
+        }
+    }
 }
 
 export async function reconcileSubmittedSupervisionReport(input: {

@@ -1,3 +1,9 @@
+import { normalizeFranchiseScheduleSource } from './franchiseScheduleSources';
+import type { FranchiseScheduleSource } from './franchiseScheduleSources';
+
+export { getFranchiseScheduleSourceLabel } from './franchiseScheduleSources';
+export type { FranchiseScheduleSource } from './franchiseScheduleSources';
+
 export const FRANCHISE_SCHEDULES_API_PATH = '/api/franchise-schedules';
 
 export function getFranchiseScheduleMutationPath(
@@ -12,14 +18,6 @@ export function getFranchiseScheduleMutationPath(
 }
 
 export type FranchiseScheduleStatus = '예정' | '진행중' | '완료' | '지연' | '취소';
-export type FranchiseScheduleSource =
-    | 'manual'
-    | 'approval-document'
-    | 'supervision-visit'
-    | 'report'
-    | 'corrective-action'
-    | 'vendor-contract-renewal'
-    | 'disclosure-contract-eligible';
 export type FranchiseScheduleVisibility = 'shared' | 'personal';
 export type FranchiseScheduleLoadState = 'loading' | 'empty' | 'ready' | 'needs-sql' | 'forbidden' | 'error';
 
@@ -36,6 +34,7 @@ export type FranchiseScheduleItem = {
     readonly details: string;
     readonly approvalDocumentId: string;
     readonly completedAt: string;
+    readonly actionUrl: string;
 };
 
 export type FranchiseScheduleAssignee = {
@@ -67,35 +66,6 @@ export type FranchiseScheduleViewModel = {
 };
 
 const STATUS_SET: readonly FranchiseScheduleStatus[] = ['예정', '진행중', '완료', '지연', '취소'];
-const SOURCE_SET: readonly FranchiseScheduleSource[] = [
-    'manual',
-    'approval-document',
-    'supervision-visit',
-    'report',
-    'corrective-action',
-    'vendor-contract-renewal',
-    'disclosure-contract-eligible'
-];
-
-export function getFranchiseScheduleSourceLabel(source: FranchiseScheduleSource): string {
-    switch (source) {
-        case 'manual':
-            return '수동 등록';
-        case 'approval-document':
-            return '전자결재';
-        case 'supervision-visit':
-            return 'SV 방문';
-        case 'report':
-            return '보고서';
-        case 'corrective-action':
-            return '시정조치';
-        case 'vendor-contract-renewal':
-            return '업체 계약';
-        case 'disclosure-contract-eligible':
-            return '정보공개서';
-    }
-}
-
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -116,15 +86,23 @@ function normalizeStatus(value: string): FranchiseScheduleStatus {
     return '예정';
 }
 
-function normalizeSource(value: string): FranchiseScheduleSource {
-    for (const source of SOURCE_SET) {
-        if (value === source) return source;
-    }
-    return 'manual';
-}
-
 function normalizeVisibility(value: string): FranchiseScheduleVisibility {
     return value === 'personal' ? 'personal' : 'shared';
+}
+
+function readActionUrl(entry: Readonly<Record<string, unknown>>): string {
+    const metadata = entry.metadata;
+    if (!isRecord(metadata)) return '';
+    const actionUrl = readString(metadata, 'actionUrl');
+    if (!actionUrl.startsWith('/')) return '';
+    try {
+        const appOrigin = 'https://fcerp.local';
+        const parsed = new URL(actionUrl, appOrigin);
+        if (parsed.origin !== appOrigin || !parsed.pathname.startsWith('/dashboard/')) return '';
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+        return '';
+    }
 }
 
 export function parseFranchiseScheduleItems(payload: unknown): readonly FranchiseScheduleItem[] {
@@ -146,14 +124,15 @@ export function parseFranchiseScheduleItems(payload: unknown): readonly Franchis
             title,
             date,
             status: normalizeStatus(readString(entry, 'status')),
-            source: normalizeSource(readString(entry, 'sourceType') || readString(entry, 'source')),
+            source: normalizeFranchiseScheduleSource(readString(entry, 'sourceType') || readString(entry, 'source')),
             visibility: normalizeVisibility(readString(entry, 'visibility')),
             assigneeProfileId: readString(entry, 'assigneeProfileId'),
             assigneeName: readString(entry, 'assigneeName') || '담당자 미지정',
             managerName: readString(entry, 'managerName') || '관리자 미지정',
             details: readString(entry, 'details'),
             approvalDocumentId: readString(entry, 'approvalDocumentId'),
-            completedAt: readString(entry, 'completedAt')
+            completedAt: readString(entry, 'completedAt'),
+            actionUrl: readActionUrl(entry)
         }];
     }).sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title));
 }

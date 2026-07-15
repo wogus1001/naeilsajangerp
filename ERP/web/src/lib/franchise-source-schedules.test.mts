@@ -25,6 +25,7 @@ void test('Given an active vendor contract When its end date is past Then a late
     assert.equal(schedule?.status, '지연');
     assert.equal(schedule?.assigneeProfileId, 'owner-1');
     assert.equal(schedule?.date, '2026-07-14');
+    assert.equal(schedule?.metadata?.actionUrl, '/dashboard/franchise-vendors');
 });
 
 void test('Given terminal vendor contracts When building schedules Then renewed is complete and archived is cancelled', () => {
@@ -77,6 +78,7 @@ void test('Given a sent disclosure When the eligible date exists Then one lead-s
     assert.equal(schedule?.date, '2026-07-18');
     assert.equal(schedule?.status, '예정');
     assert.equal(schedule?.metadata?.deliveryId, 'delivery-1');
+    assert.equal(schedule?.metadata?.actionUrl, '/dashboard/franchise-leads?leadId=lead-1');
 });
 
 void test('Given an eligible disclosure or incomplete scope When building Then it completes or skips safely', () => {

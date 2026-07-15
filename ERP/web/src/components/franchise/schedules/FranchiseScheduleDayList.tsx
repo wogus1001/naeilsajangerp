@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarPlus, Check, LockKeyhole, NotebookText, Pencil, Plus, Trash2, UserRound, UsersRound } from 'lucide-react';
+import { CalendarPlus, Check, ExternalLink, LockKeyhole, NotebookText, Pencil, Plus, Trash2, UserRound, UsersRound } from 'lucide-react';
 import { getFranchiseScheduleSourceLabel } from './franchiseScheduleViewModel';
 import type { FranchiseScheduleItem, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
 import styles from './FranchiseSchedulePage.module.css';
@@ -82,6 +82,11 @@ export function FranchiseScheduleDayList({ selectedDate, items, onCreate, onEdit
                                     <button type="button" onClick={() => onEdit(item)}><Pencil size={15} /> 수정</button>
                                     {item.status !== '완료' && <button type="button" onClick={() => onComplete(item)}><Check size={15} /> 완료</button>}
                                     <button className={styles.rowDeleteButton} type="button" onClick={() => onDelete(item)}><Trash2 size={15} /> 삭제</button>
+                                </div>
+                            )}
+                            {item.source !== 'manual' && item.actionUrl && (
+                                <div className={styles.rowActions}>
+                                    <a href={item.actionUrl}><ExternalLink size={15} /> 업무 열기</a>
                                 </div>
                             )}
                         </article>

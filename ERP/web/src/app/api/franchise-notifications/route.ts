@@ -343,20 +343,10 @@ async function runScheduledNotificationGeneration(): Promise<{ readonly companyC
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const { searchParams } = new URL(request.url);
-        if (searchParams.get('cron') === '1') {
-            const secret = process.env.CRON_SECRET;
-            const authHeader = request.headers.get('authorization');
-            if (!secret || authHeader !== `Bearer ${secret}`) {
-                return fail(401, 'AUTH_REQUIRED', 'Invalid cron secret');
-            }
-            const result = await runScheduledNotificationGeneration();
-            return ok({ success: true, ...result });
-        }
-
         const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
 
+        const { searchParams } = new URL(request.url);
         const requestedCompanyName = cleanString(searchParams.get('company') || searchParams.get('companyName'));
         const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
         const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;
@@ -378,13 +368,6 @@ export async function GET(request: Request) {
             ...buildAutomaticFranchiseNotifications(leads),
             ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
         ];
-        if (companyId) {
-            await syncNotificationSourceSchedulesSafely(supabaseAdmin, {
-                leads,
-                vendorContracts,
-                vendorRecipients
-            });
-        }
         await syncAutomaticNotifications(notificationCandidates, {
             companyId,
             requesterId: requester.id,
@@ -442,6 +425,21 @@ export async function GET(request: Request) {
         }
         console.error('Franchise notifications GET error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise notifications');
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const secret = process.env.CRON_SECRET;
+        const authHeader = request.headers.get('authorization');
+        if (!secret || authHeader !== `Bearer ${secret}`) {
+            return fail(401, 'AUTH_REQUIRED', 'Invalid cron secret');
+        }
+        const result = await runScheduledNotificationGeneration();
+        return ok({ success: true, ...result });
+    } catch (error) {
+        console.error('Scheduled franchise notification generation error:', error);
+        return fail(500, 'INTERNAL_ERROR', 'Failed to generate scheduled franchise notifications');
     }
 }
 

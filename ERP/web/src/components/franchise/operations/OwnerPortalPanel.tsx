@@ -30,6 +30,9 @@ type OwnerPortalPanelProps = {
     readonly companyName: string;
     readonly locations: readonly FranchiseLocation[];
     readonly selectedLocationId?: string;
+    readonly selectedSubmissionId?: string;
+    readonly selectedChecklistView?: 'status';
+    readonly selectedView?: Extract<OwnerPortalView, 'checklists' | 'submissions'>;
 };
 
 type JsonRequestInit = {
@@ -73,7 +76,15 @@ function countChecklistIssues(checklists: readonly OwnerChecklistSetting[]): num
     return keys.size;
 }
 
-export function OwnerPortalPanel({ userId, companyName, locations, selectedLocationId }: OwnerPortalPanelProps) {
+export function OwnerPortalPanel({
+    userId,
+    companyName,
+    locations,
+    selectedLocationId,
+    selectedSubmissionId,
+    selectedChecklistView,
+    selectedView
+}: OwnerPortalPanelProps) {
     const [activeView, setActiveView] = React.useState<OwnerPortalView>('notices');
     const [accounts, setAccounts] = React.useState<OwnerAccount[]>([]);
     const [notices, setNotices] = React.useState<OwnerNotice[]>([]);
@@ -128,6 +139,14 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
     React.useEffect(() => {
         if (selectedLocationId) setNoticeLocationIds([selectedLocationId]);
     }, [selectedLocationId]);
+
+    React.useEffect(() => {
+        if (selectedView) {
+            setActiveView(selectedView);
+            return;
+        }
+        if (selectedSubmissionId) setActiveView('submissions');
+    }, [selectedSubmissionId, selectedView]);
 
     const toggleNoticeLocation = (nextLocationId: string) => {
         setNoticeLocationIds(current => current.includes(nextLocationId)
@@ -388,6 +407,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                     checklists={checklists}
                     submissions={submissions}
                     isBusy={isBusy}
+                    initialView={selectedChecklistView}
                     onSaveChecklists={saveChecklists}
                 />
             ) : null}
@@ -395,6 +415,7 @@ export function OwnerPortalPanel({ userId, companyName, locations, selectedLocat
                 <OwnerPortalSubmissionsSection
                     locations={locations}
                     submissions={submissions}
+                    selectedSubmissionId={selectedSubmissionId}
                     isBusy={isBusy}
                     onReviewSubmission={(submissionId, action) => void reviewSubmission(submissionId, action)}
                 />

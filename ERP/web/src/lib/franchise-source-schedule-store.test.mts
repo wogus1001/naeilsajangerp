@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import {
     FRANCHISE_SCHEDULE_UPSERT_RPC,
     buildFranchiseSourceSchedulePayload,
-    executeFranchiseSourceScheduleUpsert
+    executeFranchiseSourceScheduleUpsert,
+    sanitizeFranchiseSourceScheduleProfiles
 } from './franchise-source-schedule-store.js';
 
 test('Given a franchise source task When building the storage payload Then only the franchise schedule RPC contract is used', () => {
@@ -72,4 +73,42 @@ void test('Given a rejected source upsert When persisted Then the RPC failure is
         }, async () => ({ error: { message: 'company scope rejected' } })),
         /company scope rejected/
     );
+});
+
+test('Given schedule profile candidates When sanitizing Then only active company staff and managers remain', () => {
+    const sanitized = sanitizeFranchiseSourceScheduleProfiles({
+        assigneeProfileId: 'partner-1',
+        companyId: 'company-1',
+        managerProfileId: 'staff-1',
+        sourceId: 'contract-31',
+        sourceType: 'vendor-contract-renewal',
+        title: '업체 계약 갱신 확인',
+        userId: 'inactive-1'
+    }, [
+        { company_id: 'company-1', id: 'partner-1', role: 'partner_vendor', status: 'active' },
+        { company_id: 'company-1', id: 'staff-1', role: 'staff', status: 'active' },
+        { company_id: 'company-1', id: 'inactive-1', role: 'manager', status: 'inactive' }
+    ]);
+
+    assert.equal(sanitized.assigneeProfileId, null);
+    assert.equal(sanitized.managerProfileId, null);
+    assert.equal(sanitized.userId, null);
+});
+
+test('Given an active manager in the same company When sanitizing Then assignment and management are preserved', () => {
+    const sanitized = sanitizeFranchiseSourceScheduleProfiles({
+        assigneeProfileId: 'manager-1',
+        companyId: 'company-1',
+        managerProfileId: 'manager-1',
+        sourceId: 'contract-31',
+        sourceType: 'vendor-contract-renewal',
+        title: '업체 계약 갱신 확인',
+        userId: 'manager-1'
+    }, [
+        { company_id: 'company-1', id: 'manager-1', role: 'manager', status: 'active' }
+    ]);
+
+    assert.equal(sanitized.assigneeProfileId, 'manager-1');
+    assert.equal(sanitized.managerProfileId, 'manager-1');
+    assert.equal(sanitized.userId, 'manager-1');
 });

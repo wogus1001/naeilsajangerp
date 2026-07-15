@@ -2,6 +2,7 @@ import React from 'react';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import {
     parseLeadDetailDeepLinkId,
+    parseLeadDetailDeepLinkMode,
     resolveLeadDetailDeepLinkTarget,
     type LeadDetailDeepLinkTarget
 } from './leadDetailDeepLink';
@@ -29,10 +30,12 @@ export function useLeadDetailDeepLink({
     showAlertAction
 }: UseLeadDetailDeepLinkArgs): void {
     const [pendingLeadId, setPendingLeadId] = React.useState('');
+    const [pendingDetailMode, setPendingDetailMode] = React.useState<LeadDetailDeepLinkTarget['detailMode']>('default');
     const [openedLeadId, setOpenedLeadId] = React.useState('');
 
     React.useEffect(() => {
         setPendingLeadId(parseLeadDetailDeepLinkId(window.location.search));
+        setPendingDetailMode(parseLeadDetailDeepLinkMode(window.location.search));
     }, []);
 
     React.useEffect(() => {
@@ -40,7 +43,7 @@ export function useLeadDetailDeepLink({
 
         const existingLead = leads.find(lead => lead.id === pendingLeadId);
         if (existingLead) {
-            onOpenLeadAction(resolveLeadDetailDeepLinkTarget(existingLead));
+            onOpenLeadAction(resolveLeadDetailDeepLinkTarget(existingLead, pendingDetailMode));
             setOpenedLeadId(existingLead.id);
             return;
         }
@@ -74,7 +77,7 @@ export function useLeadDetailDeepLink({
                 }
 
                 onLeadLoadedAction(lead);
-                onOpenLeadAction(resolveLeadDetailDeepLinkTarget(lead));
+                onOpenLeadAction(resolveLeadDetailDeepLinkTarget(lead, pendingDetailMode));
                 setOpenedLeadId(lead.id);
             } catch (error) {
                 if (error instanceof DOMException && error.name === 'AbortError') return;
@@ -97,6 +100,7 @@ export function useLeadDetailDeepLink({
         onLeadLoadedAction,
         onOpenLeadAction,
         openedLeadId,
+        pendingDetailMode,
         pendingLeadId,
         showAlertAction,
         userId

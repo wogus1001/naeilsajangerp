@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     mergeDeepLinkedLead,
+    parseLeadDetailDeepLinkMode,
     parseLeadDetailDeepLinkId,
     resolveLeadDetailDeepLinkTarget
 } from './leadDetailDeepLink.js';
@@ -29,13 +30,23 @@ test('parseLeadDetailDeepLinkId returns trimmed lead id from search string', () 
     assert.equal(parseLeadDetailDeepLinkId('?tab=db&leadId=lead-1'), 'lead-1');
 });
 
+test('parseLeadDetailDeepLinkMode opens the contract checklist for an opening-project link', () => {
+    assert.equal(parseLeadDetailDeepLinkMode('?leadId=lead-1&mode=contractChecklist'), 'contractChecklist');
+    assert.equal(parseLeadDetailDeepLinkMode('?leadId=lead-1'), 'default');
+});
+
 test('resolveLeadDetailDeepLinkTarget opens raw intake lead in DB table layer', () => {
     assert.deepEqual(resolveLeadDetailDeepLinkTarget({ ...baseLead, leadStage: 'raw_intake' }), {
+        detailMode: 'default',
         leadId: 'lead-1',
         workspaceTab: 'db',
         leadDbLayer: 'raw_intake',
         viewMode: 'table'
     });
+});
+
+test('resolveLeadDetailDeepLinkTarget preserves the requested detail mode', () => {
+    assert.equal(resolveLeadDetailDeepLinkTarget(baseLead, 'contractChecklist').detailMode, 'contractChecklist');
 });
 
 test('mergeDeepLinkedLead replaces existing lead and prepends missing lead', () => {

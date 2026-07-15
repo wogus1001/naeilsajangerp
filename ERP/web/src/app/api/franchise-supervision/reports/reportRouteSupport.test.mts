@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    insertCorrectiveActions,
     readPhotoAttachments,
     reconcileSubmittedSupervisionReport,
     syncSupervisionReportWorkflow
@@ -19,12 +20,20 @@ function fakeSupabase(managerIds: readonly string[]) {
         in() { return this; },
         async returns() { return { data: managerIds.map(id => ({ id })), error: null }; }
     };
+    const notificationQuery = {
+        eq() { return this; },
+        in() { return this; },
+        update() { return this; },
+        async upsert() { return { error: null }; },
+        then(resolve: (result: { readonly error: null }) => void) { resolve({ error: null }); }
+    };
     return {
         calls,
         client: {
             from(table: string) {
-                assert.equal(table, 'profiles');
-                return profileQuery;
+                if (table === 'profiles') return profileQuery;
+                assert.equal(table, 'franchise_notifications');
+                return notificationQuery;
             },
             async rpc(name: string, args: Record<string, unknown>) {
                 calls.push({ name, args });
@@ -60,11 +69,13 @@ test('Given a supervision report submission When syncing Then report persistence
         visitId: '66666666-6666-4666-8666-666666666666'
     });
 
-    assert.equal(fake.calls.length, 1);
-    assert.equal(fake.calls[0]?.name, 'save_supervision_report_with_approval');
-    assert.equal(fake.calls[0]?.args.p_approver_profile_id, approverId);
-    assert.equal(fake.calls[0]?.args.p_report_status, '제출');
-    assert.equal(fake.calls[0]?.args.p_expected_updated_at, '2026-07-13T00:00:00.000Z');
+    const reportCall = fake.calls.find(call => call.name === 'save_supervision_report_with_approval');
+    const scheduleCall = fake.calls.find(call => call.name === 'upsert_franchise_schedule_from_payload');
+    assert.equal(fake.calls.length, 2);
+    assert.equal(reportCall?.args.p_approver_profile_id, approverId);
+    assert.equal(reportCall?.args.p_report_status, '제출');
+    assert.equal(reportCall?.args.p_expected_updated_at, '2026-07-13T00:00:00.000Z');
+    assert.equal(scheduleCall?.name, 'upsert_franchise_schedule_from_payload');
 });
 
 test('Given no independent approver When submitting Then the report is rejected before persistence', async () => {
@@ -129,8 +140,74 @@ test('Given a duplicate report submission When reconciling Then the immutable re
         visit: null
     });
 
-    assert.equal(fake.calls.length, 1);
-    assert.deepEqual(fake.calls[0]?.args.p_inspection_items, [{ id: 'locked-item' }]);
-    assert.deepEqual(fake.calls[0]?.args.p_photo_attachments, [{ name: 'locked.jpg' }]);
-    assert.equal(fake.calls[0]?.args.p_special_note, 'locked note');
+    const reportCall = fake.calls.find(call => call.name === 'save_supervision_report_with_approval');
+    assert.equal(fake.calls.length, 2);
+    assert.deepEqual(reportCall?.args.p_inspection_items, [{ id: 'locked-item' }]);
+    assert.deepEqual(reportCall?.args.p_photo_attachments, [{ name: 'locked.jpg' }]);
+    assert.equal(reportCall?.args.p_special_note, 'locked note');
+});
+
+test('Given an existing corrective action When a report is submitted again Then its franchise schedule is resynchronized', async () => {
+    const scheduleCalls: Array<{ readonly name: string; readonly args: Record<string, unknown> }> = [];
+    let upsertCount = 0;
+    const correctiveQuery = {
+        select() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        upsert() { upsertCount += 1; return this; },
+        async returns() {
+            return {
+                data: [{
+                    assignee_profile_id: actorId,
+                    due_date: '2026-07-16',
+                    id: 'action-1',
+                    inspection_item_id: 'item-1',
+                    status: '완료',
+                    title: '간판 보수'
+                }],
+                error: null
+            };
+        }
+    };
+    const notificationQuery = {
+        update() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        async upsert() { return { error: null }; },
+        then(resolve: (result: { readonly error: null }) => void) { resolve({ error: null }); }
+    };
+    const profileQuery = {
+        select() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        async returns() { return { data: [{ id: actorId }], error: null }; }
+    };
+    const client = {
+        from(table: string) {
+            if (table === 'franchise_corrective_actions') return correctiveQuery;
+            if (table === 'profiles') return profileQuery;
+            assert.equal(table, 'franchise_notifications');
+            return notificationQuery;
+        },
+        async rpc(name: string, args: Record<string, unknown>) {
+            scheduleCalls.push({ name, args });
+            return { data: null, error: null };
+        }
+    };
+
+    await insertCorrectiveActions({
+        assigneeProfileId: actorId,
+        companyId,
+        createdBy: actorId,
+        items: [{ id: 'item-1', label: '간판 보수', memo: '', result: '개선필요' }],
+        locationId: '55555555-5555-4555-8555-555555555555',
+        locationName: '강남점',
+        reportId,
+        supabaseAdmin: client as never
+    });
+
+    const schedulePayload = scheduleCalls.find(call => call.name === 'upsert_franchise_schedule_from_payload')?.args.schedule_payload;
+    assert.equal(upsertCount, 0);
+    assert.equal(typeof schedulePayload === 'object' && schedulePayload !== null && 'status' in schedulePayload ? schedulePayload.status : null, '완료');
+    assert.equal(typeof schedulePayload === 'object' && schedulePayload !== null && 'date' in schedulePayload ? schedulePayload.date : null, '2026-07-16');
 });
