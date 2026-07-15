@@ -21,10 +21,13 @@
 
 ## 2026-07-15 기준 현재 상태
 
+- 순차 개발 현재 단계: 전자결재 1단계는 문서함 검색·필터 실계정 QA를 남긴 `검증 중`이며, 사용자 승인 예외로 가맹운영 일정·알림 2단계를 `개발 중`으로 시작했다. 1단계 잔여 QA는 dev/production 승격 전 필수 확인 항목으로 유지한다.
+- 2단계 알림·일정 1차: 헤더 알림에 `전자결재/가맹운영` 구분과 서버 필터를 추가하고 기존 `source_type`으로 분류한다. 가맹운영 일정에서는 전자결재 행과 `승인 대기` KPI를 제외하며, 전자결재 요청은 헤더 알림과 `/approvals`에서 처리한다. 가맹점·인력 세팅·슈퍼바이징·오픈 준비·업무 접수의 브라우저 기본 알럿/확인은 공용 중앙 커스텀 다이얼로그로 전환한다. 다이얼로그는 동시 요청을 순서대로 처리하고 알림 상세 이동은 앱 내부 경로만 허용한다. 신규 SQL은 없다.
+- 다음 개발 묶음: 1단계 문서함 검색·필터 실계정 QA를 배포 승격 전에 마감하고, 2-2에서 남은 프랜차이즈 기본 팝업 제거와 정보공개서·업체 계약·SV·오픈 준비·점주 문의·체크리스트의 원천 일정 동기화를 순서대로 진행한다. 기존 스키마로 충족할 수 없는 경우에만 migration을 작성한다.
 - 기본 배포 절차: 일반 기능은 최신 dev에서 브랜치를 만들고 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 승격한다. dev 전체가 운영 준비 상태가 아니면 dev PR의 최종 반영 커밋만 `origin/main` 기반 release 브랜치로 선별하고, 해당 release preview에서 smoke와 회귀 QA를 다시 통과한 뒤 main PR을 만든다.
 - 최신 통합 릴리스: 플랫폼 코드리뷰 보정은 PR #4, main 릴리스 문서 동기화는 PR #6, 업무 접수 모바일 접근성 보정은 PR #7과 #8을 거쳐 `dev`에 반영했다. `dev -> main` PR #5를 병합한 운영 기준 커밋은 `7306723`이며, 병합 직후 `origin/dev`와 `origin/main`의 파일 트리가 같은 것을 확인했다.
 - 통합 코드 배포 기록: `naeilsajang` production 배포 `dpl_45fnu8CDmTTJpFhi6Jk2uVnX84sL`이 `READY`였으며 source URL은 `https://naeilsajang-lx0yaxcx4-jaehyuns-projects-b4d20c6f.vercel.app`이다. `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias와 `/login`, `/approvals`, `/dashboard/franchise-operations/schedule` 200 응답을 확인했다. 문서 커밋으로 후속 deployment가 생성될 수 있으므로 실제 최신 deployment ID는 운영 도메인 최종 inspect 결과를 기준으로 한다.
-- 최신 QA: PDF 다운로드 집중 테스트 9건과 전체 자동 테스트 727건, `tsc`, `lint`, `build`, `git diff --check`가 통과했다. 전자결재 PDF 실다운로드·A4 한글 렌더링, 전자결재, 가맹운영 일정, 업무 접수 주요 화면을 확인했고 해당 브라우저 QA의 console error는 0건이었다.
+- 최신 QA: 다이얼로그 큐와 알림 링크 보안을 포함한 전체 자동 테스트 731건, `tsc`, `lint`, `build`, `git diff --check`가 통과했다. 전자결재 PDF 실다운로드·A4 한글 렌더링, 전자결재, 가맹운영 일정, 업무 접수 주요 화면을 확인했고 가맹운영 일정 최신 브라우저 QA의 console error는 0건이었다.
 - 대시보드 일정·알림 분리: 전자결재 요청은 헤더 알림과 `/approvals/pending` 결재 대기에서 처리하고, 루트 대시보드의 `예정된 일정` 목록과 단기 일정 건수에서는 제외한다. 회의, 방문, 마감 등 실제 캘린더 일정과 개인 일정의 기존 노출 규칙은 유지한다.
 - 전자결재 PDF 저장: 문서 상세는 Supabase bearer 세션을 포함한 fetch로 PDF와 첨부파일을 받은 뒤 Blob 다운로드를 실행한다. API는 Noto Sans KR TrueType 글꼴을 서버 인스턴스에서 재사용하고 완성된 PDF 바이트를 내려준다. 로컬 실계정에서 10,343바이트 PDF를 내려받아 A4 1페이지의 한글 제목·본문·푸터가 보이고 빈 페이지가 아님을 확인했다. 이 보정 자체의 신규 SQL은 없다.
 - SQL 적용 상태: 사용자 확인 기준 전자결재 SQL 기본 적용과 REST schema 접근 점검은 완료했다. 이후 캐시 호출자 검증과 만료·해제 위임 접근 차단을 추가한 최신 `supabase_company_approvals_security_review_migration.sql`, `supabase_company_approvals_workflow_schedule_fix_migration.sql`, `supabase_franchise_schedule_visibility_migration.sql`은 아래 순서로 다시 적용해야 한다. **SQL 재등록 필요**.

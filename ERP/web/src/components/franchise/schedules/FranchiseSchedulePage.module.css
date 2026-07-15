@@ -281,8 +281,7 @@
 }
 
 .dayNumber,
-.dayCount,
-.focusMark {
+.dayCount {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -316,13 +315,6 @@
 .dayActive { background: #fff7e6; color: #b25f00; }
 .dayDone { background: #e6f8f0; color: #008a52; }
 .dayLate { background: #fff1f2; color: #e42939; }
-
-.focusMark {
-    position: absolute;
-    left: 8px;
-    bottom: 8px;
-    color: #3182f6;
-}
 
 .dayList {
     flex: 0 0 380px;
@@ -371,11 +363,6 @@
 
 .scheduleRow + .scheduleRow {
     border-top: 1px solid #e5e8eb;
-}
-
-.focusRow {
-    background: #f7fbff;
-    box-shadow: inset 3px 0 #3182f6;
 }
 
 .scheduleHeading {

@@ -4,7 +4,7 @@ import React from 'react';
 import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckCircle2, BarChart3, Megaphone, StickyNote, RefreshCw, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertModal } from '@/components/common/AlertModal';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { fetchDashboardModePreference } from '@/components/dashboard/dashboardModePreference';
 import { fetchDashboardNotices, type DashboardNotice } from '@/components/dashboard/dashboardNotices';
 import { MainDashboardTypeA } from '@/components/dashboard/MainDashboardTypeA';
@@ -20,6 +20,7 @@ import {
 
 export default function DashboardPage() {
     const router = useRouter();
+    const { showAlert } = useAppDialog();
     const [memo, setMemo] = React.useState(''); // Simple state for memo
     const [isMemoLoaded, setIsMemoLoaded] = React.useState(false); // Track if initial memo is loaded
     const [dashboardMode, setDashboardMode] = React.useState<CompanyDashboardMode>(DEFAULT_COMPANY_DASHBOARD_MODE);
@@ -43,21 +44,6 @@ export default function DashboardPage() {
     const [newNotice, setNewNotice] = React.useState({ title: '', content: '', type: 'team', isPinned: false });
     const [isSavingNotice, setIsSavingNotice] = React.useState(false);
     const [userData, setUserData] = React.useState<StoredUser>(null);
-
-    const [alertConfig, setAlertConfig] = React.useState<{ isOpen: boolean; message: string; type: 'success' | 'error' | 'info'; onClose?: () => void }>({
-        isOpen: false,
-        message: '',
-        type: 'info'
-    });
-
-    const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', onClose?: () => void) => {
-        setAlertConfig({ isOpen: true, message, type, onClose });
-    };
-
-    const closeAlert = () => {
-        if (alertConfig.onClose) alertConfig.onClose();
-        setAlertConfig(prev => ({ ...prev, isOpen: false }));
-    };
 
     React.useEffect(() => {
         const user = getStoredUser();
@@ -144,7 +130,7 @@ export default function DashboardPage() {
 
     const handleCreateNotice = async () => {
         if (!newNotice.title || !newNotice.content) {
-            showAlert('제목과 내용을 입력해주세요.', 'error');
+            void showAlert({ message: '제목과 내용을 입력해주세요.', type: 'error' });
             return;
         }
 
@@ -163,14 +149,14 @@ export default function DashboardPage() {
             });
 
             if (res.ok) {
-                showAlert('공지사항이 등록되었습니다.', 'success');
+                void showAlert({ message: '공지사항이 등록되었습니다.', type: 'success' });
                 setIsNoticeModalOpen(false);
                 setNewNotice({ title: '', content: '', type: 'team', isPinned: false });
                 refreshDashboardNotices();
             }
         } catch (error) {
             console.error(error);
-            showAlert('등록 실패', 'error');
+            void showAlert({ message: '등록 실패', type: 'error' });
         } finally {
             setIsSavingNotice(false);
         }
@@ -559,12 +545,6 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
-            <AlertModal
-                isOpen={alertConfig.isOpen}
-                onClose={closeAlert}
-                message={alertConfig.message}
-                type={alertConfig.type}
-            />
         </div >
     );
 }

@@ -5,7 +5,8 @@ export const FRANCHISE_NOTIFICATION_SOURCE_TYPES = [
     'disclosure-missing', 'disclosure-failed', 'disclosure-unconfirmed', 'disclosure-due', 'disclosure-eligible',
     'contact-overdue', 'contact-today', 'hot-lead-followup',
     'vendor-contract-due',
-    'workflow-schedule', 'workflow-approval', 'supervision-visit', 'supervision-report'
+    'workflow-schedule', 'workflow-approval', 'supervision-visit', 'supervision-report',
+    'system'
 ] as const;
 
 export type FranchiseNotificationSeverity = typeof FRANCHISE_NOTIFICATION_SEVERITIES[number];
@@ -255,7 +256,7 @@ function normalizeSeverity(value: string | null): FranchiseNotificationSeverity 
 }
 
 function normalizeSourceType(value: string): FranchiseNotificationSourceType {
-    return FRANCHISE_NOTIFICATION_SOURCE_TYPES.find(item => item === value) || 'hot-lead-followup';
+    return FRANCHISE_NOTIFICATION_SOURCE_TYPES.find(item => item === value) || 'system';
 }
 
 export function transformFranchiseNotification(row: FranchiseNotificationRow): FranchiseNotification {

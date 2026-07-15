@@ -98,7 +98,7 @@ test('Given assignee metadata When parsing Then the signed-in profile is retaine
     assert.equal(parseFranchiseScheduleRequesterProfileId(payload), 'staff-1');
 });
 
-test('Given schedule rows When building view model Then KPI meanings are mutually exclusive', () => {
+test('Given schedule rows When building view model Then approval work stays out of the franchise calendar', () => {
     const model = buildFranchiseScheduleViewModel({
         items: rows,
         filters,
@@ -108,26 +108,12 @@ test('Given schedule rows When building view model Then KPI meanings are mutuall
         today: '2026-07-10'
     });
 
-    assert.deepEqual(model.kpis.map(kpi => kpi.label), ['오늘 일정', '승인 대기', '지연 일정', '이번 주']);
+    assert.deepEqual(model.kpis.map(kpi => kpi.label), ['오늘 일정', '진행 중', '지연 일정', '이번 주']);
     assert.equal(model.kpis.find(kpi => kpi.label === '이번 주')?.helper, '향후 7일 예정 일정');
     assert.equal(model.kpis.find(kpi => kpi.label === '오늘 일정')?.value, 1);
-    assert.equal(model.kpis.find(kpi => kpi.label === '승인 대기')?.value, 1);
+    assert.equal(model.kpis.find(kpi => kpi.label === '진행 중')?.value, 1);
     assert.equal(model.kpis.find(kpi => kpi.label === '지연 일정')?.value, 1);
-});
-
-test('Given approvalDocumentId When building view model Then selected day focuses linked schedule', () => {
-    const model = buildFranchiseScheduleViewModel({
-        items: rows,
-        filters,
-        selectedDate: '2026-07-10',
-        monthDate: new Date('2026-07-01T00:00:00'),
-        state: 'ready',
-        approvalDocumentId: 'doc-1'
-    });
-
-    assert.equal(model.focusId, 'approval-1');
-    assert.equal(model.selectedDate, '2026-07-12');
-    assert.equal(model.selectedItems[0]?.id, 'approval-1');
+    assert.equal(model.filteredItems.some(item => item.source === 'approval-document'), false);
 });
 
 test('Given response states When building view model Then empty, sql, forbidden and loading states stay defined', () => {

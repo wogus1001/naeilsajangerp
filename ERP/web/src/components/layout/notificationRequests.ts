@@ -4,6 +4,8 @@ import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 
 export type HeaderNotification = {
     readonly id: string;
+    readonly category: HeaderNotificationCategory;
+    readonly sourceType: string;
     readonly severity: 'info' | 'warning' | 'danger' | 'success';
     readonly title: string;
     readonly body: string;
@@ -11,6 +13,8 @@ export type HeaderNotification = {
     readonly dueAt: string | null;
     readonly readAt: string | null;
 };
+
+export type HeaderNotificationCategory = 'approval' | 'franchise' | 'system';
 
 export type HeaderNotificationResponse = {
     readonly notifications: readonly HeaderNotification[];
@@ -22,18 +26,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export function getHeaderNotificationCategory(sourceType: string): HeaderNotificationCategory {
+    if (sourceType === 'workflow-approval') return 'approval';
+    if (sourceType === 'system') return 'system';
+    return 'franchise';
+}
+
+export function getSafeHeaderNotificationActionUrl(value: string): string | null {
+    if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return null;
+    try {
+        const baseUrl = new URL('https://notification.local');
+        const targetUrl = new URL(value, baseUrl);
+        if (targetUrl.origin !== baseUrl.origin) return null;
+        return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+    } catch {
+        return null;
+    }
+}
+
 function parseNotification(value: unknown): HeaderNotification | null {
     if (!isRecord(value)) return null;
     if (typeof value.id !== 'string' || typeof value.title !== 'string') return null;
     const severity = value.severity === 'warning' || value.severity === 'danger' || value.severity === 'success'
         ? value.severity
         : 'info';
+    const sourceType = typeof value.sourceType === 'string' ? value.sourceType : 'system';
     return {
         id: value.id,
+        category: getHeaderNotificationCategory(sourceType),
+        sourceType,
         severity,
         title: value.title,
         body: typeof value.body === 'string' ? value.body : '',
-        actionUrl: typeof value.actionUrl === 'string' ? value.actionUrl : '',
+        actionUrl: typeof value.actionUrl === 'string' ? getSafeHeaderNotificationActionUrl(value.actionUrl) ?? '' : '',
         dueAt: typeof value.dueAt === 'string' ? value.dueAt : null,
         readAt: typeof value.readAt === 'string' ? value.readAt : null
     };
@@ -43,11 +68,15 @@ export function filterUnreadHeaderNotifications(notifications: readonly HeaderNo
     return notifications.filter(notification => !notification.readAt);
 }
 
-export async function fetchHeaderNotifications(user: StoredUser): Promise<HeaderNotificationResponse> {
+export async function fetchHeaderNotifications(
+    user: StoredUser,
+    category: 'all' | HeaderNotificationCategory = 'all'
+): Promise<HeaderNotificationResponse> {
     const requesterId = getRequesterId(user);
     if (!requesterId) return { notifications: [], unreadCount: 0, schemaReady: true };
 
     const params = new URLSearchParams({ requesterId, limit: '8' });
+    if (category !== 'all') params.set('category', category);
     const companyName = getStoredCompanyName(user);
     if (companyName) params.set('companyName', companyName);
 

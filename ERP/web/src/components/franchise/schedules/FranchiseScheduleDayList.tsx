@@ -7,7 +7,6 @@ import styles from './FranchiseSchedulePage.module.css';
 type DayListProps = {
     readonly selectedDate: string;
     readonly items: readonly FranchiseScheduleItem[];
-    readonly focusId: string;
     readonly onCreate: () => void;
     readonly onEdit: (item: FranchiseScheduleItem) => void;
     readonly onComplete: (item: FranchiseScheduleItem) => void;
@@ -41,7 +40,7 @@ function getStatusClass(status: FranchiseScheduleStatus): string {
     return styles.statusPlanned;
 }
 
-export function FranchiseScheduleDayList({ selectedDate, items, focusId, onCreate, onEdit, onComplete, onDelete }: DayListProps) {
+export function FranchiseScheduleDayList({ selectedDate, items, onCreate, onEdit, onComplete, onDelete }: DayListProps) {
     const dateLabel = getDateLabel(selectedDate);
 
     return (
@@ -63,7 +62,7 @@ export function FranchiseScheduleDayList({ selectedDate, items, focusId, onCreat
             ) : (
                 <div className={styles.scheduleList}>
                     {items.map(item => (
-                        <article className={`${styles.scheduleRow} ${item.id === focusId ? styles.focusRow : ''}`} key={item.id}>
+                        <article className={styles.scheduleRow} key={item.id}>
                             <div className={styles.scheduleHeading}>
                                 <span className={getStatusClass(item.status)}>{item.status}</span>
                                 <strong>{item.title}</strong>

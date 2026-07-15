@@ -25,7 +25,7 @@ import { getFranchiseScheduleResponseFailure, useFranchiseScheduleData } from '.
 import styles from './FranchiseSchedulePage.module.css';
 
 const STATUS_FILTERS: readonly ('all' | FranchiseScheduleStatus)[] = ['all', '예정', '진행중', '완료', '지연'];
-const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = ['all', 'manual', 'approval-document', 'supervision-visit', 'report'];
+const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = ['all', 'manual', 'supervision-visit', 'report'];
 const VISIBILITY_FILTERS: readonly ('all' | FranchiseScheduleVisibility)[] = ['all', 'shared', 'personal'];
 const EMPTY_FORM: ScheduleFormValue = { id: '', title: '', date: toDateKey(new Date()), status: '예정', visibility: 'shared', assigneeProfileId: '', details: '' };
 type ScheduleAlert = { readonly message: string; readonly type: 'success' | 'error' };
@@ -35,7 +35,7 @@ function getSourceLabel(source: FranchiseScheduleSource): string {
         case 'manual':
             return '수동';
         case 'approval-document':
-            return '결재';
+            return '전자결재';
         case 'supervision-visit':
             return 'SV 방문';
         case 'report':
@@ -54,7 +54,7 @@ function getSelectedStatusFilter(value: string): 'all' | FranchiseScheduleStatus
 }
 
 function getSelectedSourceFilter(value: string): 'all' | FranchiseScheduleSource {
-    if (value === 'approval-document' || value === 'supervision-visit' || value === 'report' || value === 'corrective-action') return value;
+    if (value === 'supervision-visit' || value === 'report' || value === 'corrective-action') return value;
     return value === 'manual' ? 'manual' : 'all';
 }
 
@@ -70,7 +70,7 @@ function getFormValue(item: FranchiseScheduleItem): ScheduleFormValue {
     };
 }
 
-export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approvalDocumentId: string }) {
+export function FranchiseSchedulePage() {
     const [monthDate, setMonthDate] = React.useState(new Date());
     const { items, assignees, assigneesLoading, assigneesError, requesterProfileId, state, message, reloadSchedules } = useFranchiseScheduleData(monthDate);
     const [selectedDate, setSelectedDate] = React.useState(toDateKey(new Date()));
@@ -80,7 +80,7 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
     const [alert, setAlert] = React.useState<ScheduleAlert | null>(null);
     const [saving, setSaving] = React.useState(false);
 
-    const model = buildFranchiseScheduleViewModel({ items, filters, selectedDate, monthDate, state, approvalDocumentId, message });
+    const model = buildFranchiseScheduleViewModel({ items, filters, selectedDate, monthDate, state, message });
 
     const persist = async (method: 'POST' | 'PATCH' | 'DELETE', body: Readonly<Record<string, string>>) => {
         setSaving(true);
@@ -124,7 +124,7 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                 <div>
                     <span className={styles.eyebrow}>가맹 운영</span>
                     <h1>일정관리</h1>
-                    <p>결재, 슈퍼바이징, 수동 운영 일정을 한 달 단위로 확인합니다.</p>
+                    <p>슈퍼바이징과 수동 운영 일정을 한 달 단위로 확인합니다. 전자결재 요청은 상단 알림에서 확인할 수 있습니다.</p>
                 </div>
                 <button className={styles.primaryButton} type="button" onClick={() => setForm({ ...EMPTY_FORM, date: model.selectedDate })}>
                     <Plus size={16} /> 수동 일정 등록
@@ -166,12 +166,11 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                         <button className={styles.iconButton} type="button" title="다음 달" onClick={() => monthStep(1)}><ChevronRight size={18} /></button>
                         <button className={styles.todayButton} type="button" onClick={goToday}>오늘</button>
                     </div>
-                    <FranchiseScheduleCalendar monthDate={monthDate} selectedDate={model.selectedDate} items={model.filteredItems} focusId={model.focusId} onSelectDate={setSelectedDate} />
+                    <FranchiseScheduleCalendar monthDate={monthDate} selectedDate={model.selectedDate} items={model.filteredItems} onSelectDate={setSelectedDate} />
                 </div>
                 <FranchiseScheduleDayList
                     selectedDate={model.selectedDate}
                     items={model.selectedItems}
-                    focusId={model.focusId}
                     onCreate={() => setForm({ ...EMPTY_FORM, date: model.selectedDate })}
                     onEdit={item => setForm(getFormValue(item))}
                     onComplete={item => setConfirm({ item, action: 'complete' })}

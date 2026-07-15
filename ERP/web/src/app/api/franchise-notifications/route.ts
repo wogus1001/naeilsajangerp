@@ -58,8 +58,14 @@ type NotificationCronCompanyRow = {
 };
 const DUE_NOTIFICATION_SOURCE_TYPES = new Set(['disclosure-due', 'vendor-contract-due']);
 const RECONCILED_NOTIFICATION_SOURCE_TYPES = FRANCHISE_NOTIFICATION_SOURCE_TYPES.filter(sourceType => (
-    !sourceType.startsWith('workflow-') && !sourceType.startsWith('supervision-')
+    sourceType !== 'system' && !sourceType.startsWith('workflow-') && !sourceType.startsWith('supervision-')
 ));
+
+type NotificationCategory = 'all' | 'approval' | 'franchise' | 'system';
+
+function parseNotificationCategory(value: string | null): NotificationCategory {
+    return value === 'approval' || value === 'franchise' || value === 'system' ? value : 'all';
+}
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
@@ -349,6 +355,7 @@ export async function GET(request: Request) {
         const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
         const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;
         const limit = parseLimit(searchParams.get('limit'));
+        const category = parseNotificationCategory(searchParams.get('category'));
 
         const requesterIsAdmin = isAdmin(requester);
         const [leads, vendorContracts] = await Promise.all([
@@ -402,6 +409,9 @@ export async function GET(request: Request) {
         if (companyId) unreadCountQuery = unreadCountQuery.eq('company_id', companyId);
         query = query.eq('recipient_profile_id', requester.id);
         unreadCountQuery = unreadCountQuery.eq('recipient_profile_id', requester.id);
+        if (category === 'approval') query = query.eq('source_type', 'workflow-approval');
+        if (category === 'franchise') query = query.neq('source_type', 'workflow-approval').neq('source_type', 'system');
+        if (category === 'system') query = query.eq('source_type', 'system');
         if (requester.role === 'partner_vendor') {
             query = query.neq('source_type', 'workflow-approval');
             unreadCountQuery = unreadCountQuery.neq('source_type', 'workflow-approval');

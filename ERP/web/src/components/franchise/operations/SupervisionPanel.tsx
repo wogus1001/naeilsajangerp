@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     buildDefaultInspectionItems,
     buildDefaultReportTemplate,
@@ -158,6 +159,7 @@ const QUEUE_FILTER_BY_TYPE: Record<SupervisionOperationQueueItem['type'], Superv
 } as const;
 
 export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
+    const { showAlert, showConfirm } = useAppDialog();
     const [data, setData] = React.useState<SupervisionPayload>(EMPTY_PAYLOAD);
     const [activeView, setActiveView] = React.useState<SupervisionView>('dashboard');
     const [activeFilter, setActiveFilter] = React.useState<SupervisionFilter>('all');
@@ -187,11 +189,11 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
             setVisitForm(makeVisitForm(nextData));
             setSelectedVisitId(current => current || nextData.visits[0]?.id || '');
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '슈퍼바이징 정보를 불러오지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '슈퍼바이징 정보를 불러오지 못했습니다.', type: 'error' });
         } finally {
             setIsLoading(false);
         }
-    }, [scope]);
+    }, [scope, showAlert]);
 
     React.useEffect(() => {
         void load();
@@ -315,7 +317,12 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
 
     const deleteVisit = async (visit: SupervisionVisit) => {
         if (!data.companyId) return;
-        const confirmed = window.confirm(`${visit.locationName} 방문 일정을 삭제할까요? 삭제한 일정은 취소 상태로 보관됩니다.`);
+        const confirmed = await showConfirm({
+            title: '방문 일정 삭제',
+            message: `${visit.locationName} 방문 일정을 삭제할까요? 삭제한 일정은 취소 상태로 보관됩니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
         await runSaving(() => deleteSupervisionVisit({
             ...scope,
@@ -420,7 +427,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
             await load();
             return true;
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '슈퍼바이징 정보를 저장하지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '슈퍼바이징 정보를 저장하지 못했습니다.', type: 'error' });
             return false;
         } finally {
             setIsSaving(false);

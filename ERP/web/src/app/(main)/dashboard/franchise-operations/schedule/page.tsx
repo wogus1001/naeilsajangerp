@@ -1,4 +1,5 @@
 import { FranchiseSchedulePage } from '@/components/franchise/schedules/FranchiseSchedulePage';
+import { redirect } from 'next/navigation';
 
 type PageProps = {
     readonly searchParams?: Promise<{
@@ -8,5 +9,8 @@ type PageProps = {
 
 export default async function FranchiseOperationsScheduleRoute({ searchParams }: PageProps) {
     const params = await searchParams;
-    return <FranchiseSchedulePage approvalDocumentId={params?.approvalDocumentId || ''} />;
+    if (params?.approvalDocumentId) {
+        redirect(`/approvals/documents/${encodeURIComponent(params.approvalDocumentId)}`);
+    }
+    return <FranchiseSchedulePage />;
 }

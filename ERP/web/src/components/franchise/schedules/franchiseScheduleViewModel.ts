@@ -56,7 +56,6 @@ export type FranchiseScheduleViewModel = {
     readonly filteredItems: readonly FranchiseScheduleItem[];
     readonly selectedItems: readonly FranchiseScheduleItem[];
     readonly kpis: readonly FranchiseScheduleKpi[];
-    readonly focusId: string;
     readonly message: string;
 };
 
@@ -172,43 +171,39 @@ export function buildFranchiseScheduleViewModel(input: {
     readonly selectedDate: string;
     readonly monthDate: Date;
     readonly state: FranchiseScheduleLoadState;
-    readonly approvalDocumentId?: string;
     readonly message?: string;
     readonly today?: string;
 }): FranchiseScheduleViewModel {
     const today = input.today || toDateKey(new Date());
-    const filteredItems = input.items.filter(item =>
+    const operationalItems = input.items.filter(item => item.source !== 'approval-document');
+    const filteredItems = operationalItems.filter(item =>
         (input.filters.status === 'all' || item.status === input.filters.status) &&
         (input.filters.source === 'all' || item.source === input.filters.source) &&
         (input.filters.visibility === 'all' || item.visibility === input.filters.visibility) &&
         (!input.filters.assignee || item.assigneeName.includes(input.filters.assignee))
     );
-    const focus = input.approvalDocumentId
-        ? filteredItems.find(item => item.approvalDocumentId === input.approvalDocumentId)
-        : undefined;
-    const selectedDate = focus?.date || input.selectedDate;
+    const selectedDate = input.selectedDate;
     const selectedItems = filteredItems.filter(item => item.date === selectedDate);
     const weekEnd = new Date();
     weekEnd.setDate(weekEnd.getDate() + 7);
     const weekEndKey = toDateKey(weekEnd);
-    const pendingApprovals = filteredItems.filter(item => item.source === 'approval-document' && item.status !== '완료').length;
+    const inProgress = filteredItems.filter(item => item.status === '진행중').length;
     const overdue = filteredItems.filter(item => item.date < today && item.status !== '완료' && item.status !== '취소').length;
     const thisWeek = filteredItems.filter(item => item.date >= today && item.date <= weekEndKey && item.status !== '취소').length;
     const todayCount = filteredItems.filter(item => item.date === today && item.status !== '취소').length;
 
     return {
-        state: input.items.length === 0 && input.state === 'ready' ? 'empty' : input.state,
+        state: operationalItems.length === 0 && input.state === 'ready' ? 'empty' : input.state,
         monthLabel: `${input.monthDate.getFullYear()}년 ${input.monthDate.getMonth() + 1}월`,
         selectedDate,
         filteredItems,
         selectedItems,
         kpis: [
             { label: '오늘 일정', value: todayCount, helper: '오늘 실행할 운영 일정' },
-            { label: '승인 대기', value: pendingApprovals, helper: '결재 문서 기반 일정' },
+            { label: '진행 중', value: inProgress, helper: '현재 처리 중인 운영 일정' },
             { label: '지연 일정', value: overdue, helper: '완료되지 않은 과거 일정' },
             { label: '이번 주', value: thisWeek, helper: '향후 7일 예정 일정' }
         ],
-        focusId: focus?.id || '',
         message: input.message || ''
     };
 }
