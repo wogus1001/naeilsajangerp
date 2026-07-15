@@ -14,6 +14,7 @@ import {
     validateVendorContractStorage,
     VENDOR_CONTRACT_STORAGE_BUCKET
 } from './vendorContractRouteHelpers';
+import { syncVendorContractScheduleSafely } from './vendorContractScheduleSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +149,12 @@ export async function POST(request: Request) {
             .single<VendorContractRow>();
         if (error) throw error;
 
+        await syncVendorContractScheduleSafely({
+            requester: auth.requester,
+            row: data,
+            supabaseAdmin: auth.supabaseAdmin
+        });
+
         return ok({ contract: toVendorContractView(data) });
     } catch (error) {
         if (isMissingVendorContractSchemaError(error)) {
@@ -200,6 +207,12 @@ export async function PATCH(request: Request) {
             .single<VendorContractRow>();
         if (error) throw error;
 
+        await syncVendorContractScheduleSafely({
+            requester: auth.requester,
+            row: data,
+            supabaseAdmin: auth.supabaseAdmin
+        });
+
         return ok({ contract: toVendorContractView(data) });
     } catch (error) {
         if (isMissingVendorSchemaError(error)) {
@@ -231,6 +244,12 @@ export async function DELETE(request: Request) {
             .update({ status: 'archived', updated_by: auth.requester.id, updated_at: new Date().toISOString() })
             .eq('id', contractId);
         if (error) throw error;
+
+        await syncVendorContractScheduleSafely({
+            requester: auth.requester,
+            row: { ...existing, status: 'archived' },
+            supabaseAdmin: auth.supabaseAdmin
+        });
 
         return ok({ success: true });
     } catch (error) {

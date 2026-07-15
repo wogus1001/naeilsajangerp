@@ -3,6 +3,7 @@ import { notifyAlimtalkFranchiseNotificationCandidates } from '@/lib/alimtalk-ev
 import { fail, ok } from '@/lib/api-response';
 import { isPartnerVendorRole } from '@/lib/franchise-location-access';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
+import { syncNotificationSourceSchedulesSafely } from '@/lib/franchise-notification-schedule-sync';
 import { canDispatchFranchiseNotificationAlimtalk } from '@/lib/franchise-notification-alimtalk-scope';
 import {
     FRANCHISE_NOTIFICATION_SOURCE_TYPES,
@@ -313,6 +314,11 @@ async function runScheduledNotificationGeneration(): Promise<{ readonly companyC
             ...buildAutomaticFranchiseNotifications(leads),
             ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
         ];
+        await syncNotificationSourceSchedulesSafely(supabaseAdmin, {
+            leads,
+            vendorContracts,
+            vendorRecipients
+        });
         await syncAutomaticNotifications(notificationCandidates, {
             companyId,
             requesterId: '',
@@ -372,6 +378,13 @@ export async function GET(request: Request) {
             ...buildAutomaticFranchiseNotifications(leads),
             ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
         ];
+        if (companyId) {
+            await syncNotificationSourceSchedulesSafely(supabaseAdmin, {
+                leads,
+                vendorContracts,
+                vendorRecipients
+            });
+        }
         await syncAutomaticNotifications(notificationCandidates, {
             companyId,
             requesterId: requester.id,

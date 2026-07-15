@@ -4,6 +4,7 @@ import React from 'react';
 import { Search, X } from 'lucide-react';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { inferBrandKeywords } from '@/lib/franchise-brands';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 
 type ClassNames = {
@@ -131,6 +132,7 @@ export default function FranchiseBrandSelector({
 
         setIsSearching(true);
         try {
+            const authHeaders = requesterId ? await getApiAuthHeaders() : undefined;
             let savedBrands: FranchiseBrand[] = [];
             if (requesterId) {
                 const params = new URLSearchParams({
@@ -141,7 +143,10 @@ export default function FranchiseBrandSelector({
                 if (companyName) params.set('company', companyName);
                 if (normalizedQuery) params.set('query', normalizedQuery);
 
-                const response = await fetch(`/api/franchise-brands?${params.toString()}`, { cache: 'no-store' });
+                const response = await fetch(`/api/franchise-brands?${params.toString()}`, {
+                    cache: 'no-store',
+                    headers: authHeaders
+                });
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(readApiError(payload));
 
@@ -171,7 +176,10 @@ export default function FranchiseBrandSelector({
                 });
                 if (companyName) params.set('company', companyName);
 
-                const officialPromise = fetch(`/api/franchise-brands?${params.toString()}`, { cache: 'no-store' })
+                const officialPromise = fetch(`/api/franchise-brands?${params.toString()}`, {
+                    cache: 'no-store',
+                    headers: authHeaders
+                })
                     .then(async response => {
                         const payload = await response.json().catch(() => ({}));
                         if (!response.ok) throw new Error(readApiError(payload));

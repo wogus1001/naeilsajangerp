@@ -1,7 +1,8 @@
 "use client";
 
 import { CalendarPlus, Check, LockKeyhole, NotebookText, Pencil, Plus, Trash2, UserRound, UsersRound } from 'lucide-react';
-import type { FranchiseScheduleItem, FranchiseScheduleSource, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
+import { getFranchiseScheduleSourceLabel } from './franchiseScheduleViewModel';
+import type { FranchiseScheduleItem, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
 import styles from './FranchiseSchedulePage.module.css';
 
 type DayListProps = {
@@ -22,14 +23,6 @@ function getDateLabel(date: string): { readonly label: string; readonly year: st
         label: year && month && day ? `${month}월 ${day}일 ${weekday}` : date,
         year: year ? `${year}년` : ''
     };
-}
-
-function getSourceLabel(source: FranchiseScheduleSource): string {
-    if (source === 'approval-document') return '결재';
-    if (source === 'supervision-visit') return 'SV 방문';
-    if (source === 'report') return '보고서';
-    if (source === 'corrective-action') return '시정조치';
-    return '수동 등록';
 }
 
 function getStatusClass(status: FranchiseScheduleStatus): string {
@@ -72,7 +65,7 @@ export function FranchiseScheduleDayList({ selectedDate, items, onCreate, onEdit
                                     {item.visibility === 'personal' ? <LockKeyhole size={12} /> : <UsersRound size={12} />}
                                     {item.visibility === 'personal' ? '개인 일정' : '공유 일정'}
                                 </span>
-                                <span>{getSourceLabel(item.source)}</span>
+                                <span>{getFranchiseScheduleSourceLabel(item.source)}</span>
                             </div>
                             <dl className={styles.scheduleDetails}>
                                 <div>

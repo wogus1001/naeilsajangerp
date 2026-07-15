@@ -51,14 +51,15 @@ export function openMeetingToolReport(
     draft: MeetingToolDraft,
     managerName: string,
     mode: MeetingToolPrintMode,
-    mapPosition?: ReportMapPosition | null
+    mapPosition: ReportMapPosition | null | undefined,
+    onPopupBlocked: (message: string) => void
 ): void {
     const reportHtml = buildMeetingToolReportHtml({ draft, location, managerName, mapPosition, mode });
     const reportUrl = window.URL.createObjectURL(new Blob([reportHtml], { type: 'text/html;charset=utf-8' }));
     const printWindow = window.open(reportUrl, '_blank', 'width=980,height=760');
     if (!printWindow) {
         window.URL.revokeObjectURL(reportUrl);
-        window.alert('팝업이 차단되어 보고서 화면을 열 수 없습니다. 브라우저 팝업 허용 후 다시 시도해주세요.');
+        onPopupBlocked('팝업이 차단되어 보고서 화면을 열 수 없습니다. 브라우저 팝업 허용 후 다시 시도해주세요.');
         return;
     }
 

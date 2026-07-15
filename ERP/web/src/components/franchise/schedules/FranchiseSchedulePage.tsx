@@ -11,6 +11,7 @@ import {
     FRANCHISE_SCHEDULES_API_PATH,
     buildFranchiseScheduleViewModel,
     getFranchiseScheduleMutationPath,
+    getFranchiseScheduleSourceLabel,
     toDateKey
 } from './franchiseScheduleViewModel';
 import type {
@@ -25,25 +26,18 @@ import { getFranchiseScheduleResponseFailure, useFranchiseScheduleData } from '.
 import styles from './FranchiseSchedulePage.module.css';
 
 const STATUS_FILTERS: readonly ('all' | FranchiseScheduleStatus)[] = ['all', '예정', '진행중', '완료', '지연'];
-const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = ['all', 'manual', 'supervision-visit', 'report'];
+const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = [
+    'all',
+    'manual',
+    'supervision-visit',
+    'report',
+    'corrective-action',
+    'vendor-contract-renewal',
+    'disclosure-contract-eligible'
+];
 const VISIBILITY_FILTERS: readonly ('all' | FranchiseScheduleVisibility)[] = ['all', 'shared', 'personal'];
 const EMPTY_FORM: ScheduleFormValue = { id: '', title: '', date: toDateKey(new Date()), status: '예정', visibility: 'shared', assigneeProfileId: '', details: '' };
 type ScheduleAlert = { readonly message: string; readonly type: 'success' | 'error' };
-
-function getSourceLabel(source: FranchiseScheduleSource): string {
-    switch (source) {
-        case 'manual':
-            return '수동';
-        case 'approval-document':
-            return '전자결재';
-        case 'supervision-visit':
-            return 'SV 방문';
-        case 'report':
-            return '보고서';
-        case 'corrective-action':
-            return '시정조치';
-    }
-}
 
 function getSelectedStatus(value: string): FranchiseScheduleStatus {
     return value === '진행중' || value === '완료' || value === '지연' || value === '취소' ? value : '예정';
@@ -54,7 +48,13 @@ function getSelectedStatusFilter(value: string): 'all' | FranchiseScheduleStatus
 }
 
 function getSelectedSourceFilter(value: string): 'all' | FranchiseScheduleSource {
-    if (value === 'supervision-visit' || value === 'report' || value === 'corrective-action') return value;
+    if (
+        value === 'supervision-visit'
+        || value === 'report'
+        || value === 'corrective-action'
+        || value === 'vendor-contract-renewal'
+        || value === 'disclosure-contract-eligible'
+    ) return value;
     return value === 'manual' ? 'manual' : 'all';
 }
 
@@ -142,7 +142,7 @@ export function FranchiseSchedulePage() {
                     const source = getSelectedSourceFilter(event.currentTarget.value);
                     setFilters(current => ({ ...current, source }));
                 }}>
-                    {SOURCE_FILTERS.map(source => <option key={source} value={source}>{source === 'all' ? '전체 유형' : getSourceLabel(source)}</option>)}
+                    {SOURCE_FILTERS.map(source => <option key={source} value={source}>{source === 'all' ? '전체 유형' : getFranchiseScheduleSourceLabel(source)}</option>)}
                 </select>
                 <select value={filters.visibility} onChange={event => {
                     const value = event.currentTarget.value;

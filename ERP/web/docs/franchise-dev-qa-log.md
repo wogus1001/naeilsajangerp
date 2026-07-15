@@ -1349,3 +1349,15 @@
 - 브라우저 QA: mock-session 개발 서버에서 1200px와 390px로 가맹운영 일정 및 헤더 알림을 확인했다. 전자결재 일정은 가맹운영 달력과 KPI에서 숨겨지고, 알림의 `전자결재/가맹운영` 필터는 각각 `결재 요청`과 `업체 계약 D-7`만 표시했다. 모바일 필터 높이 44px, horizontal overflow 0, 일정 화면 console error 0건을 확인했다. 메인 대시보드의 빈 공지 등록은 브라우저 기본 팝업 대신 중앙 `오류` 커스텀 알럿으로 표시됐다. 화면 증적은 `/tmp/fcerp-phase2-notification-alert-qa-20260715/notification-mobile-final.png`, `/tmp/fcerp-phase2-notification-alert-qa-20260715/custom-alert-desktop-final.png`에 저장했다.
 - 런타임 가설 점검: (1) 구분별 요청이 상위 8건 제한 때문에 비어 보일 가능성은 서버 category 조회와 모바일에서 각 구분 제목 1건을 확인해 기각했다. (2) 외부 연동의 `approval-document`가 가맹운영 일정에 다시 노출될 가능성은 같은 날짜 fixture를 주입하고 일정 root에서 결재 제목이 0건, console error가 0건인 것으로 기각했다. (3) 공용 Provider에서 확인 callback이 다음 대기창까지 닫을 가능성은 두 요청을 연속 enqueue한 회귀 테스트에서 첫 요청 승인 후 두 번째 요청이 active로 유지되고 각 resolver가 한 번씩 실행되는 것으로 기각했다.
 - SQL 상태: 기존 알림의 `source_type`을 재사용하므로 신규 SQL은 없다. 1단계 문서함 검색·필터 실계정 QA는 dev 또는 production 승격 전 필수 잔여 항목으로 유지한다.
+
+## 2026-07-15 가맹 운영 원천 일정 1차 QA
+
+- 저장소 분리: 업체 계약 갱신과 정보공개서 계약 가능일은 기존 `upsert_franchise_schedule_from_payload` RPC로 `franchise_schedules`에만 저장한다. 새 동기화 경로는 전사·점포개발 일정의 `schedules`, `/api/schedules`, `upsertWorkflowSchedule`을 참조하지 않는다.
+- 일정 규칙: 업체 계약은 계약 ID를 원천 키로 사용하며 만료 전 `예정`, 만료 후 `지연`, 갱신 완료 `완료`, 종료·보관 `취소`로 동기화한다. 정보공개서는 후보자 ID를 원천 키로 사용해 계약 가능일 전 `예정`, 가능일 도래 `완료`로 동기화한다. 반복 조회와 저장에도 같은 원천 일정 한 건을 갱신한다.
+- 화면: `/dashboard/franchise-operations/schedule`의 유형 필터와 선택 날짜 상세에 `업체 계약`, `정보공개서`를 별도 표시한다. 자동 생성 일정은 수동 일정의 수정·완료·삭제 액션을 노출하지 않는다.
+- 실패 격리: 원천 일정 동기화 오류는 업체 계약 저장·알림 생성의 본 처리를 막지 않고 서버 경고로 남긴다. 다음 알림 조회 또는 스케줄 실행에서 같은 원천 키로 다시 동기화한다.
+- 저장 보강: `upsert_franchise_schedule_from_payload`는 `supabase_franchise_source_schedule_upsert_migration.sql`에서 `service_role`만 실행할 수 있게 제한하고, 연결 프로필의 회사 일치 여부와 원천 키를 검증한다. 같은 원천을 다시 동기화해도 최초 `completed_at`을 유지한다. 회사가 선택되지 않은 플랫폼 관리자 알림 조회에서는 원천 일정 동기화를 실행하지 않는다.
+- 자동 검증: 저장 RPC 호출·오류 전파·권한 SQL, 원천 ID, 계약·정보공개서 상태 규칙, 화면 파서·한글 유형명을 포함한 집중 테스트 22건과 전체 `npx tsx --test` 743건이 통과했다. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`도 통과했다.
+- 브라우저 QA: 1440px와 390px 가맹 운영 일정 화면에 두 원천 일정과 유형 필터가 표시되고, 화면 root에는 `점포개발 업무` 문구가 없으며 두 viewport 모두 `scrollWidth=innerWidth`, console error 0건을 확인했다. 390px 상단 경로명은 한 줄로 유지하고 긴 계정명은 말줄임 처리했다.
+- 런타임 가설 점검: (1) 전사 일정 저장소로 잘못 기록될 가능성은 새 동기화 경로의 `schedules`, `/api/schedules`, `upsertWorkflowSchedule` 참조 0건과 전용 RPC payload 테스트로 기각했다. (2) 새 원천 유형이 `수동 등록`으로 표시될 가능성은 파서 테스트와 브라우저의 `업체 계약`·`정보공개서` 배지/필터 확인으로 기각했다. (3) 일정 동기화 실패가 계약 저장이나 알림 조회를 막을 가능성은 선택 동기화 경계를 별도 함수의 예외 처리로 격리하고, 같은 원천 키의 재시도 payload가 결정적인 ID를 쓰는 것으로 확인했다.
+- SQL 상태: 기존 가맹 운영 일정 테이블 적용 후 `supabase_franchise_source_schedule_upsert_migration.sql`을 추가 적용해야 한다. **SQL 등록 필요**.

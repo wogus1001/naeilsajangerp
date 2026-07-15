@@ -12,7 +12,14 @@ export function getFranchiseScheduleMutationPath(
 }
 
 export type FranchiseScheduleStatus = '예정' | '진행중' | '완료' | '지연' | '취소';
-export type FranchiseScheduleSource = 'manual' | 'approval-document' | 'supervision-visit' | 'report' | 'corrective-action';
+export type FranchiseScheduleSource =
+    | 'manual'
+    | 'approval-document'
+    | 'supervision-visit'
+    | 'report'
+    | 'corrective-action'
+    | 'vendor-contract-renewal'
+    | 'disclosure-contract-eligible';
 export type FranchiseScheduleVisibility = 'shared' | 'personal';
 export type FranchiseScheduleLoadState = 'loading' | 'empty' | 'ready' | 'needs-sql' | 'forbidden' | 'error';
 
@@ -60,7 +67,34 @@ export type FranchiseScheduleViewModel = {
 };
 
 const STATUS_SET: readonly FranchiseScheduleStatus[] = ['예정', '진행중', '완료', '지연', '취소'];
-const SOURCE_SET: readonly FranchiseScheduleSource[] = ['manual', 'approval-document', 'supervision-visit', 'report', 'corrective-action'];
+const SOURCE_SET: readonly FranchiseScheduleSource[] = [
+    'manual',
+    'approval-document',
+    'supervision-visit',
+    'report',
+    'corrective-action',
+    'vendor-contract-renewal',
+    'disclosure-contract-eligible'
+];
+
+export function getFranchiseScheduleSourceLabel(source: FranchiseScheduleSource): string {
+    switch (source) {
+        case 'manual':
+            return '수동 등록';
+        case 'approval-document':
+            return '전자결재';
+        case 'supervision-visit':
+            return 'SV 방문';
+        case 'report':
+            return '보고서';
+        case 'corrective-action':
+            return '시정조치';
+        case 'vendor-contract-renewal':
+            return '업체 계약';
+        case 'disclosure-contract-eligible':
+            return '정보공개서';
+    }
+}
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
     FRANCHISE_SCHEDULES_API_PATH,
     buildFranchiseScheduleViewModel,
+    getFranchiseScheduleSourceLabel,
     getFranchiseScheduleMutationPath,
     getMonthDays,
     parseFranchiseScheduleAssignees,
@@ -51,6 +52,24 @@ test('Given raw route payload When parsing Then invalid rows are dropped and sou
     assert.equal(items.length, 2);
     assert.equal(items[0]?.status, '예정');
     assert.equal(items[1]?.source, 'approval-document');
+});
+
+test('Given franchise source schedules When parsing Then contract and disclosure sources stay distinct', () => {
+    const items = parseFranchiseScheduleItems({
+        data: [
+            { id: 'vendor-1', title: '업체 계약 갱신', date: '2026-07-20', sourceType: 'vendor-contract-renewal' },
+            { id: 'disclosure-1', title: '정보공개서 계약 가능일', date: '2026-07-21', sourceType: 'disclosure-contract-eligible' }
+        ]
+    });
+
+    assert.deepEqual(items.map(item => item.source), [
+        'vendor-contract-renewal',
+        'disclosure-contract-eligible'
+    ]);
+    assert.deepEqual(items.map(item => getFranchiseScheduleSourceLabel(item.source)), [
+        '업체 계약',
+        '정보공개서'
+    ]);
 });
 
 test('Given the shared API envelope When parsing Then schedule rows are read from data', () => {
