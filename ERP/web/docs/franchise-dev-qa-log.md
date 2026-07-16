@@ -25,6 +25,13 @@
 
 ## 개발 과정 로그
 
+### 2026-07-16 2단계 통합 릴리즈 후보
+
+- 미배포 상태였던 알림·일정 분리, 가맹운영 원천 일정 연동, 2단계 마감 커밋을 최신 운영 `main` 기준 브랜치에 다시 통합했다. 진행현황 검색·페이지네이션·삭제목록 기능은 유지하고 삭제 확인만 공용 중앙 다이얼로그로 병합했다.
+- 관련 일정·알림·원천 동기화 테스트 68건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 브라우저 QA는 1440px·390px 일정 화면, 6개 원천 상세 이동, 수동 일정 저장 완료 중앙 알럿, SQL 미적용 424 안내, 권한 없음 403 안내, 가로 overflow 0, console error 0건을 확인했다. 실행일이 바뀌면 상세 일정이 사라지던 QA fixture 고정 날짜를 KST 실행일 기준으로 보정했다.
+- 사용자 확인 기준 `supabase_company_approvals_security_review_migration.sql`, `supabase_franchise_schedule_visibility_migration.sql`, `supabase_franchise_source_schedule_upsert_migration.sql`, `supabase_franchise_source_schedule_profile_security_migration.sql` 적용을 완료했다. **SQL 등록 완료 확인**.
+
 ### 2026-07-16
 
 - `/dashboard/franchise-leads/work-intake` 진행현황의 검색·상태·기간 필터와 10건 페이지네이션을 입점 요청/예비 창업자 등록에 적용하고, 관리자에게만 삭제 목록과 삭제 시점 상세 내용을 제공했다.

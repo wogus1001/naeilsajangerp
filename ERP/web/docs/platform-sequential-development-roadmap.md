@@ -51,8 +51,8 @@ FC ERP의 다음 개발을 아래 순서로만 진행한다.
 
 | 순서 | 단계 | 현재 상태 | 다음 단계 진입 조건 |
 |---|---|---|---|
-| 1 | 전자결재 운영 완성 | 검증 중 | 문서함 검색·필터 실계정 QA 완료 |
-| 2 | 일정·결재·알림 통합 | 코드 완료·SQL 적용 대기 | 프로필 보안 SQL 적용 확인 후 운영 마감 |
+| 1 | 전자결재 운영 완성 | 완료 | 완료 게이트 통과 |
+| 2 | 일정·결재·알림 통합 | 검증 완료·배포 준비 | dev/main/운영 반영 |
 | 3 | 점주 포털 업무 자동화 | 대기 | 2단계 source/event 계약 확정 및 운영 QA 완료 |
 | 4 | 안정화·감사·관측 체계 | 대기 | 3단계 운영 QA 완료 |
 
@@ -68,8 +68,8 @@ FC ERP의 다음 개발을 아래 순서로만 진행한다.
 - 1-6 보정으로 결재 일정 수신자를 미처리 원 결재자와 같은 회사의 활성 임직원 대결자로 다시 계산하고, 처리 완료한 병렬 결재자의 일정 노출을 제거했다.
 - 공용 `/schedule`에서 결재 일정을 누르면 결재 문서 상세로 이동한다. 1440px/390px mock-session 브라우저 QA에서 이동과 가로 넘침 0건을 확인했다. 가맹운영 일정은 별도 사용자·저장소 정책에 따라 결재 일정과 연동하지 않는다.
 - 최신 보안 리뷰 migration과 `supabase_company_approvals_workflow_schedule_fix_migration.sql` 적용 후 2명 순차 결재, 병렬 전원/1인 합의, 대결, 기안자 완료 처리까지 실계정 브라우저 QA를 통과했다. 단계별 일정·알림 교체, stale 알림 종료, 일정 완료, 중복 0건을 확인해 1-6을 완료로 판정한다. **SQL 등록 완료 확인**.
-- 후속 권한 리뷰에서 idempotent RPC의 캐시 반환 전 호출자 검증과 만료·해제 위임자의 결재함·문서·첨부·일정·알림 접근 차단을 보강했다. 최신 `supabase_company_approvals_security_review_migration.sql`과 `supabase_franchise_schedule_visibility_migration.sql` 재적용 후 보안 경계를 다시 실호출한다. **SQL 재등록 필요**.
-- 전체 1단계는 구현을 마쳤지만 1-5 문서함 검색·상태·기간·페이지네이션 실계정 QA가 남아 있어 `검증 중`을 유지한다.
+- 후속 권한 리뷰에서 idempotent RPC의 캐시 반환 전 호출자 검증과 만료·해제 위임자의 결재함·문서·첨부·일정·알림 접근 차단을 보강했다. 사용자가 최신 `supabase_company_approvals_security_review_migration.sql`과 `supabase_franchise_schedule_visibility_migration.sql` 적용을 완료했다. **SQL 등록 완료 확인**.
+- 문서함 검색·상태·기간·페이지네이션과 역할별 결재 흐름 QA까지 마쳐 전체 1단계를 `완료`로 판정한다.
 
 ### 목표
 
@@ -228,7 +228,7 @@ FC ERP의 다음 개발을 아래 순서로만 진행한다.
 
 - 업체 계약 만료일과 정보공개서 계약 가능일을 `franchise_schedules`에 중복 없이 동기화하고 `/dashboard/franchise-operations/schedule`에서 원천 유형을 구분하는 구현·자동 검증·mock-session 브라우저 QA를 완료했다.
 - `supabase_franchise_source_schedule_upsert_migration.sql`은 사용자 확인 기준 대상 DB에 적용 완료했다. **SQL 등록 완료 확인**. SQL 적용 후 실계정 원천 데이터 동기화 QA까지 완료했다는 의미는 아니다.
-- 후속 `supabase_franchise_source_schedule_profile_security_migration.sql`은 비활성 계정·협력업체의 담당자 연결과 일반 직원의 관리자 연결을 authoritative RPC에서도 차단한다. **SQL 등록 필요**.
+- 후속 `supabase_franchise_source_schedule_profile_security_migration.sql`은 비활성 계정·협력업체의 담당자 연결과 일반 직원의 관리자 연결을 authoritative RPC에서도 차단하며, 사용자 확인 기준 대상 DB 적용을 완료했다. **SQL 등록 완료 확인**.
 - SV 방문·보고서·시정요청, 오픈 준비, 점주 문의·체크리스트의 일정 생성·변경·완료 이벤트를 원천별로 표준화하고 `franchise_schedules`에 연결했다. 새 동기화 경로는 이전 SV 공통 일정 파일럿의 `schedules`를 사용하지 않는다.
 - 이전 파일럿이 `schedules`에 남긴 가맹운영 source 행은 점포개발·전사 일정 대시보드 집계에서 제외해, 레거시 이관 전에도 두 일정 화면이 사용자에게 섞여 보이지 않게 했다.
 - 업체 계약·정보공개서를 포함한 표준 이벤트를 가맹운영 일정과 인앱 알림에 결정적 원천 키로 upsert하고, KST 지연 경계와 담당자 재배정·완료·취소 수명주기를 자동 테스트했다.
@@ -243,13 +243,13 @@ FC ERP의 다음 개발을 아래 순서로만 진행한다.
 5. 상담 이력, Meta, 공시서류, 모객 DB 추출, 외부 상가, 출점 후보지 분석 도구에 남은 브라우저 기본 팝업을 공용 커스텀 다이얼로그로 전환한다.
 6. dev 또는 production 승격 전에 1단계 잔여 문서함 검색·상태·기간·페이지네이션 실계정 QA를 마감한다.
 
-위 항목 중 프로필 보안 SQL 적용 확인은 Phase 2 운영 마감 선행 조건이다. 나머지는 코드·자동 테스트·mock-session QA 이후 이어지는 운영 내구성 고도화다.
+프로필 보안 SQL 적용과 코드·자동 테스트·mock-session QA를 마쳤다. 나머지는 운영 반영 뒤 이어지는 내구성 고도화다.
 
 SQL 판단:
 
 - 2-1 알림·일정 분리와 커스텀 알럿 변경에는 신규 SQL이 없다.
 - 업체 계약·정보공개서 원천 upsert 보강용 `supabase_franchise_source_schedule_upsert_migration.sql`은 사용자 확인 기준 적용 완료다. **SQL 등록 완료 확인**.
-- SV·오픈 준비·점주 원천 연결은 기존 테이블로 구현했다. 최종 보안 리뷰에서 전용 upsert RPC의 프로필 상태·역할 검증을 보강하는 `supabase_franchise_source_schedule_profile_security_migration.sql`을 추가했다. **SQL 등록 필요**.
+- SV·오픈 준비·점주 원천 연결은 기존 테이블로 구현했다. 최종 보안 리뷰에서 전용 upsert RPC의 프로필 상태·역할 검증을 보강하는 `supabase_franchise_source_schedule_profile_security_migration.sql`을 추가했고 사용자 확인 기준 적용을 완료했다. **SQL 등록 완료 확인**.
 
 ### 진입 조건
 
@@ -257,7 +257,7 @@ SQL 판단:
 - 전자결재 문서 ID, 상태, 현재 처리자, 완료 이벤트 계약이 확정돼 있다.
 - 결재 일정·알림 중복 방지 규칙이 운영 QA를 통과했다.
 
-현재 2단계는 위 원칙의 사용자 승인 예외로 기능 개발과 자동/mock-session QA를 마쳤고, 보안 SQL 적용 확인 전까지 `코드 완료·SQL 적용 대기`로 판정한다. 1단계는 여전히 `검증 중`이며 이 예외는 1단계 잔여 QA를 면제하지 않는다.
+현재 2단계는 기능 개발, 보안 SQL 적용, 자동/mock-session QA를 마쳤고 dev/main/운영 반영을 앞둔 `검증 완료·배포 준비` 상태다.
 
 ### 목표 범위
 
@@ -286,7 +286,7 @@ SQL 판단:
 - 원천 이벤트 시점의 지연 판정과 KST 날짜 경계가 테스트로 검증된다. 원천 변경 없이 자정에 재평가하는 실행기는 후속 운영 고도화로 분리한다.
 - 다음 단계가 사용할 점주 이벤트 계약이 확정된다.
 
-위 기준은 현재 코드·자동 테스트·mock-session QA로 충족했다. `supabase_franchise_source_schedule_profile_security_migration.sql` 적용 확인 후 2단계 운영 마감을 확정하고, 적용 SQL 기준 실계정 회귀는 후속 운영 검증으로 계속 추적한다.
+위 기준은 현재 코드·자동 테스트·mock-session QA와 보안 SQL 적용으로 충족했다. dev/main/운영 반영 후 2단계를 최종 `완료`로 전환한다.
 
 ## 3단계: 점주 포털과 본사 업무 자동화
 
