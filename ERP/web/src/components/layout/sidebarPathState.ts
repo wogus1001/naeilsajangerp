@@ -1,4 +1,4 @@
-import type { SidebarMenuItem } from './SidebarMenuConfig';
+import { SIDEBAR_MENU_ITEMS, type SidebarMenuItem } from './SidebarMenuConfig';
 
 export function isSidebarItemPathMatch(item: SidebarMenuItem, pathname: string): boolean {
     if (!item.url) return false;
@@ -9,11 +9,11 @@ export function isSidebarItemPathMatch(item: SidebarMenuItem, pathname: string):
 export function isSidebarItemActive(
     item: SidebarMenuItem,
     pathname: string,
-    items: readonly SidebarMenuItem[]
+    candidates: readonly SidebarMenuItem[] = SIDEBAR_MENU_ITEMS
 ): boolean {
     if (!isSidebarItemPathMatch(item, pathname)) return false;
     const itemUrlLength = item.url?.length ?? 0;
-    return !items.some(candidate => {
+    return !candidates.some(candidate => {
         const candidateUrlLength = candidate.url?.length ?? 0;
         return candidateUrlLength > itemUrlLength && isSidebarItemPathMatch(candidate, pathname);
     });

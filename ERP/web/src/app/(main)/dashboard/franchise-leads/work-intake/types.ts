@@ -44,6 +44,7 @@ export type LeadRegistrationItem = {
     readonly mobile: string;
     readonly source: string;
     readonly status: string;
+    readonly archivedStatus?: string;
     readonly grade: string;
     readonly desiredRegion: string;
     readonly budgetMin: number | null;

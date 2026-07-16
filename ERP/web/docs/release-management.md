@@ -238,6 +238,17 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-16
+  - 작업 브랜치: `codex/work-intake-pagination-local-fix-20260716`, release 브랜치 `codex/work-intake-main-release-20260716`
+  - 기능 커밋: `a0d5a3b feat(franchise): 진행현황 삭제 목록 상세 확인 개선`, `0729bd2 fix(franchise): 진행현황 목록과 삭제 이력 보강`, `021a079 fix(franchise): 진행현황 범위 조회 정렬 안정화`
+  - 주요 기능: 진행현황의 검색·상태·기간 필터와 10건 페이지네이션, 관리자 전용 삭제 목록/상세 스냅샷, 작성자·팀장·관리자 수정/삭제 권한, 협력업체 본인 작성 건 제한을 반영했다. 삭제 이력 저장 실패 시 원본 삭제를 막고, 대량 조회는 timestamp와 `id`의 결정적 정렬로 페이지 누락을 방지한다.
+  - 후속 보정: 관리자 삭제 목록의 `상세 확인`은 삭제 당시 전체 row 스냅샷을 원본 진행현황 확인 폼으로 복원해 모든 등록 항목을 읽기 전용으로 표시한다. 사이드바 활성 판정은 전체 메뉴의 최장 일치 URL을 기준으로 바꿔 `업무 > 진행현황`과 `프랜차이즈 > 모객 DB`가 동시에 선택되는 상태를 제거했다.
+  - 반영 상태: 검색·삭제 이력 기반 기능은 `main` `82e3d88`까지 반영됐다. 후속 상세·메뉴 보정은 `dev` `7c1a143`에서 QA를 마쳤고, legacy URL-only 첨부의 교차 원본 연결 차단까지 포함한 `origin/main` 기반 release `c85bf36`을 main/production 승격 후보로 사용한다.
+  - SQL: 사용자 확인 기준 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 2026-07-16 운영 DB에 적용했다. **SQL 등록 완료 확인**.
+  - 검증: 기반 기능 관련 테스트 29건과 후속 보정 회귀 테스트 16건, `tsc`, lint, build, `git diff --check` 통과. 후속 보정의 1440px·390px mock browser QA에서 관리자 삭제 목록의 전체 form 상세, 과거 선택값·면적 단위 보존, 메뉴 단일 활성, 읽기 전용 fieldset, 가로 overflow 0, console error 0건을 확인했다. 첨부 경로 이탈 및 legacy URL-only 첨부의 교차 원본 연결 차단, 과거 상태 원문 표시, 숨김 메뉴 활성 판정도 테스트로 검증했다.
+  - 배포: dev preview `dpl_FEWEFHzvnDbD3kehbD4tQQkMQsHa`와 release `c85bf36` preview `dpl_5b7MS7Cikc1k4odMVWDs6Qui1eE6`가 `Ready`다. main PR과 production 배포는 최종 review gate 통과 후 진행한다.
+  - 남은 이슈: 운영 실계정으로 역할별 수정·삭제 권한과 삭제 이력 persistence를 확인한다.
+
 - 2026-07-13
   - 작업 브랜치: `codex/progress-request-map-gallery-20260713`
   - 기능 커밋: 이번 입점 요청 상세 지도·사진 탐색 커밋
