@@ -25,6 +25,14 @@
 
 ## 개발 과정 로그
 
+### 2026-07-16
+
+- `/dashboard/franchise-leads/work-intake` 진행현황의 검색·상태·기간 필터와 10건 페이지네이션을 입점 요청/예비 창업자 등록에 적용하고, 관리자에게만 삭제 목록과 삭제 시점 상세 내용을 제공했다.
+- 코드리뷰 보정: 200/500건 선조회 제한을 제거해 오래된 데이터도 검색·페이지 집계에 포함하고, 페이지 파라미터가 없는 기존 API 호출은 전체 결과를 유지한다. 상태 필터는 입점 요청과 예비 창업자 실제 상태값으로 분리하고 KST 날짜 기준을 적용했다.
+- 권한/삭제 보정: 소속 회사가 없는 일반 계정과 회사를 옮긴 과거 작성자의 조회·수정·삭제를 차단했다. 수정·삭제는 같은 회사의 실제 작성자, 팀장, 관리자만 가능하고 협력업체는 기존처럼 본인 작성 건만 조회한다. 삭제 이력 RPC를 찾지 못하면 원본 삭제도 중단하며, 기존 직접 삭제 API는 진행현황 전용 삭제 경로로 유도한다.
+- 삭제 RPC는 원본 row 잠금, 서버측 전체 row 스냅샷, 원천 ID 중복 방지, 실제 삭제 1건 검증을 포함하도록 강화했다. 기존 적용 환경은 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 다시 실행해야 한다. **SQL 재등록 필요**.
+- 검증: 관련 `npx tsx --test` 22건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Playwright로 1920px에서 `1/2 → 2/2` 페이지 이동, 관리자 삭제 목록/상세, Escape 닫기, 390px 모바일 overflow 0, 콘솔 오류 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+
 ### 2026-07-14
 
 - 사이드바 최상위 `전자결재` 메뉴에 다른 주요 메뉴와 동일한 18px Lucide `FileCheck2` 아이콘을 추가했다. 기존 메뉴 경로, 활성 상태, 회사별 기능 권한은 변경하지 않았다.

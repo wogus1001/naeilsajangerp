@@ -4,12 +4,10 @@ import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead
 import { FRANCHISE_MATCHING_REQUEST_SOURCE, normalizeLeadGrade, normalizeLeadPhone, normalizeLeadStatus } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { canDeleteWorkIntakeRecord, canEditWorkIntakeRecord, type WorkIntakeAccessRow } from '@/lib/work-intake-access';
-import { missingWorkIntakeEditFields } from '@/lib/work-intake-edit-validation';
 
 export const dynamic = 'force-dynamic';
 export const WORK_INTAKE_DELETE_RPC_NAME = 'delete_franchise_work_intake_record_with_snapshot';
-const WORK_INTAKE_DELETED_RECORDS_TABLE = 'franchise_work_intake_deleted_records';
-export const WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE = '삭제했습니다. 삭제 목록 저장 기능을 서버가 아직 인식하지 못해 삭제 이력은 저장되지 않았습니다. 잠시 후 다시 시도해주세요.';
+export const WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE = '삭제 목록 저장 기능을 확인할 수 없어 삭제하지 않았습니다. SQL 적용 상태와 Supabase 스키마 캐시를 확인해주세요.';
 export const WORK_INTAKE_DELETE_HISTORY_FAILED_MESSAGE = '삭제 이력 저장 중 오류가 발생해 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.';
 
 type WorkIntakeMutationKind = 'properties' | 'leadRegistrations' | 'matchingRequests';
@@ -38,9 +36,6 @@ type DeleteSnapshot = {
         readonly sourceTable: Target['table'];
         readonly row: IntakeRow;
     };
-};
-type DeletedRecordInsertResult = {
-    readonly id: string;
 };
 
 const DATA_CONTROL_FIELDS = new Set([
@@ -126,7 +121,7 @@ async function fetchTarget(kind: WorkIntakeMutationKind, id: string): Promise<Ta
     if (kind === 'leadRegistrations') {
         const { data, error } = await supabaseAdmin
             .from('franchise_lead_registration_requests')
-            .select('id, company_id, manager_id, created_by, name, mobile, status, source, created_at, data')
+            .select('id, company_id, manager_id, created_by, name, mobile, status, source, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, created_at, data')
             .eq('id', id)
             .maybeSingle<IntakeRow>();
         if (error && !isMissingLeadRegistrationRequestTableError(error)) throw error;
@@ -135,7 +130,7 @@ async function fetchTarget(kind: WorkIntakeMutationKind, id: string): Promise<Ta
 
     const { data, error } = await supabaseAdmin
         .from('franchise_leads')
-        .select('id, company_id, manager_id, created_by, name, mobile, status, source, created_at, data')
+        .select('id, company_id, manager_id, created_by, name, mobile, status, source, grade, desired_region, interested_brand, budget_min, budget_max, memo, created_at, data')
         .eq('id', id)
         .maybeSingle<IntakeRow>();
     if (error) throw error;
@@ -180,84 +175,6 @@ export function isMissingWorkIntakeDeleteSnapshotRpcError(error: unknown): boole
         || combined.includes('function') && combined.includes('schema cache');
 }
 
-function isMissingDeletedRecordsTableError(error: unknown): boolean {
-    if (!isRecord(error)) return false;
-    const code = typeof error.code === 'string' ? error.code : '';
-    const message = typeof error.message === 'string' ? error.message : '';
-    const details = typeof error.details === 'string' ? error.details : '';
-    const combined = `${message} ${details}`;
-    return code === 'PGRST204'
-        || code === 'PGRST205'
-        || code === '42P01'
-        || combined.includes(WORK_INTAKE_DELETED_RECORDS_TABLE) && combined.includes('schema cache')
-        || combined.includes(`relation "${WORK_INTAKE_DELETED_RECORDS_TABLE}" does not exist`);
-}
-
-async function deleteOriginalWorkIntakeRecord(target: Target) {
-    const supabaseAdmin = getSupabaseAdmin();
-    let query = supabaseAdmin
-        .from(target.table)
-        .delete()
-        .eq('id', target.row.id);
-
-    query = target.row.company_id
-        ? query.eq('company_id', target.row.company_id)
-        : query.is('company_id', null);
-
-    if (target.table === 'properties') {
-        query = query.eq('operation_type', '물건등록');
-    }
-    if (target.table === 'franchise_leads') {
-        query = query.eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE);
-    }
-
-    const { error } = await query;
-    if (error) throw error;
-}
-
-async function deleteWithDirectSnapshotFallback(
-    kind: WorkIntakeMutationKind,
-    target: Target,
-    requesterId: string,
-    snapshot: DeleteSnapshot
-): Promise<boolean> {
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin
-        .from(WORK_INTAKE_DELETED_RECORDS_TABLE)
-        .insert({
-            company_id: target.row.company_id,
-            deleted_by: requesterId,
-            kind,
-            source_id: target.row.id,
-            source_table: target.table,
-            title: snapshot.title,
-            summary: snapshot.summary,
-            snapshot: snapshot.snapshot
-        })
-        .select('id')
-        .single<DeletedRecordInsertResult>();
-
-    if (error) {
-        if (isMissingDeletedRecordsTableError(error)) {
-            await deleteOriginalWorkIntakeRecord(target);
-            return false;
-        }
-        throw error;
-    }
-
-    try {
-        await deleteOriginalWorkIntakeRecord(target);
-    } catch (deleteError) {
-        await supabaseAdmin
-            .from(WORK_INTAKE_DELETED_RECORDS_TABLE)
-            .delete()
-            .eq('id', data.id);
-        throw deleteError;
-    }
-
-    return true;
-}
-
 function buildPropertyUpdates(body: Record<string, unknown>, row: IntakeRow) {
     const updates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
@@ -294,18 +211,14 @@ export async function PUT(request: Request, context: RouteContext) {
     try {
         const params = await context.params;
         const kind = resolveKind(params.kind);
-        if (!kind) return fail(400, 'VALIDATION_ERROR', 'Unsupported work intake kind');
+        if (!kind) return fail(400, 'VALIDATION_ERROR', '수정할 수 없는 진행현황 유형입니다.');
         const body = await parseBody(request);
-        const missingFields = missingWorkIntakeEditFields(kind, body);
-        if (missingFields.length > 0) {
-            return fail(400, 'VALIDATION_ERROR', `필수 항목을 확인해주세요: ${missingFields.join(', ')}`);
-        }
         const supabaseAdmin = getSupabaseAdmin();
         const requester = await getRequesterProfile(supabaseAdmin, request, cleanString(body.requesterId));
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인 세션을 확인할 수 없습니다. 다시 로그인해주세요.');
 
         const target = await fetchTarget(kind, params.id);
-        if (!target) return fail(404, 'NOT_FOUND', 'Work intake record not found');
+        if (!target) return fail(404, 'NOT_FOUND', '수정할 진행현황을 찾지 못했습니다.');
         if (!canEditWorkIntakeRecord(requester, target.row)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
         }
@@ -322,7 +235,7 @@ export async function PUT(request: Request, context: RouteContext) {
         return ok({ record: data });
     } catch (error) {
         console.error('Franchise work intake PUT error:', error);
-        return fail(500, 'INTERNAL_ERROR', 'Failed to update work intake record');
+        return fail(500, 'INTERNAL_ERROR', '진행현황 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
 }
 
@@ -352,14 +265,7 @@ export async function DELETE(request: Request, context: RouteContext) {
         });
         if (error) {
             if (isMissingWorkIntakeDeleteSnapshotRpcError(error)) {
-                const deleteHistoryStored = await deleteWithDirectSnapshotFallback(kind, target, requester.id, snapshot);
-                return deleteHistoryStored
-                    ? ok({ success: true, deleteHistoryStored: true })
-                    : ok({
-                        success: true,
-                        deleteHistoryStored: false,
-                        message: WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE
-                    });
+                return fail(503, 'INTERNAL_ERROR', WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE);
             }
             throw error;
         }

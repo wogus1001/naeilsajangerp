@@ -52,3 +52,28 @@ test('Given invalid query numbers When parsing Then safe defaults are used', () 
     assert.equal(query.page, 1);
     assert.equal(query.pageSize, 50);
 });
+
+test('Given a legacy request without pagination parameters When filtering Then all matching rows are returned', () => {
+    const query = parseWorkIntakeQuery(new URLSearchParams());
+    const rows = Array.from({ length: 12 }, (_, index): Row => ({
+        title: String(index + 1),
+        status: '공실',
+        date: '2026-07-01',
+        author: 'a'
+    }));
+
+    const result = paginateWorkIntakeItems(rows, query, adapter);
+
+    assert.equal(query.paginate, false);
+    assert.equal(result.items.length, 12);
+    assert.equal(result.meta.total, 12);
+});
+
+test('Given a UTC timestamp crossing midnight in Korea When filtering by date Then the Korean calendar date is used', () => {
+    const query = parseWorkIntakeQuery(new URLSearchParams({ from: '2026-07-16', to: '2026-07-16' }));
+    const result = paginateWorkIntakeItems<Row>([
+        { title: 'KST 16일', status: '공실', date: '2026-07-15T15:30:00.000Z', author: 'a' }
+    ], query, adapter);
+
+    assert.equal(result.items.length, 1);
+});
