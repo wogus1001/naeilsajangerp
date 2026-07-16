@@ -26,21 +26,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function readSnapshotRow(record: DeletedWorkIntakeItem): Record<string, unknown> {
+export function readSnapshotRow(record: DeletedWorkIntakeItem): Record<string, unknown> {
     const snapshot = record.snapshot;
     const row = snapshot.row;
     return isRecord(row) ? row : {};
 }
 
-function readSnapshotData(record: DeletedWorkIntakeItem): Record<string, unknown> {
+export function readSnapshotData(record: DeletedWorkIntakeItem): Record<string, unknown> {
     const row = readSnapshotRow(record);
     const data = row.data;
     return isRecord(data) ? data : {};
 }
 
-function firstText(...values: readonly unknown[]): string {
+export function firstText(...values: readonly unknown[]): string {
     for (const value of values) {
-        const text = cleanText(value);
+        const text = value === null || value === undefined ? '' : String(value).trim();
         if (text) return text;
     }
     return '';

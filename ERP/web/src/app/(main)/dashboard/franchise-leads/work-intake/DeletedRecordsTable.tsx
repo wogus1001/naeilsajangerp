@@ -3,6 +3,8 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
 import styles from './page.module.css';
+import { WorkIntakeEditModal } from './WorkIntakeEditModal';
+import { buildDeletedRecordEditTarget } from './deleted-record-edit-target';
 import { buildDeletedRecordDetails, cleanText, formatDateTime } from './deleted-record-details';
 import type { DeletedWorkIntakeItem } from './types';
 
@@ -55,6 +57,7 @@ function DeletedRecordDetailModal({ record, onCloseAction }: {
 
 export function DeletedRecordsTable(props: Props) {
     const [selectedRecord, setSelectedRecord] = React.useState<DeletedWorkIntakeItem | null>(null);
+    const selectedTarget = selectedRecord ? buildDeletedRecordEditTarget(selectedRecord) : null;
 
     return (
         <>
@@ -94,7 +97,19 @@ export function DeletedRecordsTable(props: Props) {
                     </tbody>
                 </table>
             </section>
-            {selectedRecord && (
+            {selectedRecord && selectedTarget && (
+                <WorkIntakeEditModal
+                    target={selectedTarget}
+                    requesterId=""
+                    isReadOnly
+                    titleOverride={`삭제된 ${selectedRecord.kindLabel} 상세`}
+                    description="삭제 시점에 저장된 전체 등록 내용입니다."
+                    onCloseAction={() => setSelectedRecord(null)}
+                    onSavedAction={() => undefined}
+                    onErrorAction={() => undefined}
+                />
+            )}
+            {selectedRecord && !selectedTarget && (
                 <DeletedRecordDetailModal
                     record={selectedRecord}
                     onCloseAction={() => setSelectedRecord(null)}
