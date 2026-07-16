@@ -6,6 +6,15 @@ export type WorkIntakeTab = 'properties' | 'leadRegistrations' | 'matchingReques
 
 export type WorkIntakeKind = WorkIntakeTab;
 
+export type WorkIntakeVisibleTab = WorkIntakeTab | 'deletedRecords';
+
+export type WorkIntakePageMeta = {
+    readonly page: number;
+    readonly pageSize: number;
+    readonly total: number;
+    readonly pageCount: number;
+};
+
 export type PropertyItem = {
     readonly id: string;
     readonly companyName: string;
@@ -58,6 +67,7 @@ export type MatchingRequestItem = {
     readonly name: string;
     readonly mobile: string;
     readonly email: string;
+    readonly status: string;
     readonly desiredRegion: string;
     readonly desiredCategory: string;
     readonly interestedBrand: string;
@@ -72,10 +82,33 @@ export type MatchingRequestItem = {
     readonly form: MatchingRequestForm;
 };
 
+export type DeletedWorkIntakeItem = {
+    readonly id: string;
+    readonly kind: string;
+    readonly kindLabel: string;
+    readonly sourceId: string;
+    readonly companyId: string;
+    readonly companyName: string;
+    readonly deletedBy: string;
+    readonly deletedByName: string;
+    readonly title: string;
+    readonly summary: string;
+    readonly deletedAt: string;
+    readonly snapshot: Record<string, unknown>;
+};
+
 export type WorkIntakeData = {
     readonly properties: readonly PropertyItem[];
     readonly leadRegistrationRequests: readonly LeadRegistrationItem[];
     readonly matchingRequests: readonly MatchingRequestItem[];
+    readonly deletedRecords?: readonly DeletedWorkIntakeItem[];
+    readonly isAdmin?: boolean;
+    readonly meta?: {
+        readonly properties: WorkIntakePageMeta;
+        readonly leadRegistrationRequests: WorkIntakePageMeta;
+        readonly matchingRequests: WorkIntakePageMeta;
+        readonly deletedRecords: WorkIntakePageMeta;
+    };
 };
 
 export type WorkIntakeEditTarget =

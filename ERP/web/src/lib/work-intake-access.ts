@@ -18,7 +18,7 @@ function isAuthor(requester: RequesterProfile, row: WorkIntakeAccessRow): boolea
     return Boolean(authorId && authorId === requester.id);
 }
 
-export function canManageWorkIntakeRecord(
+export function canEditWorkIntakeRecord(
     requester: RequesterProfile | null,
     row: WorkIntakeAccessRow | null | undefined
 ): boolean {
@@ -26,3 +26,14 @@ export function canManageWorkIntakeRecord(
     if (requester.role === 'admin') return true;
     return isAuthor(requester, row) || isSameCompanyTeamLead(requester, row);
 }
+
+export function canDeleteWorkIntakeRecord(
+    requester: RequesterProfile | null,
+    row: WorkIntakeAccessRow | null | undefined
+): boolean {
+    if (!requester || !row) return false;
+    if (requester.role === 'admin') return true;
+    return isAuthor(requester, row) || isSameCompanyTeamLead(requester, row);
+}
+
+export const canManageWorkIntakeRecord = canEditWorkIntakeRecord;

@@ -50,6 +50,25 @@
     padding: 20px;
 }
 
+.readOnlyFieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.readOnlyFieldset:disabled {
+    opacity: 1;
+}
+
+.readOnlyFieldset:disabled input,
+.readOnlyFieldset:disabled select,
+.readOnlyFieldset:disabled textarea {
+    color: #333d4b;
+    background: #f9fafb;
+    cursor: default;
+}
+
 .previewSection {
     display: grid;
     gap: 12px;
