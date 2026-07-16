@@ -10,6 +10,10 @@ const profileSecurityMigration = readFileSync(
     new URL('../../supabase_franchise_source_schedule_profile_security_migration.sql', import.meta.url),
     'utf8'
 );
+const durableSyncMigration = readFileSync(
+    new URL('../../supabase_franchise_schedule_durable_sync_migration.sql', import.meta.url),
+    'utf8'
+);
 
 void test('Given the source schedule RPC When permissions are installed Then only service role can execute it', () => {
     assert.match(migration, /revoke all on function public\.upsert_franchise_schedule_from_payload\(jsonb\) from public, anon, authenticated/);
@@ -38,4 +42,19 @@ void test('Given source schedule profile assignments When the security follow-up
     assert.match(profileSecurityMigration, /FRANCHISE_SCHEDULE_PROFILE_NOT_ASSIGNABLE/);
     assert.match(profileSecurityMigration, /FRANCHISE_SCHEDULE_MANAGER_NOT_ASSIGNABLE/);
     assert.match(profileSecurityMigration, /grant execute on function public\.upsert_franchise_schedule_from_payload\(jsonb\) to service_role/);
+});
+
+void test('Given operational schedule writes When durable sync is installed Then schedule and recipients share one locked transaction', () => {
+    assert.match(durableSyncMigration, /create table if not exists public\.franchise_schedule_sync_jobs/);
+    assert.match(durableSyncMigration, /pg_advisory_xact_lock/);
+    assert.match(durableSyncMigration, /public\.upsert_franchise_schedule_from_payload\(schedule_payload\)/);
+    assert.match(durableSyncMigration, /insert into public\.franchise_notifications/);
+    assert.match(durableSyncMigration, /on conflict \(company_id, recipient_profile_id, source_type, source_id\)/);
+});
+
+void test('Given queued failures and elapsed dates When the daily cron runs Then jobs are claimed once and late schedules are promoted', () => {
+    assert.match(durableSyncMigration, /for update skip locked/);
+    assert.match(durableSyncMigration, /create or replace function public\.reconcile_franchise_schedule_lateness/);
+    assert.match(durableSyncMigration, /status in \('예정', '진행중'\)/);
+    assert.match(durableSyncMigration, /grant execute on function public\.claim_franchise_schedule_sync_jobs\(integer\) to service_role/);
 });

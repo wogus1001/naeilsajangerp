@@ -52,11 +52,7 @@ async function syncCorrectiveActionSchedule(input: {
         title: input.action.title || '시정요청'
     });
     if (!schedule) return;
-    try {
-        await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
-    } catch (error) {
-        console.warn('Optional corrective action franchise schedule sync skipped:', error);
-    }
+    await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 async function resolveReportId(input: {

@@ -5,6 +5,7 @@ export const SUPERVISION_VISIT_SOURCE_TYPE = 'supervision-visit';
 export const SUPERVISION_REPORT_SOURCE_TYPE = 'supervision-report';
 export const SUPERVISION_CORRECTIVE_ACTION_SOURCE_TYPE = 'supervision-corrective-action';
 export const OPENING_PROJECT_SOURCE_TYPE = 'opening-project';
+export const OWNER_GENERAL_REQUEST_SOURCE_TYPE = 'owner-general-request';
 export const OWNER_FACILITY_REQUEST_SOURCE_TYPE = 'owner-facility-request';
 export const OWNER_CHECKLIST_COMPLETION_SOURCE_TYPE = 'owner-checklist-completion';
 
@@ -224,8 +225,10 @@ export function buildOwnerSubmissionSourceSchedule(
     input: OwnerSubmissionScheduleInput,
     now: Date = new Date()
 ): FranchiseSourceScheduleInput | null {
-    const sourceType = input.submissionType === 'facility_request'
-        ? OWNER_FACILITY_REQUEST_SOURCE_TYPE
+    const sourceType = input.submissionType === 'general_request'
+        ? OWNER_GENERAL_REQUEST_SOURCE_TYPE
+        : input.submissionType === 'facility_request'
+            ? OWNER_FACILITY_REQUEST_SOURCE_TYPE
         : input.submissionType === 'opening_task_completion'
             ? OWNER_CHECKLIST_COMPLETION_SOURCE_TYPE
             : null;
@@ -245,11 +248,15 @@ export function buildOwnerSubmissionSourceSchedule(
         : `/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=${encodeURIComponent(input.submissionId)}`;
     return {
         assigneeProfileId: cleanText(input.managerProfileId) || null,
-        color: checklistCompletion ? '#14b8a6' : '#f97316',
+        color: checklistCompletion ? '#14b8a6' : sourceType === OWNER_GENERAL_REQUEST_SOURCE_TYPE ? '#3b82f6' : '#f97316',
         companyId: input.companyId,
         completedAt: status === '완료' ? now.toISOString() : null,
         date,
-        details: checklistCompletion ? '점주가 체크리스트 완료 요청을 보냈습니다.' : '점주 시설 문의를 확인하고 처리합니다.',
+        details: checklistCompletion
+            ? '점주가 체크리스트 완료 요청을 보냈습니다.'
+            : sourceType === OWNER_GENERAL_REQUEST_SOURCE_TYPE
+                ? '점주 문의를 확인하고 처리합니다.'
+                : '점주 시설 문의를 확인하고 처리합니다.',
         dueAt: dayEnd(date),
         managerProfileId: cleanText(input.managerProfileId) || null,
         metadata: {

@@ -58,18 +58,18 @@ export async function POST(request: Request) {
                 submittedAt: data.created_at || new Date(),
                 supabaseAdmin
             }), 'Owner facility request created');
-            await safelySyncOwnerSubmissionSchedule({
-                companyId: context.account.company_id,
-                locationName: context.location.name || '운영점',
-                managerProfileId: context.location.manager_id,
-                status: 'submitted',
-                submissionId: data.id,
-                submissionType: type,
-                submittedAt: data.created_at || new Date(),
-                supabaseAdmin,
-                title: title || submissionTitle
-            });
         }
+        await safelySyncOwnerSubmissionSchedule({
+            companyId: context.account.company_id,
+            locationName: context.location.name || '운영점',
+            managerProfileId: context.location.manager_id,
+            status: 'submitted',
+            submissionId: data.id,
+            submissionType: type,
+            submittedAt: data.created_at || new Date(),
+            supabaseAdmin,
+            title: title || submissionTitle
+        });
         return ok({ submissionId: data.id }, 201);
     } catch (error) {
         console.error('Owner request error:', error);

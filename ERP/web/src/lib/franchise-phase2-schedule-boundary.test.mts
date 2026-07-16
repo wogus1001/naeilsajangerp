@@ -33,6 +33,14 @@ void test('Given franchise phase two source routes When auditing persistence The
     }
 });
 
+void test('Given franchise source persistence succeeds When schedule sync and retry persistence both fail Then the failure is not swallowed', () => {
+    for (const relativePath of SOURCE_ROUTES) {
+        const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+        assert.doesNotMatch(source, /Optional .* franchise schedule sync skipped/, relativePath);
+        assert.doesNotMatch(source, /Optional supervision visit workflow sync skipped/, relativePath);
+    }
+});
+
 void test('Given legacy franchise operation rows When classifying shared schedules Then every franchise source is excluded', () => {
     assert.equal(isFranchiseOperationsScheduleSource('supervision-visit'), true);
     assert.equal(isFranchiseOperationsScheduleSource('vendor-contract-renewal'), true);
@@ -65,5 +73,6 @@ void test('Given the notification cron When dispatching generation Then it uses 
     assert.match(cronRoute, /POST as generateScheduledNotifications/);
     assert.match(cronRoute, /authorization/);
     assert.match(vercelConfig, /\/api\/franchise-notifications\/cron/);
+    assert.match(vercelConfig.replace(/\s+/g, ' '), /"path": "\/api\/franchise-notifications\/cron", "schedule": "0 15 \* \* \*"/);
     assert.doesNotMatch(vercelConfig, /franchise-notifications\?cron=1/);
 });

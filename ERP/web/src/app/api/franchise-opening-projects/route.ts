@@ -58,11 +58,7 @@ async function syncOpeningProjectSchedule(input: {
         targetOpenDate: input.project.target_open_date
     });
     if (!schedule) return;
-    try {
-        await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
-    } catch (error) {
-        console.warn('Optional opening project franchise schedule sync skipped:', error);
-    }
+    await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 function getErrorCode(error: unknown) {

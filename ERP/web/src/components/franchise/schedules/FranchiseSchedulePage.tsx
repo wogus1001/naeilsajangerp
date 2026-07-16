@@ -33,6 +33,7 @@ const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = [
     'supervision-report',
     'supervision-corrective-action',
     'opening-project',
+    'owner-general-request',
     'owner-facility-request',
     'owner-checklist-completion',
     'vendor-contract-renewal',
@@ -56,6 +57,7 @@ function getSelectedSourceFilter(value: string): 'all' | FranchiseScheduleSource
         || value === 'supervision-report'
         || value === 'supervision-corrective-action'
         || value === 'opening-project'
+        || value === 'owner-general-request'
         || value === 'owner-facility-request'
         || value === 'owner-checklist-completion'
         || value === 'vendor-contract-renewal'

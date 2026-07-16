@@ -2,6 +2,7 @@ import { getAuthenticatedRequesterProfile, isAdmin, resolveCompanyIdByName } fro
 import { notifyAlimtalkFranchiseNotificationCandidates } from '@/lib/alimtalk-event-notifications';
 import { fail, ok } from '@/lib/api-response';
 import { isPartnerVendorRole } from '@/lib/franchise-location-access';
+import { runFranchiseScheduleMaintenance } from '@/lib/franchise-schedule-reconciliation';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
 import { syncNotificationSourceSchedulesSafely } from '@/lib/franchise-notification-schedule-sync';
 import { canDispatchFranchiseNotificationAlimtalk } from '@/lib/franchise-notification-alimtalk-scope';
@@ -290,8 +291,15 @@ async function syncAutomaticNotifications(
     if (updateError) throw updateError;
 }
 
-async function runScheduledNotificationGeneration(): Promise<{ readonly companyCount: number; readonly notificationCount: number }> {
+async function runScheduledNotificationGeneration(): Promise<{
+    readonly companyCount: number;
+    readonly delayedScheduleCount: number;
+    readonly failedScheduleSyncCount: number;
+    readonly notificationCount: number;
+    readonly processedScheduleSyncCount: number;
+}> {
     const supabaseAdmin = getSupabaseAdmin();
+    const maintenance = await runFranchiseScheduleMaintenance(supabaseAdmin);
     const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('company_id')
@@ -337,7 +345,13 @@ async function runScheduledNotificationGeneration(): Promise<{ readonly companyC
         notificationCount += notificationCandidates.length;
     }
 
-    return { companyCount: companyIds.length, notificationCount };
+    return {
+        companyCount: companyIds.length,
+        delayedScheduleCount: maintenance.delayedCount,
+        failedScheduleSyncCount: maintenance.failedCount,
+        notificationCount,
+        processedScheduleSyncCount: maintenance.processedCount
+    };
 }
 
 export async function GET(request: Request) {

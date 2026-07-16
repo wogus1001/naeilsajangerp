@@ -124,6 +124,16 @@ void test('Given an opening project without a target date or cancelled status Wh
 });
 
 void test('Given owner submissions When projecting them Then facility work stays actionable and checklist completion is a record', () => {
+    const generalRequest = buildOwnerSubmissionSourceSchedule({
+        companyId: 'company-1',
+        locationName: '강남점',
+        managerProfileId: 'manager-1',
+        status: 'submitted',
+        submissionId: 'submission-0',
+        submissionType: 'general_request',
+        submittedAt: '2026-07-15T01:00:00.000Z',
+        title: '운영 정책 문의'
+    }, NOW);
     const facility = buildOwnerSubmissionSourceSchedule({
         companyId: 'company-1',
         locationName: '강남점',
@@ -155,6 +165,9 @@ void test('Given owner submissions When projecting them Then facility work stays
         title: '간판 설치 확인'
     }, NOW);
 
+    assert.equal(generalRequest?.sourceType, 'owner-general-request');
+    assert.equal(generalRequest?.status, '진행중');
+    assert.equal(generalRequest?.metadata?.actionUrl, '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-0');
     assert.equal(facility?.sourceType, 'owner-facility-request');
     assert.equal(facility?.status, '진행중');
     assert.equal(facility?.metadata?.actionUrl, '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1');

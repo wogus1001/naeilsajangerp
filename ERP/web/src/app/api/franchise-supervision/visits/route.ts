@@ -47,14 +47,6 @@ function readLocationName(location: VisitAccessRow['location']): string {
     return location?.name || '운영점';
 }
 
-async function runOptionalWorkflowSync(task: () => Promise<void>) {
-    try {
-        await task();
-    } catch (error) {
-        console.warn('Optional supervision visit workflow sync skipped:', error);
-    }
-}
-
 async function resolveAssignmentId(input: {
     readonly assignmentId: string;
     readonly companyId: string;
@@ -129,6 +121,7 @@ async function createVisitScheduleSource(input: {
     readonly companyId: string;
     readonly locationName: string;
     readonly purpose: string;
+    readonly status: string;
     readonly supervisorProfileId: string;
     readonly supabaseAdmin: SupabaseClient;
     readonly visitDate: string;
@@ -138,7 +131,7 @@ async function createVisitScheduleSource(input: {
         companyId: input.companyId,
         locationName: input.locationName,
         purpose: input.purpose,
-        status: '예정',
+        status: input.status,
         supervisorProfileId: input.supervisorProfileId,
         visitDate: input.visitDate,
         visitId: input.visitId
@@ -184,6 +177,7 @@ export async function POST(request: Request) {
         }
 
         const purpose = normalizeVisitPurpose(getFirst(scope.body, ['purpose']));
+        const visitStatus = normalizeVisitStatus(getFirst(scope.body, ['status']));
         const assignmentId = await resolveAssignmentId({
             assignmentId: cleanString(getFirst(scope.body, ['assignmentId', 'assignment_id'])),
             companyId: scope.companyId,
@@ -201,7 +195,7 @@ export async function POST(request: Request) {
                 schedule_id: null,
                 visit_date: visitDate,
                 purpose,
-                status: normalizeVisitStatus(getFirst(scope.body, ['status'])),
+                status: visitStatus,
                 memo: cleanString(getFirst(scope.body, ['memo'])) || null,
                 created_by: scope.auth.requester.id,
                 updated_by: scope.auth.requester.id
@@ -209,16 +203,16 @@ export async function POST(request: Request) {
             .select('id')
             .single<{ readonly id: string }>();
         if (error) throw error;
-        await runOptionalWorkflowSync(() => createVisitScheduleSource({
-                companyId: scope.companyId,
-                locationName: location.location.name || '운영점',
-                purpose,
-                supervisorProfileId: supervisor.profileId,
-                supabaseAdmin: scope.auth.supabaseAdmin,
-                visitDate,
-                visitId: data.id
-            })
-        );
+        await createVisitScheduleSource({
+            companyId: scope.companyId,
+            locationName: location.location.name || '운영점',
+            purpose,
+            status: visitStatus,
+            supervisorProfileId: supervisor.profileId,
+            supabaseAdmin: scope.auth.supabaseAdmin,
+            visitDate,
+            visitId: data.id
+        });
         await notifyVisitDue({
             companyId: scope.companyId,
             locationName: location.location.name || '운영점',
@@ -310,16 +304,15 @@ export async function PATCH(request: Request) {
             .update(updates)
             .eq('id', id);
         if (error) throw error;
-        await runOptionalWorkflowSync(() => syncSchedule({
-                existing,
-                nextLocationName: nextLocation?.ok ? nextLocation.location.name || '운영점' : undefined,
-                nextPurpose,
-                nextStatus,
-                nextSupervisorProfileId: supervisorId?.ok ? supervisorId.profileId : null,
-                nextVisitDate: visitDate || null,
-                supabaseAdmin: scope.auth.supabaseAdmin
-            })
-        );
+        await syncSchedule({
+            existing,
+            nextLocationName: nextLocation?.ok ? nextLocation.location.name || '운영점' : undefined,
+            nextPurpose,
+            nextStatus,
+            nextSupervisorProfileId: supervisorId?.ok ? supervisorId.profileId : null,
+            nextVisitDate: visitDate || null,
+            supabaseAdmin: scope.auth.supabaseAdmin
+        });
         return ok({ success: true });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
@@ -359,15 +352,14 @@ export async function DELETE(request: Request) {
             .eq('id', id);
         if (error) throw error;
 
-        await runOptionalWorkflowSync(() => syncSchedule({
-                existing,
-                nextPurpose: normalizeVisitPurpose(existing.purpose),
-                nextStatus: '취소',
-                nextSupervisorProfileId: null,
-                nextVisitDate: null,
-                supabaseAdmin: scope.auth.supabaseAdmin
-            })
-        );
+        await syncSchedule({
+            existing,
+            nextPurpose: normalizeVisitPurpose(existing.purpose),
+            nextStatus: '취소',
+            nextSupervisorProfileId: null,
+            nextVisitDate: null,
+            supabaseAdmin: scope.auth.supabaseAdmin
+        });
         return ok({ success: true });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {

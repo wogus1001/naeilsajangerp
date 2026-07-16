@@ -70,12 +70,12 @@ test('Given a supervision report submission When syncing Then report persistence
     });
 
     const reportCall = fake.calls.find(call => call.name === 'save_supervision_report_with_approval');
-    const scheduleCall = fake.calls.find(call => call.name === 'upsert_franchise_schedule_from_payload');
+    const scheduleCall = fake.calls.find(call => call.name === 'sync_franchise_operational_schedule_from_payload');
     assert.equal(fake.calls.length, 2);
     assert.equal(reportCall?.args.p_approver_profile_id, approverId);
     assert.equal(reportCall?.args.p_report_status, '제출');
     assert.equal(reportCall?.args.p_expected_updated_at, '2026-07-13T00:00:00.000Z');
-    assert.equal(scheduleCall?.name, 'upsert_franchise_schedule_from_payload');
+    assert.equal(scheduleCall?.name, 'sync_franchise_operational_schedule_from_payload');
 });
 
 test('Given no independent approver When submitting Then the report is rejected before persistence', async () => {
@@ -206,7 +206,7 @@ test('Given an existing corrective action When a report is submitted again Then 
         supabaseAdmin: client as never
     });
 
-    const schedulePayload = scheduleCalls.find(call => call.name === 'upsert_franchise_schedule_from_payload')?.args.schedule_payload;
+    const schedulePayload = scheduleCalls.find(call => call.name === 'sync_franchise_operational_schedule_from_payload')?.args.schedule_payload;
     assert.equal(upsertCount, 0);
     assert.equal(typeof schedulePayload === 'object' && schedulePayload !== null && 'status' in schedulePayload ? schedulePayload.status : null, '완료');
     assert.equal(typeof schedulePayload === 'object' && schedulePayload !== null && 'date' in schedulePayload ? schedulePayload.date : null, '2026-07-16');

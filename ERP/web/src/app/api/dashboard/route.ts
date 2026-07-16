@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { canAccessCompanyScope, getAuthenticatedRequesterProfile, isAdmin } from '@/lib/api-auth';
-import { isMissingDashboardScheduleSourceType, selectDashboardUpcomingSchedules } from '@/lib/dashboard-schedules';
+import {
+    DASHBOARD_SCHEDULE_SOURCE_FILTER,
+    isMissingDashboardScheduleSourceType,
+    selectDashboardUpcomingSchedules
+} from '@/lib/dashboard-schedules';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isUcansignNotConnectedError } from '@/lib/ucansign/client';
 
@@ -47,7 +51,7 @@ export async function GET(request: Request) {
             if (companyId) query = query.eq('company_id', companyId);
             let datedQuery = query.gte('date', todayStr);
             if (excludeApprovalDocuments) {
-                datedQuery = datedQuery.or('source_type.is.null,source_type.neq.approval-document');
+                datedQuery = datedQuery.or(DASHBOARD_SCHEDULE_SOURCE_FILTER);
             }
             return datedQuery
                 .not('type', 'in', '("work","completed","canceled","postponed")')

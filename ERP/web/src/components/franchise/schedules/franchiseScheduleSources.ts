@@ -5,6 +5,7 @@ export type FranchiseScheduleSource =
     | 'supervision-report'
     | 'supervision-corrective-action'
     | 'opening-project'
+    | 'owner-general-request'
     | 'owner-facility-request'
     | 'owner-checklist-completion'
     | 'vendor-contract-renewal'
@@ -17,6 +18,7 @@ const FRANCHISE_SCHEDULE_SOURCES = [
     'supervision-report',
     'supervision-corrective-action',
     'opening-project',
+    'owner-general-request',
     'owner-facility-request',
     'owner-checklist-completion',
     'vendor-contract-renewal',
@@ -37,6 +39,8 @@ export function getFranchiseScheduleSourceLabel(source: FranchiseScheduleSource)
             return '시정조치';
         case 'opening-project':
             return '오픈 준비';
+        case 'owner-general-request':
+            return '점주 문의';
         case 'owner-facility-request':
             return '점주 시설 문의';
         case 'owner-checklist-completion':

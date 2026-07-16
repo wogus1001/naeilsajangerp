@@ -3,6 +3,7 @@ const FRANCHISE_OPERATIONS_SCHEDULE_SOURCE_TYPES = new Set([
     'supervision-report',
     'supervision-corrective-action',
     'opening-project',
+    'owner-general-request',
     'owner-facility-request',
     'owner-checklist-completion',
     'vendor-contract-renewal',

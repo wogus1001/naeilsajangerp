@@ -164,7 +164,6 @@
 }
 
 .tableScroll {
-    position: relative;
     max-width: 100%;
     overflow-x: auto;
 }
@@ -300,6 +299,10 @@
     word-break: keep-all;
 }
 
+.error {
+    word-break: keep-all;
+}
+
 .pagination {
     display: flex;
     align-items: center;
@@ -372,10 +375,6 @@
 
     .dateRange input {
         width: 100%;
-        min-height: 44px;
-    }
-
-    .pagination button {
         min-height: 44px;
     }
 }

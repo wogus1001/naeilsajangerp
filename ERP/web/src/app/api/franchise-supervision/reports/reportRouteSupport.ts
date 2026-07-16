@@ -211,11 +211,7 @@ export async function insertCorrectiveActions(input: {
             title: row.title || '시정요청'
         });
         if (!schedule) return;
-        try {
-            await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
-        } catch (error) {
-            console.warn('Optional generated corrective action franchise schedule sync skipped:', error);
-        }
+        await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
     }));
 
     const newRows = insertedRows.filter(row => row.inspection_item_id && !existingItemIds.has(row.inspection_item_id));
@@ -356,13 +352,7 @@ export async function syncSupervisionReportWorkflow(input: {
         supervisorProfileId: input.supervisorProfileId,
         taskDate: input.reportWrite.reviewedAt || input.reportWrite.submittedAt
     });
-    if (schedule) {
-        try {
-            await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
-        } catch (scheduleError) {
-            console.warn('Optional supervision report franchise schedule sync skipped:', scheduleError);
-        }
-    }
+    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 export async function reconcileSubmittedSupervisionReport(input: {

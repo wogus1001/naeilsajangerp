@@ -6,30 +6,12 @@ import {
 } from './franchise-phase2-schedule-sync.js';
 import type { FranchiseSourceScheduleInput } from './franchise-source-schedules.js';
 
-function fakeSupabase(activeProfileIds: readonly string[] = ['staff-1', 'staff-2']) {
+function fakeSupabase(
+    activeProfileIds: readonly string[] = ['staff-1', 'staff-2'],
+    operationalRpcError: { readonly message: string } | null = null
+) {
     const rpcPayloads: unknown[] = [];
-    const notificationRows: unknown[] = [];
-    const dismissFilters: Array<readonly [string, string]> = [];
-    const updatePayloads: Array<Readonly<Record<string, unknown>>> = [];
-    const recipientFilters: string[][] = [];
-    const dismissQuery = {
-        update(payload: Readonly<Record<string, unknown>>) {
-            updatePayloads.push(payload);
-            return this;
-        },
-        eq(column: string, value: string) {
-            dismissFilters.push([column, value]);
-            return this;
-        },
-        in(column: string, values: string[]) {
-            assert.equal(column, 'recipient_profile_id');
-            recipientFilters.push(values);
-            return this;
-        },
-        then(resolve: (value: { readonly error: null }) => void) {
-            resolve({ error: null });
-        }
-    };
+    const queuedRows: unknown[] = [];
     const profileQuery = {
         select() { return this; },
         eq() { return this; },
@@ -47,29 +29,23 @@ function fakeSupabase(activeProfileIds: readonly string[] = ['staff-1', 'staff-2
         }
     };
     return {
-        dismissFilters,
-        notificationRows,
-        recipientFilters,
         rpcPayloads,
-        updatePayloads,
+        queuedRows,
         client: {
             from(table: string) {
                 if (table === 'profiles') return profileQuery;
-                assert.equal(table, 'franchise_notifications');
+                assert.equal(table, 'franchise_schedule_sync_jobs');
                 return {
                     async upsert(rows: unknown) {
-                        notificationRows.push(rows);
+                        queuedRows.push(rows);
                         return { error: null };
-                    },
-                    update(payload: Readonly<Record<string, unknown>>) {
-                        return dismissQuery.update(payload);
                     }
                 };
             },
             async rpc(name: string, args: unknown) {
-                assert.equal(name, 'upsert_franchise_schedule_from_payload');
+                assert.equal(name, 'sync_franchise_operational_schedule_from_payload');
                 rpcPayloads.push(args);
-                return { error: null };
+                return { error: operationalRpcError };
             }
         }
     };
@@ -95,13 +71,14 @@ void test('Given repeated source sync When persisting Then schedule and notifica
     await syncFranchiseOperationalSchedule(fake.client as never, activeSchedule);
 
     assert.equal(fake.rpcPayloads.length, 2);
-    assert.equal(fake.notificationRows.length, 2);
-    const readSourceId = (value: unknown): unknown => Array.isArray(value) ? value[0]?.source_id : null;
-    assert.equal(readSourceId(fake.notificationRows[0]), 'supervision-visit:visit-1:active');
-    assert.equal(readSourceId(fake.notificationRows[1]), 'supervision-visit:visit-1:active');
+    const firstCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly source_id?: string } };
+    const secondCall = fake.rpcPayloads[1] as { readonly schedule_payload?: { readonly source_id?: string } };
+    assert.equal(firstCall.schedule_payload?.source_id, 'visit-1');
+    assert.equal(secondCall.schedule_payload?.source_id, 'visit-1');
+    assert.equal(fake.queuedRows.length, 0);
 });
 
-void test('Given a completed source task When syncing Then its active in-app notification is dismissed', async () => {
+void test('Given a completed source task When syncing Then the atomic RPC receives its terminal state', async () => {
     const fake = fakeSupabase();
 
     await syncFranchiseOperationalSchedule(fake.client as never, {
@@ -110,25 +87,17 @@ void test('Given a completed source task When syncing Then its active in-app not
         status: '완료'
     });
 
-    assert.deepEqual(fake.dismissFilters, [
-        ['company_id', 'company-1'],
-        ['source_type', 'workflow-schedule'],
-        ['source_id', 'supervision-visit:visit-1:active']
-    ]);
-    assert.equal(fake.notificationRows.length, 0);
+    const rpcCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly status?: string } };
+    assert.equal(rpcCall.schedule_payload?.status, '완료');
 });
 
-void test('Given a dismissed source task When it becomes active again Then the in-app notification is reactivated', async () => {
+void test('Given an active source task When syncing Then the atomic payload retains its recipient', async () => {
     const fake = fakeSupabase();
 
     await syncFranchiseOperationalSchedule(fake.client as never, activeSchedule);
 
-    const payload = fake.updatePayloads[1];
-    assert.ok(payload);
-    assert.equal(payload.dismissed_at, null);
-    assert.equal(payload.read_at, null);
-    assert.deepEqual(fake.recipientFilters, [['staff-1']]);
-    assert.equal(fake.notificationRows.length, 1);
+    const rpcCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly assignee_profile_id?: string | null } };
+    assert.equal(rpcCall.schedule_payload?.assignee_profile_id, 'staff-1');
 });
 
 void test('Given an operational task is reassigned When syncing Then removed recipients stay dismissed', async () => {
@@ -140,9 +109,8 @@ void test('Given an operational task is reassigned When syncing Then removed rec
         userId: 'staff-2'
     });
 
-    assert.notEqual(fake.updatePayloads[0]?.dismissed_at, null);
-    assert.equal(fake.updatePayloads[1]?.dismissed_at, null);
-    assert.deepEqual(fake.recipientFilters, [['staff-2']]);
+    const rpcCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly assignee_profile_id?: string | null } };
+    assert.equal(rpcCall.schedule_payload?.assignee_profile_id, 'staff-2');
 });
 
 void test('Given an inactive stored assignee When syncing Then the schedule and notification omit that profile', async () => {
@@ -152,7 +120,7 @@ void test('Given an inactive stored assignee When syncing Then the schedule and 
 
     const rpcCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly assignee_profile_id?: string | null } };
     assert.equal(rpcCall.schedule_payload?.assignee_profile_id, null);
-    assert.equal(fake.notificationRows.length, 0);
+    assert.equal(fake.queuedRows.length, 0);
 });
 
 void test('Given an inactive location manager When syncing owner work Then an active company manager is used', async () => {
@@ -172,4 +140,21 @@ void test('Given an inactive location manager When syncing owner work Then an ac
 
     const rpcCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly manager_profile_id?: string | null } };
     assert.equal(rpcCall.schedule_payload?.manager_profile_id, 'manager-active');
+});
+
+void test('Given a transient operational RPC failure When syncing Then the latest payload is queued for retry', async () => {
+    const fake = fakeSupabase(['staff-1'], { message: 'temporary outage' });
+
+    await syncFranchiseOperationalSchedule(fake.client as never, activeSchedule);
+
+    assert.equal(fake.rpcPayloads.length, 1);
+    assert.equal(fake.queuedRows.length, 1);
+    const queued = fake.queuedRows[0] as {
+        readonly last_error?: string;
+        readonly source_id?: string;
+        readonly status?: string;
+    };
+    assert.equal(queued.source_id, 'visit-1');
+    assert.equal(queued.status, 'pending');
+    assert.equal(queued.last_error, 'temporary outage');
 });
