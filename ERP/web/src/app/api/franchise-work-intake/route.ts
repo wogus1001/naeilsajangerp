@@ -22,6 +22,7 @@ import {
 } from '@/lib/franchise-file-attachments';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { canDeleteWorkIntakeRecord, canEditWorkIntakeRecord } from '@/lib/work-intake-access';
+import { fetchAllWorkIntakeRows } from '@/lib/work-intake-batch';
 import {
     paginateWorkIntakeItems,
     parseWorkIntakeQuery,
@@ -399,7 +400,7 @@ export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
         const requester = await getRequesterProfile(supabaseAdmin, request);
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인 세션을 확인할 수 없습니다. 다시 로그인해주세요.');
 
         const { searchParams } = new URL(request.url);
         const query = parseWorkIntakeQuery(searchParams);
@@ -412,7 +413,10 @@ export async function GET(request: Request) {
         }
         const resolvedCompanyId = requestedCompanyId || await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName);
         if (!isAdmin(requester) && resolvedCompanyId && resolvedCompanyId !== requester.company_id) {
-            return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
+            return fail(403, 'FORBIDDEN', '다른 회사의 진행현황은 조회할 수 없습니다.');
+        }
+        if (!isAdmin(requester) && !requester.company_id) {
+            return fail(403, 'FORBIDDEN', '소속 회사가 확인되지 않아 진행현황을 조회할 수 없습니다. 관리자에게 소속 정보를 확인해주세요.');
         }
 
         let companyQuery = supabaseAdmin.from('companies').select('id, name');
@@ -451,66 +455,93 @@ export async function GET(request: Request) {
         if (profileError) throw profileError;
         const managerNames = new Map((profiles || []).map(profile => [profile.id, displayName(profile)]));
 
-        let propertyQuery = supabaseAdmin.from('properties')
-            .select(WORK_INTAKE_PROPERTY_SELECT)
-            .eq('operation_type', '물건등록')
-            .in('company_id', companyIds)
-            .order('created_at', { ascending: false })
-            .limit(200);
-
-        let leadRegistrationQuery = supabaseAdmin.from('franchise_lead_registration_requests')
-            .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, promoted_lead_id, promoted_at, created_at, data')
-            .in('company_id', companyIds)
-            .order('created_at', { ascending: false })
-            .limit(200);
-
-        let matchingRequestQuery = supabaseAdmin.from('franchise_leads')
-            .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, created_at, data')
-            .eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE)
-            .in('company_id', companyIds)
-            .order('created_at', { ascending: false })
-            .limit(200);
-        if (isPartnerVendorRole(requester.role)) {
-            propertyQuery = propertyQuery.eq('manager_id', requester.id);
-            leadRegistrationQuery = leadRegistrationQuery.eq('created_by', requester.id);
-            matchingRequestQuery = matchingRequestQuery.eq('created_by', requester.id);
-        }
-
-        let deletedRecordsPromise: Promise<{ data: DeletedRecordRow[] | null; error: { readonly code?: string; readonly message?: string } | null }> | null = null;
-        if (isAdmin(requester)) {
-            let deletedQuery = supabaseAdmin.from('franchise_work_intake_deleted_records')
-                .select(WORK_INTAKE_DELETED_RECORD_SELECT)
-                .in('company_id', companyIds)
-                .order('deleted_at', { ascending: false })
-                .limit(500);
-            if (resolvedCompanyId) deletedQuery = deletedQuery.eq('company_id', resolvedCompanyId);
-            deletedRecordsPromise = Promise.resolve(deletedQuery.returns<DeletedRecordRow[]>());
-        }
-
-        const [propertyResult, leadRegistrationResult, matchingResult, deletedResult] = await Promise.all([
-            propertyQuery.returns<PropertyRow[]>(),
-            leadRegistrationQuery.returns<LeadLikeRow[]>(),
-            matchingRequestQuery.returns<LeadLikeRow[]>(),
-            deletedRecordsPromise || Promise.resolve({ data: [], error: null })
+        const restrictToOwnRecords = isPartnerVendorRole(requester.role);
+        let leadRegistrationTableMissing = false;
+        let deletedRecordsTableMissing = false;
+        const [properties, leadRegistrations, matchingRequests, deletedRecords] = await Promise.all([
+            fetchAllWorkIntakeRows<PropertyRow>(async (from, to) => {
+                let requestQuery = supabaseAdmin.from('properties')
+                    .select(WORK_INTAKE_PROPERTY_SELECT)
+                    .eq('operation_type', '물건등록')
+                    .in('company_id', companyIds)
+                    .order('created_at', { ascending: false })
+                    .range(from, to);
+                if (restrictToOwnRecords) requestQuery = requestQuery.eq('manager_id', requester.id);
+                const { data, error } = await requestQuery.returns<PropertyRow[]>();
+                if (error) throw error;
+                return data || [];
+            }),
+            fetchAllWorkIntakeRows<LeadLikeRow>(async (from, to) => {
+                let requestQuery = supabaseAdmin.from('franchise_lead_registration_requests')
+                    .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, promoted_lead_id, promoted_at, created_at, data')
+                    .in('company_id', companyIds)
+                    .order('created_at', { ascending: false })
+                    .range(from, to);
+                if (restrictToOwnRecords) requestQuery = requestQuery.eq('created_by', requester.id);
+                const { data, error } = await requestQuery.returns<LeadLikeRow[]>();
+                if (error) {
+                    if (isMissingLeadRegistrationRequestTableError(error)) {
+                        leadRegistrationTableMissing = true;
+                        return [];
+                    }
+                    throw error;
+                }
+                return data || [];
+            }),
+            fetchAllWorkIntakeRows<LeadLikeRow>(async (from, to) => {
+                let requestQuery = supabaseAdmin.from('franchise_leads')
+                    .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, created_at, data')
+                    .eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE)
+                    .in('company_id', companyIds)
+                    .order('created_at', { ascending: false })
+                    .range(from, to);
+                if (restrictToOwnRecords) requestQuery = requestQuery.eq('created_by', requester.id);
+                const { data, error } = await requestQuery.returns<LeadLikeRow[]>();
+                if (error) throw error;
+                return data || [];
+            }),
+            isAdmin(requester)
+                ? fetchAllWorkIntakeRows<DeletedRecordRow>(async (from, to) => {
+                    let requestQuery = supabaseAdmin.from('franchise_work_intake_deleted_records')
+                        .select(WORK_INTAKE_DELETED_RECORD_SELECT)
+                        .in('company_id', companyIds)
+                        .order('deleted_at', { ascending: false })
+                        .range(from, to);
+                    if (resolvedCompanyId) requestQuery = requestQuery.eq('company_id', resolvedCompanyId);
+                    const { data, error } = await requestQuery.returns<DeletedRecordRow[]>();
+                    if (error) {
+                        if (isMissingDeletedRecordsTableError(error)) {
+                            deletedRecordsTableMissing = true;
+                            return [];
+                        }
+                        throw error;
+                    }
+                    return data || [];
+                })
+                : Promise.resolve([] as readonly DeletedRecordRow[])
         ]);
 
-        const { data: properties, error: propertyError } = propertyResult;
-        const { data: leadRegistrations, error: leadRegistrationError } = leadRegistrationResult;
-        const { data: matchingRequests, error: matchingError } = matchingResult;
-        const { data: deletedRecords, error: deletedError } = deletedResult;
-
-        if (propertyError) throw propertyError;
-        if (leadRegistrationError && !isMissingLeadRegistrationRequestTableError(leadRegistrationError)) throw leadRegistrationError;
-        if (matchingError) throw matchingError;
-        if (deletedError && !isMissingDeletedRecordsTableError(deletedError)) throw deletedError;
-        if (deletedError && activeTab === 'deletedRecords') {
+        if (deletedRecordsTableMissing && activeTab === 'deletedRecords') {
             return fail(500, 'INTERNAL_ERROR', '삭제 목록 SQL이 아직 적용되지 않았습니다. supabase_franchise_work_intake_deleted_records_migration.sql 등록이 필요합니다.');
         }
 
-        const propertyViews = (properties || []).map(row => toPropertyView(row, companyNames, managerNames, requester));
-        const leadRegistrationViews = leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationView(row, managerNames, requester));
-        const matchingViews = (matchingRequests || []).map(row => toMatchingRequestView(row, managerNames, requester));
-        const deletedViews = deletedError ? [] : (deletedRecords || []).map(row => toDeletedRecordView(row, companyNames, managerNames));
+        const missingDeletedByIds = Array.from(new Set(deletedRecords
+            .map(record => record.deleted_by)
+            .filter((id): id is string => Boolean(id && !managerNames.has(id)))));
+        if (missingDeletedByIds.length > 0) {
+            const { data: deletedByProfiles, error: deletedByProfileError } = await supabaseAdmin
+                .from('profiles')
+                .select('id, company_id, name, email, role')
+                .in('id', missingDeletedByIds)
+                .returns<ProfileRow[]>();
+            if (deletedByProfileError) throw deletedByProfileError;
+            (deletedByProfiles || []).forEach(profile => managerNames.set(profile.id, displayName(profile)));
+        }
+
+        const propertyViews = properties.map(row => toPropertyView(row, companyNames, managerNames, requester));
+        const leadRegistrationViews = leadRegistrationTableMissing ? [] : leadRegistrations.map(row => toLeadRegistrationView(row, managerNames, requester));
+        const matchingViews = matchingRequests.map(row => toMatchingRequestView(row, managerNames, requester));
+        const deletedViews = deletedRecordsTableMissing ? [] : deletedRecords.map(row => toDeletedRecordView(row, companyNames, managerNames));
 
         const pagedProperties = paginateWorkIntakeItems<PropertyView>(propertyViews, query, {
             getSearchFields: item => [item.name, item.status, item.address, item.region, item.desiredBrand, item.desiredCategory, item.companyName, item.authorName],
@@ -534,9 +565,9 @@ export async function GET(request: Request) {
         });
 
         return ok({
-            properties: activeTab === 'properties' ? pagedProperties.items : pagedProperties.items.slice(0, query.pageSize),
-            leadRegistrationRequests: activeTab === 'leadRegistrations' ? pagedLeadRegistrations.items : pagedLeadRegistrations.items.slice(0, query.pageSize),
-            matchingRequests: activeTab === 'matchingRequests' ? pagedMatchingRequests.items : pagedMatchingRequests.items.slice(0, query.pageSize),
+            properties: !query.paginate || activeTab === 'properties' ? pagedProperties.items : pagedProperties.items.slice(0, query.pageSize),
+            leadRegistrationRequests: !query.paginate || activeTab === 'leadRegistrations' ? pagedLeadRegistrations.items : pagedLeadRegistrations.items.slice(0, query.pageSize),
+            matchingRequests: !query.paginate || activeTab === 'matchingRequests' ? pagedMatchingRequests.items : pagedMatchingRequests.items.slice(0, query.pageSize),
             deletedRecords: isAdmin(requester) && activeTab === 'deletedRecords' ? pagedDeletedRecords.items : [],
             isAdmin: isAdmin(requester),
             meta: {
@@ -548,6 +579,6 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         console.error('Franchise work intake GET error:', error);
-        return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise work intake');
+        return fail(500, 'INTERNAL_ERROR', '진행현황을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
 }

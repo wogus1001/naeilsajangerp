@@ -15,10 +15,21 @@ function DeletedRecordDetailModal({ record, onCloseAction }: {
     readonly onCloseAction: () => void;
 }) {
     const details = buildDeletedRecordDetails(record);
+    const dialogRef = React.useRef<HTMLElement>(null);
+    React.useEffect(() => {
+        dialogRef.current?.focus();
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCloseAction();
+        };
+        window.addEventListener('keydown', closeOnEscape);
+        return () => window.removeEventListener('keydown', closeOnEscape);
+    }, [onCloseAction]);
     return (
-        <div className={styles.modalBackdrop}>
-            <section className={styles.modal}>
-                <h2>삭제 항목 상세</h2>
+        <div className={styles.modalBackdrop} onMouseDown={event => {
+            if (event.target === event.currentTarget) onCloseAction();
+        }}>
+            <section ref={dialogRef} className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="deleted-record-title" tabIndex={-1}>
+                <h2 id="deleted-record-title">삭제 항목 상세</h2>
                 <p>{record.kindLabel} 삭제 시점에 저장된 내용을 확인합니다.</p>
                 <dl className={styles.detailGrid}>
                     {details.map(([label, value]) => (
@@ -78,7 +89,7 @@ export function DeletedRecordsTable(props: Props) {
                             </tr>
                         ))}
                         {props.records.length === 0 && (
-                            <tr><td colSpan={6} className={styles.emptyCell}>삭제된 진행현황 DB가 없습니다.</td></tr>
+                            <tr><td colSpan={6} className={styles.emptyCell}>삭제된 진행현황이 없습니다.</td></tr>
                         )}
                     </tbody>
                 </table>

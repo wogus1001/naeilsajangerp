@@ -19,6 +19,9 @@ create index if not exists franchise_work_intake_deleted_company_idx
 create index if not exists franchise_work_intake_deleted_kind_idx
   on public.franchise_work_intake_deleted_records(kind, deleted_at desc);
 
+create unique index if not exists franchise_work_intake_deleted_source_uidx
+  on public.franchise_work_intake_deleted_records(source_table, source_id);
+
 alter table public.franchise_work_intake_deleted_records enable row level security;
 
 drop policy if exists "franchise_work_intake_deleted_records_service_role" on public.franchise_work_intake_deleted_records;
@@ -44,14 +47,17 @@ declare
   v_company_id uuid;
   v_source_table text;
   v_deleted_record_id uuid;
+  v_source_row jsonb;
+  v_deleted_count integer;
 begin
   if p_kind = 'properties' then
     v_source_table := 'properties';
-    select company_id into v_company_id
-      from public.properties
-      where id = p_source_id and operation_type = '물건등록';
+    select p.company_id, to_jsonb(p) into v_company_id, v_source_row
+      from public.properties p
+      where p.id = p_source_id and p.operation_type = '물건등록'
+      for update;
 
-    if v_company_id is null then
+    if v_source_row is null then
       raise exception 'WORK_INTAKE_RECORD_NOT_FOUND';
     end if;
 
@@ -61,23 +67,28 @@ begin
       v_company_id, p_kind, v_source_table, p_source_id, p_deleted_by,
       coalesce(nullif(p_title, ''), '삭제된 입점 요청'),
       coalesce(p_summary, ''),
-      coalesce(p_snapshot, '{}'::jsonb)
+      jsonb_build_object('sourceTable', v_source_table, 'row', v_source_row)
     )
     returning id into v_deleted_record_id;
 
     delete from public.properties
       where id = p_source_id and operation_type = '물건등록';
+    get diagnostics v_deleted_count = row_count;
+    if v_deleted_count <> 1 then
+      raise exception 'WORK_INTAKE_DELETE_CONFLICT';
+    end if;
 
     return v_deleted_record_id;
   end if;
 
   if p_kind = 'leadRegistrations' then
     v_source_table := 'franchise_lead_registration_requests';
-    select company_id into v_company_id
-      from public.franchise_lead_registration_requests
-      where id = p_source_id;
+    select r.company_id, to_jsonb(r) into v_company_id, v_source_row
+      from public.franchise_lead_registration_requests r
+      where r.id = p_source_id
+      for update;
 
-    if v_company_id is null then
+    if v_source_row is null then
       raise exception 'WORK_INTAKE_RECORD_NOT_FOUND';
     end if;
 
@@ -87,23 +98,28 @@ begin
       v_company_id, p_kind, v_source_table, p_source_id, p_deleted_by,
       coalesce(nullif(p_title, ''), '삭제된 예비 창업자 등록'),
       coalesce(p_summary, ''),
-      coalesce(p_snapshot, '{}'::jsonb)
+      jsonb_build_object('sourceTable', v_source_table, 'row', v_source_row)
     )
     returning id into v_deleted_record_id;
 
     delete from public.franchise_lead_registration_requests
       where id = p_source_id;
+    get diagnostics v_deleted_count = row_count;
+    if v_deleted_count <> 1 then
+      raise exception 'WORK_INTAKE_DELETE_CONFLICT';
+    end if;
 
     return v_deleted_record_id;
   end if;
 
   if p_kind = 'matchingRequests' then
     v_source_table := 'franchise_leads';
-    select company_id into v_company_id
-      from public.franchise_leads
-      where id = p_source_id and source = '프랜차이즈 매칭 요청';
+    select l.company_id, to_jsonb(l) into v_company_id, v_source_row
+      from public.franchise_leads l
+      where l.id = p_source_id and l.source = '프랜차이즈 매칭 요청'
+      for update;
 
-    if v_company_id is null then
+    if v_source_row is null then
       raise exception 'WORK_INTAKE_RECORD_NOT_FOUND';
     end if;
 
@@ -113,12 +129,16 @@ begin
       v_company_id, p_kind, v_source_table, p_source_id, p_deleted_by,
       coalesce(nullif(p_title, ''), '삭제된 예비 창업자 등록'),
       coalesce(p_summary, ''),
-      coalesce(p_snapshot, '{}'::jsonb)
+      jsonb_build_object('sourceTable', v_source_table, 'row', v_source_row)
     )
     returning id into v_deleted_record_id;
 
     delete from public.franchise_leads
       where id = p_source_id and source = '프랜차이즈 매칭 요청';
+    get diagnostics v_deleted_count = row_count;
+    if v_deleted_count <> 1 then
+      raise exception 'WORK_INTAKE_DELETE_CONFLICT';
+    end if;
 
     return v_deleted_record_id;
   end if;

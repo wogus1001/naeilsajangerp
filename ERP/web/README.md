@@ -394,6 +394,8 @@ Amount fields in the 권리금계약 payload are split: numeric won display valu
 
 Run `supabase_partner_vendor_access_migration.sql` before enabling 협력업체 accounts in production. The migration adds signup phone storage, the `partner_vendor` role support, `created_by` tracking for franchise leads and locations, and RLS helpers for lead/location/opening-project access.
 
+Run the latest `supabase_franchise_work_intake_deleted_records_migration.sql` before enabling the administrator-only deleted work-intake list. If an earlier version was applied, re-run the latest file so deletion locks the source row, stores the full server-side snapshot, prevents duplicate history, and verifies that exactly one source row was deleted. **SQL 재등록 필요**.
+
 Access rule: headquarters brand employees can see the company franchise leads, opening candidates, and opening operations; 협력업체 users can see only the leads and opening candidates they created. Opening operations inherit the linked opening-candidate access rule. Server APIs enforce the same rule even when they use the service role.
 
 ## Franchise Contract Checklist Setup

@@ -502,6 +502,7 @@
     .deleteButton {
         flex: 1;
         min-width: 0;
+        min-height: 44px;
     }
 
     .emptyCell {
@@ -533,5 +534,12 @@
 
     .pagination div {
         justify-content: space-between;
+    }
+
+    .pagination button,
+    .filterBar input,
+    .filterBar select,
+    .resetButton {
+        min-height: 44px;
     }
 }
