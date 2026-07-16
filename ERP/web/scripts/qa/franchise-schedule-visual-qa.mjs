@@ -13,6 +13,12 @@ const mode = args.get('--mode') || 'mocked';
 const readyTimeoutMs = Number(args.get('--ready-timeout-ms') || '120000');
 const baseUrl = `http://localhost:${port}`;
 const evidenceDir = resolve(process.cwd(), '.omo/evidence/task-7-franchise-independent-schedule');
+const fixtureDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+}).format(new Date());
 
 if (mode !== 'mocked') {
     console.error('Only --mode mocked is supported by this safe visual QA script.');
@@ -91,14 +97,14 @@ function authFixture() {
 function scheduleFixture() {
     return {
         schedules: [
-            { id: 'manual-1', title: '점주 정기 미팅', date: '2026-07-15', status: '예정', sourceType: 'manual', assigneeName: '김SV', managerName: '운영팀', details: '오픈 후 1개월 운영 점검' },
-            { id: 'approval-1', title: '방문 보고 결재', date: '2026-07-15', status: '진행중', sourceType: 'approval-document', assigneeName: '이SV', managerName: '박매니저', approvalDocumentId: 'doc-1' },
-            { id: 'visit-1', title: '위생 점검 방문', date: '2026-07-15', status: '지연', sourceType: 'supervision-visit', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?visitId=visit-1' } },
-            { id: 'report-1', title: '점검 보고서 검토', date: '2026-07-15', status: '진행중', sourceType: 'supervision-report', assigneeName: '박매니저', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?reportId=report-1' } },
-            { id: 'action-1', title: '냉장고 온도 시정조치', date: '2026-07-15', status: '완료', sourceType: 'supervision-corrective-action', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?actionId=action-1' } },
-            { id: 'opening-1', title: '강남점 오픈 준비', date: '2026-07-15', status: '진행중', sourceType: 'opening-project', assigneeName: '오픈 담당자', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-leads?leadId=lead-1&mode=contractChecklist' } },
-            { id: 'request-1', title: '강남점 시설 문의', date: '2026-07-15', status: '지연', sourceType: 'owner-facility-request', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1' } },
-            { id: 'checklist-1', title: '강남점 체크리스트 완료', date: '2026-07-15', status: '완료', sourceType: 'owner-checklist-completion', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status' } }
+            { id: 'manual-1', title: '점주 정기 미팅', date: fixtureDate, status: '예정', sourceType: 'manual', assigneeName: '김SV', managerName: '운영팀', details: '오픈 후 1개월 운영 점검' },
+            { id: 'approval-1', title: '방문 보고 결재', date: fixtureDate, status: '진행중', sourceType: 'approval-document', assigneeName: '이SV', managerName: '박매니저', approvalDocumentId: 'doc-1' },
+            { id: 'visit-1', title: '위생 점검 방문', date: fixtureDate, status: '지연', sourceType: 'supervision-visit', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?visitId=visit-1' } },
+            { id: 'report-1', title: '점검 보고서 검토', date: fixtureDate, status: '진행중', sourceType: 'supervision-report', assigneeName: '박매니저', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?reportId=report-1' } },
+            { id: 'action-1', title: '냉장고 온도 시정조치', date: fixtureDate, status: '완료', sourceType: 'supervision-corrective-action', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?actionId=action-1' } },
+            { id: 'opening-1', title: '강남점 오픈 준비', date: fixtureDate, status: '진행중', sourceType: 'opening-project', assigneeName: '오픈 담당자', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-leads?leadId=lead-1&mode=contractChecklist' } },
+            { id: 'request-1', title: '강남점 시설 문의', date: fixtureDate, status: '지연', sourceType: 'owner-facility-request', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1' } },
+            { id: 'checklist-1', title: '강남점 체크리스트 완료', date: fixtureDate, status: '완료', sourceType: 'owner-checklist-completion', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status' } }
         ]
     };
 }
@@ -148,8 +154,8 @@ async function installMocks(page, scenario) {
                     status: '완료',
                     title: '냉장고 온도 시정조치',
                     memo: '온도계를 교체했습니다.',
-                    dueDate: '2026-07-15',
-                    completedAt: '2026-07-15T03:00:00.000Z'
+                    dueDate: fixtureDate,
+                    completedAt: `${fixtureDate}T03:00:00.000Z`
                 }],
                 correctiveActionEvents: [],
                 operationQueue: [],
@@ -188,7 +194,7 @@ async function installMocks(page, scenario) {
                     payload: {},
                     status: 'submitted',
                     review_note: null,
-                    created_at: '2026-07-15T01:00:00.000Z',
+                    created_at: `${fixtureDate}T01:00:00.000Z`,
                     files: []
                 }] } })
             });
