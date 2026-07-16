@@ -18,15 +18,16 @@ import styles from './WorkIntakeEditModal.module.css';
 type WorkIntakeEditModalProps = {
     readonly target: WorkIntakeEditTarget;
     readonly requesterId: string;
+    readonly isReadOnly?: boolean;
     readonly onCloseAction: () => void;
     readonly onSavedAction: () => void;
     readonly onErrorAction: (message: string) => void;
 };
 
-function titleFor(target: WorkIntakeEditTarget): string {
-    if (target.kind === 'properties') return '입점 요청 확인/수정';
-    if (target.kind === 'leadRegistrations') return '가맹 희망자 등록 수정';
-    return '예비 창업자 등록 확인/수정';
+function titleFor(target: WorkIntakeEditTarget, isReadOnly: boolean): string {
+    if (target.kind === 'properties') return isReadOnly ? '입점 요청 확인' : '입점 요청 확인/수정';
+    if (target.kind === 'leadRegistrations') return isReadOnly ? '가맹 희망자 등록 확인' : '가맹 희망자 등록 수정';
+    return isReadOnly ? '예비 창업자 등록 확인' : '예비 창업자 등록 확인/수정';
 }
 
 function displayValue(value: string): string {
@@ -74,7 +75,14 @@ function PropertyDetailSummary({ form }: { readonly form: PropertyRegistrationFo
     );
 }
 
-export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSavedAction, onErrorAction }: WorkIntakeEditModalProps) {
+export function WorkIntakeEditModal({
+    target,
+    requesterId,
+    isReadOnly = false,
+    onCloseAction,
+    onSavedAction,
+    onErrorAction
+}: WorkIntakeEditModalProps) {
     const [form, setForm] = React.useState<WorkIntakeEditForm>(() => buildInitialEditForm(target));
     const [pendingPropertyFiles, setPendingPropertyFiles] = React.useState<readonly File[]>([]);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -88,6 +96,7 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
     const dialogRef = useDialogFocusTrap<HTMLElement>(true, closeModal, cancelButtonRef);
 
     const save = async () => {
+        if (isReadOnly) return;
         setIsSaving(true);
         try {
             let nextForm = form;
@@ -117,21 +126,23 @@ export function WorkIntakeEditModal({ target, requesterId, onCloseAction, onSave
         <div className={styles.modalBackdrop} onMouseDown={event => { if (event.currentTarget === event.target) closeModal(); }}>
             <section aria-labelledby={titleId} aria-modal="true" className={styles.modal} ref={dialogRef} role="dialog" tabIndex={-1}>
                 <div className={styles.modalHeader}>
-                    <h2 id={titleId}>{titleFor(target)}</h2>
+                    <h2 id={titleId}>{titleFor(target, isReadOnly)}</h2>
                 </div>
                 <form className={styles.modalForm} onSubmit={event => { event.preventDefault(); void save(); }}>
                     <div className={styles.modalBody}>
                         {form.kind === 'properties' && <PropertyDetailSummary form={form.value} />}
-                        <WorkIntakeEditFields
-                            form={form}
-                            pendingPropertyFiles={pendingPropertyFiles}
-                            onChangeAction={setForm}
-                            onPendingPropertyFilesChangeAction={setPendingPropertyFiles}
-                        />
+                        <fieldset className={styles.readOnlyFieldset} disabled={isReadOnly}>
+                            <WorkIntakeEditFields
+                                form={form}
+                                pendingPropertyFiles={pendingPropertyFiles}
+                                onChangeAction={setForm}
+                                onPendingPropertyFilesChangeAction={setPendingPropertyFiles}
+                            />
+                        </fieldset>
                     </div>
                     <div className={styles.modalActions}>
-                        <button className={styles.secondaryButton} onClick={closeModal} disabled={isSaving} ref={cancelButtonRef} type="button">취소</button>
-                        <button className={styles.primaryButton} disabled={isSaving} type="submit">{isSaving ? '저장 중' : '수정 저장'}</button>
+                        <button className={styles.secondaryButton} onClick={closeModal} disabled={isSaving} ref={cancelButtonRef} type="button">{isReadOnly ? '닫기' : '취소'}</button>
+                        {!isReadOnly && <button className={styles.primaryButton} disabled={isSaving} type="submit">{isSaving ? '저장 중' : '수정 저장'}</button>}
                     </div>
                 </form>
             </section>

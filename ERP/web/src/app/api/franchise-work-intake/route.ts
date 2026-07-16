@@ -21,7 +21,12 @@ import {
     normalizeFranchiseFileNames
 } from '@/lib/franchise-file-attachments';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
+import { canDeleteWorkIntakeRecord, canEditWorkIntakeRecord } from '@/lib/work-intake-access';
+import {
+    paginateWorkIntakeItems,
+    parseWorkIntakeQuery,
+    type WorkIntakePageMeta
+} from '@/lib/work-intake-query';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +76,20 @@ type LeadLikeRow = {
     readonly data: Record<string, unknown> | null;
 };
 
+type DeletedRecordRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly kind: string;
+    readonly source_id: string;
+    readonly deleted_by: string | null;
+    readonly title: string | null;
+    readonly summary: string | null;
+    readonly snapshot: Record<string, unknown> | null;
+    readonly deleted_at: string | null;
+};
+
+type WorkIntakeTab = 'properties' | 'leadRegistrations' | 'matchingRequests' | 'deletedRecords';
+
 function readDataString(data: Record<string, unknown> | null, key: string): string {
     const value = data?.[key];
     return typeof value === 'string' ? value : '';
@@ -109,6 +128,31 @@ function displayName(profile: ProfileRow): string {
 }
 
 export const WORK_INTAKE_PROPERTY_SELECT = 'id, company_id, manager_id, name, status, address, created_at, data';
+export const WORK_INTAKE_DELETED_RECORD_SELECT = 'id, company_id, kind, source_id, deleted_by, title, summary, snapshot, deleted_at';
+
+function isWorkIntakeTab(value: string | null): value is WorkIntakeTab {
+    return value === 'properties'
+        || value === 'leadRegistrations'
+        || value === 'matchingRequests'
+        || value === 'deletedRecords';
+}
+
+function emptyMeta(pageSize: number): WorkIntakePageMeta {
+    return { page: 1, pageSize, total: 0, pageCount: 1 };
+}
+
+function isMissingDeletedRecordsTableError(error: { readonly code?: string; readonly message?: string }): boolean {
+    const message = error.message || '';
+    return error.code === 'PGRST205'
+        || error.code === 'PGRST204'
+        || message.includes('franchise_work_intake_deleted_records');
+}
+
+function kindLabel(kind: string): string {
+    if (kind === 'properties') return '입점 요청';
+    if (kind === 'leadRegistrations' || kind === 'matchingRequests') return '예비 창업자 등록';
+    return '진행현황';
+}
 
 function toPropertyForm(row: PropertyRow): PropertyRegistrationForm {
     const data = row.data || {};
@@ -238,7 +282,8 @@ function toPropertyView(
 ) {
     const companyId = row.company_id || '';
     const form = toPropertyForm(row);
-    const canManage = canManageWorkIntakeRecord(requester, row);
+    const canEdit = canEditWorkIntakeRecord(requester, row);
+    const canDelete = canDeleteWorkIntakeRecord(requester, row);
     return {
         id: row.id,
         companyId,
@@ -255,15 +300,18 @@ function toPropertyView(
         deposit: form.deposit,
         monthlyRent: form.monthlyRent,
         createdAt: row.created_at || '',
-        canEdit: canManage,
-        canDelete: canManage,
+        canEdit,
+        canDelete,
         form
     };
 }
 
+type PropertyView = ReturnType<typeof toPropertyView>;
+
 function toLeadRegistrationView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>, requester: RequesterProfile) {
     const form = toLeadRegistrationForm(row);
-    const canManage = canManageWorkIntakeRecord(requester, row);
+    const canEdit = canEditWorkIntakeRecord(requester, row);
+    const canDelete = canDeleteWorkIntakeRecord(requester, row);
     return {
         id: row.id,
         managerId: row.manager_id || '',
@@ -283,16 +331,19 @@ function toLeadRegistrationView(row: LeadLikeRow, managerNames: ReadonlyMap<stri
         promotedAt: row.promoted_at || '',
         promotedLeadId: row.promoted_lead_id || '',
         createdAt: row.created_at || '',
-        canEdit: canManage,
-        canDelete: canManage,
+        canEdit,
+        canDelete,
         form
     };
 }
 
+type LeadRegistrationView = ReturnType<typeof toLeadRegistrationView>;
+
 function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<string, string>, requester: RequesterProfile) {
     const data = row.data || {};
     const form = toMatchingRequestForm(row);
-    const canManage = canManageWorkIntakeRecord(requester, row);
+    const canEdit = canEditWorkIntakeRecord(requester, row);
+    const canDelete = canDeleteWorkIntakeRecord(requester, row);
     return {
         id: row.id,
         managerId: row.manager_id || '',
@@ -301,6 +352,7 @@ function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<strin
         name: form.name || '이름 없음',
         mobile: form.mobile,
         email: form.email,
+        status: row.status || '',
         desiredRegion: form.desiredRegion,
         desiredCategory: form.desiredCategory,
         interestedBrand: row.interested_brand || form.desiredBrand,
@@ -310,11 +362,38 @@ function toMatchingRequestView(row: LeadLikeRow, managerNames: ReadonlyMap<strin
         urgency: form.urgency,
         memo: row.memo || '',
         createdAt: row.created_at || '',
-        canEdit: canManage,
-        canDelete: canManage,
+        canEdit,
+        canDelete,
         form
     };
 }
+
+type MatchingRequestView = ReturnType<typeof toMatchingRequestView>;
+
+function toDeletedRecordView(
+    row: DeletedRecordRow,
+    companies: ReadonlyMap<string, string>,
+    managerNames: ReadonlyMap<string, string>
+) {
+    const companyId = row.company_id || '';
+    const deletedBy = row.deleted_by || '';
+    return {
+        id: row.id,
+        kind: row.kind,
+        kindLabel: kindLabel(row.kind),
+        sourceId: row.source_id,
+        companyId,
+        companyName: companies.get(companyId) || '회사명 없음',
+        deletedBy,
+        deletedByName: deletedBy ? managerNames.get(deletedBy) || '이름 없음' : '이름 없음',
+        title: row.title || kindLabel(row.kind),
+        summary: row.summary || '',
+        deletedAt: row.deleted_at || '',
+        snapshot: row.snapshot || {}
+    };
+}
+
+type DeletedRecordView = ReturnType<typeof toDeletedRecordView>;
 
 export async function GET(request: Request) {
     try {
@@ -323,8 +402,14 @@ export async function GET(request: Request) {
         if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
 
         const { searchParams } = new URL(request.url);
+        const query = parseWorkIntakeQuery(searchParams);
+        const requestedTab = searchParams.get('tab');
+        const activeTab: WorkIntakeTab = isWorkIntakeTab(requestedTab) ? requestedTab : 'properties';
         const requestedCompanyId = searchParams.get('companyId');
         const requestedCompanyName = searchParams.get('company');
+        if (activeTab === 'deletedRecords' && !isAdmin(requester)) {
+            return fail(403, 'FORBIDDEN', '삭제 목록은 관리자만 조회할 수 있습니다.');
+        }
         const resolvedCompanyId = requestedCompanyId || await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName);
         if (!isAdmin(requester) && resolvedCompanyId && resolvedCompanyId !== requester.company_id) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
@@ -341,7 +426,21 @@ export async function GET(request: Request) {
         if (companyError) throw companyError;
         const companyRows = companies || [];
         const companyIds = companyRows.map(company => company.id);
-        if (companyIds.length === 0) return ok({ properties: [], leadRegistrationRequests: [], matchingRequests: [] });
+        if (companyIds.length === 0) {
+            return ok({
+                properties: [],
+                leadRegistrationRequests: [],
+                matchingRequests: [],
+                deletedRecords: [],
+                isAdmin: isAdmin(requester),
+                meta: {
+                    properties: emptyMeta(query.pageSize),
+                    leadRegistrationRequests: emptyMeta(query.pageSize),
+                    matchingRequests: emptyMeta(query.pageSize),
+                    deletedRecords: emptyMeta(query.pageSize)
+                }
+            });
+        }
 
         const companyNames = new Map(companyRows.map(company => [company.id, company.name || '회사명 없음']));
         const { data: profiles, error: profileError } = await supabaseAdmin
@@ -377,24 +476,75 @@ export async function GET(request: Request) {
             matchingRequestQuery = matchingRequestQuery.eq('created_by', requester.id);
         }
 
-        const [
-            { data: properties, error: propertyError },
-            { data: leadRegistrations, error: leadRegistrationError },
-            { data: matchingRequests, error: matchingError }
-        ] = await Promise.all([
+        let deletedRecordsPromise: Promise<{ data: DeletedRecordRow[] | null; error: { readonly code?: string; readonly message?: string } | null }> | null = null;
+        if (isAdmin(requester)) {
+            let deletedQuery = supabaseAdmin.from('franchise_work_intake_deleted_records')
+                .select(WORK_INTAKE_DELETED_RECORD_SELECT)
+                .in('company_id', companyIds)
+                .order('deleted_at', { ascending: false })
+                .limit(500);
+            if (resolvedCompanyId) deletedQuery = deletedQuery.eq('company_id', resolvedCompanyId);
+            deletedRecordsPromise = Promise.resolve(deletedQuery.returns<DeletedRecordRow[]>());
+        }
+
+        const [propertyResult, leadRegistrationResult, matchingResult, deletedResult] = await Promise.all([
             propertyQuery.returns<PropertyRow[]>(),
             leadRegistrationQuery.returns<LeadLikeRow[]>(),
-            matchingRequestQuery.returns<LeadLikeRow[]>()
+            matchingRequestQuery.returns<LeadLikeRow[]>(),
+            deletedRecordsPromise || Promise.resolve({ data: [], error: null })
         ]);
+
+        const { data: properties, error: propertyError } = propertyResult;
+        const { data: leadRegistrations, error: leadRegistrationError } = leadRegistrationResult;
+        const { data: matchingRequests, error: matchingError } = matchingResult;
+        const { data: deletedRecords, error: deletedError } = deletedResult;
 
         if (propertyError) throw propertyError;
         if (leadRegistrationError && !isMissingLeadRegistrationRequestTableError(leadRegistrationError)) throw leadRegistrationError;
         if (matchingError) throw matchingError;
+        if (deletedError && !isMissingDeletedRecordsTableError(deletedError)) throw deletedError;
+        if (deletedError && activeTab === 'deletedRecords') {
+            return fail(500, 'INTERNAL_ERROR', '삭제 목록 SQL이 아직 적용되지 않았습니다. supabase_franchise_work_intake_deleted_records_migration.sql 등록이 필요합니다.');
+        }
+
+        const propertyViews = (properties || []).map(row => toPropertyView(row, companyNames, managerNames, requester));
+        const leadRegistrationViews = leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationView(row, managerNames, requester));
+        const matchingViews = (matchingRequests || []).map(row => toMatchingRequestView(row, managerNames, requester));
+        const deletedViews = deletedError ? [] : (deletedRecords || []).map(row => toDeletedRecordView(row, companyNames, managerNames));
+
+        const pagedProperties = paginateWorkIntakeItems<PropertyView>(propertyViews, query, {
+            getSearchFields: item => [item.name, item.status, item.address, item.region, item.desiredBrand, item.desiredCategory, item.companyName, item.authorName],
+            getStatus: item => item.status,
+            getDate: item => item.createdAt
+        });
+        const pagedLeadRegistrations = paginateWorkIntakeItems<LeadRegistrationView>(leadRegistrationViews, query, {
+            getSearchFields: item => [item.name, item.mobile, item.source, item.status, item.grade, item.desiredRegion, item.interestedBrand, item.managerName, item.memo],
+            getStatus: item => item.status,
+            getDate: item => item.createdAt
+        });
+        const pagedMatchingRequests = paginateWorkIntakeItems<MatchingRequestView>(matchingViews, query, {
+            getSearchFields: item => [item.name, item.mobile, item.email, item.desiredRegion, item.desiredCategory, item.interestedBrand, item.totalBudget, item.ownedPropertyStatus, item.matchPriority, item.urgency, item.managerName, item.memo],
+            getStatus: item => item.status,
+            getDate: item => item.createdAt
+        });
+        const pagedDeletedRecords = paginateWorkIntakeItems<DeletedRecordView>(deletedViews, query, {
+            getSearchFields: item => [item.kindLabel, item.title, item.summary, item.companyName, item.deletedByName],
+            getStatus: item => '',
+            getDate: item => item.deletedAt
+        });
 
         return ok({
-            properties: (properties || []).map(row => toPropertyView(row, companyNames, managerNames, requester)),
-            leadRegistrationRequests: leadRegistrationError ? [] : (leadRegistrations || []).map(row => toLeadRegistrationView(row, managerNames, requester)),
-            matchingRequests: (matchingRequests || []).map(row => toMatchingRequestView(row, managerNames, requester))
+            properties: activeTab === 'properties' ? pagedProperties.items : pagedProperties.items.slice(0, query.pageSize),
+            leadRegistrationRequests: activeTab === 'leadRegistrations' ? pagedLeadRegistrations.items : pagedLeadRegistrations.items.slice(0, query.pageSize),
+            matchingRequests: activeTab === 'matchingRequests' ? pagedMatchingRequests.items : pagedMatchingRequests.items.slice(0, query.pageSize),
+            deletedRecords: isAdmin(requester) && activeTab === 'deletedRecords' ? pagedDeletedRecords.items : [],
+            isAdmin: isAdmin(requester),
+            meta: {
+                properties: pagedProperties.meta,
+                leadRegistrationRequests: pagedLeadRegistrations.meta,
+                matchingRequests: pagedMatchingRequests.meta,
+                deletedRecords: isAdmin(requester) ? pagedDeletedRecords.meta : emptyMeta(query.pageSize)
+            }
         });
     } catch (error) {
         console.error('Franchise work intake GET error:', error);

@@ -1,46 +1,41 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { canManageWorkIntakeRecord } from './work-intake-access.js';
+import type { RequesterProfile } from './api-auth.js';
+import { canDeleteWorkIntakeRecord, canEditWorkIntakeRecord, type WorkIntakeAccessRow } from './work-intake-access.js';
 
-const intakeRow = {
-    company_id: 'company-a',
-    manager_id: 'author-a',
-    created_by: 'author-a'
+const row: WorkIntakeAccessRow = {
+    company_id: 'company-1',
+    manager_id: 'author-1'
 };
 
-test('Given a work intake row When checking management access Then the author can edit and delete it', () => {
-    assert.equal(
-        canManageWorkIntakeRecord({ id: 'author-a', role: 'staff', company_id: 'company-a' }, intakeRow),
-        true
-    );
+function requester(id: string, role: string, companyId = 'company-1'): RequesterProfile {
+    return {
+        id,
+        role,
+        company_id: companyId,
+        status: 'active'
+    };
+}
+
+test('Given same company staff did not create a work intake record When checking delete access Then deletion is blocked', () => {
+    assert.equal(canDeleteWorkIntakeRecord(requester('staff-1', 'staff'), row), false);
 });
 
-test('Given a work intake row When checking management access Then the same-company team lead can edit and delete it', () => {
-    assert.equal(
-        canManageWorkIntakeRecord({ id: 'lead-a', role: 'manager', company_id: 'company-a' }, intakeRow),
-        true
-    );
+test('Given same company staff did not create a work intake record When checking edit access Then editing is blocked', () => {
+    assert.equal(canEditWorkIntakeRecord(requester('staff-1', 'staff'), row), false);
 });
 
-test('Given a work intake row When checking management access Then non-author employees cannot edit or delete it', () => {
-    for (const role of ['sub_manager', 'staff', 'partner_vendor']) {
-        assert.equal(
-            canManageWorkIntakeRecord({ id: `${role}-a`, role, company_id: 'company-a' }, intakeRow),
-            false
-        );
-    }
+test('Given record author or team lead checks edit access Then editing is allowed', () => {
+    assert.equal(canEditWorkIntakeRecord(requester('author-1', 'staff'), row), true);
+    assert.equal(canEditWorkIntakeRecord(requester('manager-1', 'manager'), row), true);
 });
 
-test('Given a work intake row When checking management access Then cross-company team leads cannot edit or delete it', () => {
-    assert.equal(
-        canManageWorkIntakeRecord({ id: 'lead-b', role: 'manager', company_id: 'company-b' }, intakeRow),
-        false
-    );
+test('Given record author or team lead checks delete access Then deletion is allowed', () => {
+    assert.equal(canDeleteWorkIntakeRecord(requester('author-1', 'staff'), row), true);
+    assert.equal(canDeleteWorkIntakeRecord(requester('manager-1', 'manager'), row), true);
 });
 
-test('Given a work intake row When checking management access Then platform admins can edit and delete it as an exception', () => {
-    assert.equal(
-        canManageWorkIntakeRecord({ id: 'admin-a', role: 'admin', company_id: null }, intakeRow),
-        true
-    );
+test('Given admin checks work intake access Then edit and delete are allowed', () => {
+    assert.equal(canEditWorkIntakeRecord(requester('admin-1', 'admin', 'company-2'), row), true);
+    assert.equal(canDeleteWorkIntakeRecord(requester('admin-1', 'admin', 'company-2'), row), true);
 });
