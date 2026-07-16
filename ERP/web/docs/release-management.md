@@ -245,7 +245,7 @@ YYYY-MM-DD
   - 후속 보정: 관리자 삭제 목록의 `상세 확인`은 삭제 당시 전체 row 스냅샷을 원본 진행현황 확인 폼으로 복원해 모든 등록 항목을 읽기 전용으로 표시한다. 사이드바 활성 판정은 전체 메뉴의 최장 일치 URL을 기준으로 바꿔 `업무 > 진행현황`과 `프랜차이즈 > 모객 DB`가 동시에 선택되는 상태를 제거했다.
   - 반영 상태: 검색·삭제 이력 기반 기능은 `main` `82e3d88`까지 반영됐다. 후속 상세·메뉴 보정은 `dev` `7c1a143`에서 QA를 마쳤고, `origin/main` 기반 release `76bddc1`을 main/production 승격 후보로 사용한다.
   - SQL: 사용자 확인 기준 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 2026-07-16 운영 DB에 적용했다. **SQL 등록 완료 확인**.
-  - 검증: 기반 기능 관련 테스트 29건과 후속 보정 회귀 테스트 14건, `tsc`, lint, build, `git diff --check` 통과. 후속 보정의 1440px·390px mock browser QA에서 관리자 삭제 목록의 전체 form 상세, 과거 선택값·면적 단위 보존, 메뉴 단일 활성, 읽기 전용 fieldset, 가로 overflow 0, console error 0건을 확인했다. 첨부 경로 이탈 차단, 과거 상태 원문 표시, 숨김 메뉴 활성 판정도 테스트로 검증했다.
+  - 검증: 기반 기능 관련 테스트 29건과 후속 보정 회귀 테스트 16건, `tsc`, lint, build, `git diff --check` 통과. 후속 보정의 1440px·390px mock browser QA에서 관리자 삭제 목록의 전체 form 상세, 과거 선택값·면적 단위 보존, 메뉴 단일 활성, 읽기 전용 fieldset, 가로 overflow 0, console error 0건을 확인했다. 첨부 경로 이탈 및 legacy URL-only 첨부의 교차 원본 연결 차단, 과거 상태 원문 표시, 숨김 메뉴 활성 판정도 테스트로 검증했다.
   - 배포: dev preview `dpl_FEWEFHzvnDbD3kehbD4tQQkMQsHa`와 release preview `dpl_J9NKpPxeLWGxifwFZvKFVRKqm7JT`가 `Ready`다. main PR과 production 배포는 최종 review gate 통과 후 진행한다.
   - 남은 이슈: 운영 실계정으로 역할별 수정·삭제 권한과 삭제 이력 persistence를 확인한다.
 
