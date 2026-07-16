@@ -33,6 +33,7 @@ const matchingItem: MatchingRequestItem = {
     name: '예비 창업자',
     mobile: '010-0000-0000',
     email: '',
+    status: '신규',
     desiredRegion: '서울',
     desiredCategory: '카페',
     interestedBrand: '브랜드',

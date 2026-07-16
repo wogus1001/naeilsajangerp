@@ -3,9 +3,14 @@ import { fail, ok } from '@/lib/api-response';
 import { isMissingLeadRegistrationRequestTableError } from '@/lib/franchise-lead-registration-table';
 import { FRANCHISE_MATCHING_REQUEST_SOURCE, normalizeLeadGrade, normalizeLeadPhone, normalizeLeadStatus } from '@/lib/franchise-leads';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { canManageWorkIntakeRecord, type WorkIntakeAccessRow } from '@/lib/work-intake-access';
+import { canDeleteWorkIntakeRecord, canEditWorkIntakeRecord, type WorkIntakeAccessRow } from '@/lib/work-intake-access';
+import { missingWorkIntakeEditFields } from '@/lib/work-intake-edit-validation';
 
 export const dynamic = 'force-dynamic';
+export const WORK_INTAKE_DELETE_RPC_NAME = 'delete_franchise_work_intake_record_with_snapshot';
+const WORK_INTAKE_DELETED_RECORDS_TABLE = 'franchise_work_intake_deleted_records';
+export const WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE = '삭제했습니다. 삭제 목록 저장 기능을 서버가 아직 인식하지 못해 삭제 이력은 저장되지 않았습니다. 잠시 후 다시 시도해주세요.';
+export const WORK_INTAKE_DELETE_HISTORY_FAILED_MESSAGE = '삭제 이력 저장 중 오류가 발생해 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.';
 
 type WorkIntakeMutationKind = 'properties' | 'leadRegistrations' | 'matchingRequests';
 type RouteContext = {
@@ -13,6 +18,11 @@ type RouteContext = {
 };
 type IntakeRow = WorkIntakeAccessRow & {
     readonly id: string;
+    readonly name?: string | null;
+    readonly mobile?: string | null;
+    readonly status?: string | null;
+    readonly address?: string | null;
+    readonly created_at?: string | null;
     readonly operation_type?: string | null;
     readonly source?: string | null;
     readonly data: Record<string, unknown> | null;
@@ -20,6 +30,17 @@ type IntakeRow = WorkIntakeAccessRow & {
 type Target = {
     readonly table: 'properties' | 'franchise_lead_registration_requests' | 'franchise_leads';
     readonly row: IntakeRow;
+};
+type DeleteSnapshot = {
+    readonly title: string;
+    readonly summary: string;
+    readonly snapshot: {
+        readonly sourceTable: Target['table'];
+        readonly row: IntakeRow;
+    };
+};
+type DeletedRecordInsertResult = {
+    readonly id: string;
 };
 
 const DATA_CONTROL_FIELDS = new Set([
@@ -56,6 +77,16 @@ function cleanString(value: unknown): string | null {
     return normalized || null;
 }
 
+function readDataText(data: Record<string, unknown> | null, key: string): string {
+    const value = data?.[key];
+    if (value === null || value === undefined) return '';
+    return String(value).trim();
+}
+
+function joinSummary(parts: readonly unknown[]): string {
+    return parts.map(part => cleanString(part)).filter((part): part is string => Boolean(part)).join(' / ');
+}
+
 function parseNullableNumber(value: unknown): number | null {
     const raw = cleanString(value);
     if (!raw) return null;
@@ -85,7 +116,7 @@ async function fetchTarget(kind: WorkIntakeMutationKind, id: string): Promise<Ta
     if (kind === 'properties') {
         const { data, error } = await supabaseAdmin
             .from('properties')
-            .select('id, company_id, manager_id, operation_type, data')
+            .select('id, company_id, manager_id, name, status, address, created_at, operation_type, data')
             .eq('id', id)
             .maybeSingle<IntakeRow>();
         if (error) throw error;
@@ -95,7 +126,7 @@ async function fetchTarget(kind: WorkIntakeMutationKind, id: string): Promise<Ta
     if (kind === 'leadRegistrations') {
         const { data, error } = await supabaseAdmin
             .from('franchise_lead_registration_requests')
-            .select('id, company_id, manager_id, created_by, data')
+            .select('id, company_id, manager_id, created_by, name, mobile, status, source, created_at, data')
             .eq('id', id)
             .maybeSingle<IntakeRow>();
         if (error && !isMissingLeadRegistrationRequestTableError(error)) throw error;
@@ -104,11 +135,127 @@ async function fetchTarget(kind: WorkIntakeMutationKind, id: string): Promise<Ta
 
     const { data, error } = await supabaseAdmin
         .from('franchise_leads')
-        .select('id, company_id, manager_id, created_by, source, data')
+        .select('id, company_id, manager_id, created_by, name, mobile, status, source, created_at, data')
         .eq('id', id)
         .maybeSingle<IntakeRow>();
     if (error) throw error;
     return data?.source === FRANCHISE_MATCHING_REQUEST_SOURCE ? { table: 'franchise_leads', row: data } : null;
+}
+
+function buildDeleteSnapshot(kind: WorkIntakeMutationKind, target: Target): DeleteSnapshot {
+    const row = target.row;
+    if (kind === 'properties') {
+        const title = row.name || readDataText(row.data, 'propertyName') || '입점 요청';
+        return {
+            title,
+            summary: joinSummary([row.status, row.address, readDataText(row.data, 'desiredBrand'), readDataText(row.data, 'desiredCategory')]),
+            snapshot: {
+                sourceTable: target.table,
+                row
+            }
+        };
+    }
+
+    const title = row.name || '예비 창업자 등록';
+    return {
+        title,
+        summary: joinSummary([row.mobile, row.status, readDataText(row.data, 'desiredRegion'), readDataText(row.data, 'desiredCategory'), readDataText(row.data, 'interestedBrand')]),
+        snapshot: {
+            sourceTable: target.table,
+            row
+        }
+    };
+}
+
+export function isMissingWorkIntakeDeleteSnapshotRpcError(error: unknown): boolean {
+    if (!isRecord(error)) return false;
+    const code = typeof error.code === 'string' ? error.code : '';
+    const message = typeof error.message === 'string' ? error.message : '';
+    const details = typeof error.details === 'string' ? error.details : '';
+    const combined = `${message} ${details}`;
+    return code === 'PGRST202'
+        || code === '42883'
+        || combined.includes(WORK_INTAKE_DELETE_RPC_NAME)
+        || combined.includes('Could not find the function')
+        || combined.includes('function') && combined.includes('schema cache');
+}
+
+function isMissingDeletedRecordsTableError(error: unknown): boolean {
+    if (!isRecord(error)) return false;
+    const code = typeof error.code === 'string' ? error.code : '';
+    const message = typeof error.message === 'string' ? error.message : '';
+    const details = typeof error.details === 'string' ? error.details : '';
+    const combined = `${message} ${details}`;
+    return code === 'PGRST204'
+        || code === 'PGRST205'
+        || code === '42P01'
+        || combined.includes(WORK_INTAKE_DELETED_RECORDS_TABLE) && combined.includes('schema cache')
+        || combined.includes(`relation "${WORK_INTAKE_DELETED_RECORDS_TABLE}" does not exist`);
+}
+
+async function deleteOriginalWorkIntakeRecord(target: Target) {
+    const supabaseAdmin = getSupabaseAdmin();
+    let query = supabaseAdmin
+        .from(target.table)
+        .delete()
+        .eq('id', target.row.id);
+
+    query = target.row.company_id
+        ? query.eq('company_id', target.row.company_id)
+        : query.is('company_id', null);
+
+    if (target.table === 'properties') {
+        query = query.eq('operation_type', '물건등록');
+    }
+    if (target.table === 'franchise_leads') {
+        query = query.eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE);
+    }
+
+    const { error } = await query;
+    if (error) throw error;
+}
+
+async function deleteWithDirectSnapshotFallback(
+    kind: WorkIntakeMutationKind,
+    target: Target,
+    requesterId: string,
+    snapshot: DeleteSnapshot
+): Promise<boolean> {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+        .from(WORK_INTAKE_DELETED_RECORDS_TABLE)
+        .insert({
+            company_id: target.row.company_id,
+            deleted_by: requesterId,
+            kind,
+            source_id: target.row.id,
+            source_table: target.table,
+            title: snapshot.title,
+            summary: snapshot.summary,
+            snapshot: snapshot.snapshot
+        })
+        .select('id')
+        .single<DeletedRecordInsertResult>();
+
+    if (error) {
+        if (isMissingDeletedRecordsTableError(error)) {
+            await deleteOriginalWorkIntakeRecord(target);
+            return false;
+        }
+        throw error;
+    }
+
+    try {
+        await deleteOriginalWorkIntakeRecord(target);
+    } catch (deleteError) {
+        await supabaseAdmin
+            .from(WORK_INTAKE_DELETED_RECORDS_TABLE)
+            .delete()
+            .eq('id', data.id);
+        throw deleteError;
+    }
+
+    return true;
 }
 
 function buildPropertyUpdates(body: Record<string, unknown>, row: IntakeRow) {
@@ -149,13 +296,17 @@ export async function PUT(request: Request, context: RouteContext) {
         const kind = resolveKind(params.kind);
         if (!kind) return fail(400, 'VALIDATION_ERROR', 'Unsupported work intake kind');
         const body = await parseBody(request);
+        const missingFields = missingWorkIntakeEditFields(kind, body);
+        if (missingFields.length > 0) {
+            return fail(400, 'VALIDATION_ERROR', `필수 항목을 확인해주세요: ${missingFields.join(', ')}`);
+        }
         const supabaseAdmin = getSupabaseAdmin();
         const requester = await getRequesterProfile(supabaseAdmin, request, cleanString(body.requesterId));
         if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
 
         const target = await fetchTarget(kind, params.id);
         if (!target) return fail(404, 'NOT_FOUND', 'Work intake record not found');
-        if (!canManageWorkIntakeRecord(requester, target.row)) {
+        if (!canEditWorkIntakeRecord(requester, target.row)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 수정할 수 있습니다.');
         }
 
@@ -164,6 +315,7 @@ export async function PUT(request: Request, context: RouteContext) {
             .from(target.table)
             .update(updates)
             .eq('id', params.id)
+            .eq('company_id', target.row.company_id)
             .select()
             .single();
         if (error) throw error;
@@ -178,22 +330,42 @@ export async function DELETE(request: Request, context: RouteContext) {
     try {
         const params = await context.params;
         const kind = resolveKind(params.kind);
-        if (!kind) return fail(400, 'VALIDATION_ERROR', 'Unsupported work intake kind');
+        if (!kind) return fail(400, 'VALIDATION_ERROR', '삭제할 수 없는 진행현황 유형입니다.');
         const supabaseAdmin = getSupabaseAdmin();
         const requester = await getRequesterProfile(supabaseAdmin, request);
-        if (!requester) return fail(401, 'AUTH_REQUIRED', 'requesterId is required');
+        if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인 세션을 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.');
 
         const target = await fetchTarget(kind, params.id);
-        if (!target) return fail(404, 'NOT_FOUND', 'Work intake record not found');
-        if (!canManageWorkIntakeRecord(requester, target.row)) {
-            return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
+        if (!target) return fail(404, 'NOT_FOUND', '삭제할 진행현황을 찾지 못했습니다.');
+        if (!canDeleteWorkIntakeRecord(requester, target.row)) {
+            return fail(403, 'FORBIDDEN', '작성자 또는 회사 팀장만 삭제할 수 있습니다.');
         }
 
-        const { error } = await supabaseAdmin.from(target.table).delete().eq('id', params.id);
-        if (error) throw error;
-        return ok({ success: true });
+        const snapshot = buildDeleteSnapshot(kind, target);
+        const { error } = await supabaseAdmin.rpc(WORK_INTAKE_DELETE_RPC_NAME, {
+            p_kind: kind,
+            p_source_id: params.id,
+            p_deleted_by: requester.id,
+            p_title: snapshot.title,
+            p_summary: snapshot.summary,
+            p_snapshot: snapshot.snapshot
+        });
+        if (error) {
+            if (isMissingWorkIntakeDeleteSnapshotRpcError(error)) {
+                const deleteHistoryStored = await deleteWithDirectSnapshotFallback(kind, target, requester.id, snapshot);
+                return deleteHistoryStored
+                    ? ok({ success: true, deleteHistoryStored: true })
+                    : ok({
+                        success: true,
+                        deleteHistoryStored: false,
+                        message: WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE
+                    });
+            }
+            throw error;
+        }
+        return ok({ success: true, deleteHistoryStored: true });
     } catch (error) {
         console.error('Franchise work intake DELETE error:', error);
-        return fail(500, 'INTERNAL_ERROR', 'Failed to delete work intake record');
+        return fail(500, 'INTERNAL_ERROR', WORK_INTAKE_DELETE_HISTORY_FAILED_MESSAGE);
     }
 }
