@@ -19,7 +19,7 @@
 
 ## 현재 우선순위
 
-다음 플랫폼 고도화는 `platform-sequential-development-roadmap.md`를 실행 기준으로 삼아 `전자결재 운영 완성 -> 일정·결재·알림 통합 -> 점주 포털 업무 자동화 -> 안정화·감사·관측 체계` 순서로 진행한다. 원칙적으로 선행 단계의 완료 게이트와 다음 단계 진입 승인이 기록되기 전에는 후속 단계 개발을 시작하지 않는다. 현재는 사용자 승인 예외로 전자결재 1단계를 `검증 중`에 유지한 채 가맹운영 2단계의 원천 연결 기능 개발과 자동/mock-session QA를 마쳤다. 2단계는 프로필 보안 SQL 적용 확인 전까지 `코드 완료·SQL 적용 대기`이며, 1단계 문서함 실계정 QA는 dev 또는 production 승격 전 필수 게이트로 남긴다.
+다음 플랫폼 고도화는 `platform-sequential-development-roadmap.md`를 실행 기준으로 삼아 `전자결재 운영 완성 -> 일정·결재·알림 통합 -> 점주 포털 업무 자동화 -> 안정화·감사·관측 체계` 순서로 진행한다. 원칙적으로 선행 단계의 완료 게이트와 다음 단계 진입 승인이 기록되기 전에는 후속 단계 개발을 시작하지 않는다. 전자결재 1단계는 보안 SQL과 QA를 마쳐 완료했고, 가맹운영 2단계는 원천 연결·내구성 재처리 구현과 자동/mock-session QA를 마친 상태다. 운영 승격 전 `supabase_franchise_schedule_durable_sync_migration.sql` 적용 확인이 필요하다.
 
 수동·자동·원천 연동을 포함한 모든 가맹운영 일정의 고정 계약은 `franchise_schedules` 저장과 `/dashboard/franchise-operations/schedule` 표시다. 점포개발·전사 업무용 `schedules`, `/api/schedules`, `/schedule`은 가맹운영 일정에 사용하지 않는다.
 
@@ -40,10 +40,10 @@
 
 - 완료: 헤더 알림의 전자결재/가맹운영 분리, 가맹운영 일정의 전자결재 제외, 주요 화면의 커스텀 알럿 전환을 구현·검증했다.
 - 완료: 업체 계약 만료·갱신·종료와 정보공개서 계약 가능일을 `franchise_schedules`에 동기화하고 `/dashboard/franchise-operations/schedule`에서 구분하는 구현·자동 검증·mock-session 브라우저 QA를 마쳤다.
-- SQL: 기존 `supabase_franchise_source_schedule_upsert_migration.sql`은 사용자 확인 기준 대상 DB 적용 완료다. 최종 보안 리뷰에서 RPC의 비활성 계정·협력업체·관리자 역할 검증을 강화하는 `supabase_franchise_source_schedule_profile_security_migration.sql`을 추가했다. **SQL 등록 필요**.
+- SQL: `supabase_franchise_source_schedule_upsert_migration.sql`과 RPC의 비활성 계정·협력업체·관리자 역할 검증을 강화하는 `supabase_franchise_source_schedule_profile_security_migration.sql`은 사용자 확인 기준 대상 DB 적용 완료다. **SQL 등록 완료 확인**.
 - 완료: SV 방문·보고서·시정요청, 오픈 준비, 점주 문의·체크리스트를 같은 `franchise_schedules` 계약으로 연결하고 상태·담당자·완료/취소 수명주기와 mock-session 1440px/390px 화면을 검증했다. 기존 SV-`schedules` 파일럿은 새 동기화 경로에서 사용하지 않는다.
-- 완료 판정: 원천별 결정적 upsert, 상태·담당자·완료/취소 수명주기, KST 지연 경계, 전용 저장소 분리, 1440px/390px mock-session 화면 검증까지 코드 범위를 완료했다. 보안 SQL 적용 확인 후 2단계 운영 마감을 확정한다.
-- 후속 운영 고도화: 기존 SV 파일럿 행 이관·종료, 영속 실패 재처리, KST 자정 지연 재평가 실행기, 적용 SQL 기준 실계정 회귀를 별도 백로그로 이어간다. 잔여 기본 팝업 제거는 UI 운영 고도화이고 1단계 문서함 실계정 QA는 별도 승격 게이트이며, 어느 항목도 2단계 코드 완료 판정을 되돌리지 않는다.
+- 완료 판정: 원천별 결정적 upsert, 상태·담당자·완료/취소 수명주기, 원천 일정·알림의 트랜잭션 동기화, 실패 재처리 큐, KST 자정 지연 재평가, 전용 저장소 분리, 1440px/390px mock-session 화면 검증을 마쳤다. 내구성 SQL 적용 확인과 dev/main/운영 반영 후 2단계 운영 마감을 확정한다.
+- 후속 운영 고도화: 기존 SV 파일럿 행 이관·종료와 적용 DB 실계정 원천 회귀를 별도 백로그로 이어간다. 잔여 기본 팝업 제거는 UI 운영 고도화이고 1단계 문서함 실계정 QA는 별도 승격 게이트이며, 어느 항목도 2단계 코드 완료 판정을 되돌리지 않는다.
 
 ### 모객 DB 단계/업무 큐 강화
 

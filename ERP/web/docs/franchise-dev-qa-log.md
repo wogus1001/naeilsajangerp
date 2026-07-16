@@ -25,6 +25,18 @@
 
 ## 개발 과정 로그
 
+### 2026-07-16 가맹 운영 원천 일정 내구성 리뷰 보정
+
+- 원천 일정과 현재 담당자 알림을 `sync_franchise_operational_schedule_from_payload` 한 트랜잭션에서 갱신하고, source 단위 advisory lock으로 동시 동기화를 직렬화했다.
+- 일시 실패 payload는 `franchise_schedule_sync_jobs`에 source 기준으로 덮어써 보관하고, 예약 실행에서 `FOR UPDATE SKIP LOCKED`로 가져와 성공 시 삭제·실패 시 지수 backoff를 적용한다.
+- 예약 실행은 매일 `0 15 * * *` UTC, KST 자정에 미완료 과거 일정을 `지연`으로 재평가한다.
+- SV 방문·보고서·시정요청과 오픈 준비는 원천 동기화와 재시도 저장이 모두 실패하면 성공으로 응답하지 않도록 실패 은폐를 제거했다.
+- 일반 점주 문의도 시설 문의와 별도 원천 유형으로 가맹운영 일정에 연결하고, 전자결재·가맹운영 원천 일정은 메인 대시보드 `예정된 일정`에서 제외한다.
+- 검증: 내구성 RPC·재시도·지연 승격·실패 전파 경계 집중 테스트 21건, 전체 테스트 592건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 브라우저 QA: mock-session 개발 서버에서 1440px·390px 가맹운영 일정, 6개 원천 상세 이동, 수동 일정 중앙 알럿, 403/424 안내, 가로 overflow 0을 재확인했다. QA fixture의 Supabase 클라이언트 중복 생성 경고는 남지만 기능 오류나 page error는 없었다.
+- 런타임 가설 점검: (1) 원자적 RPC 실패 후 요청이 유실될 가능성은 재시도 큐 upsert 회귀 테스트로 기각했다. (2) 동시 실행이 같은 작업을 중복 처리할 가능성은 source advisory lock과 `FOR UPDATE SKIP LOCKED` SQL 경계 테스트로 기각했다. (3) 원천 변경 없이 날짜가 지나도 `예정`에 머물 가능성은 KST 자정 크론 설정과 지연 승격 RPC 테스트로 기각했다. 실제 DB 실행은 신규 SQL 적용 후 실계정 회귀가 필요하다.
+- SQL 상태: `supabase_franchise_schedule_durable_sync_migration.sql` **SQL 등록 필요**.
+
 ### 2026-07-16 2단계 통합 릴리즈 후보
 
 - 미배포 상태였던 알림·일정 분리, 가맹운영 원천 일정 연동, 2단계 마감 커밋을 최신 운영 `main` 기준 브랜치에 다시 통합했다. 진행현황 검색·페이지네이션·삭제목록 기능은 유지하고 삭제 확인만 공용 중앙 다이얼로그로 병합했다.
