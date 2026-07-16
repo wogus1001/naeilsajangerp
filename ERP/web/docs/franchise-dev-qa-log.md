@@ -31,8 +31,11 @@
 - 코드리뷰 보정: 200/500건 선조회 제한을 제거해 오래된 데이터도 검색·페이지 집계에 포함하고, 페이지 파라미터가 없는 기존 API 호출은 전체 결과를 유지한다. 상태 필터는 입점 요청과 예비 창업자 실제 상태값으로 분리하고 KST 날짜 기준을 적용했다.
 - 권한/삭제 보정: 소속 회사가 없는 일반 계정과 회사를 옮긴 과거 작성자의 조회·수정·삭제를 차단했다. 수정·삭제는 같은 회사의 실제 작성자, 팀장, 관리자만 가능하고 협력업체는 기존처럼 본인 작성 건만 조회한다. 삭제 이력 RPC를 찾지 못하면 원본 삭제도 중단하며, 기존 직접 삭제 API는 진행현황 전용 삭제 경로로 유도한다.
 - 삭제 RPC는 원본 row 잠금, 서버측 전체 row 스냅샷, 원천 ID 중복 방지, 실제 삭제 1건 검증을 포함하도록 강화했다. 사용자 확인 기준 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 2026-07-16 운영 DB에 적용했다. **SQL 등록 완료 확인**.
+- 삭제 목록 상세는 별도 요약 카드 대신 기존 진행현황 확인 모달의 전체 필드 renderer를 읽기 전용으로 재사용한다. 입점 요청, 가맹 희망자 등록, 예비 창업자 등록의 삭제 스냅샷을 각 원본 form으로 복원하며, 오래된 형식이나 알 수 없는 유형은 기존 요약 상세를 fallback으로 유지한다.
+- 메뉴 활성 상태는 현재 섹션 내부가 아니라 전체 사이드바 항목의 URL 길이를 비교하도록 보정했다. `/dashboard/franchise-leads/work-intake`에서 `진행현황`만 활성화되고 `/dashboard/franchise-leads`의 `모객 DB`는 비활성인 것을 회귀 테스트와 브라우저 DOM으로 확인했다.
+- 런타임 원인 감사: H1 `삭제 스냅샷 자체가 일부 필드만 저장한다`는 migration의 `to_jsonb(source row)`와 실제 `snapshot.row.data`로 기각했다. H2 `상세 UI가 일부 필드만 선택한다`는 기존 `buildDeletedRecordDetails` 출력과 보정 전 실패 테스트로 확인했고 전체 form 복원 후 통과했다. H3 `모객 DB 중복 활성은 섹션별 경로 비교 때문`은 섹션을 가로지르는 회귀 테스트에서 재현했고 전체 메뉴 최장 URL 비교와 브라우저 active class로 해결을 확인했다.
 - 코드리뷰에서 대량 범위 조회가 동일 시각 레코드를 건너뛸 수 있는 비결정적 정렬을 확인해 timestamp 다음 `id` 내림차순 정렬을 추가했다. 최종 gate review는 `PASS`였다.
-- 검증: 관련 `npx tsx --test` 29건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Playwright로 1920px에서 `1/2 → 2/2` 페이지 이동, 관리자 삭제 목록/상세, Escape 닫기, 390px 모바일 overflow 0, 콘솔 오류 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 검증: 기존 관련 테스트 29건에 삭제된 3개 유형 전체 form 복원, 과거 선택값·상태값·면적 단위·여러 줄 메모 보존, 외부·경로 이탈 첨부 URL 차단, 메뉴 단일 활성과 숨김 메뉴 회귀 테스트 14건을 추가해 통과했고, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Playwright로 1920px에서 `1/2 → 2/2` 페이지 이동과 기존 삭제 상세를 확인했으며, 후속 보정 QA는 1440px·390px에서 전체 삭제 폼, 과거 선택값 노출, 메뉴 단일 활성, 가로 overflow 0, 콘솔 오류 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했고 최종 gate review는 `PASS`였다.
 - 배포 확인: `dev` `a6faeb9`, `main` `82e3d88`에 기능 패치를 반영했다. `naeilsajang` production deployment `dpl_A97VMaSCEMDLLvj3uChWc5TF9MYS`는 `Ready`이며 운영 도메인 alias와 `/login` 200 응답을 확인했다.
 
 ### 2026-07-15

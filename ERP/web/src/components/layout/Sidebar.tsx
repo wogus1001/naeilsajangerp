@@ -202,6 +202,7 @@ const Sidebar = ({ isOpen, onToggle, menuFlags = getDefaultCompanyMenuFlags(), c
                             isExpanded={isSectionExpanded(section.key)}
                             isVisible={section.key !== 'contracts' || features.electronicContracts}
                             isFeatureEnabled={isEnabled}
+                            activeItems={visibleMenuItems}
                             onToggle={() => toggleSection(section.key)}
                         />
                     ))}

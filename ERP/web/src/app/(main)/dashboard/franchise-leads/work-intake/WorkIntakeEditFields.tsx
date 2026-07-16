@@ -21,10 +21,12 @@ import {
 } from '@/lib/franchise-matching-request';
 import type { WorkIntakeEditForm } from './requests';
 import { PropertyWorkIntakeEditFields } from './PropertyWorkIntakeEditFields';
+import { withCurrentSelectOption } from './work-intake-select-options';
 import styles from './WorkIntakeEditModal.module.css';
 
 type WorkIntakeEditFieldsProps = {
     readonly form: WorkIntakeEditForm;
+    readonly archivedLeadStatus?: string;
     readonly onChangeAction: (form: WorkIntakeEditForm) => void;
     readonly pendingPropertyFiles?: readonly File[];
     readonly onPendingPropertyFilesChangeAction?: (files: readonly File[]) => void;
@@ -57,11 +59,12 @@ function renderMatchingField(
     }
 
     if (field.kind === 'select') {
+        const options = withCurrentSelectOption(field.options || [], String(value));
         return (
             <label className={fieldClassName(field)} key={field.key}>
                 {label}
                 <select value={String(value)} onChange={event => updateField(field.key, event.target.value)} required={field.required}>
-                    {(field.options || []).map(option => <option key={option || 'empty'} value={option}>{option || '선택'}</option>)}
+                    {options.map(option => <option key={option || 'empty'} value={option}>{option || '선택'}</option>)}
                 </select>
             </label>
         );
@@ -94,10 +97,18 @@ function renderMatchingField(
     );
 }
 
-function LeadRegistrationEditFields({ value, onChange }: {
+function LeadRegistrationEditFields({ value, archivedStatus, onChange }: {
     readonly value: LeadRegistrationForm;
+    readonly archivedStatus?: string;
     readonly onChange: (value: LeadRegistrationForm) => void;
 }) {
+    const displayedStatus = archivedStatus || value.status;
+    const statuses = withCurrentSelectOption(FRANCHISE_LEAD_STATUSES, displayedStatus);
+    const grades = withCurrentSelectOption(FRANCHISE_LEAD_GRADES, value.grade);
+    const sources = withCurrentSelectOption(
+        FRANCHISE_LEAD_SOURCES.filter(source => source !== FRANCHISE_LEAD_REGISTRATION_SOURCE),
+        value.source
+    );
     return (
         <>
             <section className={styles.section}>
@@ -105,9 +116,9 @@ function LeadRegistrationEditFields({ value, onChange }: {
                 <div className={styles.editGrid}>
                     <label className={styles.field}>가맹 희망자명 *<input value={value.name} onChange={event => onChange({ ...value, name: event.target.value })} required /></label>
                     <label className={styles.field}>연락처<input value={value.mobile} onChange={event => onChange({ ...value, mobile: formatLeadPhoneInput(event.target.value) })} /></label>
-                    <label className={styles.field}>상태<select value={value.status} onChange={event => onChange({ ...value, status: normalizeLeadStatus(event.target.value) })}>{FRANCHISE_LEAD_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select></label>
-                    <label className={styles.field}>등급<select value={value.grade} onChange={event => onChange({ ...value, grade: event.target.value })}><option value="">미지정</option>{FRANCHISE_LEAD_GRADES.map(grade => <option key={grade} value={grade}>{getFranchiseLeadGradeLabel(grade)}</option>)}</select></label>
-                    <label className={styles.field}>유입경로<select value={value.source} onChange={event => onChange({ ...value, source: event.target.value })}><option value="">미지정</option>{FRANCHISE_LEAD_SOURCES.filter(source => source !== FRANCHISE_LEAD_REGISTRATION_SOURCE).map(source => <option key={source} value={source}>{getFranchiseLeadSourceLabel(source)}</option>)}</select></label>
+                    <label className={styles.field}>상태<select value={displayedStatus} onChange={event => onChange({ ...value, status: normalizeLeadStatus(event.target.value) })}>{statuses.map(status => <option key={status} value={status}>{status}</option>)}</select></label>
+                    <label className={styles.field}>등급<select value={value.grade} onChange={event => onChange({ ...value, grade: event.target.value })}><option value="">미지정</option>{grades.map(grade => <option key={grade} value={grade}>{getFranchiseLeadGradeLabel(grade)}</option>)}</select></label>
+                    <label className={styles.field}>유입경로<select value={value.source} onChange={event => onChange({ ...value, source: event.target.value })}><option value="">미지정</option>{sources.map(source => <option key={source} value={source}>{getFranchiseLeadSourceLabel(source)}</option>)}</select></label>
                     <label className={styles.field}>희망지역<input value={value.desiredRegion} onChange={event => onChange({ ...value, desiredRegion: event.target.value })} /></label>
                 </div>
             </section>
@@ -152,6 +163,7 @@ function MatchingRequestEditFields({ value, onChange }: {
 
 export function WorkIntakeEditFields({
     form,
+    archivedLeadStatus,
     onChangeAction,
     pendingPropertyFiles = [],
     onPendingPropertyFilesChangeAction
@@ -167,7 +179,7 @@ export function WorkIntakeEditFields({
         );
     }
     if (form.kind === 'leadRegistrations') {
-        return <LeadRegistrationEditFields value={form.value} onChange={value => onChangeAction({ kind: 'leadRegistrations', value })} />;
+        return <LeadRegistrationEditFields value={form.value} archivedStatus={archivedLeadStatus} onChange={value => onChangeAction({ kind: 'leadRegistrations', value })} />;
     }
     return <MatchingRequestEditFields value={form.value} onChange={value => onChangeAction({ kind: 'matchingRequests', value })} />;
 }

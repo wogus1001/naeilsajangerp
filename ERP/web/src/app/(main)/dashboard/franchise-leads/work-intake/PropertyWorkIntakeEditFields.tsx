@@ -21,6 +21,7 @@ import {
     type PropertyAreaUnit
 } from '@/lib/franchise-property-registration-format';
 import { PropertyRegistrationFileInput } from '../property-registration/PropertyRegistrationFileInput';
+import { withCurrentSelectOption } from './work-intake-select-options';
 import propertyStyles from './PropertyWorkIntakeEditFields.module.css';
 import styles from './WorkIntakeEditModal.module.css';
 
@@ -97,6 +98,7 @@ function renderPropertyField(
 
     if (field.kind === 'select') {
         const isCategoryDisabled = field.key === 'desiredCategory' && !value.desiredBusinessType;
+        const options = withCurrentSelectOption(field.options || [], value[field.key]);
         return (
             <label className={fieldClassName(field)} key={field.key}>
                 {labelFor(field)}
@@ -106,7 +108,7 @@ function renderPropertyField(
                     required={field.required}
                     disabled={isCategoryDisabled}
                 >
-                    {(field.options || []).map(option => <option key={option || 'empty'} value={option}>{option || '선택'}</option>)}
+                    {options.map(option => <option key={option || 'empty'} value={option}>{option || '선택'}</option>)}
                 </select>
                 {isCategoryDisabled && <small className={propertyStyles.helpText}>업태를 먼저 선택하면 중분류 업종만 표시됩니다.</small>}
             </label>
