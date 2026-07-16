@@ -47,6 +47,10 @@ void test('Given source schedule profile assignments When the security follow-up
 void test('Given operational schedule writes When durable sync is installed Then schedule and recipients share one locked transaction', () => {
     assert.match(durableSyncMigration, /create table if not exists public\.franchise_schedule_sync_jobs/);
     assert.match(durableSyncMigration, /pg_advisory_xact_lock/);
+    assert.match(
+        durableSyncMigration,
+        /public\.normalize_franchise_schedule_status\(\s*schedule_payload->>'status',\s*nullif\(schedule_payload->>'completed_at', ''\)::timestamp with time zone,\s*'예정'\s*\)/
+    );
     assert.match(durableSyncMigration, /public\.upsert_franchise_schedule_from_payload\(schedule_payload\)/);
     assert.match(durableSyncMigration, /insert into public\.franchise_notifications/);
     assert.match(durableSyncMigration, /on conflict \(company_id, recipient_profile_id, source_type, source_id\)/);

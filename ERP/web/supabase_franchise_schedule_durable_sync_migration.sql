@@ -33,7 +33,11 @@ declare
   schedule_company uuid := nullif(schedule_payload->>'company_id', '')::uuid;
   schedule_source_type text := nullif(trim(schedule_payload->>'source_type'), '');
   schedule_source_id text := nullif(trim(schedule_payload->>'source_id'), '');
-  schedule_status text := public.normalize_franchise_schedule_status(schedule_payload->>'status');
+  schedule_status text := public.normalize_franchise_schedule_status(
+    schedule_payload->>'status',
+    nullif(schedule_payload->>'completed_at', '')::timestamp with time zone,
+    '예정'
+  );
   notification_source_id text;
   recipient_id uuid;
   now_utc timestamp with time zone := timezone('utc'::text, now());
