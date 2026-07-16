@@ -17,7 +17,7 @@
 - 관리자에게만 `삭제 목록` 탭을 노출하며 유형, 제목, 회사, 삭제자, 삭제일, 요약을 확인한다. `상세 확인`은 삭제 시점 스냅샷을 기존 입점 요청·예비 창업자 확인 화면과 같은 읽기 전용 폼으로 복원해 임대 조건, 면적, 지원 조건, 상담 내용, 후속 조치, 첨부 등 전체 등록 내용을 보여준다. 과거 URL-only 첨부도 현재 Supabase origin과 삭제 원본 ID 경로가 모두 일치할 때만 열며, 삭제 이력을 저장할 수 없으면 원본도 삭제하지 않는 fail-closed 정책을 사용한다.
 - 사이드바는 현재 URL과 일치하는 전체 메뉴 중 가장 구체적인 경로 하나만 활성화한다. `/dashboard/franchise-leads/work-intake`에서는 `업무 > 진행현황`만 선택되고 상위 경로가 겹치는 `프랜차이즈 > 모객 DB`는 함께 선택되지 않는다.
 - 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`은 원본 row 잠금, 서버측 전체 스냅샷, 중복 방지, 삭제 건수 검증을 포함한다. 사용자 확인 기준 2026-07-16 운영 DB에 최신 파일 적용을 완료했다. **SQL 등록 완료 확인**.
-- 검색·삭제 이력 기반 기능은 `main` `82e3d88`까지 반영됐고, 전체 삭제 상세와 메뉴 단일 활성 보정은 `dev` `7c1a143`에서 QA를 마쳤다. 운영 승격 후보는 `origin/main` 기반 release `76bddc1`이며 preview `dpl_J9NKpPxeLWGxifwFZvKFVRKqm7JT`가 `Ready`다. main/production 반영은 이 release 검증 이후 진행하며, 작성자/일반 직원/팀장/관리자/협력업체 실계정 권한과 실제 삭제 이력 persistence는 운영 live QA로 남긴다.
+- 검색·삭제 이력 기반 기능은 `main` `82e3d88`까지 반영됐고, 전체 삭제 상세와 메뉴 단일 활성 보정은 `dev` `7c1a143`에서 QA를 마쳤다. 운영 승격 후보는 legacy URL-only 첨부의 교차 원본 연결 차단까지 포함한 `origin/main` 기반 release `c85bf36`이며 preview `dpl_5b7MS7Cikc1k4odMVWDs6Qui1eE6`가 `Ready`다. main/production 반영은 이 release 검증 이후 진행하며, 작성자/일반 직원/팀장/관리자/협력업체 실계정 권한과 실제 삭제 이력 persistence는 운영 live QA로 남긴다.
 
 ## 2026-07-15 기준 현재 상태
 

@@ -37,7 +37,7 @@
 - 코드리뷰에서 대량 범위 조회가 동일 시각 레코드를 건너뛸 수 있는 비결정적 정렬을 확인해 timestamp 다음 `id` 내림차순 정렬을 추가했다. 최종 gate review는 `PASS`였다.
 - 검증: 기존 관련 테스트 29건에 삭제된 3개 유형 전체 form 복원, 과거 선택값·상태값·면적 단위·여러 줄 메모 보존, 외부·경로 이탈 첨부 URL 차단, 메뉴 단일 활성과 숨김 메뉴 회귀 테스트 14건을 추가해 통과했고, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Playwright로 1920px에서 `1/2 → 2/2` 페이지 이동과 기존 삭제 상세를 확인했으며, 후속 보정 QA는 1440px·390px에서 전체 삭제 폼, 과거 선택값 노출, 메뉴 단일 활성, 가로 overflow 0, 콘솔 오류 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했고 최종 gate review는 `PASS`였다.
 - 후속 상세·메뉴 보정 검증: `dev` `7c1a143`과 release에서 회귀 테스트 16건, `tsc`, lint, build, `git diff --check`를 통과했다. 보안 리뷰에서 확인한 legacy URL-only 첨부의 교차 매물 연결 가능성을 차단해 현재 Supabase origin과 삭제 원본 ID 경로가 모두 일치할 때만 복원한다. 1440px·390px mock browser QA에서 삭제 스냅샷의 임대 조건·면적·지원 조건·메모·후속 조치가 읽기 전용 폼에 복원되고, 활성 메뉴가 `진행현황` 하나이며 가로 overflow와 console error가 0건임을 확인했다.
-- 배포 확인: release preview `dpl_J9NKpPxeLWGxifwFZvKFVRKqm7JT`는 `naeilsajang`의 `preview / Ready`다. main/production은 최종 review gate와 main PR 통과 후 반영한다.
+- 배포 확인: 보안 보강을 포함한 release `c85bf36` preview `dpl_5b7MS7Cikc1k4odMVWDs6Qui1eE6`는 `naeilsajang`의 `preview / Ready`다. main/production은 최종 review gate와 main PR 통과 후 반영한다.
 
 ### 2026-07-15
 
