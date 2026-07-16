@@ -30,8 +30,10 @@
 - `/dashboard/franchise-leads/work-intake` 진행현황의 검색·상태·기간 필터와 10건 페이지네이션을 입점 요청/예비 창업자 등록에 적용하고, 관리자에게만 삭제 목록과 삭제 시점 상세 내용을 제공했다.
 - 코드리뷰 보정: 200/500건 선조회 제한을 제거해 오래된 데이터도 검색·페이지 집계에 포함하고, 페이지 파라미터가 없는 기존 API 호출은 전체 결과를 유지한다. 상태 필터는 입점 요청과 예비 창업자 실제 상태값으로 분리하고 KST 날짜 기준을 적용했다.
 - 권한/삭제 보정: 소속 회사가 없는 일반 계정과 회사를 옮긴 과거 작성자의 조회·수정·삭제를 차단했다. 수정·삭제는 같은 회사의 실제 작성자, 팀장, 관리자만 가능하고 협력업체는 기존처럼 본인 작성 건만 조회한다. 삭제 이력 RPC를 찾지 못하면 원본 삭제도 중단하며, 기존 직접 삭제 API는 진행현황 전용 삭제 경로로 유도한다.
-- 삭제 RPC는 원본 row 잠금, 서버측 전체 row 스냅샷, 원천 ID 중복 방지, 실제 삭제 1건 검증을 포함하도록 강화했다. 기존 적용 환경은 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 다시 실행해야 한다. **SQL 재등록 필요**.
-- 검증: 관련 `npx tsx --test` 22건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Playwright로 1920px에서 `1/2 → 2/2` 페이지 이동, 관리자 삭제 목록/상세, Escape 닫기, 390px 모바일 overflow 0, 콘솔 오류 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 삭제 RPC는 원본 row 잠금, 서버측 전체 row 스냅샷, 원천 ID 중복 방지, 실제 삭제 1건 검증을 포함하도록 강화했다. 사용자 확인 기준 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 2026-07-16 운영 DB에 적용했다. **SQL 등록 완료 확인**.
+- 코드리뷰에서 대량 범위 조회가 동일 시각 레코드를 건너뛸 수 있는 비결정적 정렬을 확인해 timestamp 다음 `id` 내림차순 정렬을 추가했다. 최종 gate review는 `PASS`였다.
+- 검증: 관련 `npx tsx --test` 29건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. Playwright로 1920px에서 `1/2 → 2/2` 페이지 이동, 관리자 삭제 목록/상세, Escape 닫기, 390px 모바일 overflow 0, 콘솔 오류 0건을 확인했다. build는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 출력했다.
+- 배포 확인: `dev` `a6faeb9`, `main` `82e3d88`에 기능 패치를 반영했다. `naeilsajang` production deployment `dpl_A97VMaSCEMDLLvj3uChWc5TF9MYS`는 `Ready`이며 운영 도메인 alias와 `/login` 200 응답을 확인했다.
 
 ### 2026-07-15
 

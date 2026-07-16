@@ -15,8 +15,8 @@
 
 - `/dashboard/franchise-leads/work-intake`는 입점 요청과 예비 창업자 등록의 검색, 실제 상태 필터, 기간 필터, 10건 페이지네이션을 제공한다. 같은 회사 내부 직원은 목록을 함께 확인하되 수정·삭제는 실제 작성자, 팀장, 관리자만 가능하고, 협력업체는 본인 작성 건만 조회한다.
 - 관리자에게만 `삭제 목록` 탭을 노출하며 유형, 제목, 회사, 삭제자, 삭제일, 요약과 삭제 시점 상세 스냅샷을 확인한다. 삭제 이력을 저장할 수 없으면 원본도 삭제하지 않는 fail-closed 정책을 사용한다.
-- 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`은 원본 row 잠금, 서버측 전체 스냅샷, 중복 방지, 삭제 건수 검증을 포함한다. 사용자가 기존 버전을 적용한 뒤 파일이 보강되었으므로 운영 DB에 최신 SQL을 다시 실행해야 한다. **SQL 재등록 필요**.
-- 로컬 자동 검증과 1920px/390px 브라우저 QA는 통과했으며, 운영 배포 후 실계정으로 작성자/일반 직원/팀장/관리자/협력업체 권한과 실제 삭제 이력 persistence를 확인한다.
+- 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`은 원본 row 잠금, 서버측 전체 스냅샷, 중복 방지, 삭제 건수 검증을 포함한다. 사용자 확인 기준 2026-07-16 운영 DB에 최신 파일 적용을 완료했다. **SQL 등록 완료 확인**.
+- 기능은 `dev` `a6faeb9`, `main` `82e3d88`에 패치 동등하게 반영했고, `naeilsajang` production 배포 `dpl_A97VMaSCEMDLLvj3uChWc5TF9MYS`가 `Ready`이며 `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias를 확인했다. 작성자/일반 직원/팀장/관리자/협력업체 실계정 권한과 실제 삭제 이력 persistence는 운영 live QA로 남긴다.
 
 ## 2026-07-15 기준 현재 상태
 
