@@ -36,6 +36,13 @@
     line-height: 1.4;
 }
 
+.modalHeader p {
+    margin: 6px 0 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 .modalForm {
     display: flex;
     flex: 1 1 auto;

@@ -19,6 +19,8 @@ type WorkIntakeEditModalProps = {
     readonly target: WorkIntakeEditTarget;
     readonly requesterId: string;
     readonly isReadOnly?: boolean;
+    readonly titleOverride?: string;
+    readonly description?: string;
     readonly onCloseAction: () => void;
     readonly onSavedAction: () => void;
     readonly onErrorAction: (message: string) => void;
@@ -79,6 +81,8 @@ export function WorkIntakeEditModal({
     target,
     requesterId,
     isReadOnly = false,
+    titleOverride,
+    description,
     onCloseAction,
     onSavedAction,
     onErrorAction
@@ -126,7 +130,8 @@ export function WorkIntakeEditModal({
         <div className={styles.modalBackdrop} onMouseDown={event => { if (event.currentTarget === event.target) closeModal(); }}>
             <section aria-labelledby={titleId} aria-modal="true" className={styles.modal} ref={dialogRef} role="dialog" tabIndex={-1}>
                 <div className={styles.modalHeader}>
-                    <h2 id={titleId}>{titleFor(target, isReadOnly)}</h2>
+                    <h2 id={titleId}>{titleOverride || titleFor(target, isReadOnly)}</h2>
+                    {description && <p>{description}</p>}
                 </div>
                 <form className={styles.modalForm} onSubmit={event => { event.preventDefault(); void save(); }}>
                     <div className={styles.modalBody}>
@@ -134,6 +139,7 @@ export function WorkIntakeEditModal({
                         <fieldset className={styles.readOnlyFieldset} disabled={isReadOnly}>
                             <WorkIntakeEditFields
                                 form={form}
+                                archivedLeadStatus={target.kind === 'leadRegistrations' ? target.item.archivedStatus : undefined}
                                 pendingPropertyFiles={pendingPropertyFiles}
                                 onChangeAction={setForm}
                                 onPendingPropertyFilesChangeAction={setPendingPropertyFiles}

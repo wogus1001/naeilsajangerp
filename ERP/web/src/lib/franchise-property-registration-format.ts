@@ -38,7 +38,7 @@ function parseDecimal(value: string): number | null {
 }
 
 export function readPropertyAreaUnit(value: string): PropertyAreaUnit {
-    return value === 'pyeong' ? 'pyeong' : 'squareMeter';
+    return value === 'pyeong' || value === '평' ? 'pyeong' : 'squareMeter';
 }
 
 export function convertPrivateAreaValue(value: string, fromUnit: PropertyAreaUnit, toUnit: PropertyAreaUnit): string {

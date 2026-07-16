@@ -29,6 +29,7 @@ type SidebarNavSectionProps = {
     readonly isExpanded: boolean;
     readonly isVisible?: boolean;
     readonly isFeatureEnabled: (key: CompanyMenuFeatureKey) => boolean;
+    readonly activeItems: readonly SidebarMenuItem[];
     readonly onToggle: () => void;
 };
 
@@ -95,6 +96,7 @@ export function SidebarNavSection({
     isExpanded,
     isVisible = true,
     isFeatureEnabled,
+    activeItems,
     onToggle
 }: SidebarNavSectionProps) {
     if (!isVisible) return null;
@@ -114,7 +116,7 @@ export function SidebarNavSection({
             <div className={styles.navGroup}>
                 <Link
                     href={item.url}
-                    className={`${styles.navGroupTitle} ${isSidebarItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
+                    className={`${styles.navGroupTitle} ${isSidebarItemActive(item, pathname, activeItems) ? styles.active : ''}`}
                     title={!isSidebarOpen ? section.collapsedTitle : undefined}
                 >
                     <div className={styles.navGroupLabel}>
@@ -145,7 +147,7 @@ export function SidebarNavSection({
                     {visibleItems.map((item, index) => {
                         const icon = renderLinkIcon(item.icon);
                         if (item.group || !item.url) {
-                            const isActiveGroup = getGroupChildren(visibleItems, index).some(child => isSidebarItemActive(child, pathname, visibleItems));
+                            const isActiveGroup = getGroupChildren(visibleItems, index).some(child => isSidebarItemActive(child, pathname, activeItems));
                             return (
                                 <div
                                     key={`group-${item.title}`}
@@ -164,7 +166,7 @@ export function SidebarNavSection({
                             <Link
                                 key={item.url}
                                 href={item.url}
-                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${isSidebarItemActive(item, pathname, visibleItems) ? styles.active : ''}`}
+                                className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${isSidebarItemActive(item, pathname, activeItems) ? styles.active : ''}`}
                             >
                                 {icon ? (
                                     <span className={styles.navSubLinkContent}>
