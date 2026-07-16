@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { RotateCcw, Search } from 'lucide-react';
+import type { WorkIntakeVisibleTab } from './types';
 import styles from './page.module.css';
 
 export type WorkIntakeFilterState = {
@@ -12,14 +13,19 @@ export type WorkIntakeFilterState = {
 };
 
 type Props = {
+    readonly activeTab: WorkIntakeVisibleTab;
     readonly filters: WorkIntakeFilterState;
     readonly onChangeAction: (filters: WorkIntakeFilterState) => void;
     readonly onResetAction: () => void;
 };
 
-const STATUS_OPTIONS = ['', '공실', '영업중', '신규', '검토중', '상담중', '계약가능', '보류'];
+const PROPERTY_STATUS_OPTIONS = ['', '공실', '영업중', '공사중', '확인 필요'];
+const LEAD_STATUS_OPTIONS = ['', '문의접수', '상담중', '가맹검토', '입지검토', '계약예정', '계약완료', '보류/이탈'];
 
 export function WorkIntakeFilters(props: Props) {
+    const statusOptions = props.activeTab === 'properties'
+        ? PROPERTY_STATUS_OPTIONS
+        : props.activeTab === 'deletedRecords' ? [''] : LEAD_STATUS_OPTIONS;
     const update = (patch: Partial<WorkIntakeFilterState>) => {
         props.onChangeAction({ ...props.filters, ...patch });
     };
@@ -34,8 +40,8 @@ export function WorkIntakeFilters(props: Props) {
                     placeholder="물건명, 주소, 이름, 연락처 검색"
                 />
             </label>
-            <select value={props.filters.status} onChange={event => update({ status: event.currentTarget.value })}>
-                {STATUS_OPTIONS.map(status => (
+            <select aria-label="상태" value={props.filters.status} onChange={event => update({ status: event.currentTarget.value })} disabled={props.activeTab === 'deletedRecords'}>
+                {statusOptions.map(status => (
                     <option key={status || 'all'} value={status}>{status || '전체 상태'}</option>
                 ))}
             </select>

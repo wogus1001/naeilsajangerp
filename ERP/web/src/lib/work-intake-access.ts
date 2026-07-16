@@ -15,7 +15,13 @@ function isSameCompanyTeamLead(requester: RequesterProfile, row: WorkIntakeAcces
 
 function isAuthor(requester: RequesterProfile, row: WorkIntakeAccessRow): boolean {
     const authorId = row.created_by || row.manager_id || null;
-    return Boolean(authorId && authorId === requester.id);
+    return Boolean(
+        authorId
+        && authorId === requester.id
+        && requester.company_id
+        && row.company_id
+        && requester.company_id === row.company_id
+    );
 }
 
 export function canEditWorkIntakeRecord(

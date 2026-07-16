@@ -909,6 +909,9 @@ export async function DELETE(request: Request) {
         if (forbidden) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company delete denied');
         }
+        if ((targets || []).some((target: LeadAccessTarget) => isMatchingRequestLead(target))) {
+            return fail(409, 'CONFLICT', '예비 창업자 등록은 진행현황 화면에서 삭제해주세요. 삭제 이력을 함께 보관합니다.');
+        }
 
         const { error, count } = await supabaseAdmin
             .from('franchise_leads')

@@ -600,6 +600,9 @@ export async function DELETE(request: Request) {
         if (isWorkIntakeProperty(targetProperty) && !canManageWorkIntakeRecord(requesterProfile, targetProperty)) {
             return fail(403, 'FORBIDDEN', '작성자, 회사 팀장 또는 관리자만 삭제할 수 있습니다.');
         }
+        if (isWorkIntakeProperty(targetProperty)) {
+            return fail(409, 'CONFLICT', '입점 요청은 진행현황 화면에서 삭제해주세요. 삭제 이력을 함께 보관합니다.');
+        }
         if (!isWorkIntakeProperty(targetProperty) && !isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && targetProperty.manager_id !== requesterProfile.id) {
             return fail(403, 'FORBIDDEN', 'Forbidden: property delete requires assigned manager or team lead');
         }

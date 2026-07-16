@@ -12,6 +12,7 @@ export type WorkIntakeQuery = {
     readonly to: string;
     readonly page: number;
     readonly pageSize: number;
+    readonly paginate: boolean;
 };
 
 type WorkIntakeFilterAdapter<T> = {
@@ -35,7 +36,19 @@ function readPositiveInteger(value: string | null, fallback: number): number {
 }
 
 function normalizeDate(value: string): string {
-    return cleanText(value).slice(0, 10);
+    const text = cleanText(value);
+    if (!text) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    const date = new Date(text);
+    if (Number.isNaN(date.getTime())) return text.slice(0, 10);
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date);
+    const values = new Map(parts.map(part => [part.type, part.value]));
+    return `${values.get('year')}-${values.get('month')}-${values.get('day')}`;
 }
 
 function isInDateRange(value: string, from: string, to: string): boolean {
@@ -59,7 +72,8 @@ export function parseWorkIntakeQuery(searchParams: URLSearchParams): WorkIntakeQ
         from: normalizeDate(cleanText(searchParams.get('from'))),
         to: normalizeDate(cleanText(searchParams.get('to'))),
         page: readPositiveInteger(searchParams.get('page'), DEFAULT_PAGE),
-        pageSize: Math.min(requestedPageSize, MAX_PAGE_SIZE)
+        pageSize: Math.min(requestedPageSize, MAX_PAGE_SIZE),
+        paginate: searchParams.has('page') || searchParams.has('pageSize')
     };
 }
 
@@ -73,11 +87,11 @@ export function paginateWorkIntakeItems<T>(
         if ((query.from || query.to) && !isInDateRange(adapter.getDate(item), query.from, query.to)) return false;
         return matchesSearch(adapter.getSearchFields(item), query.search);
     });
-    const pageCount = Math.max(1, Math.ceil(filtered.length / query.pageSize));
+    const pageCount = query.paginate ? Math.max(1, Math.ceil(filtered.length / query.pageSize)) : 1;
     const page = Math.min(query.page, pageCount);
     const start = (page - 1) * query.pageSize;
     return {
-        items: filtered.slice(start, start + query.pageSize),
+        items: query.paginate ? filtered.slice(start, start + query.pageSize) : filtered,
         meta: {
             page,
             pageSize: query.pageSize,

@@ -22,8 +22,8 @@ test('Given work intake records are deleted When invoking the API Then the snaps
     assert.equal(WORK_INTAKE_DELETE_RPC_NAME, 'delete_franchise_work_intake_record_with_snapshot');
 });
 
-test('Given delete history SQL is missing When deleting Then the route can use the legacy delete fallback', () => {
-    assert.equal(WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE, '삭제했습니다. 삭제 목록 저장 기능을 서버가 아직 인식하지 못해 삭제 이력은 저장되지 않았습니다. 잠시 후 다시 시도해주세요.');
+test('Given delete history SQL is missing When deleting Then the original record remains protected', () => {
+    assert.equal(WORK_INTAKE_DELETE_HISTORY_UNAVAILABLE_MESSAGE, '삭제 목록 저장 기능을 확인할 수 없어 삭제하지 않았습니다. SQL 적용 상태와 Supabase 스키마 캐시를 확인해주세요.');
     assert.equal(WORK_INTAKE_DELETE_HISTORY_FAILED_MESSAGE, '삭제 이력 저장 중 오류가 발생해 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.');
     assert.equal(isMissingWorkIntakeDeleteSnapshotRpcError({
         code: 'PGRST202',

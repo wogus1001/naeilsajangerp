@@ -66,6 +66,7 @@ export default function FranchiseWorkIntakePage() {
     const [message, setMessage] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(true);
     const [deletingId, setDeletingId] = React.useState('');
+    const requestSequence = React.useRef(0);
     const currentPage = pages[activeTab];
     const meta = data.meta || {
         properties: EMPTY_META,
@@ -76,11 +77,14 @@ export default function FranchiseWorkIntakePage() {
     const canSeeDeletedRecords = isAdminUser || data.isAdmin === true;
 
     const loadData = React.useCallback(async () => {
+        const sequence = ++requestSequence.current;
         const storedUser = getStoredUser();
         const nextRequesterId = getRequesterId(storedUser);
         if (!nextRequesterId) {
-            setMessage('로그인 정보를 확인할 수 없습니다.');
-            setIsLoading(false);
+            if (sequence === requestSequence.current) {
+                setMessage('로그인 정보를 확인할 수 없습니다.');
+                setIsLoading(false);
+            }
             return;
         }
         setRequesterId(nextRequesterId);
@@ -103,11 +107,15 @@ export default function FranchiseWorkIntakePage() {
             });
             const payload: unknown = await response.json();
             if (!response.ok) throw new Error(readApiError(payload));
-            setData(unwrapApiData<WorkIntakeData>(payload));
+            if (sequence === requestSequence.current) {
+                setData(unwrapApiData<WorkIntakeData>(payload));
+            }
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : '진행현황을 불러오지 못했습니다.');
+            if (sequence === requestSequence.current) {
+                setMessage(error instanceof Error ? error.message : '진행현황을 불러오지 못했습니다.');
+            }
         } finally {
-            setIsLoading(false);
+            if (sequence === requestSequence.current) setIsLoading(false);
         }
     }, [activeTab, currentPage, filters]);
 
@@ -152,6 +160,8 @@ export default function FranchiseWorkIntakePage() {
 
     const changeTab = (tab: WorkIntakeVisibleTab) => {
         setActiveTab(tab);
+        setFilters(EMPTY_FILTERS);
+        setPages(resetPages());
         setMessage('');
     };
     const changeFilters = (nextFilters: WorkIntakeFilterState) => {
@@ -191,7 +201,7 @@ export default function FranchiseWorkIntakePage() {
                 )}
             </section>
 
-            <WorkIntakeFilters filters={filters} onChangeAction={changeFilters} onResetAction={resetFilters} />
+            <WorkIntakeFilters activeTab={activeTab} filters={filters} onChangeAction={changeFilters} onResetAction={resetFilters} />
 
             {message && <p className={styles.message}>{message}</p>}
             {isLoading && <p className={styles.message}>목록을 불러오는 중입니다.</p>}

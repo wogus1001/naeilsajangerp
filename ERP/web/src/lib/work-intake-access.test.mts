@@ -35,6 +35,16 @@ test('Given record author or team lead checks delete access Then deletion is all
     assert.equal(canDeleteWorkIntakeRecord(requester('manager-1', 'manager'), row), true);
 });
 
+test('Given an author moved to another company When checking access Then the former company record stays protected', () => {
+    assert.equal(canEditWorkIntakeRecord(requester('author-1', 'staff', 'company-2'), row), false);
+    assert.equal(canDeleteWorkIntakeRecord(requester('author-1', 'staff', 'company-2'), row), false);
+});
+
+test('Given a non-admin has no company When checking access Then the record stays protected', () => {
+    assert.equal(canEditWorkIntakeRecord(requester('author-1', 'staff', ''), row), false);
+    assert.equal(canDeleteWorkIntakeRecord(requester('author-1', 'staff', ''), row), false);
+});
+
 test('Given admin checks work intake access Then edit and delete are allowed', () => {
     assert.equal(canEditWorkIntakeRecord(requester('admin-1', 'admin', 'company-2'), row), true);
     assert.equal(canDeleteWorkIntakeRecord(requester('admin-1', 'admin', 'company-2'), row), true);
