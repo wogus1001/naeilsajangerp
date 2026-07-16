@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
     isMissingWorkIntakeDeleteSnapshotRpcError,
@@ -16,6 +17,13 @@ test('Given admin deleted records are loaded When selecting rows Then audit fiel
     for (const field of ['kind', 'source_id', 'deleted_by', 'title', 'summary', 'snapshot', 'deleted_at']) {
         assert.match(WORK_INTAKE_DELETED_RECORD_SELECT, new RegExp(`(?:^|, )${field}(?:,|$)`));
     }
+});
+
+test('Given rows share the same timestamp at a database page boundary When loading batches Then every range query uses id as a deterministic tiebreaker', async () => {
+    const source = await readFile(new URL('./route.ts', import.meta.url), 'utf8');
+    const timestampOrders = source.match(/\.order\('(created_at|deleted_at)', \{ ascending: false \}\)\s*\.order\('id', \{ ascending: false \}\)/g) ?? [];
+
+    assert.equal(timestampOrders.length, 4);
 });
 
 test('Given work intake records are deleted When invoking the API Then the snapshot RPC is the delete contract', () => {

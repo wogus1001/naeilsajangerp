@@ -465,6 +465,7 @@ export async function GET(request: Request) {
                     .eq('operation_type', '물건등록')
                     .in('company_id', companyIds)
                     .order('created_at', { ascending: false })
+                    .order('id', { ascending: false })
                     .range(from, to);
                 if (restrictToOwnRecords) requestQuery = requestQuery.eq('manager_id', requester.id);
                 const { data, error } = await requestQuery.returns<PropertyRow[]>();
@@ -476,6 +477,7 @@ export async function GET(request: Request) {
                     .select('id, company_id, manager_id, created_by, name, mobile, source, status, grade, desired_region, interested_brand, budget_min, budget_max, memo, next_contact_at, promoted_lead_id, promoted_at, created_at, data')
                     .in('company_id', companyIds)
                     .order('created_at', { ascending: false })
+                    .order('id', { ascending: false })
                     .range(from, to);
                 if (restrictToOwnRecords) requestQuery = requestQuery.eq('created_by', requester.id);
                 const { data, error } = await requestQuery.returns<LeadLikeRow[]>();
@@ -494,6 +496,7 @@ export async function GET(request: Request) {
                     .eq('source', FRANCHISE_MATCHING_REQUEST_SOURCE)
                     .in('company_id', companyIds)
                     .order('created_at', { ascending: false })
+                    .order('id', { ascending: false })
                     .range(from, to);
                 if (restrictToOwnRecords) requestQuery = requestQuery.eq('created_by', requester.id);
                 const { data, error } = await requestQuery.returns<LeadLikeRow[]>();
@@ -506,6 +509,7 @@ export async function GET(request: Request) {
                         .select(WORK_INTAKE_DELETED_RECORD_SELECT)
                         .in('company_id', companyIds)
                         .order('deleted_at', { ascending: false })
+                        .order('id', { ascending: false })
                         .range(from, to);
                     if (resolvedCompanyId) requestQuery = requestQuery.eq('company_id', resolvedCompanyId);
                     const { data, error } = await requestQuery.returns<DeletedRecordRow[]>();
