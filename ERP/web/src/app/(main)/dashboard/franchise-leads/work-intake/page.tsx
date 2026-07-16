@@ -58,7 +58,6 @@ function joinParts(parts: readonly unknown[]): string {
 
 export default function FranchiseWorkIntakePage() {
     const { showConfirm } = useAppDialog();
-    const { showConfirm } = useAppDialog();
     const [data, setData] = React.useState<WorkIntakeData>(EMPTY_DATA);
     const [requesterId, setRequesterId] = React.useState('');
     const [activeTab, setActiveTab] = React.useState<WorkIntakeVisibleTab>('properties');
