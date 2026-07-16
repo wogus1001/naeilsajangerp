@@ -238,6 +238,16 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-16
+  - 작업 브랜치: `codex/work-intake-pagination-local-fix-20260716`, release 브랜치 `codex/work-intake-main-release-20260716`
+  - 기능 커밋: `a0d5a3b feat(franchise): 진행현황 삭제 목록 상세 확인 개선`, `0729bd2 fix(franchise): 진행현황 목록과 삭제 이력 보강`, `021a079 fix(franchise): 진행현황 범위 조회 정렬 안정화`
+  - 주요 기능: 진행현황의 검색·상태·기간 필터와 10건 페이지네이션, 관리자 전용 삭제 목록/상세 스냅샷, 작성자·팀장·관리자 수정/삭제 권한, 협력업체 본인 작성 건 제한을 반영했다. 삭제 이력 저장 실패 시 원본 삭제를 막고, 대량 조회는 timestamp와 `id`의 결정적 정렬로 페이지 누락을 방지한다.
+  - dev/main 반영: `dev` `a6faeb9`, `main` `82e3d88`. 양쪽 릴리즈 패치는 `git cherry` 기준 동등하며 각 worktree upstream은 일치한다.
+  - SQL: 사용자 확인 기준 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 2026-07-16 운영 DB에 적용했다. **SQL 등록 완료 확인**.
+  - 검증: 관련 테스트 29건, `tsc`, lint, build, `git diff --check` 통과. 1920px·390px Playwright QA에서 페이지 이동, 관리자 삭제 목록/상세, Escape 닫기, 가로 overflow 0, console error 0건을 확인했고 최종 gate review는 `PASS`였다.
+  - 배포: dev `dpl_3WSKohgdEMVu4nnaPXQw6vEc7hNj` READY, production `dpl_A97VMaSCEMDLLvj3uChWc5TF9MYS` READY. 운영 source는 `https://naeilsajang-b7tcy0o8l-jaehyuns-projects-b4d20c6f.vercel.app`이며 `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias를 확인했다.
+  - 남은 이슈: 운영 실계정으로 역할별 수정·삭제 권한과 삭제 이력 persistence를 확인한다.
+
 - 2026-07-13
   - 작업 브랜치: `codex/progress-request-map-gallery-20260713`
   - 기능 커밋: 이번 입점 요청 상세 지도·사진 탐색 커밋
