@@ -92,6 +92,7 @@ supabase_franchise_schedule_visibility_migration.sql
 supabase_franchise_source_schedule_upsert_migration.sql
 supabase_franchise_source_schedule_profile_security_migration.sql
 supabase_franchise_schedule_durable_sync_migration.sql
+supabase_franchise_schedule_durable_sync_review_fix_migration.sql
 supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_portal_migration.sql
 supabase_franchise_owner_company_login_scope.sql
@@ -107,7 +108,7 @@ supabase_realty_import_migration.sql
 
 가맹운영 원천 일정은 위 visibility migration 다음 `supabase_franchise_source_schedule_upsert_migration.sql`, `supabase_franchise_source_schedule_profile_security_migration.sql` 순서로 적용한다. 두 migration은 원천별 결정적 upsert와 활성 회사 직원·관리자 검증을 제공한다. 사용자 확인 기준 대상 DB에는 두 파일 모두 적용 완료됐다. **SQL 등록 완료 확인**.
 
-그 다음 `supabase_franchise_schedule_durable_sync_migration.sql`을 적용한다. 원천 일정과 수신자 알림을 한 트랜잭션에서 갱신하고, 일시 실패 작업을 재시도 큐에 보관하며, 매일 KST 자정에 지난 일정을 `지연`으로 재평가한다. **SQL 등록 필요**.
+그 다음 `supabase_franchise_schedule_durable_sync_migration.sql`을 적용한다. 원천 일정과 수신자 알림을 한 트랜잭션에서 갱신하고, 일시 실패 작업을 재시도 큐에 보관하며, 매일 KST 자정에 지난 일정을 `지연`으로 재평가한다. 사용자 확인 기준 대상 DB에 적용 완료됐다. 이어서 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 적용한다. 이 보완 파일은 최신 payload를 먼저 큐에 기록하고 고유 lease로 실행 권한을 검증해 오래된 worker의 덮어쓰기를 막으며, 재시도 시 수신자 자격과 RPC 실행 권한을 다시 확인한다. **보완 SQL 등록 필요**.
 
 ## Franchise Supervision Setup
 

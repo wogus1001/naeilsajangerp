@@ -1398,3 +1398,12 @@
 - 예약 실행 경계: 알림 목록 `GET /api/franchise-notifications`에서 Cron 분기를 제거했다. Vercel Cron은 `GET /api/franchise-notifications/cron` 전용 진입점이 인증 헤더를 보존해 `POST /api/franchise-notifications` 명령을 호출하며, 일정·알림 생성은 이 예약 명령에서만 실행한다. 로컬 production 서버에서 인증 없는 Cron 진입과 일반 목록 조회가 각각 401을 반환하고 DB 쓰기 전에 차단되는 것을 확인했다.
 - 마감 판정: 대표 원천이 `franchise_schedules`에 결정적 원천 키로 중복 없이 연결되고, 완료·취소·반려·재배정 수명주기와 KST 지연 경계가 테스트되며, 가맹운영 일정 화면과 점포개발·전사 일정 저장소의 분리가 mock-session QA로 확인돼 Phase 2 코드 완료 기준을 충족한다. 운영 마감은 프로필 보안 SQL 적용 확인 후 확정한다.
 - 후속 운영 고도화·검증: 과거 SV 파일럿 `schedules` 행의 이관·종료, 원천 저장 후 일정 동기화 실패를 영속 재처리할 outbox/reconciliation, 원천 변경 없이 KST 자정에 지연 상태를 재평가하는 실행기, 적용 DB 실계정 원천 회귀가 남아 있다. 잔여 기본 팝업 제거는 별도 UI 운영 고도화이고 1단계 문서함 실계정 QA는 dev/production 승격 전 별도 게이트다. 이 항목들은 Phase 2 코드 완료 판정을 되돌리지 않는다.
+
+# 2026-07-20 가맹운영 일정 2단계 내구성 최종 리뷰
+
+- 범위: 원천 저장 뒤 일정·알림 동기화를 최신 payload 우선 재처리 구조로 보강하고, 업체 계약 담당자 및 슈퍼바이징 원천의 회사 범위와 저장 응답 정합성을 재검토했다.
+- 실패 가설과 재현: (1) 이전 worker가 늦게 끝나 최신 payload를 덮어쓸 수 있다는 가설은 큐보다 RPC가 먼저 실행되는 실패 테스트로 재현했다. (2) 재시도 대기 중 수신자가 비활성화돼도 과거 수신자가 유지된다는 가설은 reconciliation 테스트로 재현했다. (3) 다른 회사 업체 계약 담당자와 SV 방문 원천에 대한 범위 검사가 부족하다는 가설은 helper 및 route 경계 테스트로 재현했다.
+- 수정: 모든 동기화는 최신 payload를 큐에 먼저 upsert하고 UUID lease와 갱신 시각을 RPC에 전달한다. SQL RPC는 advisory lock 안에서 현재 lease를 다시 확인해 오래된 worker를 no-op 처리하고, 성공한 동일 lease 작업만 트랜잭션에서 삭제한다. 재시도 직전 프로필 회사·활성 상태·역할을 다시 확인하며, 업체 계약 담당자와 SV 방문 삭제에도 회사 범위 검사를 적용했다.
+- 응답 정합성: 업체 계약과 슈퍼바이징 보고서의 원본 저장이 완료된 뒤 일정 동기화가 지연되면 원본 저장 자체를 500으로 오인하지 않도록 `scheduleSync` 또는 `scheduleSyncRequired`를 응답한다. 큐 저장까지 실패한 경우에는 실패 상태를 명시해 운영에서 재처리 필요 여부를 확인할 수 있다.
+- 자동 검증: 집중 테스트 56건, 전체 테스트 797건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 빌드에는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남고 실패는 없다.
+- SQL 상태: `supabase_franchise_schedule_durable_sync_migration.sql`은 사용자 확인 기준 적용 완료다. 기존 적용 환경에는 lease 컬럼·RPC·claim 함수·profile helper 권한을 최신 상태로 맞추는 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 추가 적용해야 한다. **SQL 등록 필요**.
