@@ -11,6 +11,12 @@ export default function FranchiseOwnerPortalPage() {
     const searchParams = useSearchParams();
     const controller = useFranchiseOperationsController();
     const selectedLocationId = searchParams.get('locationId') || '';
+    const selectedSubmissionId = searchParams.get('submissionId') || '';
+    const selectedChecklistView = searchParams.get('checklistView') === 'status' ? 'status' : undefined;
+    const requestedView = searchParams.get('view');
+    const selectedView = requestedView === 'checklists' || requestedView === 'submissions'
+        ? requestedView
+        : undefined;
 
     return (
         <div className={styles.pageShell}>
@@ -25,6 +31,9 @@ export default function FranchiseOwnerPortalPage() {
                         companyName={controller.companyName}
                         locations={controller.operationalLocations}
                         selectedLocationId={selectedLocationId}
+                        selectedSubmissionId={selectedSubmissionId}
+                        selectedChecklistView={selectedChecklistView}
+                        selectedView={selectedView}
                     />
                 </div>
             </section>

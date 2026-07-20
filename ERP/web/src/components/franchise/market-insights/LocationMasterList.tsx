@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ExternalLink, FileText, MessageSquare } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { ExportActions } from '@/components/franchise/ExportActions';
 import {
     buildNaverMapSearchUrl,
@@ -148,6 +149,7 @@ export function LocationMasterList({
     onEdit,
     onDelete
 }: LocationMasterListProps) {
+    const { showAlert } = useAppDialog();
     const [recordLocationId, setRecordLocationId] = React.useState('');
     const [messageSummaries, setMessageSummaries] = React.useState<ReadonlyMap<string, FranchiseLocationMessageSummary>>(
         () => new Map<string, FranchiseLocationMessageSummary>()
@@ -266,7 +268,11 @@ export function LocationMasterList({
             await action(buildExportPayload());
         } catch (error) {
             console.error('Failed to export franchise locations:', error);
-            window.alert(error instanceof Error ? error.message : '출점 후보지 추출에 실패했습니다.');
+            void showAlert({
+                message: error instanceof Error ? error.message : '출점 후보지 추출에 실패했습니다.',
+                title: '내보내기 실패',
+                type: 'error'
+            });
         }
     };
 
@@ -304,8 +310,16 @@ export function LocationMasterList({
                 <ExportActions
                     rowCount={sortedLocations.length}
                     onExcelAction={() => runExportAction(downloadTableAsXlsx)}
-                    onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
-                    onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
+                    onPdfAction={() => runExportAction(payload => openPrintableTable(
+                        payload,
+                        'pdf',
+                        message => void showAlert({ message, title: '팝업 차단', type: 'error' })
+                    ))}
+                    onPrintAction={() => runExportAction(payload => openPrintableTable(
+                        payload,
+                        'print',
+                        message => void showAlert({ message, title: '팝업 차단', type: 'error' })
+                    ))}
                 />
             </div>
 

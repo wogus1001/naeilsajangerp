@@ -75,8 +75,21 @@ export function rebuildDeletedAttachmentUrls(
         if (!archivedPublicUrl) return attachment;
         try {
             const archivedUrl = new URL(archivedPublicUrl);
+            const publicObjectPrefix = '/storage/v1/object/public/';
+            const encodedSegments = archivedUrl.pathname.startsWith(publicObjectPrefix)
+                ? archivedUrl.pathname.slice(publicObjectPrefix.length).split('/')
+                : [];
+            const decodedSegments = encodedSegments.map(segment => decodeURIComponent(segment));
+            const hasUnsafeSegment = decodedSegments.some(segment => !segment || segment === '.' || segment === '..');
+            const belongsToSource = decodedSegments[0] === 'property-images'
+                ? decodedSegments[1] === sourceId && decodedSegments.length > 2
+                : decodedSegments[0] === 'property-documents'
+                    && decodedSegments[1] === 'properties'
+                    && decodedSegments[2] === sourceId
+                    && decodedSegments.length > 3;
             const isTrustedStoredObject = archivedUrl.origin === storageOrigin
-                && archivedUrl.pathname.startsWith('/storage/v1/object/');
+                && !hasUnsafeSegment
+                && belongsToSource;
             return isTrustedStoredObject ? { ...attachment, publicUrl: archivedUrl.toString() } : attachment;
         } catch {
             return attachment;

@@ -103,10 +103,14 @@ ${summary}
 </html>`;
 }
 
-export function openPrintableTable(payload: TableExportPayload, mode: 'print' | 'pdf' = 'print'): void {
+export function openPrintableTable(
+    payload: TableExportPayload,
+    mode: 'print' | 'pdf',
+    onPopupBlocked: (message: string) => void
+): void {
     const printWindow = window.open('', '_blank', 'width=1200,height=800');
     if (!printWindow) {
-        window.alert('팝업이 차단되어 인쇄 화면을 열 수 없습니다. 브라우저 팝업 허용 후 다시 시도해주세요.');
+        onPopupBlocked('팝업이 차단되어 인쇄 화면을 열 수 없습니다. 브라우저 팝업 허용 후 다시 시도해주세요.');
         return;
     }
 

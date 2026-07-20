@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
@@ -32,6 +33,7 @@ const REALTY_IMPORT_LIMIT = 2000;
 const REALTY_LIST_LIMIT = 2000;
 
 export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
+    const { showAlert } = useAppDialog();
     const initialSelection = React.useMemo(
         () => parseRealtyRegionToSelection(initialRegionHint || '서울 광진구'),
         [initialRegionHint]
@@ -124,7 +126,7 @@ export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
         if (!userId) return;
         const region = (regionOverride || selectedRealtyRegion).trim();
         if (!region) {
-            window.alert('수집할 지역을 선택해주세요.');
+            void showAlert({ message: '수집할 지역을 선택해주세요.', type: 'info' });
             return;
         }
 
@@ -151,12 +153,24 @@ export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
             setSelectedSavedRegion(getRealtySavedRegionKeyFromText(region));
             await fetchSavedRealtyListings();
             if (data.job?.status === 'failed') {
-                window.alert('상가 수집이 완료되지 않았습니다. 수집 결과 영역의 오류/경고를 확인해주세요.');
+                void showAlert({
+                    message: '상가 수집이 완료되지 않았습니다. 수집 결과 영역의 오류/경고를 확인해주세요.',
+                    title: '상가 수집 확인 필요',
+                    type: 'error'
+                });
                 return;
             }
-            window.alert(`상가 수집을 완료했습니다. 신규수집 ${data.job?.createdCount || 0}건, 업데이트 ${data.job?.updatedCount || 0}건`);
+            void showAlert({
+                message: `신규수집 ${data.job?.createdCount || 0}건, 업데이트 ${data.job?.updatedCount || 0}건`,
+                title: '상가 수집 완료',
+                type: 'success'
+            });
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '외부 상가 수집 중 오류가 발생했습니다.');
+            void showAlert({
+                message: error instanceof Error ? error.message : '외부 상가 수집 중 오류가 발생했습니다.',
+                title: '상가 수집 실패',
+                type: 'error'
+            });
         } finally {
             setIsRealtyImporting(false);
         }
@@ -177,7 +191,11 @@ export function RealtyImportPanel({ userId, initialRegionHint = '' }: Props) {
             if (!response.ok) throw new Error(readApiError(payload));
         } catch (error) {
             setAllSavedRealtyListings(prev => mergeFavorite(prev, listing.id, !nextFavorite));
-            window.alert(error instanceof Error ? error.message : '별표 저장 중 오류가 발생했습니다.');
+            void showAlert({
+                message: error instanceof Error ? error.message : '별표 저장 중 오류가 발생했습니다.',
+                title: '별표 저장 실패',
+                type: 'error'
+            });
         } finally {
             setFavoriteUpdatingId('');
         }

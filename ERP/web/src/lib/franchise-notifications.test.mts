@@ -6,7 +6,11 @@ import {
     buildDisclosureEmailSentAlimtalkVariables
 } from './alimtalk-event-notifications.js';
 import { buildLeadDisclosureSummary } from './franchise-lead-disclosure-summary.js';
-import { buildAutomaticFranchiseNotifications } from './franchise-notifications.js';
+import {
+    buildAutomaticFranchiseNotifications,
+    sanitizeNotificationLeadManagers,
+    transformFranchiseNotification
+} from './franchise-notifications.js';
 import { buildVendorContractNotifications } from './franchise-vendor-contract-notifications.js';
 
 const baseLead = {
@@ -17,6 +21,43 @@ const baseLead = {
     status: '상담중',
     grade: 'WARM'
 } as const;
+
+test('Given a lead manager belongs to another company When sanitizing recipients Then no notification recipient remains', () => {
+    const leads = sanitizeNotificationLeadManagers([baseLead], [{
+        companyId: 'company-2',
+        id: 'profile-1',
+        role: 'manager',
+        status: 'active'
+    }]);
+
+    assert.equal(leads[0]?.managerId, null);
+    assert.deepEqual(buildAutomaticFranchiseNotifications(leads), []);
+});
+
+test('transformFranchiseNotification preserves unknown operational sources as system notifications', () => {
+    const notification = transformFranchiseNotification({
+        id: 'notification-1',
+        company_id: 'company-1',
+        recipient_profile_id: 'profile-1',
+        source_type: 'future-platform-source',
+        source_id: 'source-1',
+        lead_id: null,
+        severity: 'info',
+        title: '시스템 안내',
+        body: '확인이 필요합니다.',
+        action_url: '/dashboard',
+        due_at: null,
+        read_at: null,
+        dismissed_at: null,
+        delivery_channel: 'in_app',
+        kakao_template_key: null,
+        data: {},
+        created_at: '2026-07-15T00:00:00.000Z',
+        updated_at: '2026-07-15T00:00:00.000Z'
+    });
+
+    assert.equal(notification.sourceType, 'system');
+});
 
 test('buildAutomaticFranchiseNotifications creates disclosure D-3 reminder', () => {
     const disclosureSummary = buildLeadDisclosureSummary([

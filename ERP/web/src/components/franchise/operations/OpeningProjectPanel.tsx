@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { RefreshCw, Save, Trash2 } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     OPENING_PROJECT_STATUSES,
     buildDefaultOpeningProjectTasks,
@@ -46,6 +47,7 @@ function patchDraftTask(
 }
 
 export function OpeningProjectPanel({ userId, companyName, locations }: OpeningProjectPanelProps) {
+    const { showAlert, showConfirm } = useAppDialog();
     const openingLocations = React.useMemo(
         () => locations.filter(location => location.status === '오픈준비'),
         [locations]
@@ -109,14 +111,19 @@ export function OpeningProjectPanel({ userId, companyName, locations }: OpeningP
             setProjects(current => [project, ...current.filter(item => item.id !== project.id)]);
             setDrafts(current => ({ ...current, [location.id]: toDraft(location, project) }));
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '오픈 준비 프로젝트 저장 중 오류가 발생했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '오픈 준비 프로젝트 저장 중 오류가 발생했습니다.', type: 'error' });
         } finally {
             setSavingLocationId('');
         }
     };
 
     const deleteProject = async (location: FranchiseLocation, project: FranchiseOpeningProject) => {
-        const confirmed = window.confirm(`${location.name} 오픈 준비 프로젝트를 삭제할까요? 가맹점 마스터는 삭제되지 않습니다.`);
+        const confirmed = await showConfirm({
+            title: '오픈 준비 프로젝트 삭제',
+            message: `${location.name} 오픈 준비 프로젝트를 삭제할까요? 가맹점 마스터는 삭제되지 않습니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
         setDeletingProjectId(project.id);
         try {
@@ -124,7 +131,7 @@ export function OpeningProjectPanel({ userId, companyName, locations }: OpeningP
             setProjects(current => current.filter(item => item.id !== project.id));
             setDrafts(current => ({ ...current, [location.id]: toDraft(location) }));
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '오픈 준비 프로젝트 삭제 중 오류가 발생했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '오픈 준비 프로젝트 삭제 중 오류가 발생했습니다.', type: 'error' });
         } finally {
             setDeletingProjectId('');
         }

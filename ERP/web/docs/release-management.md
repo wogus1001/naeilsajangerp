@@ -243,10 +243,10 @@ YYYY-MM-DD
   - 기능 커밋: `a0d5a3b feat(franchise): 진행현황 삭제 목록 상세 확인 개선`, `0729bd2 fix(franchise): 진행현황 목록과 삭제 이력 보강`, `021a079 fix(franchise): 진행현황 범위 조회 정렬 안정화`
   - 주요 기능: 진행현황의 검색·상태·기간 필터와 10건 페이지네이션, 관리자 전용 삭제 목록/상세 스냅샷, 작성자·팀장·관리자 수정/삭제 권한, 협력업체 본인 작성 건 제한을 반영했다. 삭제 이력 저장 실패 시 원본 삭제를 막고, 대량 조회는 timestamp와 `id`의 결정적 정렬로 페이지 누락을 방지한다.
   - 후속 보정: 관리자 삭제 목록의 `상세 확인`은 삭제 당시 전체 row 스냅샷을 원본 진행현황 확인 폼으로 복원해 모든 등록 항목을 읽기 전용으로 표시한다. 사이드바 활성 판정은 전체 메뉴의 최장 일치 URL을 기준으로 바꿔 `업무 > 진행현황`과 `프랜차이즈 > 모객 DB`가 동시에 선택되는 상태를 제거했다.
-  - dev/main 반영: `dev` `a6faeb9`, `main` `82e3d88`. 양쪽 릴리즈 패치는 `git cherry` 기준 동등하며 각 worktree upstream은 일치한다.
+  - 반영 상태: 검색·삭제 이력 기반 기능은 `main` `82e3d88`까지 반영됐다. 후속 상세·메뉴 보정은 `dev` `7c1a143`에서 QA를 마쳤고, legacy URL-only 첨부의 교차 원본 연결 차단까지 포함한 `origin/main` 기반 release `c85bf36`을 main/production 승격 후보로 사용한다.
   - SQL: 사용자 확인 기준 최신 `supabase_franchise_work_intake_deleted_records_migration.sql`을 2026-07-16 운영 DB에 적용했다. **SQL 등록 완료 확인**.
-  - 검증: 관련 테스트 29건과 후속 보정 회귀 테스트 14건, `tsc`, lint, build, `git diff --check` 통과. 1920px·1440px·390px Playwright QA에서 페이지 이동, 관리자 삭제 목록의 전체 form 상세, 과거 선택값·면적 단위 보존, 메뉴 단일 활성, Escape 닫기, 가로 overflow 0, console error 0건을 확인했다. 첨부 경로 이탈 차단, 과거 상태 원문 표시, 숨김 메뉴 활성 판정을 보정한 뒤 최종 gate review는 `PASS`였다.
-  - 배포: dev `dpl_3WSKohgdEMVu4nnaPXQw6vEc7hNj` READY, production `dpl_A97VMaSCEMDLLvj3uChWc5TF9MYS` READY. 운영 source는 `https://naeilsajang-b7tcy0o8l-jaehyuns-projects-b4d20c6f.vercel.app`이며 `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias를 확인했다.
+  - 검증: 기반 기능 관련 테스트 29건과 후속 보정 회귀 테스트 16건, `tsc`, lint, build, `git diff --check` 통과. 후속 보정의 1440px·390px mock browser QA에서 관리자 삭제 목록의 전체 form 상세, 과거 선택값·면적 단위 보존, 메뉴 단일 활성, 읽기 전용 fieldset, 가로 overflow 0, console error 0건을 확인했다. 첨부 경로 이탈 및 legacy URL-only 첨부의 교차 원본 연결 차단, 과거 상태 원문 표시, 숨김 메뉴 활성 판정도 테스트로 검증했다.
+  - 배포: dev preview `dpl_FEWEFHzvnDbD3kehbD4tQQkMQsHa`와 release `c85bf36` preview `dpl_5b7MS7Cikc1k4odMVWDs6Qui1eE6`가 `Ready`다. main PR과 production 배포는 최종 review gate 통과 후 진행한다.
   - 남은 이슈: 운영 실계정으로 역할별 수정·삭제 권한과 삭제 이력 persistence를 확인한다.
 
 - 2026-07-13
@@ -760,3 +760,11 @@ YYYY-MM-DD
 - 검증: PDF 집중 테스트 9건, 전체 자동 테스트 727건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 문서 상세에서 실제 다운로드와 console error 0건을 확인하고, macOS 미리보기와 PDF 렌더링으로 최신 파일이 빈 페이지가 아님을 확인했다.
 - 승격: 최신 `dev`의 보안·일정 보정을 유지한 상태에서 PDF 다운로드 최종 리뷰 사항과 릴리즈 문서를 반영하고, protected branch PR/check 절차로 `main`에 승격한 뒤 `naeilsajang` production을 Fast Release Runbook으로 배포한다. 최종 커밋, deployment ID와 운영 도메인 smoke 결과는 배포 보고에 남긴다.
 - SQL 적용 순서: 최신 `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` -> 최신 `supabase_franchise_schedule_visibility_migration.sql`. 문서·첨부 RLS와 알림 조회·읽음 처리도 현재 유효한 위임 및 결재 단계만 허용하도록 마지막 두 파일을 보강했다. PDF 보정 자체의 신규 SQL은 없지만 같은 릴리즈의 권한 정책 변경 때문에 최신 파일 기준으로 다시 적용한다. **SQL 재등록 필요**.
+
+## 2026-07-20 가맹운영 일정 2단계 내구성 마감 준비
+
+- 작업 브랜치: `codex/phase2-main-integration-20260716`.
+- 범위: 원천 일정 동기화의 큐 선기록, UUID lease 기반 최신 작업 보호, 재시도 수신자 재검증, 업체 계약 담당자 및 슈퍼바이징 회사 범위, 원본 저장 후 일정 동기화 결과 응답을 보강한다.
+- 검증: 집중 테스트 56건, 전체 테스트 797건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- SQL 적용 순서: 최신 `supabase_franchise_schedule_visibility_migration.sql` -> `supabase_franchise_source_schedule_upsert_migration.sql` -> `supabase_franchise_source_schedule_profile_security_migration.sql` -> `supabase_franchise_schedule_durable_sync_migration.sql` -> `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`. 사용자 확인 기준 기본 durable migration까지 적용 완료이며 마지막 리뷰 보완 파일은 추가 적용해야 한다. **SQL 등록 필요**.
+- 승격 상태: 보완 SQL 적용 확인 후 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 진행한다. dev와 production DB가 분리돼 있으면 두 환경에 같은 보완 SQL이 적용됐는지 각각 확인한다.

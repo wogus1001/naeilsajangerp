@@ -13,6 +13,7 @@ import {
 } from '@/lib/franchise-supervision-api';
 import { mergeInspectionItems, nextReportStatus, normalizeReportStatus } from '@/lib/franchise-supervision';
 import {
+    captureCorrectiveActionPostProcessing,
     fetchReportTemplateItems,
     fetchVisit,
     hasField,
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
         );
         const specialNote = cleanString(getFirst(body, ['specialNote', 'special_note'])) || null;
         const rejectReason = cleanString(getFirst(body, ['rejectReason', 'reject_reason'])) || null;
-        await syncSupervisionReportWorkflow({
+        const workflowSync = await syncSupervisionReportWorkflow({
             actorProfileId: authResult.auth.requester.id,
             companyId: visit.company_id,
             eventType,
@@ -96,23 +97,24 @@ export async function POST(request: Request) {
             supervisorProfileId: visit.supervisor_profile_id,
             supabaseAdmin: authResult.auth.supabaseAdmin
         });
-        if (nextStatus === '제출') {
-            try {
-                await insertCorrectiveActions({
-                    assigneeProfileId: visit.supervisor_profile_id,
-                    companyId: visit.company_id,
-                    createdBy: authResult.auth.requester.id,
-                    items,
-                    locationId: visit.location_id,
-                    locationName: readVisitLocationName(visit),
-                    reportId,
-                    supabaseAdmin: authResult.auth.supabaseAdmin
-                });
-            } catch (error) {
-                console.error('Supervision corrective action sync deferred after report submission:', error);
-            }
-        }
-        return ok({ id: reportId }, 201);
+        const correctiveSync = nextStatus === '제출'
+            ? await captureCorrectiveActionPostProcessing(() => insertCorrectiveActions({
+                assigneeProfileId: visit.supervisor_profile_id,
+                companyId: visit.company_id,
+                createdBy: authResult.auth.requester.id,
+                items,
+                locationId: visit.location_id,
+                locationName: readVisitLocationName(visit),
+                reportId,
+                supabaseAdmin: authResult.auth.supabaseAdmin
+            }))
+            : { scheduleSyncRequiredCount: 0, warning: null };
+        return ok({
+            id: reportId,
+            scheduleSyncRequired: workflowSync.status === 'failed'
+                || correctiveSync.scheduleSyncRequiredCount > 0,
+            warning: correctiveSync.warning || undefined
+        }, 201);
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_TEMPLATE_NOT_FOUND') {
             return fail(400, 'VALIDATION_ERROR', '점검 템플릿을 찾을 수 없습니다.');
@@ -169,13 +171,30 @@ export async function PATCH(request: Request) {
             const visit = existing.visit_id
                 ? await fetchVisit({ id: existing.visit_id, supabaseAdmin: authResult.auth.supabaseAdmin })
                 : null;
-            await reconcileSubmittedSupervisionReport({
+            const workflowSync = await reconcileSubmittedSupervisionReport({
                 actorProfileId: authResult.auth.requester.id,
                 report: existing,
                 supabaseAdmin: authResult.auth.supabaseAdmin,
                 visit
             });
-            return ok({ success: true, id: existing.id, status: currentStatus });
+            const correctiveSync = await captureCorrectiveActionPostProcessing(() => insertCorrectiveActions({
+                assigneeProfileId: existing.supervisor_profile_id,
+                companyId: existing.company_id,
+                createdBy: authResult.auth.requester.id,
+                items: mergeInspectionItems(existing.inspection_items),
+                locationId: existing.location_id,
+                locationName: readVisitLocationName(visit),
+                reportId: existing.id,
+                supabaseAdmin: authResult.auth.supabaseAdmin
+            }));
+            return ok({
+                success: true,
+                id: existing.id,
+                status: currentStatus,
+                scheduleSyncRequired: workflowSync.status === 'failed'
+                    || correctiveSync.scheduleSyncRequiredCount > 0,
+                warning: correctiveSync.warning || undefined
+            });
         }
         if (nextStatus === currentStatus && event.kind !== 'saveDraft') {
             return fail(409, 'VALIDATION_ERROR', '현재 보고서 상태에서는 요청한 처리를 할 수 없습니다.');
@@ -218,7 +237,7 @@ export async function PATCH(request: Request) {
         const visit = existing.visit_id
             ? await fetchVisit({ id: existing.visit_id, supabaseAdmin: authResult.auth.supabaseAdmin })
             : null;
-        await syncSupervisionReportWorkflow({
+        const workflowSync = await syncSupervisionReportWorkflow({
             actorProfileId: authResult.auth.requester.id,
             companyId: existing.company_id,
             eventType,
@@ -250,23 +269,24 @@ export async function PATCH(request: Request) {
             supervisorProfileId: existing.supervisor_profile_id,
             supabaseAdmin: authResult.auth.supabaseAdmin
         });
-        if (nextStatus === '제출') {
-            try {
-                await insertCorrectiveActions({
-                    assigneeProfileId: existing.supervisor_profile_id,
-                    companyId: existing.company_id,
-                    createdBy: authResult.auth.requester.id,
-                    items,
-                    locationId: existing.location_id,
-                    locationName: readVisitLocationName(visit),
-                    reportId: existing.id,
-                    supabaseAdmin: authResult.auth.supabaseAdmin
-                });
-            } catch (error) {
-                console.error('Supervision corrective action sync deferred after report submission:', error);
-            }
-        }
-        return ok({ success: true });
+        const correctiveSync = nextStatus === '제출'
+            ? await captureCorrectiveActionPostProcessing(() => insertCorrectiveActions({
+                assigneeProfileId: existing.supervisor_profile_id,
+                companyId: existing.company_id,
+                createdBy: authResult.auth.requester.id,
+                items,
+                locationId: existing.location_id,
+                locationName: readVisitLocationName(visit),
+                reportId: existing.id,
+                supabaseAdmin: authResult.auth.supabaseAdmin
+            }))
+            : { scheduleSyncRequiredCount: 0, warning: null };
+        return ok({
+            success: true,
+            scheduleSyncRequired: workflowSync.status === 'failed'
+                || correctiveSync.scheduleSyncRequiredCount > 0,
+            warning: correctiveSync.warning || undefined
+        });
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_TEMPLATE_NOT_FOUND') {
             return fail(400, 'VALIDATION_ERROR', '점검 템플릿을 찾을 수 없습니다.');

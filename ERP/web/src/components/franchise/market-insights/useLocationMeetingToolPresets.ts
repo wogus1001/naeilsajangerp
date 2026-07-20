@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     applyMeetingToolPreset,
     type MeetingToolCostKey,
@@ -31,6 +32,7 @@ export function useLocationMeetingToolPresets({
     setRatioInputValues,
     setMessage
 }: UseLocationMeetingToolPresetsParams) {
+    const { showConfirm } = useAppDialog();
     const [presets, setPresets] = React.useState<readonly MeetingToolPreset[]>([]);
     const [selectedPresetId, setSelectedPresetId] = React.useState('');
     const [presetName, setPresetName] = React.useState('');
@@ -117,7 +119,13 @@ export function useLocationMeetingToolPresets({
 
     const deletePreset = async () => {
         if (!selectedPresetId) return;
-        if (!window.confirm('선택한 분석표 프리셋을 삭제할까요?')) return;
+        const confirmed = await showConfirm({
+            message: '선택한 분석표 프리셋을 삭제할까요?',
+            title: '분석표 프리셋 삭제',
+            confirmText: '삭제',
+            isDanger: true
+        });
+        if (!confirmed) return;
         setPresetSaving(true);
         setMessage('');
         try {

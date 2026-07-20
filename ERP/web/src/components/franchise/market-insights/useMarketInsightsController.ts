@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { buildMarketInsights, normalizeRegion } from '@/lib/franchise-market-insights';
@@ -31,6 +32,7 @@ import { useMarketInsightIdentity } from './useMarketInsightIdentity';
 import { useMarketInsightNavigation } from './useMarketInsightNavigation';
 
 export function useMarketInsightsController() {
+    const { showAlert, showConfirm } = useAppDialog();
     const { activeMarketTab, activeMarketView, selectMarketTab, selectMarketView } = useMarketInsightNavigation();
     const { userId, companyName, currentUserName, currentUserRole } = useMarketInsightIdentity();
     const { managerOptions, isManagerLoading, defaultManagerId } = useLocationManagers({
@@ -67,7 +69,7 @@ export function useMarketInsightsController() {
         } catch (error) {
             if (error instanceof Error) {
                 console.error('Failed to fetch market insight data:', error);
-                window.alert(error.message);
+                void showAlert({ message: error.message, title: '후보지 정보 조회 실패', type: 'error' });
             } else {
                 throw error;
             }
@@ -76,7 +78,7 @@ export function useMarketInsightsController() {
         } finally {
             setIsLoading(false);
         }
-    }, [companyName, userId]);
+    }, [companyName, showAlert, userId]);
 
     React.useEffect(() => {
         if (!userId) return;
@@ -147,11 +149,11 @@ export function useMarketInsightsController() {
     const saveFranchiseLocation = async () => {
         if (!userId) return;
         if (!locationForm.name.trim()) {
-            window.alert('후보지명을 입력해주세요.');
+            void showAlert({ message: '후보지명을 입력해주세요.', type: 'info' });
             return;
         }
         if (!locationForm.region.trim() && !locationForm.address.trim()) {
-            window.alert('지역 또는 주소를 입력해주세요.');
+            void showAlert({ message: '지역 또는 주소를 입력해주세요.', type: 'info' });
             return;
         }
         setIsLocationSaving(true);
@@ -165,9 +167,13 @@ export function useMarketInsightsController() {
             await saveBrandMaster({ userId, companyName, form: locationForm });
             resetLocationForm();
             await fetchInsightData();
-            window.alert(locationForm.id ? '출점 후보지를 수정했습니다.' : '출점 후보지를 등록했습니다.');
+            void showAlert({
+                message: locationForm.id ? '출점 후보지를 수정했습니다.' : '출점 후보지를 등록했습니다.',
+                title: locationForm.id ? '후보지 수정 완료' : '후보지 등록 완료',
+                type: 'success'
+            });
         } catch (error) {
-            if (error instanceof Error) window.alert(error.message);
+            if (error instanceof Error) void showAlert({ message: error.message, title: '후보지 저장 실패', type: 'error' });
             else throw error;
         } finally {
             setIsLocationSaving(false);
@@ -176,15 +182,21 @@ export function useMarketInsightsController() {
 
     const deleteFranchiseLocation = async (location: FranchiseLocation) => {
         if (!userId) return;
-        if (!window.confirm(`${location.name} 후보지를 삭제할까요? 기존 모객DB 데이터는 삭제되지 않습니다.`)) return;
+        const confirmed = await showConfirm({
+            message: `${location.name} 후보지를 삭제할까요? 기존 모객DB 데이터는 삭제되지 않습니다.`,
+            title: '출점 후보지 삭제',
+            confirmText: '삭제',
+            isDanger: true
+        });
+        if (!confirmed) return;
         setDeletingLocationId(location.id);
         try {
             await deleteFranchiseLocationRequest({ userId, companyName, locationId: location.id });
             if (locationForm.id === location.id) resetLocationForm();
             await fetchInsightData();
-            window.alert('출점 후보지를 삭제했습니다.');
+            void showAlert({ message: '출점 후보지를 삭제했습니다.', title: '삭제 완료', type: 'success' });
         } catch (error) {
-            if (error instanceof Error) window.alert(error.message);
+            if (error instanceof Error) void showAlert({ message: error.message, title: '후보지 삭제 실패', type: 'error' });
             else throw error;
         } finally {
             setDeletingLocationId('');
@@ -195,16 +207,16 @@ export function useMarketInsightsController() {
         if (!userId) return;
         const query = getCompetitionKeyword(location);
         if (!query) {
-            window.alert('경쟁스캔 키워드를 입력해주세요. 예: 한식, 고기집, 카페, 치킨');
+            void showAlert({ message: '경쟁스캔 키워드를 입력해주세요. 예: 한식, 고기집, 카페, 치킨', type: 'info' });
             return;
         }
         setScanningLocationId(location.id);
         try {
             await scanLocationCompetitorsRequest({ userId, companyName, locationId: location.id, query });
             await fetchInsightData();
-            window.alert('주변 경쟁업체 스캔을 완료했습니다.');
+            void showAlert({ message: '주변 경쟁업체 스캔을 완료했습니다.', title: '경쟁업체 스캔 완료', type: 'success' });
         } catch (error) {
-            if (error instanceof Error) window.alert(error.message);
+            if (error instanceof Error) void showAlert({ message: error.message, title: '경쟁업체 스캔 실패', type: 'error' });
             else throw error;
         } finally {
             setScanningLocationId('');

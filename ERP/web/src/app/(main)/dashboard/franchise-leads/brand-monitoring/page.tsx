@@ -14,6 +14,7 @@ import {
     TrendingUp
 } from 'lucide-react';
 import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import {
@@ -160,6 +161,7 @@ function getDeltaClass(value: number | null | undefined) {
 }
 
 export default function FranchiseBrandMonitoringPage() {
+    const { showConfirm } = useAppDialog();
     const [user, setUser] = React.useState<AuthUser | null>(null);
     const [brandName, setBrandName] = React.useState('');
     const [brandId, setBrandId] = React.useState<string | null>(null);
@@ -288,7 +290,13 @@ export default function FranchiseBrandMonitoringPage() {
 
     const deleteWatch = async (watchId: string) => {
         if (!user || !requesterId) return;
-        if (!window.confirm('감시목록에서 제거할까요? 기존 스냅샷은 유지됩니다.')) return;
+        const confirmed = await showConfirm({
+            title: '감시목록에서 제거',
+            message: '감시목록에서 제거할까요? 기존 스냅샷은 유지됩니다.',
+            confirmText: '제거',
+            isDanger: true
+        });
+        if (!confirmed) return;
 
         try {
             const params = new URLSearchParams({ id: watchId, requesterId });

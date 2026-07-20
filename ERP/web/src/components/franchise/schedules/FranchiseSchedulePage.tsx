@@ -11,6 +11,7 @@ import {
     FRANCHISE_SCHEDULES_API_PATH,
     buildFranchiseScheduleViewModel,
     getFranchiseScheduleMutationPath,
+    getFranchiseScheduleSourceLabel,
     toDateKey
 } from './franchiseScheduleViewModel';
 import type {
@@ -25,25 +26,22 @@ import { getFranchiseScheduleResponseFailure, useFranchiseScheduleData } from '.
 import styles from './FranchiseSchedulePage.module.css';
 
 const STATUS_FILTERS: readonly ('all' | FranchiseScheduleStatus)[] = ['all', '예정', '진행중', '완료', '지연'];
-const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = ['all', 'manual', 'approval-document', 'supervision-visit', 'report'];
+const SOURCE_FILTERS: readonly ('all' | FranchiseScheduleSource)[] = [
+    'all',
+    'manual',
+    'supervision-visit',
+    'supervision-report',
+    'supervision-corrective-action',
+    'opening-project',
+    'owner-general-request',
+    'owner-facility-request',
+    'owner-checklist-completion',
+    'vendor-contract-renewal',
+    'disclosure-contract-eligible'
+];
 const VISIBILITY_FILTERS: readonly ('all' | FranchiseScheduleVisibility)[] = ['all', 'shared', 'personal'];
 const EMPTY_FORM: ScheduleFormValue = { id: '', title: '', date: toDateKey(new Date()), status: '예정', visibility: 'shared', assigneeProfileId: '', details: '' };
 type ScheduleAlert = { readonly message: string; readonly type: 'success' | 'error' };
-
-function getSourceLabel(source: FranchiseScheduleSource): string {
-    switch (source) {
-        case 'manual':
-            return '수동';
-        case 'approval-document':
-            return '결재';
-        case 'supervision-visit':
-            return 'SV 방문';
-        case 'report':
-            return '보고서';
-        case 'corrective-action':
-            return '시정조치';
-    }
-}
 
 function getSelectedStatus(value: string): FranchiseScheduleStatus {
     return value === '진행중' || value === '완료' || value === '지연' || value === '취소' ? value : '예정';
@@ -54,7 +52,17 @@ function getSelectedStatusFilter(value: string): 'all' | FranchiseScheduleStatus
 }
 
 function getSelectedSourceFilter(value: string): 'all' | FranchiseScheduleSource {
-    if (value === 'approval-document' || value === 'supervision-visit' || value === 'report' || value === 'corrective-action') return value;
+    if (
+        value === 'supervision-visit'
+        || value === 'supervision-report'
+        || value === 'supervision-corrective-action'
+        || value === 'opening-project'
+        || value === 'owner-general-request'
+        || value === 'owner-facility-request'
+        || value === 'owner-checklist-completion'
+        || value === 'vendor-contract-renewal'
+        || value === 'disclosure-contract-eligible'
+    ) return value;
     return value === 'manual' ? 'manual' : 'all';
 }
 
@@ -70,7 +78,7 @@ function getFormValue(item: FranchiseScheduleItem): ScheduleFormValue {
     };
 }
 
-export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approvalDocumentId: string }) {
+export function FranchiseSchedulePage() {
     const [monthDate, setMonthDate] = React.useState(new Date());
     const { items, assignees, assigneesLoading, assigneesError, requesterProfileId, state, message, reloadSchedules } = useFranchiseScheduleData(monthDate);
     const [selectedDate, setSelectedDate] = React.useState(toDateKey(new Date()));
@@ -80,7 +88,7 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
     const [alert, setAlert] = React.useState<ScheduleAlert | null>(null);
     const [saving, setSaving] = React.useState(false);
 
-    const model = buildFranchiseScheduleViewModel({ items, filters, selectedDate, monthDate, state, approvalDocumentId, message });
+    const model = buildFranchiseScheduleViewModel({ items, filters, selectedDate, monthDate, state, message });
 
     const persist = async (method: 'POST' | 'PATCH' | 'DELETE', body: Readonly<Record<string, string>>) => {
         setSaving(true);
@@ -124,7 +132,7 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                 <div>
                     <span className={styles.eyebrow}>가맹 운영</span>
                     <h1>일정관리</h1>
-                    <p>결재, 슈퍼바이징, 수동 운영 일정을 한 달 단위로 확인합니다.</p>
+                    <p>가맹운영 일정을 한 달 단위로 확인합니다. 전자결재는 상단 알림에서 확인하세요.</p>
                 </div>
                 <button className={styles.primaryButton} type="button" onClick={() => setForm({ ...EMPTY_FORM, date: model.selectedDate })}>
                     <Plus size={16} /> 수동 일정 등록
@@ -142,7 +150,7 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                     const source = getSelectedSourceFilter(event.currentTarget.value);
                     setFilters(current => ({ ...current, source }));
                 }}>
-                    {SOURCE_FILTERS.map(source => <option key={source} value={source}>{source === 'all' ? '전체 유형' : getSourceLabel(source)}</option>)}
+                    {SOURCE_FILTERS.map(source => <option key={source} value={source}>{source === 'all' ? '전체 유형' : getFranchiseScheduleSourceLabel(source)}</option>)}
                 </select>
                 <select value={filters.visibility} onChange={event => {
                     const value = event.currentTarget.value;
@@ -166,12 +174,11 @@ export function FranchiseSchedulePage({ approvalDocumentId }: { readonly approva
                         <button className={styles.iconButton} type="button" title="다음 달" onClick={() => monthStep(1)}><ChevronRight size={18} /></button>
                         <button className={styles.todayButton} type="button" onClick={goToday}>오늘</button>
                     </div>
-                    <FranchiseScheduleCalendar monthDate={monthDate} selectedDate={model.selectedDate} items={model.filteredItems} focusId={model.focusId} onSelectDate={setSelectedDate} />
+                    <FranchiseScheduleCalendar monthDate={monthDate} selectedDate={model.selectedDate} items={model.filteredItems} onSelectDate={setSelectedDate} />
                 </div>
                 <FranchiseScheduleDayList
                     selectedDate={model.selectedDate}
                     items={model.selectedItems}
-                    focusId={model.focusId}
                     onCreate={() => setForm({ ...EMPTY_FORM, date: model.selectedDate })}
                     onEdit={item => setForm(getFormValue(item))}
                     onComplete={item => setConfirm({ item, action: 'complete' })}

@@ -1451,6 +1451,11 @@ button.listItem {
     margin-top: 12px;
 }
 
+.focusedTableRow {
+    background: #eff6ff;
+    box-shadow: inset 3px 0 #3182f6;
+}
+
 @media (max-width: 1180px) {
     .layout {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

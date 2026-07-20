@@ -10,6 +10,7 @@ import { WorkIntakeEditModal } from './WorkIntakeEditModal';
 import { DeletedRecordsTable } from './DeletedRecordsTable';
 import { WorkIntakeFilters, type WorkIntakeFilterState } from './WorkIntakeFilters';
 import { WorkIntakePagination } from './WorkIntakePagination';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { deleteWorkIntakeItem } from './requests';
 import type { WorkIntakeData, WorkIntakeEditTarget, WorkIntakePageMeta, WorkIntakeVisibleTab } from './types';
 import styles from './page.module.css';
@@ -56,6 +57,7 @@ function joinParts(parts: readonly unknown[]): string {
 }
 
 export default function FranchiseWorkIntakePage() {
+    const { showConfirm } = useAppDialog();
     const [data, setData] = React.useState<WorkIntakeData>(EMPTY_DATA);
     const [requesterId, setRequesterId] = React.useState('');
     const [activeTab, setActiveTab] = React.useState<WorkIntakeVisibleTab>('properties');
@@ -142,7 +144,12 @@ export default function FranchiseWorkIntakePage() {
             return;
         }
         const label = target.kind === 'properties' ? '입점 요청' : '예비 창업자 등록';
-        const confirmed = window.confirm(`${label}을 삭제할까요? 삭제 후에는 진행현황 목록에서 사라집니다.`);
+        const confirmed = await showConfirm({
+            title: `${label} 삭제`,
+            message: `${label}을 삭제할까요? 삭제 후에는 진행현황 목록에서 사라집니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
 
         setDeletingId(target.item.id);

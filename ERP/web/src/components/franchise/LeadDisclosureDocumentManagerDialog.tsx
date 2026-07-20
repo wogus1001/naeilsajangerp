@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ExternalLink, FileText, Trash2, X } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import type { FranchiseDisclosureDocument } from '@/lib/franchise-disclosure-deliveries';
 import type { DocumentDraft } from './leadDisclosureFormUtils';
 import { LeadDisclosureDocumentForm } from './LeadDisclosureDocumentForm';
@@ -36,8 +37,14 @@ export function LeadDisclosureDocumentManagerDialog({
     onSave,
     onSelectDocument
 }: Props) {
-    const handleDeleteDocument = (document: FranchiseDisclosureDocument) => {
-        const confirmed = window.confirm(`${document.title} 문서를 삭제할까요? 기존 발송 이력은 유지됩니다.`);
+    const { showConfirm } = useAppDialog();
+    const handleDeleteDocument = async (document: FranchiseDisclosureDocument) => {
+        const confirmed = await showConfirm({
+            message: `${document.title} 문서를 삭제할까요? 기존 발송 이력은 유지됩니다.`,
+            title: '정보공개서 삭제',
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
         onDeleteDocument(document.id);
     };
@@ -97,7 +104,7 @@ export function LeadDisclosureDocumentManagerDialog({
                                 <button
                                     type="button"
                                     className={styles.iconDangerButton}
-                                    onClick={() => handleDeleteDocument(document)}
+                                    onClick={() => void handleDeleteDocument(document)}
                                     disabled={deletingDocumentId === document.id}
                                     aria-label={`${document.title} 삭제`}
                                     title="문서 삭제"

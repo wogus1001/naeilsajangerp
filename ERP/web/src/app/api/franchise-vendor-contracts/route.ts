@@ -6,6 +6,7 @@ import {
     buildMutationPayload,
     cleanString,
     isElectronicContractInCompany,
+    isActiveVendorContractOwner,
     isMissingVendorContractSchemaError,
     isMissingVendorSchemaError,
     isVendorInCompany,
@@ -14,6 +15,7 @@ import {
     validateVendorContractStorage,
     VENDOR_CONTRACT_STORAGE_BUCKET
 } from './vendorContractRouteHelpers';
+import { syncVendorContractSchedule } from './vendorContractScheduleSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,6 +138,10 @@ export async function POST(request: Request) {
         if (!await isVendorInCompany(auth.supabaseAdmin, vendorId, scope.companyId)) {
             return fail(403, 'FORBIDDEN', '업체 관리의 회사 범위가 일치하지 않습니다.');
         }
+        const ownerProfileId = cleanString(body.ownerProfileId) || auth.requester.id;
+        if (!await isActiveVendorContractOwner(auth.supabaseAdmin, ownerProfileId, scope.companyId)) {
+            return fail(403, 'FORBIDDEN', '계약 담당자의 회사 범위 또는 계정 상태가 올바르지 않습니다.');
+        }
         const storageValidation = validateVendorContractStorage(body, scope.companyId);
         if (!storageValidation.ok) {
             return fail(storageValidation.status, 'FORBIDDEN', storageValidation.message);
@@ -148,7 +154,13 @@ export async function POST(request: Request) {
             .single<VendorContractRow>();
         if (error) throw error;
 
-        return ok({ contract: toVendorContractView(data) });
+        const scheduleSync = await syncVendorContractSchedule({
+            requester: auth.requester,
+            row: data,
+            supabaseAdmin: auth.supabaseAdmin
+        });
+
+        return ok({ contract: toVendorContractView(data), scheduleSync: scheduleSync.status });
     } catch (error) {
         if (isMissingVendorContractSchemaError(error)) {
             return fail(424, 'INTERNAL_ERROR', '업체 계약함 SQL이 아직 적용되지 않았습니다. supabase_franchise_vendor_contracts_migration.sql 적용 후 다시 확인해주세요.');
@@ -187,6 +199,10 @@ export async function PATCH(request: Request) {
         if (!await isVendorInCompany(auth.supabaseAdmin, vendorId, existing.company_id)) {
             return fail(403, 'FORBIDDEN', '업체 관리의 회사 범위가 일치하지 않습니다.');
         }
+        const ownerProfileId = cleanString(body.ownerProfileId) || auth.requester.id;
+        if (!await isActiveVendorContractOwner(auth.supabaseAdmin, ownerProfileId, existing.company_id)) {
+            return fail(403, 'FORBIDDEN', '계약 담당자의 회사 범위 또는 계정 상태가 올바르지 않습니다.');
+        }
         const storageValidation = validateVendorContractStorage(body, existing.company_id);
         if (!storageValidation.ok) {
             return fail(storageValidation.status, 'FORBIDDEN', storageValidation.message);
@@ -200,7 +216,14 @@ export async function PATCH(request: Request) {
             .single<VendorContractRow>();
         if (error) throw error;
 
-        return ok({ contract: toVendorContractView(data) });
+        const scheduleSync = await syncVendorContractSchedule({
+            previousContractEndDate: existing.contract_end_date,
+            requester: auth.requester,
+            row: data,
+            supabaseAdmin: auth.supabaseAdmin
+        });
+
+        return ok({ contract: toVendorContractView(data), scheduleSync: scheduleSync.status });
     } catch (error) {
         if (isMissingVendorSchemaError(error)) {
             return fail(424, 'INTERNAL_ERROR', '업체 관리 SQL이 아직 적용되지 않았습니다. supabase_franchise_vendors_migration.sql 적용 후 다시 확인해주세요.');
@@ -232,7 +255,13 @@ export async function DELETE(request: Request) {
             .eq('id', contractId);
         if (error) throw error;
 
-        return ok({ success: true });
+        const scheduleSync = await syncVendorContractSchedule({
+            requester: auth.requester,
+            row: { ...existing, status: 'archived' },
+            supabaseAdmin: auth.supabaseAdmin
+        });
+
+        return ok({ success: true, scheduleSync: scheduleSync.status });
     } catch (error) {
         console.error('Franchise vendor contracts DELETE error:', error);
         return fail(500, 'INTERNAL_ERROR', '업체 계약을 삭제하지 못했습니다.');

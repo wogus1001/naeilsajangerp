@@ -83,15 +83,15 @@ export async function fetchOwnerPortalLocation(
     companyId: string,
     locationId: string
 ): Promise<
-    | { readonly ok: true; readonly location: { readonly id: string; readonly data: unknown; readonly name: string | null } }
+    | { readonly ok: true; readonly location: { readonly id: string; readonly data: unknown; readonly manager_id: string | null; readonly name: string | null } }
     | { readonly ok: false; readonly response: Response }
 > {
     const { data, error } = await supabaseAdmin
         .from('franchise_locations')
-        .select('id, data, name')
+        .select('id, data, manager_id, name')
         .eq('id', locationId)
         .eq('company_id', companyId)
-        .maybeSingle<{ readonly id: string; readonly data: unknown; readonly name: string | null }>();
+        .maybeSingle<{ readonly id: string; readonly data: unknown; readonly manager_id: string | null; readonly name: string | null }>();
     if (error) throw error;
     if (!data) return { ok: false, response: fail(404, 'NOT_FOUND', '운영점을 찾을 수 없습니다.') };
     return { ok: true, location: data };

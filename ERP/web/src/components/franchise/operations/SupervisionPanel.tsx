@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     buildDefaultInspectionItems,
     buildDefaultReportTemplate,
@@ -157,7 +158,14 @@ const QUEUE_FILTER_BY_TYPE: Record<SupervisionOperationQueueItem['type'], Superv
     actionOverdue: 'activeActions'
 } as const;
 
-export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
+type SupervisionPanelProps = SupervisionScope & {
+    readonly initialActionId?: string;
+    readonly initialReportId?: string;
+    readonly initialVisitId?: string;
+};
+
+export function SupervisionPanel({ userId, companyName, initialActionId = '', initialReportId = '', initialVisitId = '' }: SupervisionPanelProps) {
+    const { showAlert, showConfirm } = useAppDialog();
     const [data, setData] = React.useState<SupervisionPayload>(EMPTY_PAYLOAD);
     const [activeView, setActiveView] = React.useState<SupervisionView>('dashboard');
     const [activeFilter, setActiveFilter] = React.useState<SupervisionFilter>('all');
@@ -185,13 +193,29 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
             setData(nextData);
             setAssignmentForm(makeAssignmentForm(nextData));
             setVisitForm(makeVisitForm(nextData));
-            setSelectedVisitId(current => current || nextData.visits[0]?.id || '');
+            const linkedAction = initialActionId
+                ? nextData.correctiveActions.find(action => action.id === initialActionId)
+                : null;
+            const linkedReportId = initialReportId || linkedAction?.reportId || '';
+            const linkedReport = linkedReportId
+                ? nextData.reports.find(report => report.id === linkedReportId)
+                : null;
+            const linkedVisitId = initialVisitId || linkedReport?.visitId || '';
+            setSelectedVisitId(current => linkedVisitId || current || nextData.visits[0]?.id || '');
+            if (initialActionId) {
+                setActiveView('review');
+                setActiveFilter(linkedAction && (linkedAction.status === '요청' || linkedAction.status === '진행중') ? 'activeActions' : 'all');
+            } else if (linkedReportId) {
+                setActiveView('reports');
+            } else if (linkedVisitId) {
+                setActiveView('visits');
+            }
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '슈퍼바이징 정보를 불러오지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '슈퍼바이징 정보를 불러오지 못했습니다.', type: 'error' });
         } finally {
             setIsLoading(false);
         }
-    }, [scope]);
+    }, [initialActionId, initialReportId, initialVisitId, scope, showAlert]);
 
     React.useEffect(() => {
         void load();
@@ -315,7 +339,12 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
 
     const deleteVisit = async (visit: SupervisionVisit) => {
         if (!data.companyId) return;
-        const confirmed = window.confirm(`${visit.locationName} 방문 일정을 삭제할까요? 삭제한 일정은 취소 상태로 보관됩니다.`);
+        const confirmed = await showConfirm({
+            title: '방문 일정 삭제',
+            message: `${visit.locationName} 방문 일정을 삭제할까요? 삭제한 일정은 취소 상태로 보관됩니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
         await runSaving(() => deleteSupervisionVisit({
             ...scope,
@@ -420,7 +449,7 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
             await load();
             return true;
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '슈퍼바이징 정보를 저장하지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '슈퍼바이징 정보를 저장하지 못했습니다.', type: 'error' });
             return false;
         } finally {
             setIsSaving(false);
@@ -569,7 +598,12 @@ export function SupervisionPanel({ userId, companyName }: SupervisionScope) {
                                 onApprove={report => void submitReport('approve', report)}
                                 onReject={(report, reason) => void submitReport('reject', report, reason)}
                             />
-                            <CorrectiveActionList actions={visibleActions} disabled={isSaving} onStatusChange={changeActionStatus} />
+                            <CorrectiveActionList
+                                actions={visibleActions}
+                                disabled={isSaving}
+                                selectedActionId={initialActionId}
+                                onStatusChange={changeActionStatus}
+                            />
                         </div>
                     </section>
                 </div>

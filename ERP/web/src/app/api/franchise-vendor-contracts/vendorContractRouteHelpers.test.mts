@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     buildMutationPayload,
+    isActiveVendorContractOwner,
     validateVendorContractStorage,
     VENDOR_CONTRACT_STORAGE_BUCKET
 } from './vendorContractRouteHelpers.js';
@@ -48,4 +49,20 @@ test('Given a valid vendor contract upload When building mutation Then storage b
 
     assert.equal(payload.storage_bucket, VENDOR_CONTRACT_STORAGE_BUCKET);
     assert.equal(payload.storage_path, 'franchise-vendor-contracts/company-1/contract-1/file.pdf');
+});
+
+test('Given a contract owner from another company When validating Then the owner is rejected', async () => {
+    const query = {
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() {
+            return {
+                data: { company_id: 'company-2', id: 'profile-2', status: 'active' },
+                error: null
+            };
+        }
+    };
+    const client = { from() { return query; } };
+
+    assert.equal(await isActiveVendorContractOwner(client as never, 'profile-2', 'company-1'), false);
 });

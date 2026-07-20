@@ -11,6 +11,7 @@ import {
     safelyNotifyOwnerPortalAlimtalk
 } from '@/lib/alimtalk-owner-portal-notifications';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { safelySyncOwnerSubmissionSchedule } from '@/lib/franchise-phase2-schedule-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
         if (type === 'facility_request') {
             await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerFacilityRequestCreated({
                 companyId: context.account.company_id,
-                locationName: context.location.name,
+                locationName: context.location.name || '운영점',
                 ownerName: context.account.owner_name,
                 requestTitle: title || submissionTitle,
                 sourceId: data.id,
@@ -58,7 +59,18 @@ export async function POST(request: Request) {
                 supabaseAdmin
             }), 'Owner facility request created');
         }
-        return ok({ submissionId: data.id }, 201);
+        const scheduleSync = await safelySyncOwnerSubmissionSchedule({
+            companyId: context.account.company_id,
+            locationName: context.location.name || '운영점',
+            managerProfileId: context.location.manager_id,
+            status: 'submitted',
+            submissionId: data.id,
+            submissionType: type,
+            submittedAt: data.created_at || new Date(),
+            supabaseAdmin,
+            title: title || submissionTitle
+        });
+        return ok({ submissionId: data.id, scheduleSyncRequired: scheduleSync.status === 'failed' }, 201);
     } catch (error) {
         console.error('Owner request error:', error);
         return fail(500, 'INTERNAL_ERROR', '문의 등록에 실패했습니다.');
@@ -111,7 +123,7 @@ export async function PATCH(request: Request) {
         if (error) throw error;
         await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerFacilityRequestCreated({
             companyId: context.account.company_id,
-            locationName: context.location.name,
+            locationName: context.location.name || '운영점',
             ownerName: context.account.owner_name,
             requestTitle: title || submissionTitle,
             sourceId: submission.id,
@@ -119,7 +131,18 @@ export async function PATCH(request: Request) {
             submittedAt: new Date(),
             supabaseAdmin
         }), 'Owner facility request resubmitted');
-        return ok({ submissionId: submission.id });
+        const scheduleSync = await safelySyncOwnerSubmissionSchedule({
+            companyId: context.account.company_id,
+            locationName: context.location.name || '운영점',
+            managerProfileId: context.location.manager_id,
+            status: 'submitted',
+            submissionId: submission.id,
+            submissionType: 'facility_request',
+            submittedAt: new Date(),
+            supabaseAdmin,
+            title: title || submissionTitle
+        });
+        return ok({ submissionId: submission.id, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         console.error('Owner request update error:', error);
         return fail(500, 'INTERNAL_ERROR', '문의 수정에 실패했습니다.');

@@ -22,6 +22,7 @@ export type FranchiseLocationRow = {
     company_id: string | null;
     manager_id: string | null;
     created_by: string | null;
+    name: string | null;
     status: string | null;
 };
 
@@ -86,6 +87,10 @@ function parseNullableDate(value: unknown): string | null {
 
 function readJsonRecord(value: unknown): JsonRecord {
     return isRecord(value) ? value : {};
+}
+
+export function readOpeningProjectLeadId(value: unknown): string | null {
+    return cleanString(readJsonRecord(value).leadId);
 }
 
 function readTasks(value: unknown): readonly OpeningProjectTaskInput[] {
@@ -177,7 +182,7 @@ export async function fetchOpeningReadyLocation(
 ) {
     const { data, error } = await supabaseAdmin
         .from('franchise_locations')
-        .select('id, company_id, manager_id, created_by, status')
+        .select('id, company_id, manager_id, created_by, name, status')
         .eq('id', locationId)
         .single();
 
@@ -209,11 +214,11 @@ export async function resolveOpeningProjectManagerId(
 
     const { data } = await supabaseAdmin
         .from('profiles')
-        .select('company_id')
+        .select('company_id, status')
         .eq('id', managerId)
         .maybeSingle();
 
-    if (!data || data.company_id !== location.company_id) {
+    if (!data || data.company_id !== location.company_id || data.status !== 'active') {
         return { error: fail(403, 'FORBIDDEN', 'Forbidden: manager/company mismatch') };
     }
     return { managerId };

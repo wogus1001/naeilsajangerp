@@ -11,6 +11,7 @@ import {
 import { fail, ok } from '@/lib/api-response';
 import { isMissingWorkflowSchemaError } from '@/lib/franchise-workflow';
 import { canReadSchedule } from '@/lib/schedule-access';
+import { isFranchiseOperationsScheduleSource } from '@/lib/franchise-schedule-source-types';
 import { loadActionableApprovalDocumentIds } from '@/lib/approval-delegation-access';
 import {
     completeWorkflowSchedule,
@@ -223,7 +224,10 @@ export async function GET(request: Request) {
         const { data, error } = await query;
         if (error) throw error;
 
-        const approvalDocumentIds = (data || [])
+        const storeDevelopmentRows = (data || []).filter((row: ScheduleRow) => (
+            !isFranchiseOperationsScheduleSource(row.source_type)
+        ));
+        const approvalDocumentIds = storeDevelopmentRows
             .filter((row: ScheduleRow) => row.source_type === 'approval-document' && row.source_id)
             .map((row: ScheduleRow) => row.source_id || '');
         const actionableApprovalDocumentIds = isAdmin(requesterProfile) || !requesterProfile.company_id
@@ -234,7 +238,7 @@ export async function GET(request: Request) {
                 requesterProfile.id,
                 approvalDocumentIds
             );
-        let result = (data || []).filter((row: ScheduleRow) => canReadSchedule(requesterProfile, {
+        let result = storeDevelopmentRows.filter((row: ScheduleRow) => canReadSchedule(requesterProfile, {
             approvalAccessGranted: row.source_type === 'approval-document'
                 ? actionableApprovalDocumentIds.has(row.source_id || '')
                 : undefined,
@@ -436,6 +440,9 @@ export async function PUT(request: Request) {
 
         if (existing.source_type === 'approval-document') {
             return fail(403, 'FORBIDDEN', 'Approval schedules must be managed through the approval workflow');
+        }
+        if (isFranchiseOperationsScheduleSource(existing.source_type)) {
+            return fail(403, 'FORBIDDEN', 'Franchise operation schedules must be managed through the franchise schedule workflow');
         }
 
         let targetCompanyId = existing.company_id;

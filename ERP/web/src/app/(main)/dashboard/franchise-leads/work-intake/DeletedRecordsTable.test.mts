@@ -210,6 +210,82 @@ test('Given a deleted attachment with path traversal Then no public URL is rebui
     }
 });
 
+test('Given a legacy attachment URL from another property Then the archived URL is not trusted', () => {
+    const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    const record = {
+        id: 'deleted-cross-property-file',
+        kind: 'properties',
+        kindLabel: '입점 요청',
+        sourceId: 'property-owner',
+        companyId: 'company-1',
+        companyName: '내일',
+        deletedBy: 'admin-1',
+        deletedByName: '관리자',
+        title: '첨부 소유권 검증',
+        summary: '',
+        deletedAt: '2026-07-16T00:00:00.000Z',
+        snapshot: {
+            row: {
+                data: {
+                    fileAttachments: [{
+                        name: '다른매물.png',
+                        publicUrl: 'https://example.supabase.co/storage/v1/object/public/property-images/property-other/photo.png'
+                    }]
+                }
+            }
+        }
+    } satisfies DeletedWorkIntakeItem;
+
+    const target = buildDeletedRecordEditTarget(record);
+    assert.equal(target?.kind, 'properties');
+    if (target?.kind === 'properties') {
+        assert.equal(target.item.form.fileAttachments[0]?.publicUrl, undefined);
+    }
+    if (previousUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    } else {
+        process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    }
+});
+
+test('Given a legacy attachment URL owned by the deleted property Then the archived URL remains available', () => {
+    const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/property-documents/properties/property-owner/floor-plan.pdf';
+    const record = {
+        id: 'deleted-owned-property-file',
+        kind: 'properties',
+        kindLabel: '입점 요청',
+        sourceId: 'property-owner',
+        companyId: 'company-1',
+        companyName: '내일',
+        deletedBy: 'admin-1',
+        deletedByName: '관리자',
+        title: '첨부 소유권 검증',
+        summary: '',
+        deletedAt: '2026-07-16T00:00:00.000Z',
+        snapshot: {
+            row: {
+                data: {
+                    fileAttachments: [{ name: '도면.pdf', publicUrl }]
+                }
+            }
+        }
+    } satisfies DeletedWorkIntakeItem;
+
+    const target = buildDeletedRecordEditTarget(record);
+    assert.equal(target?.kind, 'properties');
+    if (target?.kind === 'properties') {
+        assert.equal(target.item.form.fileAttachments[0]?.publicUrl, publicUrl);
+    }
+    if (previousUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    } else {
+        process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    }
+});
+
 test('Given a legacy lead status Then the archived value remains available for display', () => {
     const record = {
         id: 'deleted-legacy-status',

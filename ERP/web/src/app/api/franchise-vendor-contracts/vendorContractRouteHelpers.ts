@@ -38,6 +38,12 @@ type VendorScopeRow = {
     readonly company_id: string | null;
 };
 
+type VendorContractOwnerScopeRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly status: string | null;
+};
+
 export type VendorContractStorageValidationResult =
     | { readonly ok: true }
     | { readonly ok: false; readonly status: 400 | 403; readonly message: string };
@@ -124,6 +130,20 @@ export async function isVendorInCompany(
         .maybeSingle<VendorScopeRow>();
     if (error) throw error;
     return Boolean(data && data.company_id === companyId);
+}
+
+export async function isActiveVendorContractOwner(
+    supabaseAdmin: SupabaseClient,
+    profileId: string,
+    companyId: string
+): Promise<boolean> {
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, company_id, status')
+        .eq('id', profileId)
+        .maybeSingle<VendorContractOwnerScopeRow>();
+    if (error) throw error;
+    return Boolean(data && data.company_id === companyId && data.status === 'active');
 }
 
 export function validateVendorContractStorage(

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle2, MessageSquare, Send, X } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { normalizeFranchiseLocationMasterData } from '@/lib/franchise-location-master';
 import type { FranchiseLocation } from './locationMasterTypes';
@@ -54,6 +55,7 @@ export function LocationMessagePanel({
     onOpenChange,
     onSummaryChange
 }: LocationMessagePanelProps) {
+    const { showAlert } = useAppDialog();
     const [messages, setMessages] = React.useState<readonly FranchiseLocationMessage[]>([]);
     const [draft, setDraft] = React.useState('');
     const [kind, setKind] = React.useState<LocationMessageKind>('note');
@@ -81,7 +83,7 @@ export function LocationMessagePanel({
                 onSummaryChange(result.summary);
             })
             .catch(error => {
-                if (error instanceof Error) window.alert(error.message);
+                if (error instanceof Error) void showAlert({ message: error.message, title: '물건 기록 조회 실패', type: 'error' });
             })
             .finally(() => {
                 if (isActive) setIsLoading(false);
@@ -89,7 +91,7 @@ export function LocationMessagePanel({
         return () => {
             isActive = false;
         };
-    }, [location, onSummaryChange, open, userId]);
+    }, [location, onSummaryChange, open, showAlert, userId]);
 
     if (!open || !location) return null;
 
@@ -111,7 +113,7 @@ export function LocationMessagePanel({
             setDraft('');
             setKind('note');
         } catch (error) {
-            if (error instanceof Error) window.alert(error.message);
+            if (error instanceof Error) void showAlert({ message: error.message, title: '물건 기록 저장 실패', type: 'error' });
             else throw error;
         } finally {
             setIsSaving(false);
@@ -125,7 +127,7 @@ export function LocationMessagePanel({
             setMessages(result.messages);
             onSummaryChange(result.summary);
         } catch (error) {
-            if (error instanceof Error) window.alert(error.message);
+            if (error instanceof Error) void showAlert({ message: error.message, title: '요청 상태 변경 실패', type: 'error' });
             else throw error;
         } finally {
             setUpdatingMessageId('');
