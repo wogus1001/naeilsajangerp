@@ -1,13 +1,13 @@
 "use client";
 
-import { CalendarPlus, Check, LockKeyhole, NotebookText, Pencil, Plus, Trash2, UserRound, UsersRound } from 'lucide-react';
-import type { FranchiseScheduleItem, FranchiseScheduleSource, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
+import { CalendarPlus, Check, ExternalLink, LockKeyhole, NotebookText, Pencil, Plus, Trash2, UserRound, UsersRound } from 'lucide-react';
+import { getFranchiseScheduleSourceLabel } from './franchiseScheduleViewModel';
+import type { FranchiseScheduleItem, FranchiseScheduleStatus } from './franchiseScheduleViewModel';
 import styles from './FranchiseSchedulePage.module.css';
 
 type DayListProps = {
     readonly selectedDate: string;
     readonly items: readonly FranchiseScheduleItem[];
-    readonly focusId: string;
     readonly onCreate: () => void;
     readonly onEdit: (item: FranchiseScheduleItem) => void;
     readonly onComplete: (item: FranchiseScheduleItem) => void;
@@ -25,14 +25,6 @@ function getDateLabel(date: string): { readonly label: string; readonly year: st
     };
 }
 
-function getSourceLabel(source: FranchiseScheduleSource): string {
-    if (source === 'approval-document') return '결재';
-    if (source === 'supervision-visit') return 'SV 방문';
-    if (source === 'report') return '보고서';
-    if (source === 'corrective-action') return '시정조치';
-    return '수동 등록';
-}
-
 function getStatusClass(status: FranchiseScheduleStatus): string {
     if (status === '완료') return styles.statusDone;
     if (status === '지연') return styles.statusLate;
@@ -41,7 +33,7 @@ function getStatusClass(status: FranchiseScheduleStatus): string {
     return styles.statusPlanned;
 }
 
-export function FranchiseScheduleDayList({ selectedDate, items, focusId, onCreate, onEdit, onComplete, onDelete }: DayListProps) {
+export function FranchiseScheduleDayList({ selectedDate, items, onCreate, onEdit, onComplete, onDelete }: DayListProps) {
     const dateLabel = getDateLabel(selectedDate);
 
     return (
@@ -63,7 +55,7 @@ export function FranchiseScheduleDayList({ selectedDate, items, focusId, onCreat
             ) : (
                 <div className={styles.scheduleList}>
                     {items.map(item => (
-                        <article className={`${styles.scheduleRow} ${item.id === focusId ? styles.focusRow : ''}`} key={item.id}>
+                        <article className={styles.scheduleRow} key={item.id}>
                             <div className={styles.scheduleHeading}>
                                 <span className={getStatusClass(item.status)}>{item.status}</span>
                                 <strong>{item.title}</strong>
@@ -73,7 +65,7 @@ export function FranchiseScheduleDayList({ selectedDate, items, focusId, onCreat
                                     {item.visibility === 'personal' ? <LockKeyhole size={12} /> : <UsersRound size={12} />}
                                     {item.visibility === 'personal' ? '개인 일정' : '공유 일정'}
                                 </span>
-                                <span>{getSourceLabel(item.source)}</span>
+                                <span>{getFranchiseScheduleSourceLabel(item.source)}</span>
                             </div>
                             <dl className={styles.scheduleDetails}>
                                 <div>
@@ -90,6 +82,11 @@ export function FranchiseScheduleDayList({ selectedDate, items, focusId, onCreat
                                     <button type="button" onClick={() => onEdit(item)}><Pencil size={15} /> 수정</button>
                                     {item.status !== '완료' && <button type="button" onClick={() => onComplete(item)}><Check size={15} /> 완료</button>}
                                     <button className={styles.rowDeleteButton} type="button" onClick={() => onDelete(item)}><Trash2 size={15} /> 삭제</button>
+                                </div>
+                            )}
+                            {item.source !== 'manual' && item.actionUrl && (
+                                <div className={styles.rowActions}>
+                                    <a href={item.actionUrl}><ExternalLink size={15} /> 업무 열기</a>
                                 </div>
                             )}
                         </article>

@@ -2,11 +2,14 @@ import { getAuthenticatedRequesterProfile, isAdmin, resolveCompanyIdByName } fro
 import { notifyAlimtalkFranchiseNotificationCandidates } from '@/lib/alimtalk-event-notifications';
 import { fail, ok } from '@/lib/api-response';
 import { isPartnerVendorRole } from '@/lib/franchise-location-access';
+import { runFranchiseScheduleMaintenance } from '@/lib/franchise-schedule-reconciliation';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
+import { syncNotificationSourceSchedules } from '@/lib/franchise-notification-schedule-sync';
 import { canDispatchFranchiseNotificationAlimtalk } from '@/lib/franchise-notification-alimtalk-scope';
 import {
     FRANCHISE_NOTIFICATION_SOURCE_TYPES,
     buildAutomaticFranchiseNotifications,
+    sanitizeNotificationLeadManagers,
     transformFranchiseNotification,
     type FranchiseNotificationCandidate,
     type FranchiseNotificationRow,
@@ -53,13 +56,23 @@ type NotificationRecipientProfileRow = {
     readonly id: string;
     readonly company_id: string | null;
 };
+type NotificationLeadManagerProfileRow = NotificationRecipientProfileRow & {
+    readonly role: string | null;
+    readonly status: string | null;
+};
 type NotificationCronCompanyRow = {
     readonly company_id: string | null;
 };
 const DUE_NOTIFICATION_SOURCE_TYPES = new Set(['disclosure-due', 'vendor-contract-due']);
 const RECONCILED_NOTIFICATION_SOURCE_TYPES = FRANCHISE_NOTIFICATION_SOURCE_TYPES.filter(sourceType => (
-    !sourceType.startsWith('workflow-') && !sourceType.startsWith('supervision-')
+    sourceType !== 'system' && !sourceType.startsWith('workflow-') && !sourceType.startsWith('supervision-')
 ));
+
+type NotificationCategory = 'all' | 'approval' | 'franchise' | 'system';
+
+function parseNotificationCategory(value: string | null): NotificationCategory {
+    return value === 'approval' || value === 'franchise' || value === 'system' ? value : 'all';
+}
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
@@ -151,8 +164,26 @@ async function fetchNotificationLeads(
     const { data, error } = await query;
     if (error) throw error;
 
-    const leads = ((data || []) as LeadNotificationRow[]).map(mapLeadRow);
-    return attachDisclosureSummariesToLeads(supabaseAdmin, leads);
+    const leads = await attachDisclosureSummariesToLeads(
+        supabaseAdmin,
+        ((data || []) as LeadNotificationRow[]).map(mapLeadRow)
+    );
+    const managerIds = [...new Set(leads.map(lead => cleanString(lead.managerId)).filter(Boolean))];
+    if (managerIds.length === 0) return leads;
+
+    const { data: managerProfiles, error: managerError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, company_id, role, status')
+        .in('id', managerIds)
+        .returns<NotificationLeadManagerProfileRow[]>();
+    if (managerError) throw managerError;
+
+    return sanitizeNotificationLeadManagers(leads, (managerProfiles || []).map(profile => ({
+        companyId: profile.company_id,
+        id: profile.id,
+        role: profile.role,
+        status: profile.status
+    })));
 }
 
 async function fetchVendorContractsForNotifications(
@@ -283,8 +314,15 @@ async function syncAutomaticNotifications(
     if (updateError) throw updateError;
 }
 
-async function runScheduledNotificationGeneration(): Promise<{ readonly companyCount: number; readonly notificationCount: number }> {
+async function runScheduledNotificationGeneration(): Promise<{
+    readonly companyCount: number;
+    readonly delayedScheduleCount: number;
+    readonly failedScheduleSyncCount: number;
+    readonly notificationCount: number;
+    readonly processedScheduleSyncCount: number;
+}> {
     const supabaseAdmin = getSupabaseAdmin();
+    const maintenance = await runFranchiseScheduleMaintenance(supabaseAdmin);
     const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('company_id')
@@ -307,6 +345,11 @@ async function runScheduledNotificationGeneration(): Promise<{ readonly companyC
             ...buildAutomaticFranchiseNotifications(leads),
             ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
         ];
+        await syncNotificationSourceSchedules(supabaseAdmin, {
+            leads,
+            vendorContracts,
+            vendorRecipients
+        });
         await syncAutomaticNotifications(notificationCandidates, {
             companyId,
             requesterId: '',
@@ -325,30 +368,27 @@ async function runScheduledNotificationGeneration(): Promise<{ readonly companyC
         notificationCount += notificationCandidates.length;
     }
 
-    return { companyCount: companyIds.length, notificationCount };
+    return {
+        companyCount: companyIds.length,
+        delayedScheduleCount: maintenance.delayedCount,
+        failedScheduleSyncCount: maintenance.failedCount,
+        notificationCount,
+        processedScheduleSyncCount: maintenance.processedCount
+    };
 }
 
 export async function GET(request: Request) {
     try {
         const supabaseAdmin = getSupabaseAdmin();
-        const { searchParams } = new URL(request.url);
-        if (searchParams.get('cron') === '1') {
-            const secret = process.env.CRON_SECRET;
-            const authHeader = request.headers.get('authorization');
-            if (!secret || authHeader !== `Bearer ${secret}`) {
-                return fail(401, 'AUTH_REQUIRED', 'Invalid cron secret');
-            }
-            const result = await runScheduledNotificationGeneration();
-            return ok({ success: true, ...result });
-        }
-
         const requester = await getAuthenticatedRequesterProfile(supabaseAdmin, request);
         if (!requester) return fail(401, 'AUTH_REQUIRED', '로그인이 필요합니다.');
 
+        const { searchParams } = new URL(request.url);
         const requestedCompanyName = cleanString(searchParams.get('company') || searchParams.get('companyName'));
         const requestedCompanyId = requestedCompanyName ? await resolveCompanyIdByName(supabaseAdmin, requestedCompanyName) : null;
         const companyId = isAdmin(requester) ? requestedCompanyId : requester.company_id;
         const limit = parseLimit(searchParams.get('limit'));
+        const category = parseNotificationCategory(searchParams.get('category'));
 
         const requesterIsAdmin = isAdmin(requester);
         const [leads, vendorContracts] = await Promise.all([
@@ -402,6 +442,9 @@ export async function GET(request: Request) {
         if (companyId) unreadCountQuery = unreadCountQuery.eq('company_id', companyId);
         query = query.eq('recipient_profile_id', requester.id);
         unreadCountQuery = unreadCountQuery.eq('recipient_profile_id', requester.id);
+        if (category === 'approval') query = query.eq('source_type', 'workflow-approval');
+        if (category === 'franchise') query = query.neq('source_type', 'workflow-approval').neq('source_type', 'system');
+        if (category === 'system') query = query.eq('source_type', 'system');
         if (requester.role === 'partner_vendor') {
             query = query.neq('source_type', 'workflow-approval');
             unreadCountQuery = unreadCountQuery.neq('source_type', 'workflow-approval');
@@ -419,6 +462,21 @@ export async function GET(request: Request) {
         }
         console.error('Franchise notifications GET error:', error);
         return fail(500, 'INTERNAL_ERROR', 'Failed to fetch franchise notifications');
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const secret = process.env.CRON_SECRET;
+        const authHeader = request.headers.get('authorization');
+        if (!secret || authHeader !== `Bearer ${secret}`) {
+            return fail(401, 'AUTH_REQUIRED', 'Invalid cron secret');
+        }
+        const result = await runScheduledNotificationGeneration();
+        return ok({ success: true, ...result });
+    } catch (error) {
+        console.error('Scheduled franchise notification generation error:', error);
+        return fail(500, 'INTERNAL_ERROR', 'Failed to generate scheduled franchise notifications');
     }
 }
 

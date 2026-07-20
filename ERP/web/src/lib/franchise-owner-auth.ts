@@ -30,6 +30,7 @@ export type OwnerLocationRow = {
     readonly region: string | null;
     readonly address: string | null;
     readonly memo: string | null;
+    readonly manager_id: string | null;
     readonly data: unknown;
 };
 
@@ -106,7 +107,7 @@ export async function getOwnerSessionContext(supabaseAdmin: SupabaseClient): Pro
 
     const { data: location } = await supabaseAdmin
         .from('franchise_locations')
-        .select('id, company_id, name, brand, status, region, address, memo, data')
+        .select('id, company_id, name, brand, status, region, address, memo, manager_id, data')
         .eq('id', account.location_id)
         .eq('company_id', account.company_id)
         .maybeSingle<OwnerLocationRow>();

@@ -15,6 +15,7 @@ import {
     resolveOwnerPortalCompanyScope,
     resolveOwnerPortalStaffAuth
 } from '@/lib/franchise-owner-portal-api';
+import { safelySyncOwnerSubmissionSchedule } from '@/lib/franchise-phase2-schedule-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,7 +118,18 @@ export async function PATCH(request: Request) {
             })
             .eq('id', submission.id);
         if (error) throw error;
-        return ok({ success: true });
+        const scheduleSync = await safelySyncOwnerSubmissionSchedule({
+            companyId: submission.company_id,
+            locationName: location.location.name || '운영점',
+            managerProfileId: location.location.manager_id,
+            status: nextStatus,
+            submissionId: submission.id,
+            submissionType: submission.submission_type,
+            submittedAt: submission.created_at || new Date(),
+            supabaseAdmin: authResult.auth.supabaseAdmin,
+            title: submission.title
+        });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         console.error('Owner portal submissions PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '점주 제출 건을 처리하지 못했습니다.');

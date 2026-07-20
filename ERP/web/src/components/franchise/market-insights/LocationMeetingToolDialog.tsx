@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Calculator, X } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     addMeetingToolCustomCostRow,
     calculateMeetingToolSummary,
@@ -53,6 +54,7 @@ export function LocationMeetingToolDialog({
     onOpenChange,
     onSaved
 }: LocationMeetingToolDialogProps) {
+    const { showAlert } = useAppDialog();
     const [draft, setDraft] = React.useState<MeetingToolDraft>(() => normalizeMeetingToolDraft(null));
     const [customCostLabel, setCustomCostLabel] = React.useState('');
     const [ratioInputValues, setRatioInputValues] = React.useState<Record<MeetingToolCostKey, string>>({});
@@ -273,8 +275,22 @@ export function LocationMeetingToolDialog({
                 <LocationMeetingToolActions
                     saving={saving}
                     onSave={saveReport}
-                    onOpenPdf={() => openMeetingToolReport(location, draft, managerName, 'pdf', reportMapPosition)}
-                    onPrint={() => openMeetingToolReport(location, draft, managerName, 'print', reportMapPosition)}
+                    onOpenPdf={() => openMeetingToolReport(
+                        location,
+                        draft,
+                        managerName,
+                        'pdf',
+                        reportMapPosition,
+                        message => void showAlert({ message, title: '팝업 차단', type: 'error' })
+                    )}
+                    onPrint={() => openMeetingToolReport(
+                        location,
+                        draft,
+                        managerName,
+                        'print',
+                        reportMapPosition,
+                        message => void showAlert({ message, title: '팝업 차단', type: 'error' })
+                    )}
                     laborPlanningHref={laborPlanningHref}
                 />
             </section>

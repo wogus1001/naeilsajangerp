@@ -1,6 +1,7 @@
 "use client";
 
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     FRANCHISE_LEAD_STATUSES
 } from '@/lib/franchise-leads';
@@ -105,6 +106,7 @@ export function LeadDbWorkspace({
     onTaskQueueFilterChangeAction,
     onCompleteTodayTaskAction
 }: LeadDbWorkspaceProps) {
+    const { showAlert } = useAppDialog();
     const isContractOwnersWorkspace = workspaceVariant === 'contractOwners';
     const effectiveViewMode = isContractOwnersWorkspace ? 'table' : viewMode;
     const {
@@ -139,7 +141,11 @@ export function LeadDbWorkspace({
             await action(await buildExportPayload());
         } catch (error) {
             console.error('Failed to export franchise leads:', error);
-            window.alert(error instanceof Error ? error.message : '모객 DB 추출에 실패했습니다.');
+            void showAlert({
+                message: error instanceof Error ? error.message : '모객 DB 추출에 실패했습니다.',
+                title: '내보내기 실패',
+                type: 'error'
+            });
         }
     };
 
@@ -174,8 +180,16 @@ export function LeadDbWorkspace({
                             allowEmptyExport={Boolean(onLoadExportLeadsAction)}
                             disabled={isLoading}
                             onExcelAction={() => runExportAction(downloadTableAsXlsx)}
-                            onPdfAction={() => runExportAction(payload => openPrintableTable(payload, 'pdf'))}
-                            onPrintAction={() => runExportAction(payload => openPrintableTable(payload, 'print'))}
+                            onPdfAction={() => runExportAction(payload => openPrintableTable(
+                                payload,
+                                'pdf',
+                                message => void showAlert({ message, title: '팝업 차단', type: 'error' })
+                            ))}
+                            onPrintAction={() => runExportAction(payload => openPrintableTable(
+                                payload,
+                                'print',
+                                message => void showAlert({ message, title: '팝업 차단', type: 'error' })
+                            ))}
                         />
                     )}
                     {!isContractOwnersWorkspace && <div className={styles.viewTabs} aria-label="모객 DB 보기 전환">

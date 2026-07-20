@@ -88,7 +88,7 @@ export function LeadOpeningProjectSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const savedProject = await saveOpeningProjectDraft({ draft, userId, companyName });
+            const savedProject = await saveOpeningProjectDraft({ draft, leadId: lead.id, userId, companyName });
             setProject(savedProject);
             setDraft(toOpeningProjectDraft(storeLocation, savedProject));
             setMessage(project ? '오픈 준비 프로젝트를 저장했습니다.' : '오픈 준비 프로젝트를 시작했습니다.');

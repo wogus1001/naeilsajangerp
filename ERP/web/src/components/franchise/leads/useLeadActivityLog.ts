@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import {
     addLeadActivityLogEntry,
     removeLeadActivityLogEntry,
@@ -43,6 +44,7 @@ export function useLeadActivityLog({
     onLeadPatchAction,
     showAlertAction
 }: UseLeadActivityLogParams) {
+    const { showConfirm } = useAppDialog();
     const [activityType, setActivityType] = React.useState<LeadActivityType>('전화');
     const [activityContent, setActivityContent] = React.useState('');
     const [quickActivityLeadId, setQuickActivityLeadId] = React.useState('');
@@ -113,7 +115,12 @@ export function useLeadActivityLog({
 
     const removeLeadActivity = async (activityId: string) => {
         if (!selectedLead) return false;
-        const confirmed = window.confirm('상담 이력을 삭제할까요? 삭제 후에는 복구할 수 없습니다.');
+        const confirmed = await showConfirm({
+            message: '상담 이력을 삭제할까요? 삭제 후에는 복구할 수 없습니다.',
+            title: '상담 이력 삭제',
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return false;
 
         const currentActivities = selectedLead.activityLog || [];

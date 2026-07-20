@@ -704,6 +704,7 @@ type ChecklistSectionProps = {
     readonly checklists: readonly OwnerChecklistSetting[];
     readonly submissions: readonly OwnerSubmission[];
     readonly isBusy: boolean;
+    readonly initialView?: 'status';
     readonly onSaveChecklists: (locationIds: readonly string[], tasks: readonly OwnerPortalChecklistTask[]) => Promise<ChecklistSaveResult>;
 };
 
@@ -840,8 +841,8 @@ function buildChecklistIssueGroups(
     });
 }
 
-export function OwnerPortalChecklistSection({ locations, checklists, submissions, isBusy, onSaveChecklists }: ChecklistSectionProps) {
-    const [checklistView, setChecklistView] = React.useState<'issue' | 'status'>('issue');
+export function OwnerPortalChecklistSection({ locations, checklists, submissions, isBusy, initialView, onSaveChecklists }: ChecklistSectionProps) {
+    const [checklistView, setChecklistView] = React.useState<'issue' | 'status'>(initialView || 'issue');
     const [targetMode, setTargetMode] = React.useState<'all' | 'selected'>('all');
     const [locationPickerId, setLocationPickerId] = React.useState(locations[0]?.id || '');
     const [selectedLocationIds, setSelectedLocationIds] = React.useState<readonly string[]>([]);
@@ -860,6 +861,10 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
         ? locationPickerId
         : selectableLocations[0]?.id || '';
     const selectedLocationSummary = selectedLocations.length > 0 ? `${selectedLocations.length}개 운영점` : '운영점 미선택';
+
+    React.useEffect(() => {
+        if (initialView) setChecklistView(initialView);
+    }, [initialView]);
 
     React.useEffect(() => {
         const locationIds = new Set(locations.map(location => location.id));
@@ -1244,6 +1249,7 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
 type SubmissionSectionProps = {
     readonly locations: readonly FranchiseLocation[];
     readonly submissions: readonly OwnerSubmission[];
+    readonly selectedSubmissionId?: string;
     readonly isBusy: boolean;
     readonly onReviewSubmission: (submissionId: string, action: 'approve' | 'reject' | 'resolve') => void;
 };
@@ -1251,6 +1257,7 @@ type SubmissionSectionProps = {
 export function OwnerPortalSubmissionsSection({
     locations,
     submissions,
+    selectedSubmissionId,
     isBusy,
     onReviewSubmission
 }: SubmissionSectionProps) {
@@ -1264,6 +1271,7 @@ export function OwnerPortalSubmissionsSection({
     ));
     const pendingSubmissions = generalSubmissions.filter(isPendingOwnerSubmission);
     const completedSubmissions = generalSubmissions.filter(submission => !isPendingOwnerSubmission(submission));
+    const selectedSubmission = generalSubmissions.find(submission => submission.id === selectedSubmissionId);
     const baseSubmissions = submissionView === 'pending' ? pendingSubmissions : completedSubmissions;
     const normalizedSearch = submissionSearch.trim().toLowerCase();
     const filteredSubmissions = baseSubmissions.filter(submission => {
@@ -1277,6 +1285,9 @@ export function OwnerPortalSubmissionsSection({
         ].some(value => value.toLowerCase().includes(normalizedSearch));
         return typeMatches && statusMatches && textMatches;
     });
+    const selectedSubmissionIndex = selectedSubmissionId
+        ? filteredSubmissions.findIndex(submission => submission.id === selectedSubmissionId)
+        : -1;
     const submissionPageCount = Math.max(1, Math.ceil(filteredSubmissions.length / OWNER_PORTAL_SUBMISSION_PAGE_SIZE));
     const safeSubmissionPage = Math.min(submissionPage, submissionPageCount);
     const visibleSubmissions = filteredSubmissions.slice(
@@ -1291,6 +1302,19 @@ export function OwnerPortalSubmissionsSection({
     React.useEffect(() => {
         setSubmissionPage(currentPage => Math.min(currentPage, Math.max(1, Math.ceil(filteredSubmissions.length / OWNER_PORTAL_SUBMISSION_PAGE_SIZE))));
     }, [filteredSubmissions.length]);
+
+    React.useEffect(() => {
+        if (!selectedSubmission) return;
+        setSubmissionView(isPendingOwnerSubmission(selectedSubmission) ? 'pending' : 'completed');
+        setSubmissionTypeFilter('all');
+        setSubmissionStatusFilter('all');
+        setSubmissionSearch('');
+    }, [selectedSubmission]);
+
+    React.useEffect(() => {
+        if (selectedSubmissionIndex < 0) return;
+        setSubmissionPage(Math.floor(selectedSubmissionIndex / OWNER_PORTAL_SUBMISSION_PAGE_SIZE) + 1);
+    }, [selectedSubmissionIndex]);
 
     return (
         <section className={styles.ownerPortalPanel}>
@@ -1352,12 +1376,16 @@ export function OwnerPortalSubmissionsSection({
                     const payloadTitle = getSubmissionPayloadTitle(submission);
                     const detailRows = getSubmissionDetailRows(submission);
                     return (
-                        <article className={`${styles.locationItem} ${styles.ownerPortalListItem}`} key={submission.id}>
+                        <article
+                            aria-current={submission.id === selectedSubmissionId ? 'true' : undefined}
+                            className={`${styles.locationItem} ${styles.ownerPortalListItem} ${submission.id === selectedSubmissionId ? styles.ownerPortalFocusedSubmission : ''}`}
+                            key={submission.id}
+                        >
                             <div className={styles.locationItemMain}>
                                 <strong>{submission.title}</strong>
                                 <span>{getLocationName(locations, submission.location_id)} · {getSubmissionTypeLabel(submission.submission_type)} · {getSubmissionStatusLabel(submission.status)} · {formatDate(submission.created_at)}</span>
                                 {payloadTitle ? <small>{payloadTitle}</small> : null}
-                                <details className={styles.ownerPortalSubmissionDetails}>
+                                <details className={styles.ownerPortalSubmissionDetails} open={submission.id === selectedSubmissionId}>
                                     <summary>내용 확인</summary>
                                     <div className={styles.ownerPortalSubmissionDetailGrid}>
                                         {detailRows.map(row => (

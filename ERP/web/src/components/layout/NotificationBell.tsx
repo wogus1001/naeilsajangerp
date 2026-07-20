@@ -5,9 +5,11 @@ import { Bell, Check } from 'lucide-react';
 import type { StoredUser } from '@/utils/userUtils';
 import {
     fetchHeaderNotifications,
+    getSafeHeaderNotificationActionUrl,
     markAllHeaderNotificationsRead,
     markHeaderNotificationRead,
-    type HeaderNotification
+    type HeaderNotification,
+    type HeaderNotificationCategory
 } from './notificationRequests';
 import styles from './NotificationBell.module.css';
 
@@ -35,24 +37,47 @@ function getSeverityLabel(severity: HeaderNotification['severity']): string {
     }
 }
 
+const NOTIFICATION_CATEGORY_FILTERS = [
+    { value: 'all', label: '전체' },
+    { value: 'approval', label: '전자결재' },
+    { value: 'franchise', label: '가맹운영' }
+] as const satisfies readonly { readonly value: 'all' | HeaderNotificationCategory; readonly label: string }[];
+
+function getCategoryLabel(category: HeaderNotificationCategory): string {
+    switch (category) {
+        case 'approval':
+            return '전자결재';
+        case 'franchise':
+            return '가맹운영';
+        case 'system':
+            return '시스템';
+    }
+}
+
 export function NotificationBell({ user }: NotificationBellProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const [schemaReady, setSchemaReady] = React.useState(true);
+    const [categoryFilter, setCategoryFilter] = React.useState<'all' | HeaderNotificationCategory>('all');
     const [unreadCount, setUnreadCount] = React.useState(0);
     const [notifications, setNotifications] = React.useState<readonly HeaderNotification[]>([]);
     const [markingNotificationId, setMarkingNotificationId] = React.useState<string | null>(null);
     const panelRef = React.useRef<HTMLDivElement>(null);
+    const visibleNotifications = React.useMemo(() => (
+        categoryFilter === 'all'
+            ? notifications
+            : notifications.filter(notification => notification.category === categoryFilter)
+    ), [categoryFilter, notifications]);
 
     const refreshNotifications = React.useCallback(async () => {
         try {
-            const result = await fetchHeaderNotifications(user);
+            const result = await fetchHeaderNotifications(user, categoryFilter);
             setNotifications(result.notifications);
             setUnreadCount(result.unreadCount);
             setSchemaReady(result.schemaReady);
         } catch (error) {
             console.error('Failed to load notifications:', error);
         }
-    }, [user]);
+    }, [categoryFilter, user]);
 
     React.useEffect(() => {
         void refreshNotifications();
@@ -81,8 +106,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
                 console.error('Failed to mark notification as read:', error);
             }
         }
-        if (notification.actionUrl) {
-            window.location.href = notification.actionUrl;
+        const safeActionUrl = getSafeHeaderNotificationActionUrl(notification.actionUrl);
+        if (safeActionUrl) {
+            window.location.href = safeActionUrl;
         }
     };
 
@@ -131,15 +157,34 @@ export function NotificationBell({ user }: NotificationBellProps) {
                             모두 읽음
                         </button>
                     </div>
+                    {schemaReady && (unreadCount > 0 || notifications.length > 0) ? (
+                        <div className={styles.notificationFilters} aria-label="알림 구분">
+                            {NOTIFICATION_CATEGORY_FILTERS.map(filter => (
+                                <button
+                                    aria-pressed={categoryFilter === filter.value}
+                                    className={categoryFilter === filter.value ? styles.notificationFilterActive : styles.notificationFilter}
+                                    key={filter.value}
+                                    onClick={() => setCategoryFilter(filter.value)}
+                                    type="button"
+                                >
+                                    {filter.label}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
                     {!schemaReady ? (
                         <div className={styles.notificationEmpty}>
                             알림 스키마 적용 후 사용할 수 있습니다.
                         </div>
                     ) : notifications.length === 0 ? (
-                        <div className={styles.notificationEmpty}>확인할 알림이 없습니다.</div>
+                        <div className={styles.notificationEmpty}>
+                            {categoryFilter === 'all' ? '확인할 알림이 없습니다.' : '선택한 구분의 알림이 없습니다.'}
+                        </div>
+                    ) : visibleNotifications.length === 0 ? (
+                        <div className={styles.notificationEmpty}>선택한 구분의 알림이 없습니다.</div>
                     ) : (
                         <div className={styles.notificationList}>
-                            {notifications.map(notification => (
+                            {visibleNotifications.map(notification => (
                                 <div
                                     key={notification.id}
                                     className={notification.readAt ? styles.notificationItem : styles.notificationItemUnread}
@@ -151,6 +196,9 @@ export function NotificationBell({ user }: NotificationBellProps) {
                                     >
                                         <span className={`${styles.notificationSeverity} ${styles[`notificationSeverity_${notification.severity}`]}`}>
                                             {getSeverityLabel(notification.severity)}
+                                        </span>
+                                        <span className={`${styles.notificationCategory} ${styles[`notificationCategory_${notification.category}`]}`}>
+                                            {getCategoryLabel(notification.category)}
                                         </span>
                                         <strong>{notification.title}</strong>
                                         <small>{notification.body}</small>

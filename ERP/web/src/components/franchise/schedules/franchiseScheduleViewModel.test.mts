@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
     FRANCHISE_SCHEDULES_API_PATH,
     buildFranchiseScheduleViewModel,
+    getFranchiseScheduleSourceLabel,
     getFranchiseScheduleMutationPath,
     getMonthDays,
     parseFranchiseScheduleAssignees,
@@ -14,9 +15,9 @@ import type { FranchiseScheduleFilters, FranchiseScheduleItem } from './franchis
 const filters: FranchiseScheduleFilters = { status: 'all', source: 'all', visibility: 'all', assignee: '' };
 
 const rows: readonly FranchiseScheduleItem[] = [
-    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'report', visibility: 'shared', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
-    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', visibility: 'personal', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '' },
-    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', visibility: 'shared', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '' }
+    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'supervision-report', visibility: 'shared', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '/dashboard/franchise-supervision' },
+    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', visibility: 'personal', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '' },
+    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', visibility: 'shared', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '', actionUrl: '' }
 ];
 
 test('Given API contract When reading client endpoint Then only franchise schedule API is used', () => {
@@ -51,6 +52,53 @@ test('Given raw route payload When parsing Then invalid rows are dropped and sou
     assert.equal(items.length, 2);
     assert.equal(items[0]?.status, '예정');
     assert.equal(items[1]?.source, 'approval-document');
+});
+
+test('Given franchise source schedules When parsing Then contract and disclosure sources stay distinct', () => {
+    const items = parseFranchiseScheduleItems({
+        data: [
+            { id: 'vendor-1', title: '업체 계약 갱신', date: '2026-07-20', sourceType: 'vendor-contract-renewal' },
+            { id: 'disclosure-1', title: '정보공개서 계약 가능일', date: '2026-07-21', sourceType: 'disclosure-contract-eligible' }
+        ]
+    });
+
+    assert.deepEqual(items.map(item => item.source), [
+        'vendor-contract-renewal',
+        'disclosure-contract-eligible'
+    ]);
+    assert.deepEqual(items.map(item => getFranchiseScheduleSourceLabel(item.source)), [
+        '업체 계약',
+        '정보공개서'
+    ]);
+});
+
+test('Given an operational source with a safe action URL When parsing Then its navigation is retained', () => {
+    const [item] = parseFranchiseScheduleItems({
+        data: [{
+            id: 'report-1',
+            title: '점검 보고서 검토',
+            date: '2026-07-15',
+            sourceType: 'supervision-report',
+            metadata: { actionUrl: '/dashboard/franchise-supervision' }
+        }]
+    });
+
+    assert.equal(item?.source, 'supervision-report');
+    assert.equal(item?.actionUrl, '/dashboard/franchise-supervision');
+});
+
+test('Given an action URL that escapes the dashboard When parsing Then navigation is rejected', () => {
+    const [item] = parseFranchiseScheduleItems({
+        data: [{
+            id: 'report-1',
+            title: '점검 보고서 검토',
+            date: '2026-07-15',
+            sourceType: 'supervision-report',
+            metadata: { actionUrl: '/dashboard/../schedule' }
+        }]
+    });
+
+    assert.equal(item?.actionUrl, '');
 });
 
 test('Given the shared API envelope When parsing Then schedule rows are read from data', () => {
@@ -98,7 +146,7 @@ test('Given assignee metadata When parsing Then the signed-in profile is retaine
     assert.equal(parseFranchiseScheduleRequesterProfileId(payload), 'staff-1');
 });
 
-test('Given schedule rows When building view model Then KPI meanings are mutually exclusive', () => {
+test('Given schedule rows When building view model Then approval work stays out of the franchise calendar', () => {
     const model = buildFranchiseScheduleViewModel({
         items: rows,
         filters,
@@ -108,26 +156,12 @@ test('Given schedule rows When building view model Then KPI meanings are mutuall
         today: '2026-07-10'
     });
 
-    assert.deepEqual(model.kpis.map(kpi => kpi.label), ['오늘 일정', '승인 대기', '지연 일정', '이번 주']);
+    assert.deepEqual(model.kpis.map(kpi => kpi.label), ['오늘 일정', '진행 중', '지연 일정', '이번 주']);
     assert.equal(model.kpis.find(kpi => kpi.label === '이번 주')?.helper, '향후 7일 예정 일정');
     assert.equal(model.kpis.find(kpi => kpi.label === '오늘 일정')?.value, 1);
-    assert.equal(model.kpis.find(kpi => kpi.label === '승인 대기')?.value, 1);
+    assert.equal(model.kpis.find(kpi => kpi.label === '진행 중')?.value, 1);
     assert.equal(model.kpis.find(kpi => kpi.label === '지연 일정')?.value, 1);
-});
-
-test('Given approvalDocumentId When building view model Then selected day focuses linked schedule', () => {
-    const model = buildFranchiseScheduleViewModel({
-        items: rows,
-        filters,
-        selectedDate: '2026-07-10',
-        monthDate: new Date('2026-07-01T00:00:00'),
-        state: 'ready',
-        approvalDocumentId: 'doc-1'
-    });
-
-    assert.equal(model.focusId, 'approval-1');
-    assert.equal(model.selectedDate, '2026-07-12');
-    assert.equal(model.selectedItems[0]?.id, 'approval-1');
+    assert.equal(model.filteredItems.some(item => item.source === 'approval-document'), false);
 });
 
 test('Given response states When building view model Then empty, sql, forbidden and loading states stay defined', () => {

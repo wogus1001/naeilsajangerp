@@ -1,6 +1,8 @@
 import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
+import { buildSupervisionCorrectiveActionSourceSchedule } from '@/lib/franchise-phase2-source-schedules';
+import { trySyncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -8,6 +10,7 @@ import {
     fetchLocationInCompany,
     getFirst,
     isMissingSupervisionSchemaError,
+    isSupervisionResourceInCompany,
     readJsonBody,
     resolveProfileInCompany,
     resolveSupervisionAuth,
@@ -21,8 +24,12 @@ type CorrectiveActionRow = {
     readonly id: string;
     readonly company_id: string | null;
     readonly assignee_profile_id: string | null;
+    readonly completed_at: string | null;
     readonly created_by: string | null;
+    readonly due_date: string | null;
+    readonly location?: { readonly name: string | null } | null;
     readonly status: string | null;
+    readonly title: string | null;
 };
 
 type ReportScopeRow = {
@@ -30,6 +37,24 @@ type ReportScopeRow = {
     readonly company_id: string | null;
     readonly location_id: string | null;
 };
+
+async function syncCorrectiveActionSchedule(input: {
+    readonly action: CorrectiveActionRow;
+    readonly supabaseAdmin: SupabaseClient;
+}) {
+    const schedule = buildSupervisionCorrectiveActionSourceSchedule({
+        actionId: input.action.id,
+        assigneeProfileId: input.action.assignee_profile_id || '',
+        companyId: input.action.company_id || '',
+        completedAt: input.action.completed_at,
+        dueDate: input.action.due_date,
+        locationName: input.action.location?.name || '운영점',
+        status: input.action.status || '요청',
+        title: input.action.title || '시정요청'
+    });
+    if (!schedule) return { status: 'synced' as const };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+}
 
 async function resolveReportId(input: {
     readonly companyId: string;
@@ -156,8 +181,8 @@ export async function POST(request: Request) {
                 created_by: scope.auth.requester.id,
                 updated_by: scope.auth.requester.id
             })
-            .select('id')
-            .single<{ readonly id: string }>();
+            .select('id, company_id, assignee_profile_id, completed_at, created_by, due_date, status, title, location:franchise_locations(name)')
+            .single<CorrectiveActionRow>();
         if (error) throw error;
         await insertActionEvent({
             actionId: data.id,
@@ -178,7 +203,8 @@ export async function POST(request: Request) {
             supabaseAdmin: scope.auth.supabaseAdmin,
             title: cleanString(getFirst(scope.body, ['title'])) || '시정요청'
         });
-        return ok({ id: data.id }, 201);
+        const scheduleSync = await syncCorrectiveActionSchedule({ action: data, supabaseAdmin: scope.auth.supabaseAdmin });
+        return ok({ id: data.id, scheduleSyncRequired: scheduleSync.status === 'failed' }, 201);
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_REPORT_SCOPE_MISMATCH') {
             return fail(403, 'FORBIDDEN', '보고서의 회사 또는 운영점 범위가 일치하지 않습니다.');
@@ -201,11 +227,14 @@ export async function PATCH(request: Request) {
 
         const { data: existing, error: findError } = await scope.auth.supabaseAdmin
             .from('franchise_corrective_actions')
-            .select('id, company_id, assignee_profile_id, created_by, status')
+            .select('id, company_id, assignee_profile_id, completed_at, created_by, due_date, status, title, location:franchise_locations(name)')
             .eq('id', id)
             .maybeSingle<CorrectiveActionRow>();
         if (findError) throw findError;
         if (!existing) return fail(404, 'NOT_FOUND', '시정요청을 찾을 수 없습니다.');
+        if (!isSupervisionResourceInCompany(existing, scope.companyId)) {
+            return fail(403, 'FORBIDDEN', '시정요청의 회사 범위가 일치하지 않습니다.');
+        }
         if (!canAccessSupervisorResource(scope.auth.requester, existing)) {
             return fail(403, 'FORBIDDEN', '시정요청을 수정할 권한이 없습니다.');
         }
@@ -239,10 +268,12 @@ export async function PATCH(request: Request) {
             }
         }
 
-        const { error } = await scope.auth.supabaseAdmin
+        const { data: updated, error } = await scope.auth.supabaseAdmin
             .from('franchise_corrective_actions')
             .update(updates)
-            .eq('id', id);
+            .eq('id', id)
+            .select('id, company_id, assignee_profile_id, completed_at, created_by, due_date, status, title, location:franchise_locations(name)')
+            .single<CorrectiveActionRow>();
         if (error) throw error;
         await insertActionEvent({
             actionId: id,
@@ -254,7 +285,8 @@ export async function PATCH(request: Request) {
             supabaseAdmin: scope.auth.supabaseAdmin,
             toStatus: hadStatusUpdate ? String(updates.status || '') : existing.status
         });
-        return ok({ success: true });
+        const scheduleSync = await syncCorrectiveActionSchedule({ action: updated, supabaseAdmin: scope.auth.supabaseAdmin });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');

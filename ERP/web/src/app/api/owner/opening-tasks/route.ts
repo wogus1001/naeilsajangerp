@@ -2,6 +2,7 @@ import { fail, ok } from '@/lib/api-response';
 import { getOwnerSessionContext } from '@/lib/franchise-owner-auth';
 import { buildOwnerSubmissionTitle, cleanOwnerText, isOwnerRecord } from '@/lib/franchise-owner-portal';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { safelySyncOwnerSubmissionSchedule } from '@/lib/franchise-phase2-schedule-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,10 +30,21 @@ export async function POST(request: Request) {
                 payload: { taskId, taskTitle },
                 status: 'submitted'
             })
-            .select('id')
-            .single<{ readonly id: string }>();
+            .select('id, created_at')
+            .single<{ readonly id: string; readonly created_at: string | null }>();
         if (error) throw error;
-        return ok({ submissionId: data.id }, 201);
+        const scheduleSync = await safelySyncOwnerSubmissionSchedule({
+            companyId: context.account.company_id,
+            locationName: context.location.name || '운영점',
+            managerProfileId: context.location.manager_id,
+            status: 'submitted',
+            submissionId: data.id,
+            submissionType: 'opening_task_completion',
+            submittedAt: data.created_at || new Date(),
+            supabaseAdmin,
+            title: taskTitle || taskId
+        });
+        return ok({ submissionId: data.id, scheduleSyncRequired: scheduleSync.status === 'failed' }, 201);
     } catch (error) {
         console.error('Owner opening task error:', error);
         return fail(500, 'INTERNAL_ERROR', '완료 요청을 등록하지 못했습니다.');

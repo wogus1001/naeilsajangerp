@@ -763,6 +763,7 @@ function ReportReviewGroup(props: {
 export function CorrectiveActionList(props: {
     readonly actions: readonly SupervisionCorrectiveAction[];
     readonly disabled: boolean;
+    readonly selectedActionId?: string;
     readonly onStatusChange: (action: SupervisionCorrectiveAction, status: string) => void;
 }) {
     if (props.actions.length === 0) return <div className={styles.empty}>진행 중인 시정요청이 없습니다.</div>;
@@ -780,7 +781,11 @@ export function CorrectiveActionList(props: {
                 </thead>
                 <tbody>
                     {props.actions.map(action => (
-                        <tr key={action.id}>
+                        <tr
+                            aria-current={action.id === props.selectedActionId ? 'true' : undefined}
+                            className={action.id === props.selectedActionId ? styles.focusedTableRow : undefined}
+                            key={action.id}
+                        >
                             <td>
                                 <div className={styles.reportTitleCell}>
                                     <strong>{action.title}</strong>

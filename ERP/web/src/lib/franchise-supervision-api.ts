@@ -118,11 +118,12 @@ export async function resolveProfileInCompany(input: ResolveProfileInCompanyInpu
 
     const { data, error } = await input.supabaseAdmin
         .from('profiles')
-        .select('id, company_id')
+        .select('id, company_id, status')
         .eq('id', profileId)
-        .maybeSingle<{ readonly id: string; readonly company_id: string | null }>();
+        .maybeSingle<{ readonly id: string; readonly company_id: string | null; readonly status: string | null }>();
     if (error) throw error;
     if (!data || data.company_id !== input.companyId) return { ok: false, response: fail(403, 'FORBIDDEN', '담당자의 회사 범위가 일치하지 않습니다.') };
+    if (data.status !== 'active') return { ok: false, response: fail(400, 'VALIDATION_ERROR', '활성 상태인 담당자만 지정할 수 있습니다.') };
     return { ok: true, profileId };
 }
 
@@ -174,4 +175,11 @@ export function canAccessSupervisorResource(
     return resource.supervisor_profile_id === requester.id
         || resource.created_by === requester.id
         || resource.assignee_profile_id === requester.id;
+}
+
+export function isSupervisionResourceInCompany(
+    resource: { readonly company_id: string | null },
+    companyId: string
+): boolean {
+    return resource.company_id === companyId;
 }

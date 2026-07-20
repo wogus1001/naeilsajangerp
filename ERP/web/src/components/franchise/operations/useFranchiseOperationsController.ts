@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { normalizeRegion } from '@/lib/franchise-market-insights';
@@ -25,6 +26,7 @@ type OperationsCounts = {
 };
 
 export function useFranchiseOperationsController() {
+    const { showAlert, showConfirm } = useAppDialog();
     const [userId, setUserId] = React.useState('');
     const [companyName, setCompanyName] = React.useState('');
     const [locations, setLocations] = React.useState<FranchiseLocation[]>([]);
@@ -52,11 +54,11 @@ export function useFranchiseOperationsController() {
         } catch (error) {
             console.error('Failed to fetch franchise operations:', error);
             setLocations([]);
-            window.alert(error instanceof Error ? error.message : '가맹 운영 데이터를 불러오지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '가맹 운영 데이터를 불러오지 못했습니다.', type: 'error' });
         } finally {
             setIsLoading(false);
         }
-    }, [companyName, userId]);
+    }, [companyName, showAlert, userId]);
 
     React.useEffect(() => {
         if (!userId) return;
@@ -108,11 +110,11 @@ export function useFranchiseOperationsController() {
     const saveLocation = async () => {
         if (!userId) return;
         if (!locationForm.name.trim()) {
-            window.alert('가맹점명을 입력해주세요.');
+            void showAlert({ message: '가맹점명을 입력해주세요.', type: 'error' });
             return;
         }
         if (!locationForm.region.trim() && !locationForm.address.trim()) {
-            window.alert('지역 또는 주소를 입력해주세요.');
+            void showAlert({ message: '지역 또는 주소를 입력해주세요.', type: 'error' });
             return;
         }
         setIsSaving(true);
@@ -122,9 +124,9 @@ export function useFranchiseOperationsController() {
             await saveBrandMaster({ userId, companyName, form });
             resetLocationForm();
             await fetchLocations();
-            window.alert(locationForm.id ? '가맹점 정보를 수정했습니다.' : '가맹점을 등록했습니다.');
+            void showAlert({ message: locationForm.id ? '가맹점 정보를 수정했습니다.' : '가맹점을 등록했습니다.', type: 'success' });
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '가맹점 저장 중 오류가 발생했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '가맹점 저장 중 오류가 발생했습니다.', type: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -137,7 +139,7 @@ export function useFranchiseOperationsController() {
             await updateFranchiseLocationStatus({ userId, companyName, locationId: location.id, status });
             await fetchLocations();
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '상태 변경 중 오류가 발생했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '상태 변경 중 오류가 발생했습니다.', type: 'error' });
         } finally {
             setUpdatingStatusId('');
         }
@@ -145,16 +147,21 @@ export function useFranchiseOperationsController() {
 
     const deleteLocation = async (location: FranchiseLocation) => {
         if (!userId) return;
-        const confirmed = window.confirm(`${location.name} 가맹점 정보를 삭제할까요? 기존 모객DB 데이터는 삭제되지 않습니다.`);
+        const confirmed = await showConfirm({
+            title: '가맹점 정보 삭제',
+            message: `${location.name} 가맹점 정보를 삭제할까요? 기존 모객DB 데이터는 삭제되지 않습니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
         setDeletingLocationId(location.id);
         try {
             await deleteFranchiseLocation({ userId, companyName, locationId: location.id });
             if (locationForm.id === location.id) resetLocationForm();
             await fetchLocations();
-            window.alert('가맹점 정보를 삭제했습니다.');
+            void showAlert({ message: '가맹점 정보를 삭제했습니다.', type: 'success' });
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '가맹점 삭제 중 오류가 발생했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '가맹점 삭제 중 오류가 발생했습니다.', type: 'error' });
         } finally {
             setDeletingLocationId('');
         }

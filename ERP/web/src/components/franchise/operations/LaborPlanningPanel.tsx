@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Calculator, FileText, FolderOpen, Pencil, RotateCcw, Table2, Trash2, Wrench } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { DEFAULT_LABOR_SETTINGS, LABOR_WEEKDAYS, calculateLaborPlan, type LaborPlanResult, type LaborSettings, type LaborWeekday } from '@/lib/franchise-labor-planning';
 import { buildLaborScenarioResult, type LaborScenarioKey } from '@/lib/franchise-labor-scenario-summary';
 import type { FranchiseLocation } from './types';
@@ -70,6 +71,7 @@ export function LaborPlanningPanel({
     initialLocationId = '',
     initialMonthlySalesManwon
 }: Props) {
+    const { showAlert, showConfirm } = useAppDialog();
     const initialSales = initialMonthlySalesManwon && initialMonthlySalesManwon > 0 ? initialMonthlySalesManwon : 6000;
     const [form, setForm] = React.useState<LaborPlanForm>(() => defaultForm(initialLocationId || locations[0]?.id || '', initialSales));
     const [settings, setSettings] = React.useState<LaborSettings>(DEFAULT_LABOR_SETTINGS);
@@ -170,7 +172,7 @@ export function LaborPlanningPanel({
 
     const saveCurrentPlan = async () => {
         if (!companyId || !form.locationId) {
-            window.alert('운영점과 회사 정보를 확인해주세요.');
+            void showAlert({ message: '운영점과 회사 정보를 확인해주세요.', type: 'error' });
             return;
         }
         setIsSaving(true);
@@ -184,9 +186,9 @@ export function LaborPlanningPanel({
             setEditingPlanId('');
             await load();
             setActiveView('saved');
-            window.alert(isEditing ? '인력 세팅안을 수정했습니다.' : '인력 세팅안을 저장했습니다.');
+            void showAlert({ message: isEditing ? '인력 세팅안을 수정했습니다.' : '인력 세팅안을 저장했습니다.', type: 'success' });
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '인력 세팅안을 저장하지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '인력 세팅안을 저장하지 못했습니다.', type: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -240,19 +242,24 @@ export function LaborPlanningPanel({
 
     const deleteSavedPlan = async (plan: LaborSavedPlan) => {
         if (!companyId) {
-            window.alert('회사 정보를 확인해주세요.');
+            void showAlert({ message: '회사 정보를 확인해주세요.', type: 'error' });
             return;
         }
-        const confirmed = window.confirm(`'${plan.title}' 인력 세팅안을 삭제할까요? 삭제한 세팅안은 목록에서 제거됩니다.`);
+        const confirmed = await showConfirm({
+            title: '인력 세팅안 삭제',
+            message: `'${plan.title}' 인력 세팅안을 삭제할까요? 삭제한 세팅안은 목록에서 제거됩니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
         if (!confirmed) return;
         setIsSaving(true);
         try {
             await deleteLaborPlan(scope, companyId, plan.id);
             if (editingPlanId === plan.id) setEditingPlanId('');
             await load();
-            window.alert('인력 세팅안을 삭제했습니다.');
+            void showAlert({ message: '인력 세팅안을 삭제했습니다.', type: 'success' });
         } catch (error) {
-            window.alert(error instanceof Error ? error.message : '인력 세팅안을 삭제하지 못했습니다.');
+            void showAlert({ message: error instanceof Error ? error.message : '인력 세팅안을 삭제하지 못했습니다.', type: 'error' });
         } finally {
             setIsSaving(false);
         }

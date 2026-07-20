@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import { cleanString, getFirst, isRecord } from '@/lib/franchise-supervision-api';
+import {
+    buildSupervisionCorrectiveActionSourceSchedule,
+    buildSupervisionReportSourceSchedule
+} from '@/lib/franchise-phase2-source-schedules';
+import { trySyncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import { kstDateKey } from '@/lib/franchise-workflow';
 import { isSupervisionReportStoragePath, SUPERVISION_REPORT_BUCKET } from '@/lib/upload-storage-policy';
 import {
     fetchWorkflowManagerProfileIds
@@ -47,8 +53,11 @@ export type ReportRow = {
 };
 
 type CorrectiveActionRow = {
+    readonly assignee_profile_id: string | null;
+    readonly due_date: string | null;
     readonly id: string;
     readonly inspection_item_id: string | null;
+    readonly status: string | null;
     readonly title?: string | null;
 };
 
@@ -56,6 +65,32 @@ type ReportTemplateRow = {
     readonly id: string;
     readonly inspection_items: unknown;
 };
+
+type CorrectiveActionPostProcessingResult = {
+    readonly scheduleSyncRequiredCount: number;
+    readonly warning: string | null;
+};
+
+function readPostProcessingErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (isRecord(error) && typeof error.message === 'string') return error.message;
+    return String(error);
+}
+
+export async function captureCorrectiveActionPostProcessing(
+    operation: () => Promise<{ readonly scheduleSyncRequiredCount: number }>
+): Promise<CorrectiveActionPostProcessingResult> {
+    try {
+        const result = await operation();
+        return { ...result, warning: null };
+    } catch (error) {
+        console.error('Supervision corrective action post-processing failed:', readPostProcessingErrorMessage(error));
+        return {
+            scheduleSyncRequiredCount: 1,
+            warning: '보고서는 저장됐지만 시정요청 후처리가 지연되고 있습니다.'
+        };
+    }
+}
 
 export function reportEventTypeFor(event: SupervisionReportStatusEvent): SupervisionReportEventType {
     switch (event.kind) {
@@ -151,38 +186,63 @@ export async function insertCorrectiveActions(input: {
     readonly supabaseAdmin: SupabaseClient;
 }) {
     const seeds = buildCorrectiveActionSeeds(input.reportId, input.items);
-    if (seeds.length === 0) return;
+    if (seeds.length === 0) return { scheduleSyncRequiredCount: 0 };
     const now = new Date().toISOString();
+    const dueAt = new Date();
+    dueAt.setDate(dueAt.getDate() + 7);
+    const dueDate = kstDateKey(dueAt);
     const seedItemIds = seeds.map(seed => seed.itemId);
     const { data: existingRows, error: existingError } = await input.supabaseAdmin
         .from('franchise_corrective_actions')
-        .select('id, inspection_item_id')
+        .select('id, assignee_profile_id, due_date, inspection_item_id, status, title')
         .eq('report_id', input.reportId)
         .in('inspection_item_id', seedItemIds)
         .returns<CorrectiveActionRow[]>();
     if (existingError) throw existingError;
     const existingItemIds = new Set((existingRows || []).map(row => row.inspection_item_id).filter(Boolean));
-    const { data, error } = await input.supabaseAdmin
-        .from('franchise_corrective_actions')
-        .upsert(seeds.map(seed => ({
-            company_id: input.companyId,
-            report_id: input.reportId,
-            inspection_item_id: seed.itemId,
-            location_id: input.locationId,
-            assignee_profile_id: input.assigneeProfileId,
-            title: seed.title,
-            memo: seed.memo || null,
-            status: '요청',
-            created_by: input.createdBy,
-            updated_by: input.createdBy,
-            created_at: now,
-            updated_at: now
-        })), { onConflict: 'report_id,inspection_item_id' })
-        .select('id, inspection_item_id, title')
-        .returns<CorrectiveActionRow[]>();
-    if (error) throw error;
-    const newRows = (data || []).filter(row => row.inspection_item_id && !existingItemIds.has(row.inspection_item_id));
-    if (newRows.length === 0) return;
+    const newSeeds = seeds.filter(seed => !existingItemIds.has(seed.itemId));
+    let insertedRows: readonly CorrectiveActionRow[] = [];
+    if (newSeeds.length > 0) {
+        const { data, error } = await input.supabaseAdmin
+            .from('franchise_corrective_actions')
+            .upsert(newSeeds.map(seed => ({
+                company_id: input.companyId,
+                report_id: input.reportId,
+                inspection_item_id: seed.itemId,
+                location_id: input.locationId,
+                assignee_profile_id: input.assigneeProfileId,
+                title: seed.title,
+                memo: seed.memo || null,
+                status: '요청',
+                due_date: dueDate,
+                created_by: input.createdBy,
+                updated_by: input.createdBy,
+                created_at: now,
+                updated_at: now
+            })), { onConflict: 'report_id,inspection_item_id' })
+            .select('id, assignee_profile_id, due_date, inspection_item_id, status, title')
+            .returns<CorrectiveActionRow[]>();
+        if (error) throw error;
+        insertedRows = data || [];
+    }
+    const syncedRows = [...(existingRows || []), ...insertedRows];
+    const scheduleResults = await Promise.all(syncedRows.map(async row => {
+        const schedule = buildSupervisionCorrectiveActionSourceSchedule({
+            actionId: row.id,
+            assigneeProfileId: row.assignee_profile_id || input.assigneeProfileId,
+            companyId: input.companyId,
+            dueDate: row.due_date,
+            locationName: input.locationName,
+            status: row.status || '요청',
+            title: row.title || '시정요청'
+        });
+        if (!schedule) return { status: 'synced' as const };
+        return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    }));
+    const scheduleSyncRequiredCount = scheduleResults.filter(result => result.status === 'failed').length;
+
+    const newRows = insertedRows.filter(row => row.inspection_item_id && !existingItemIds.has(row.inspection_item_id));
+    if (newRows.length === 0) return { scheduleSyncRequiredCount };
     const { error: eventError } = await input.supabaseAdmin
         .from('franchise_corrective_action_events')
         .insert(newRows.map(row => ({
@@ -207,7 +267,7 @@ export async function insertCorrectiveActions(input: {
                 variables: {
                     운영점명: input.locationName,
                     시정항목: row.title || '시정요청',
-                    기한: '-'
+                    기한: row.due_date || dueDate
                 }
             });
         } catch (error) {
@@ -215,6 +275,7 @@ export async function insertCorrectiveActions(input: {
             console.warn('Supervision corrective action AlimTalk notification skipped:', message);
         }
     }));
+    return { scheduleSyncRequiredCount };
 }
 
 export async function notifyReportReviewed(input: {
@@ -310,6 +371,17 @@ export async function syncSupervisionReportWorkflow(input: {
         p_visit_id: input.visitId || null
     });
     if (error) throw error;
+    const schedule = buildSupervisionReportSourceSchedule({
+        companyId: input.companyId,
+        locationName: input.locationName,
+        managerProfileId: approverProfileId || input.reportWrite.reviewedBy,
+        reportId: input.reportId,
+        status: input.reportWrite.status,
+        supervisorProfileId: input.supervisorProfileId,
+        taskDate: input.reportWrite.reviewedAt || input.reportWrite.submittedAt
+    });
+    if (!schedule) return { status: 'synced' as const };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 export async function reconcileSubmittedSupervisionReport(input: {
@@ -318,7 +390,7 @@ export async function reconcileSubmittedSupervisionReport(input: {
     readonly supabaseAdmin: SupabaseClient;
     readonly visit: VisitRow | null;
 }) {
-    await syncSupervisionReportWorkflow({
+    return syncSupervisionReportWorkflow({
         actorProfileId: input.actorProfileId,
         companyId: input.report.company_id,
         eventType: '제출',

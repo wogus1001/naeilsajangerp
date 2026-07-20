@@ -760,3 +760,11 @@ YYYY-MM-DD
 - 검증: PDF 집중 테스트 9건, 전체 자동 테스트 727건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 문서 상세에서 실제 다운로드와 console error 0건을 확인하고, macOS 미리보기와 PDF 렌더링으로 최신 파일이 빈 페이지가 아님을 확인했다.
 - 승격: 최신 `dev`의 보안·일정 보정을 유지한 상태에서 PDF 다운로드 최종 리뷰 사항과 릴리즈 문서를 반영하고, protected branch PR/check 절차로 `main`에 승격한 뒤 `naeilsajang` production을 Fast Release Runbook으로 배포한다. 최종 커밋, deployment ID와 운영 도메인 smoke 결과는 배포 보고에 남긴다.
 - SQL 적용 순서: 최신 `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` -> 최신 `supabase_franchise_schedule_visibility_migration.sql`. 문서·첨부 RLS와 알림 조회·읽음 처리도 현재 유효한 위임 및 결재 단계만 허용하도록 마지막 두 파일을 보강했다. PDF 보정 자체의 신규 SQL은 없지만 같은 릴리즈의 권한 정책 변경 때문에 최신 파일 기준으로 다시 적용한다. **SQL 재등록 필요**.
+
+## 2026-07-20 가맹운영 일정 2단계 내구성 마감 준비
+
+- 작업 브랜치: `codex/phase2-main-integration-20260716`.
+- 범위: 원천 일정 동기화의 큐 선기록, UUID lease 기반 최신 작업 보호, 재시도 수신자 재검증, 업체 계약 담당자 및 슈퍼바이징 회사 범위, 원본 저장 후 일정 동기화 결과 응답을 보강한다.
+- 검증: 집중 테스트 56건, 전체 테스트 797건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- SQL 적용 순서: 최신 `supabase_franchise_schedule_visibility_migration.sql` -> `supabase_franchise_source_schedule_upsert_migration.sql` -> `supabase_franchise_source_schedule_profile_security_migration.sql` -> `supabase_franchise_schedule_durable_sync_migration.sql` -> `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`. 사용자 확인 기준 기본 durable migration까지 적용 완료이며 마지막 리뷰 보완 파일은 추가 적용해야 한다. **SQL 등록 필요**.
+- 승격 상태: 보완 SQL 적용 확인 후 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 진행한다. dev와 production DB가 분리돼 있으면 두 환경에 같은 보완 SQL이 적용됐는지 각각 확인한다.

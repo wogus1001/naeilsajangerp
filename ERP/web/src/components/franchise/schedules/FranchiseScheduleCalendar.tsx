@@ -1,6 +1,5 @@
 "use client";
 
-import { CheckCircle2 } from 'lucide-react';
 import { getMonthDays, toDateKey } from './franchiseScheduleViewModel';
 import type { FranchiseScheduleItem } from './franchiseScheduleViewModel';
 import styles from './FranchiseSchedulePage.module.css';
@@ -9,7 +8,6 @@ type CalendarProps = {
     readonly monthDate: Date;
     readonly selectedDate: string;
     readonly items: readonly FranchiseScheduleItem[];
-    readonly focusId: string;
     readonly onSelectDate: (date: string) => void;
 };
 
@@ -22,7 +20,7 @@ function getStatusTone(items: readonly FranchiseScheduleItem[]): string {
     return styles.dayPlanned;
 }
 
-export function FranchiseScheduleCalendar({ monthDate, selectedDate, items, focusId, onSelectDate }: CalendarProps) {
+export function FranchiseScheduleCalendar({ monthDate, selectedDate, items, onSelectDate }: CalendarProps) {
     const month = monthDate.getMonth();
     const days = getMonthDays(monthDate);
     const today = toDateKey(new Date());
@@ -50,11 +48,6 @@ export function FranchiseScheduleCalendar({ monthDate, selectedDate, items, focu
                             {dayItems.length > 0 && (
                                 <span className={`${styles.dayCount} ${getStatusTone(dayItems)}`}>
                                     {dayItems.length}
-                                </span>
-                            )}
-                            {dayItems.some(item => item.id === focusId) && (
-                                <span className={styles.focusMark} title="연결된 결재 문서">
-                                    <CheckCircle2 size={14} />
                                 </span>
                             )}
                         </button>

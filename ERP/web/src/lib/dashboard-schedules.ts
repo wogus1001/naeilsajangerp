@@ -29,7 +29,8 @@ export function selectDashboardUpcomingSchedules(
     if (!Array.isArray(rows)) return [];
     return rows.flatMap(row => {
         if (!isRecord(row)) return [];
-        if (optionalString(row.source_type) === 'approval-document') return [];
+        const sourceType = optionalString(row.source_type);
+        if (sourceType === 'approval-document' || isFranchiseOperationsScheduleSource(sourceType)) return [];
         if (optionalString(row.scope) === 'personal' && optionalString(row.user_id) !== requesterProfileId) return [];
 
         const id = typeof row.id === 'string' || typeof row.id === 'number' ? row.id : null;
@@ -46,3 +47,6 @@ export function selectDashboardUpcomingSchedules(
         }];
     });
 }
+import { isFranchiseOperationsScheduleSource } from './franchise-schedule-source-types';
+
+export const DASHBOARD_SCHEDULE_SOURCE_FILTER = 'source_type.is.null,source_type.not.in.(approval-document,supervision-visit,supervision-report,supervision-corrective-action,opening-project,owner-general-request,owner-facility-request,owner-checklist-completion,vendor-contract-renewal,disclosure-contract-eligible)';

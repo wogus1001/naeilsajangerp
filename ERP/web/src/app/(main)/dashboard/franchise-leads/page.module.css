@@ -5924,6 +5924,11 @@
     background: #ffffff;
 }
 
+.ownerPortalFocusedSubmission {
+    border-color: #8ab8ff;
+    box-shadow: 0 0 0 2px rgb(49 130 246 / 12%);
+}
+
 .ownerPortalSubmissionDetails summary {
     min-height: 34px;
     padding: 9px 11px;

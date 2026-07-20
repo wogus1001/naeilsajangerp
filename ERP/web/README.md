@@ -89,6 +89,10 @@ supabase_company_approvals_document_line_override_migration.sql
 supabase_company_approvals_security_review_migration.sql
 supabase_company_approvals_workflow_schedule_fix_migration.sql
 supabase_franchise_schedule_visibility_migration.sql
+supabase_franchise_source_schedule_upsert_migration.sql
+supabase_franchise_source_schedule_profile_security_migration.sql
+supabase_franchise_schedule_durable_sync_migration.sql
+supabase_franchise_schedule_durable_sync_review_fix_migration.sql
 supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_portal_migration.sql
 supabase_franchise_owner_company_login_scope.sql
@@ -101,6 +105,10 @@ supabase_realty_import_migration.sql
 `franchise_brands`, `franchise_location_messages`, `franchise_disclosure_documents`, `franchise_lead_disclosure_deliveries`, `profile_gmail_connections`, `franchise_notifications`, `franchise_lead_contract_checklist_steps`, `franchise_market_monitoring`, `partner_vendor_access`, `company_menu_features`, `electronic_contracts`, `franchise_location_meeting_tool_presets`, `franchise_location_meeting_tool_versions`, `franchise_vendor_contracts`, `franchise_vendor_contract_events`, `franchise_vendors`, `alimtalk_templates`, `franchise_supervisor_assignments`, `approval_templates`, `approval_documents`, `approval_document_events`, `franchise_labor_settings`, `franchise_owner_accounts`, 또는 `franchise_owner_notices.attachments` SQL이 미적용된 상태에서 관련 화면/API를 열면 Supabase schema cache 오류, 예를 들어 `PGRST205`, 가 발생할 수 있다. 점주 포털 알림톡 3종은 `supabase_franchise_alimtalk_operations_migration.sql` 적용 후 `supabase_franchise_owner_portal_alimtalk_templates_migration.sql`로 seed를 추가하고, `/admin/alimtalk`에서 승인 템플릿의 SOLAPI template/channel ID를 저장한다. 공통 일정/결재 MVP는 `supabase_franchise_approval_calendar_migration.sql`로 기존 `schedules` 확장과 결재 테이블을 추가한 뒤 확인한다. dev와 main Supabase 프로젝트는 분리되어 있으므로 배포 전 각 환경의 적용 여부를 따로 확인한다.
 
 가맹운영 전용 일정의 공유/개인 구분은 `franchise_schedules` 생성 SQL과 최신 `supabase_company_approvals_security_review_migration.sql`을 먼저 적용한 뒤 `supabase_franchise_schedule_visibility_migration.sql`을 실행한다. 일정 정책이 보안 리뷰 migration의 `can_act_on_approval_document` 함수를 사용하므로 순서를 바꾸면 안 된다. 기존 일정과 시스템 생성 일정은 공유로 유지되고, 개인 일정은 생성자 본인에게만 조회·수정·삭제가 허용된다. 전자결재 보안 리뷰에서 비활성 계정의 직접 RLS 접근을 차단하도록 정책을 보강했으므로 기존 적용 환경도 최신 파일을 다시 실행한다. **SQL 재등록 필요**.
+
+가맹운영 원천 일정은 위 visibility migration 다음 `supabase_franchise_source_schedule_upsert_migration.sql`, `supabase_franchise_source_schedule_profile_security_migration.sql` 순서로 적용한다. 두 migration은 원천별 결정적 upsert와 활성 회사 직원·관리자 검증을 제공한다. 사용자 확인 기준 대상 DB에는 두 파일 모두 적용 완료됐다. **SQL 등록 완료 확인**.
+
+그 다음 `supabase_franchise_schedule_durable_sync_migration.sql`을 적용한다. 원천 일정과 수신자 알림을 한 트랜잭션에서 갱신하고, 일시 실패 작업을 재시도 큐에 보관하며, 매일 KST 자정에 지난 일정을 `지연`으로 재평가한다. 사용자 확인 기준 대상 DB에 적용 완료됐다. 이어서 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 적용한다. 이 보완 파일은 최신 payload를 먼저 큐에 기록하고 고유 lease로 실행 권한을 검증해 오래된 worker의 덮어쓰기를 막으며, 재시도 시 수신자 자격과 RPC 실행 권한을 다시 확인한다. 사용자 확인 기준 2026-07-20 대상 DB에 적용 완료됐다. **SQL 등록 완료 확인**.
 
 ## Franchise Supervision Setup
 

@@ -90,10 +90,12 @@ export async function fetchOpeningProject({
 
 export async function saveOpeningProjectDraft({
     draft,
+    leadId,
     userId,
     companyName
 }: {
     readonly draft: OpeningProjectDraft;
+    readonly leadId: string;
     readonly userId: string;
     readonly companyName: string;
 }): Promise<FranchiseOpeningProject> {
@@ -101,7 +103,7 @@ export async function saveOpeningProjectDraft({
     const response = await fetch('/api/franchise-opening-projects', {
         method: draft.id ? 'PUT' : 'POST',
         headers,
-        body: JSON.stringify({ ...draft, requesterId: userId, companyName })
+        body: JSON.stringify({ ...draft, leadId, requesterId: userId, companyName })
     });
     const payload = await readJsonPayload(response);
     const savedProject = unwrapApiData<OpeningProjectResponse>(payload).project;

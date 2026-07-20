@@ -25,6 +25,35 @@
 
 ## 개발 과정 로그
 
+### 2026-07-20 가맹 운영 일정 내구성 최종 보정
+
+- `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`은 사용자 확인 기준 대상 DB 적용을 완료했다. **SQL 등록 완료 확인**.
+- 원천 저장 전 동기화 경계는 큐 저장 실패를 호출자에게 전달하고, 이미 원본 저장이 끝난 방문·시정요청·오픈 준비·점주 제출·업체 계약·점검 보고서 경로는 성공 응답의 `scheduleSyncRequired`로 후속 동기화 필요 상태를 반환하도록 호출 계약을 분리했다.
+- 점검 보고서가 저장된 뒤 시정요청 후처리가 실패하더라도 500을 반환해 같은 보고서를 다시 생성하지 않도록 성공 응답에 지연 경고를 포함한다.
+- 재처리 배치는 payload별 프로필 재검증과 RPC 오류를 개별 실패로 기록하고 다음 작업을 계속 처리한다. 필수 필드가 없는 payload도 조용히 폐기하지 않고 실패·재시도 대상으로 남기며, Supabase 객체 오류의 `message`를 재시도 로그에 보존한다.
+- 회귀 테스트 28건, 전체 테스트 803건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- mock-session 브라우저 QA에서 `/dashboard/franchise-operations/schedule`의 원천 일정 목록, 상세 이동, 완료 처리와 1440px/390px 레이아웃을 확인했다. 테스트 인증 mock에서 발생하는 다중 GoTrueClient 경고 외 제품 콘솔 오류는 없었다.
+- 남은 live QA는 적용 DB의 실계정으로 원천 변경 1건과 재처리 큐 1건을 확인하는 것이다. 신규 SQL 파일은 없다.
+
+### 2026-07-16 가맹 운영 원천 일정 내구성 리뷰 보정
+
+- 원천 일정과 현재 담당자 알림을 `sync_franchise_operational_schedule_from_payload` 한 트랜잭션에서 갱신하고, source 단위 advisory lock으로 동시 동기화를 직렬화했다.
+- 일시 실패 payload는 `franchise_schedule_sync_jobs`에 source 기준으로 덮어써 보관하고, 예약 실행에서 `FOR UPDATE SKIP LOCKED`로 가져와 성공 시 삭제·실패 시 지수 backoff를 적용한다.
+- 예약 실행은 매일 `0 15 * * *` UTC, KST 자정에 미완료 과거 일정을 `지연`으로 재평가한다.
+- SV 방문·보고서·시정요청과 오픈 준비는 원천 동기화와 재시도 저장이 모두 실패하면 성공으로 응답하지 않도록 실패 은폐를 제거했다.
+- 일반 점주 문의도 시설 문의와 별도 원천 유형으로 가맹운영 일정에 연결하고, 전자결재·가맹운영 원천 일정은 메인 대시보드 `예정된 일정`에서 제외한다.
+- 검증: 내구성 RPC·재시도·지연 승격·실패 전파 경계 집중 테스트 21건, 전체 테스트 592건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 브라우저 QA: mock-session 개발 서버에서 1440px·390px 가맹운영 일정, 6개 원천 상세 이동, 수동 일정 중앙 알럿, 403/424 안내, 가로 overflow 0을 재확인했다. QA fixture의 Supabase 클라이언트 중복 생성 경고는 남지만 기능 오류나 page error는 없었다.
+- 런타임 가설 점검: (1) 원자적 RPC 실패 후 요청이 유실될 가능성은 재시도 큐 upsert 회귀 테스트로 기각했다. (2) 동시 실행이 같은 작업을 중복 처리할 가능성은 source advisory lock과 `FOR UPDATE SKIP LOCKED` SQL 경계 테스트로 기각했다. (3) 원천 변경 없이 날짜가 지나도 `예정`에 머물 가능성은 KST 자정 크론 설정과 지연 승격 RPC 테스트로 기각했다. 실제 DB 실행은 신규 SQL 적용 후 실계정 회귀가 필요하다.
+- SQL 상태: `supabase_franchise_schedule_durable_sync_migration.sql` **SQL 등록 필요**.
+
+### 2026-07-16 2단계 통합 릴리즈 후보
+
+- 미배포 상태였던 알림·일정 분리, 가맹운영 원천 일정 연동, 2단계 마감 커밋을 최신 운영 `main` 기준 브랜치에 다시 통합했다. 진행현황 검색·페이지네이션·삭제목록 기능은 유지하고 삭제 확인만 공용 중앙 다이얼로그로 병합했다.
+- 관련 일정·알림·원천 동기화 테스트 68건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 브라우저 QA는 1440px·390px 일정 화면, 6개 원천 상세 이동, 수동 일정 저장 완료 중앙 알럿, SQL 미적용 424 안내, 권한 없음 403 안내, 가로 overflow 0, console error 0건을 확인했다. 실행일이 바뀌면 상세 일정이 사라지던 QA fixture 고정 날짜를 KST 실행일 기준으로 보정했다.
+- 사용자 확인 기준 `supabase_company_approvals_security_review_migration.sql`, `supabase_franchise_schedule_visibility_migration.sql`, `supabase_franchise_source_schedule_upsert_migration.sql`, `supabase_franchise_source_schedule_profile_security_migration.sql` 적용을 완료했다. **SQL 등록 완료 확인**.
+
 ### 2026-07-16
 
 - `/dashboard/franchise-leads/work-intake` 진행현황의 검색·상태·기간 필터와 10건 페이지네이션을 입점 요청/예비 창업자 등록에 적용하고, 관리자에게만 삭제 목록과 삭제 시점 상세 내용을 제공했다.
@@ -1047,7 +1076,7 @@
 - 신규 SQL: `supabase_franchise_supervision_v2_migration.sql`을 추가했다. 회사별 점검 템플릿, 보고서 이벤트, 시정요청 이벤트, 보고서 `template_id`, 내부 알림톡 seed를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - 코드리뷰 보정: 보고서 저장/조회 시 `template_id` 기준으로 회사 점검 템플릿 항목을 실제 병합하도록 수정했다. 승인/반려는 실제 `제출` 상태에서만 처리하고, 임시저장은 방문 상태·미제출 알림을 만들지 않게 했다. 방문 생성의 `assignment_id`, 시정요청 생성의 `report_id`, 내부 알림톡 수신자 조회는 회사 범위를 다시 검증한다. 보고서 첨부는 저장 경로만 신뢰하고 조회 시 `property-documents/franchise-supervision/...` 경로에서 public URL을 재생성한다. v2 이벤트 테이블 RLS는 참조 보고서/시정요청 회사와 `actor_profile_id = auth.uid()`를 확인하는 insert-only 정책으로 보강했다. 보고서 라우트와 슈퍼바이징 패널은 지원 파일/섹션 파일로 분리해 유지보수 리스크를 낮췄다. 추가 코드리뷰에서 나온 미제출 보고서 필터 불일치를 보정해 미래 예정 방문은 미제출 목록에 뜨지 않게 했고, 같은 방문에 보고서 row가 여러 개 있으면 최신 업데이트/제출/검토 시각 기준으로 선택한다. 승인 큐의 반려 사유 입력도 행별 상태로 분리했다.
 - 검증: `npx tsx --test src/lib/franchise-supervision.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. Playwright mock 세션에서 `/dashboard/franchise-operations` 슈퍼바이징 탭을 1280px/390px로 확인했고, 운영 리포트/점검 보고서 화면 모두 page-level horizontal overflow 0건이었다. 추가 운영 큐 QA에서는 1280px/390px 모두 `오늘 처리 큐` 렌더, `점검 보고서 미제출` 큐 클릭 후 점검 보고서 탭 이동, console/page error 0건을 확인했다. 이번 보고서 목록/승인·시정요청 큐 고도화 QA에서는 Chrome mock 세션으로 1280px/390px에서 점검 보고서 `확인/작성`, `미작성` 상태, 승인 대기 보고서, 시정요청 메모 렌더링을 확인했고 page-level horizontal overflow 0건, console/page error 0건이었다.
-- 남은 live QA: v2 SQL 적용 후 실계정으로 템플릿 저장/재조회, 방문 생성/수정/취소와 공용 일정 동기화, 보고서 제출/승인/반려 이력, 시정요청 상태 변경 이력, 보고서 인쇄 미리보기, `오늘 처리 큐` 항목 이동, 알림톡 발송 로그를 확인한다. 방문 D-1/D-day 및 보고서 미제출 자동 발송은 스케줄러 범위로 남긴다.
+- 당시 남은 live QA: v2 SQL 적용 후 실계정으로 템플릿 저장/재조회, 방문 생성/수정/취소와 공용 일정 파일럿 동기화, 보고서 제출/승인/반려 이력, 시정요청 상태 변경 이력, 보고서 인쇄 미리보기, `오늘 처리 큐` 항목 이동, 알림톡 발송 로그를 확인한다. 현재 2단계 기준에서는 이 공용 일정 파일럿 대신 `franchise_schedules`와 `/dashboard/franchise-operations/schedule`만 검증한다. 방문 D-1/D-day 및 보고서 미제출 자동 발송은 스케줄러 범위로 남긴다.
 
 - 신규 SQL: `supabase_franchise_supervision_migration.sql`을 추가했다. `franchise_supervisor_assignments`, `franchise_store_visits`, `franchise_inspection_reports`, `franchise_corrective_actions`, 상태 제약, 인덱스, RLS를 포함한다. 대상 Supabase 환경에는 사용자가 직접 SQL을 등록해야 한다. **SQL 등록 필요**.
 - API/UI: `/api/franchise-supervision` 초기 조회와 `/assignments`, `/visits`, `/reports`, `/actions` mutation 라우트를 추가했다. `admin`/`manager`는 회사 전체를 관리하고, 일반 직원/SV는 본인 배정·방문·보고서 중심으로 제한한다. 방문 생성 시 기존 `schedules`에 회사 일정 1건을 같이 만들며, 보고서 사진은 기존 `property-documents` 버킷의 `franchise-supervision/<company_id>/<report_id>/...` 경로 메타데이터로 저장한다.
@@ -1246,6 +1275,7 @@
 
 ## 2026-07-09 공통 일정/결재 MVP 및 슈퍼바이징 파일럿 QA
 
+- 후속 기준: 이 절의 SV-`schedules` 연결은 2026-07-09 당시 공통 일정 파일럿 기록이다. 현재 2단계 가맹운영 원천 일정은 `franchise_schedules`와 `/dashboard/franchise-operations/schedule`만 사용하며, 이 파일럿은 2단계 완료 구현으로 인정하지 않는다.
 - 범위: 보고·결재 통합과 전사 일정/알림 PRD의 1차 기반을 구현했다. `schedules`는 source 기반 업무 허브로 확장하고, 신규 `approval_templates`, `approval_documents`, `approval_document_events`로 공통 결재 문서와 이벤트를 저장한다. `/api/schedules`는 기존 CRUD를 유지하면서 source 필터, source 기반 upsert, 완료 처리 액션을 지원한다.
 - API: `/api/franchise-approvals/templates`, `/api/franchise-approvals/documents`, `/api/franchise-approvals/actions`를 추가했다. 결재 문서는 `임시저장`, `제출`, `승인`, `반려`, `완료처리` 상태 전이를 서버에서 검증하고, 반려 사유 누락을 차단한다. SQL 미적용 시 `supabase_franchise_approval_calendar_migration.sql` 적용 안내를 반환한다.
 - 슈퍼바이징 파일럿: SV 방문 일정은 기존 `schedule_id`를 유지하면서 `source_type=supervision-visit`로 확장한다. SV 점검 보고서 제출은 `supervision-report` 결재 문서와 `approval-document` 승인 대기 일정에 연결하고, 관리자에게 인앱 알림을 만든다. 승인/반려 시 작성자 인앱 알림을 만들고 승인 대기 일정을 완료 처리한다. 기존 알림톡 훅은 유지한다.
@@ -1339,3 +1369,51 @@
 - 자동 검증: PDF 전용 테스트 7건에서 5,000,000바이트 응답의 스트리밍, Content-Length 미설정, PDF 시그니처 보존, 번들 폰트의 TrueType 시그니처, 특수문자 포함 파일명의 RFC 8187 인코딩을 확인했다. 전체 `npx tsx --test` 725건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
 - 브라우저·파일 QA: 로컬 실계정 임시저장 문서에서 `PDF 내려받기`를 실행해 다운로드 이벤트와 파일명 `전자결재 PDF 저장 QA.pdf`를 확인했다. 내려받은 파일은 A4 1페이지, 약 7.6KB이며 한글 제목·본문·푸터가 표시되고 비백색 픽셀이 존재해 빈 페이지가 아님을 확인했다. 브라우저 console error는 0건이었다.
 - SQL 상태: PDF 저장 보정 자체의 신규 SQL은 없다. 같은 릴리즈에서 문서·하위 테이블 RLS와 알림 조회·읽음 처리가 현재 유효한 위임 및 결재 단계만 허용하도록 보강됐으므로 최신 `supabase_company_approvals_security_review_migration.sql` -> `supabase_company_approvals_workflow_schedule_fix_migration.sql` -> `supabase_franchise_schedule_visibility_migration.sql` 순서로 다시 적용해야 한다. **SQL 재등록 필요**.
+
+## 2026-07-15 2단계 알림·일정 분리 및 커스텀 알럿 1차 QA
+
+- 알림 분류: 헤더 알림 응답의 `sourceType`을 보존하고 `workflow-approval`은 `전자결재`, 가맹운영 원천은 `가맹운영`, 알 수 없는 원천은 `시스템`으로 표시한다. 알림 패널에 `전체/전자결재/가맹운영` 필터를 추가했으며 선택한 구분을 서버에서 다시 조회해 다른 구분의 상위 8건에 밀리지 않게 했다. 알림 상세 이동은 앱 내부 루트 경로만 허용하고 외부 URL, 프로토콜 상대 URL, `javascript:` 실행 스킴을 차단한다.
+- 일정 분리: 가맹운영 일정관리의 목록, 달력, KPI, 선택 날짜 상세에서 `approval-document`를 제외했다. 기존 `승인 대기` KPI는 가맹운영 업무 기준의 `진행 중`으로 교체하고, 전자결재 요청은 헤더 알림과 `/approvals`에서 확인하도록 안내 문구를 정리했다. 기존 일정 URL의 `approvalDocumentId`는 결재 문서 상세로 바로 전환한다.
+- 커스텀 알럿: 메인 대시보드와 가맹점 관리, 인력 세팅, 슈퍼바이징, 오픈 준비, 모객 업무 접수의 주요 저장·삭제·상태 변경 흐름을 공용 중앙 알럿/확인창으로 전환했다. 동시 요청은 FIFO 큐에서 순서대로 표시하며 확인 버튼의 이중 callback이 다음 요청을 취소하지 않도록 결과를 한 번만 소비한다. 상담 이력 삭제, Meta 연결 해제, 공시서류 삭제, 모객 DB 추출, 외부 상가 수집·ERP 등록, 출점 후보지·경쟁스캔·메시지·분석표 프리셋, 보고서/표 인쇄 팝업 차단 안내에 남은 브라우저 기본 팝업은 별도 UI 운영 고도화로 추적한다. 다운로드·인쇄 목적의 새 창 자체는 유지한다.
+- 자동 검증: 다이얼로그 큐, 내부 링크 검증, 알림 분류와 일정 방어 필터 집중 테스트 30건과 전체 `npx tsx --test` 731건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. build는 기존 workspace root와 Browserslist 데이터 경고만 출력했다.
+- 브라우저 QA: mock-session 개발 서버에서 1200px와 390px로 가맹운영 일정 및 헤더 알림을 확인했다. 전자결재 일정은 가맹운영 달력과 KPI에서 숨겨지고, 알림의 `전자결재/가맹운영` 필터는 각각 `결재 요청`과 `업체 계약 D-7`만 표시했다. 모바일 필터 높이 44px, horizontal overflow 0, 일정 화면 console error 0건을 확인했다. 메인 대시보드의 빈 공지 등록은 브라우저 기본 팝업 대신 중앙 `오류` 커스텀 알럿으로 표시됐다. 화면 증적은 `/tmp/fcerp-phase2-notification-alert-qa-20260715/notification-mobile-final.png`, `/tmp/fcerp-phase2-notification-alert-qa-20260715/custom-alert-desktop-final.png`에 저장했다.
+- 런타임 가설 점검: (1) 구분별 요청이 상위 8건 제한 때문에 비어 보일 가능성은 서버 category 조회와 모바일에서 각 구분 제목 1건을 확인해 기각했다. (2) 외부 연동의 `approval-document`가 가맹운영 일정에 다시 노출될 가능성은 같은 날짜 fixture를 주입하고 일정 root에서 결재 제목이 0건, console error가 0건인 것으로 기각했다. (3) 공용 Provider에서 확인 callback이 다음 대기창까지 닫을 가능성은 두 요청을 연속 enqueue한 회귀 테스트에서 첫 요청 승인 후 두 번째 요청이 active로 유지되고 각 resolver가 한 번씩 실행되는 것으로 기각했다.
+- SQL 상태: 기존 알림의 `source_type`을 재사용하므로 신규 SQL은 없다. 1단계 문서함 검색·필터 실계정 QA는 dev 또는 production 승격 전 필수 잔여 항목으로 유지한다.
+
+## 2026-07-15 가맹 운영 원천 일정 1차 QA
+
+- 저장소 분리: 업체 계약 갱신과 정보공개서 계약 가능일은 기존 `upsert_franchise_schedule_from_payload` RPC로 `franchise_schedules`에만 저장한다. 새 동기화 경로는 전사·점포개발 일정의 `schedules`, `/api/schedules`, `upsertWorkflowSchedule`을 참조하지 않는다.
+- 일정 규칙: 업체 계약은 계약 ID를 원천 키로 사용하며 만료 전 `예정`, 만료 후 `지연`, 갱신 완료 `완료`, 종료·보관 `취소`로 동기화한다. 정보공개서는 후보자 ID를 원천 키로 사용해 계약 가능일 전 `예정`, 가능일 도래 `완료`로 동기화한다. 반복 조회와 저장에도 같은 원천 일정 한 건을 갱신한다.
+- 화면: `/dashboard/franchise-operations/schedule`의 유형 필터와 선택 날짜 상세에 `업체 계약`, `정보공개서`를 별도 표시한다. 자동 생성 일정은 수동 일정의 수정·완료·삭제 액션을 노출하지 않는다.
+- 실패 격리: 원천 일정 동기화 오류는 업체 계약 저장·알림 생성의 본 처리를 막지 않고 서버 경고로 남긴다. 일반 알림 조회는 일정을 쓰지 않으며, 다음 원천 변경 또는 스케줄 실행에서 같은 원천 키로 다시 동기화한다.
+- 저장 보강: `upsert_franchise_schedule_from_payload`는 `supabase_franchise_source_schedule_upsert_migration.sql`에서 `service_role`만 실행할 수 있게 제한하고, 연결 프로필의 회사 일치 여부와 원천 키를 검증한다. 같은 원천을 다시 동기화해도 최초 `completed_at`을 유지한다. 회사가 선택되지 않은 플랫폼 관리자 알림 조회에서는 원천 일정 동기화를 실행하지 않는다.
+- 자동 검증: 저장 RPC 호출·오류 전파·권한 SQL, 원천 ID, 계약·정보공개서 상태 규칙, 화면 파서·한글 유형명을 포함한 집중 테스트 22건과 전체 `npx tsx --test` 743건이 통과했다. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`도 통과했다.
+- 브라우저 QA: 1440px와 390px 가맹 운영 일정 화면에 두 원천 일정과 유형 필터가 표시되고, 화면 root에는 `점포개발 업무` 문구가 없으며 두 viewport 모두 `scrollWidth=innerWidth`, console error 0건을 확인했다. 390px 상단 경로명은 한 줄로 유지하고 긴 계정명은 말줄임 처리했다.
+- 런타임 가설 점검: (1) 전사 일정 저장소로 잘못 기록될 가능성은 새 동기화 경로의 `schedules`, `/api/schedules`, `upsertWorkflowSchedule` 참조 0건과 전용 RPC payload 테스트로 기각했다. (2) 새 원천 유형이 `수동 등록`으로 표시될 가능성은 파서 테스트와 브라우저의 `업체 계약`·`정보공개서` 배지/필터 확인으로 기각했다. (3) 일정 동기화 실패가 계약 저장이나 알림 조회를 막을 가능성은 선택 동기화 경계를 별도 함수의 예외 처리로 격리하고, 같은 원천 키의 재시도 payload가 결정적인 ID를 쓰는 것으로 확인했다.
+- SQL 상태: `supabase_franchise_source_schedule_upsert_migration.sql`은 사용자 확인 기준 대상 DB 적용 완료다. 이 확인은 SQL 적용 상태만 뜻하며, 적용 후 실계정 업체 계약·정보공개서 원천 데이터 동기화 QA는 아직 수행하지 않았다. **SQL 등록 완료 확인**.
+
+## 2026-07-15 가맹 운영 원천 일정 2차 QA 및 Phase 2 운영 마감 준비
+
+- 단계 상태: 전자결재 1단계는 문서함 검색·상태·기간·페이지네이션 실계정 QA가 남은 `검증 중`이다. 가맹운영 2단계는 사용자 승인 예외로 원천 연결 기능, 상태·담당자 수명주기, 저장소 경계, 자동/mock-session QA와 코드 보안 보정을 완료했다. 신규 프로필 보안 SQL 적용 확인 전까지 `코드 완료·SQL 적용 대기`다.
+- 연결 원천: 기존 업체 계약·정보공개서에 더해 SV 방문, 점검 보고서, 시정요청, 오픈 준비 프로젝트, 점주 시설 문의, 점주 체크리스트 완료 요청을 `franchise_schedules`에 연결했다. 원천별 결정적 `source_type + source_id`를 사용해 반복 저장 시 같은 일정 한 건을 갱신한다.
+- 상태·담당자 수명주기: 방문·보고서·시정요청의 완료/취소, 오픈 예정일 제거, 체크리스트 반려, 보고서 반려 후 재작성, 담당자 재배정을 일정과 알림에 반영한다. 점주 원천은 운영점 `manager_id`를 우선 사용하고, 새로 지정하는 SV·오픈 준비 담당자는 같은 회사의 활성 프로필만 인정한다. 보고서 재상신은 기존 시정조치를 다시 생성하거나 완료 상태·기한을 덮어쓰지 않고 일정만 재동기화하며, 재배정된 이전 수신자의 알림은 종료 상태를 유지한다. 업체 계약 종료일 제거는 원래 날짜의 갱신 일정을 취소한다.
+- 상세 이동·경계: SV 방문/보고서/시정요청은 레코드 ID를 포함한 슈퍼바이징 상세 URL, 오픈 준비는 가맹 희망자 상세의 오픈 준비 화면, 점주 시설 문의는 선택 제출 건이 펼쳐진 제출 처리 URL을 제공한다. 표시 URL은 정규화 후 `/dashboard/` 내부 경로만 허용한다. 정적 경계 테스트로 새 동기화 경로에 점포개발·전사 업무용 `schedules`, `/api/schedules`, `/schedule`, `upsertWorkflowSchedule` 참조가 없음을 확인했다. 실제 DB 저장 경계는 후속 프로필 보안 SQL 적용 뒤 실계정 통합 QA에서 최종 확인한다.
+- 자동 검증: 원천 상태 빌더, 담당자 재배정, 비활성 담당자·협력업체 차단, 점주 담당자 우선순위, 오픈 예정일·계약 종료일 제거, 반려 보고서 재작성, 기존 시정조치 상태 보존, 알림 종료, URL traversal 차단, 레거시 전사 일정 격리, 알림 조회와 예약 실행 분리를 포함한 집중 테스트 66건을 통과했다. 전체 `npx tsx --test`는 774건을 통과했다. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`도 통과했다.
+- 브라우저 QA: mock-session 개발 서버에서 1440px와 390px 가맹운영 일정 화면, 원천 유형/공개 범위 필터, 선택 날짜 목록, 점주 시설 문의 카드의 제출 처리 상세 이동·선택 제출 자동 펼침, 체크리스트 완료 기록의 `발송 현황` 탭 직접 이동, 완료된 시정조치의 슈퍼바이징 상세 이동·대상 행 강조, 수동 일정 등록과 중앙 `처리 완료` 알럿을 확인했다. 화면 증적은 `ERP/web/.omo/evidence/task-7-franchise-independent-schedule/desktop.png`, `mobile.png`에 저장했다. 두 화면에서 기능을 막는 겹침이나 가로 넘침은 없었다. mock auth fixture에서 Supabase 클라이언트 중복 생성 경고가 출력됐으나 이번 일정 동작 오류는 아니며 테스트 harness 정리 대상으로 분리한다.
+- SQL 상태: 기존 `supabase_franchise_source_schedule_upsert_migration.sql`은 사용자 확인 기준 대상 DB 적용 완료다. 후속 `supabase_franchise_source_schedule_profile_security_migration.sql`은 전용 RPC에서 비활성 계정·협력업체 담당자와 일반 직원의 관리자 연결을 거부한다. **SQL 등록 필요**.
+- 런타임 가설 점검: (1) 새 원천이 점포개발·전사 일정 경계로 새어 나갈 가능성은 정적 경계 테스트와 변경 경로 검색에서 금지 참조 0건으로 기각했다. (2) 담당자 재배정 시 이전 수신자 알림이 다시 활성화될 가능성은 이전 수신자 종료 상태 유지 테스트로 기각했다. (3) 모바일 QA가 API 응답 전 로딩 화면을 정상 화면으로 오인할 가능성은 실제 재현됐고, 원천 필터 option 렌더링을 기다리도록 QA 스크립트를 보정한 뒤 KPI `오늘 7건/진행 2건`이 표시된 390px 증적을 다시 생성해 해결했다.
+- 최종 게이트 가설 점검: (1) 같은 회사의 비활성 프로필이 SV 방문 담당자로 지정될 수 있다는 가설은 `resolveProfileInCompany`의 활성 상태 검증과 활성/비활성 프로필 회귀 테스트로 차단했다. (2) 이미 생성된 시정조치를 재상신할 때 기존 일정의 기한·담당자가 남는다는 가설은 신규 행뿐 아니라 upsert된 전체 시정조치 행을 일정 동기화 대상으로 바꾸고 기존 행 RPC 호출 테스트로 기각했다. (3) 점주 제출 일정의 상세 링크가 제출 ID를 소비하지 못해 목록 첫 화면에만 머문다는 가설은 mock-session 브라우저에서 해당 시설 문의 링크를 열어 `submissionId`가 선택되고 상세가 자동으로 펼쳐지는 흐름으로 기각했다.
+- 최종 게이트 추가 보정: 저장된 운영점/SV 담당자가 비활성화된 경우 공통 동기화 계층에서 일정·알림 수신자에서 제외하고, 점주 업무는 활성 회사 관리자로 대체한다. 체크리스트 완료 기록은 소비되지 않는 제출 ID 없이 체크리스트 현황으로 이동하고, 시정조치는 `actionId`로 완료 건까지 포함한 목록에서 해당 행을 강조한다. 과거 `schedules`에 남은 가맹운영 source 행은 점포개발·전사 일정 대시보드 집계에서 제외해 저장소 이관 전에도 두 일정 화면이 섞이지 않게 했다.
+- 보안·수명주기 재검토: (1) 활성 협력업체가 서비스 역할 API를 통해 가맹운영 일정을 읽을 가능성은 모든 HTTP method 403 회귀 테스트와 RPC 역할 검증 SQL로 차단했다. (2) 일반 알림 조회가 이전 계약 상태로 일정을 되돌릴 가능성은 GET handler의 일정 쓰기 부재 경계 테스트와 계약 종료일 제거 시 기존 일정 취소 테스트로 기각했다. (3) 보고서 재상신이 완료 시정조치를 새 요청으로 되돌릴 가능성은 기존 행 upsert 0회, 완료 상태·원래 기한 payload 유지 테스트로 기각했다.
+- 예약 실행 경계: 알림 목록 `GET /api/franchise-notifications`에서 Cron 분기를 제거했다. Vercel Cron은 `GET /api/franchise-notifications/cron` 전용 진입점이 인증 헤더를 보존해 `POST /api/franchise-notifications` 명령을 호출하며, 일정·알림 생성은 이 예약 명령에서만 실행한다. 로컬 production 서버에서 인증 없는 Cron 진입과 일반 목록 조회가 각각 401을 반환하고 DB 쓰기 전에 차단되는 것을 확인했다.
+- 마감 판정: 대표 원천이 `franchise_schedules`에 결정적 원천 키로 중복 없이 연결되고, 완료·취소·반려·재배정 수명주기와 KST 지연 경계가 테스트되며, 가맹운영 일정 화면과 점포개발·전사 일정 저장소의 분리가 mock-session QA로 확인돼 Phase 2 코드 완료 기준을 충족한다. 운영 마감은 프로필 보안 SQL 적용 확인 후 확정한다.
+- 후속 운영 고도화·검증: 과거 SV 파일럿 `schedules` 행의 이관·종료, 원천 저장 후 일정 동기화 실패를 영속 재처리할 outbox/reconciliation, 원천 변경 없이 KST 자정에 지연 상태를 재평가하는 실행기, 적용 DB 실계정 원천 회귀가 남아 있다. 잔여 기본 팝업 제거는 별도 UI 운영 고도화이고 1단계 문서함 실계정 QA는 dev/production 승격 전 별도 게이트다. 이 항목들은 Phase 2 코드 완료 판정을 되돌리지 않는다.
+
+# 2026-07-20 가맹운영 일정 2단계 내구성 최종 리뷰
+
+- 범위: 원천 저장 뒤 일정·알림 동기화를 최신 payload 우선 재처리 구조로 보강하고, 업체 계약 담당자 및 슈퍼바이징 원천의 회사 범위와 저장 응답 정합성을 재검토했다.
+- 실패 가설과 재현: (1) 이전 worker가 늦게 끝나 최신 payload를 덮어쓸 수 있다는 가설은 큐보다 RPC가 먼저 실행되는 실패 테스트로 재현했다. (2) 재시도 대기 중 수신자가 비활성화돼도 과거 수신자가 유지된다는 가설은 reconciliation 테스트로 재현했다. (3) 다른 회사 업체 계약 담당자와 SV 방문 원천에 대한 범위 검사가 부족하다는 가설은 helper 및 route 경계 테스트로 재현했다.
+- 수정: 모든 동기화는 최신 payload를 큐에 먼저 upsert하고 UUID lease와 갱신 시각을 RPC에 전달한다. SQL RPC는 advisory lock 안에서 현재 lease를 다시 확인해 오래된 worker를 no-op 처리하고, 성공한 동일 lease 작업만 트랜잭션에서 삭제한다. 재시도 직전 프로필 회사·활성 상태·역할을 다시 확인하며, 업체 계약 담당자와 SV 방문 삭제에도 회사 범위 검사를 적용했다.
+- 응답 정합성: 업체 계약과 슈퍼바이징 보고서의 원본 저장이 완료된 뒤 일정 동기화가 지연되면 원본 저장 자체를 500으로 오인하지 않도록 `scheduleSync` 또는 `scheduleSyncRequired`를 응답한다. 큐 저장까지 실패한 경우에는 실패 상태를 명시해 운영에서 재처리 필요 여부를 확인할 수 있다.
+- 자동 검증: 집중 테스트 56건, 전체 테스트 797건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 빌드에는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남고 실패는 없다.
+- SQL 상태: `supabase_franchise_schedule_durable_sync_migration.sql`은 사용자 확인 기준 적용 완료다. 기존 적용 환경에는 lease 컬럼·RPC·claim 함수·profile helper 권한을 최신 상태로 맞추는 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 추가 적용해야 한다. **SQL 등록 필요**.

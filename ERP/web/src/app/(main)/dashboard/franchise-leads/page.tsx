@@ -676,6 +676,7 @@ export default function FranchiseLeadsPage() {
     };
 
     const openDeepLinkedLeadDetail = React.useCallback((target: {
+        readonly detailMode: LeadDetailMode;
         readonly leadId: string;
         readonly workspaceTab: LeadWorkspaceTab;
         readonly leadDbLayer: LeadDbLayer;
@@ -685,7 +686,7 @@ export default function FranchiseLeadsPage() {
         setStatusFilter('전체');
         setLeadDbLayer(target.leadDbLayer);
         setViewMode(target.viewMode);
-        setSelectedLeadDetailMode('default');
+        setSelectedLeadDetailMode(target.detailMode);
         setSelectedLeadId(target.leadId);
     }, []);
 

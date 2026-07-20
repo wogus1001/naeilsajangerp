@@ -20,6 +20,13 @@ void test('Given calendar and approval work When selecting dashboard schedules T
             title: '결재 검토: 지출 품의',
             scope: 'company',
             source_type: 'approval-document'
+        },
+        {
+            id: 'supervision-1',
+            date: '2026-07-14',
+            title: 'SV 방문',
+            scope: 'company',
+            source_type: 'supervision-visit'
         }
     ], 'profile-1');
 
@@ -49,7 +56,7 @@ void test('Given another users personal schedule When selecting dashboard schedu
 
 void test('Given many approval tasks When querying dashboard schedules Then approval rows are filtered before the limit', () => {
     const routeSource = readFileSync(fileURLToPath(new URL('../app/api/dashboard/route.ts', import.meta.url)), 'utf8');
-    const sourceFilterIndex = routeSource.indexOf("datedQuery.or('source_type.is.null,source_type.neq.approval-document')");
+    const sourceFilterIndex = routeSource.indexOf('DASHBOARD_SCHEDULE_SOURCE_FILTER');
     const limitIndex = routeSource.indexOf('.limit(20)', sourceFilterIndex);
 
     assert.ok(sourceFilterIndex >= 0);

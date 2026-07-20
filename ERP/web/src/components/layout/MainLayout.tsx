@@ -17,6 +17,7 @@ import { useResponsiveSidebar } from './useResponsiveSidebar';
 import { CompanyMenuDisabledNotice } from './CompanyMenuDisabledNotice';
 import { MaintenanceScreen } from './MaintenanceScreen';
 import { useCompanyMenuFeatures } from './useCompanyMenuFeatures';
+import { AppDialogProvider } from '@/components/common/AppDialogProvider';
 import styles from './MainLayout.module.css';
 
 interface MainLayoutProps {
@@ -244,29 +245,31 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     }
 
     return (
-        <div className={`${styles.container} global-layout-container`}>
-            {announcement && (
-                <AnnouncementBanner message={announcement.message || ''} level={announcement.level} onDismiss={handleDismissBanner} />
-            )}
+        <AppDialogProvider>
+            <div className={`${styles.container} global-layout-container`}>
+                {announcement && (
+                    <AnnouncementBanner message={announcement.message || ''} level={announcement.level} onDismiss={handleDismissBanner} />
+                )}
 
-            <Sidebar
-                isOpen={isSidebarOpen}
-                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-                menuFlags={menuFlags}
-                companyName={sidebarCompanyName}
-                companyLogoUrl={sidebarCompanyLogoUrl}
-            />
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                    menuFlags={menuFlags}
+                    companyName={sidebarCompanyName}
+                    companyLogoUrl={sidebarCompanyLogoUrl}
+                />
 
-            <div
-                className={`${styles.mainWrapper} ${!isSidebarOpen ? styles.collapsed : ''} global-main-wrapper`}
-                style={{ marginTop: announcement ? '40px' : 0, height: announcement ? 'calc(100vh - 40px)' : '100vh' }}
-            >
-                <Header user={authUser} onLogout={handleLogout} />
-                <main className={`${styles.content} global-content`}>
-                    {blockedFeature ? <CompanyMenuDisabledNotice feature={blockedFeature} /> : children}
-                </main>
+                <div
+                    className={`${styles.mainWrapper} ${!isSidebarOpen ? styles.collapsed : ''} global-main-wrapper`}
+                    style={{ marginTop: announcement ? '40px' : 0, height: announcement ? 'calc(100vh - 40px)' : '100vh' }}
+                >
+                    <Header user={authUser} onLogout={handleLogout} />
+                    <main className={`${styles.content} global-content`}>
+                        {blockedFeature ? <CompanyMenuDisabledNotice feature={blockedFeature} /> : children}
+                    </main>
+                </div>
             </div>
-        </div>
+        </AppDialogProvider>
     );
 };
 

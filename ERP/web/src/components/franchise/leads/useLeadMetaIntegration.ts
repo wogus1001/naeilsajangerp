@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { EMPTY_META_STATE } from './constants';
 import type { MetaConnection, MetaFieldMapping, MetaIntegrationState, MetaLeadForm } from './types';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -23,6 +24,7 @@ export function useLeadMetaIntegration({
     onLeadsRefreshAction,
     showAlertAction
 }: UseLeadMetaIntegrationParams) {
+    const { showConfirm } = useAppDialog();
     const [metaState, setMetaState] = React.useState<MetaIntegrationState>(EMPTY_META_STATE);
     const [isMetaLoading, setIsMetaLoading] = React.useState(false);
     const [isMetaSyncing, setIsMetaSyncing] = React.useState(false);
@@ -167,7 +169,12 @@ export function useLeadMetaIntegration({
 
     const disconnectMetaConnection = async (connection: MetaConnection) => {
         if (!userId) return;
-        const confirmed = window.confirm(`${connection.metaPageName || connection.metaPageId} Meta 연결을 해제할까요? 기존 모객DB 리드는 삭제되지 않습니다.`);
+        const confirmed = await showConfirm({
+            message: `${connection.metaPageName || connection.metaPageId} Meta 연결을 해제할까요? 기존 모객DB 리드는 삭제되지 않습니다.`,
+            title: 'Meta 연결 해제',
+            confirmText: '연결 해제',
+            isDanger: true
+        });
         if (!confirmed) return;
 
         try {
