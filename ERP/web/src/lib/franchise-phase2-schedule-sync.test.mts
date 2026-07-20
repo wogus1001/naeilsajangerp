@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     safelySyncOwnerSubmissionSchedule,
-    syncFranchiseOperationalSchedule
+    syncFranchiseOperationalSchedule,
+    trySyncFranchiseOperationalSchedule
 } from './franchise-phase2-schedule-sync.js';
 import type { FranchiseSourceScheduleInput } from './franchise-source-schedules.js';
 
 function fakeSupabase(
     activeProfileIds: readonly string[] = ['staff-1', 'staff-2'],
-    operationalRpcError: { readonly message: string } | null = null
+    operationalRpcError: { readonly message: string } | null = null,
+    queueError: { readonly message: string } | null = null
 ) {
     const operationOrder: string[] = [];
     const rpcPayloads: unknown[] = [];
@@ -40,7 +42,7 @@ function fakeSupabase(
                     async upsert(rows: unknown) {
                         operationOrder.push('queue');
                         queuedRows.push(rows);
-                        return { error: null };
+                        return { error: queueError };
                     }
                 };
             },
@@ -177,4 +179,22 @@ void test('Given a source schedule sync When processing Then the durable queue i
     };
     assert.match(rpcCall.schedule_payload?._sync_job_token || '', /^[0-9a-f-]{36}$/);
     assert.match(rpcCall.schedule_payload?._sync_job_updated_at || '', /^\d{4}-\d{2}-\d{2}T/);
+});
+
+void test('Given durable queue persistence fails When strict sync runs Then the caller receives the failure', async () => {
+    const fake = fakeSupabase(['staff-1'], null, { message: 'queue unavailable' });
+
+    await assert.rejects(
+        () => syncFranchiseOperationalSchedule(fake.client as never, activeSchedule),
+        /queue unavailable/
+    );
+    assert.equal(fake.rpcPayloads.length, 0);
+});
+
+void test('Given durable queue persistence fails When best-effort sync runs Then the structured message is retained', async () => {
+    const fake = fakeSupabase(['staff-1'], null, { message: 'queue unavailable' });
+
+    const result = await trySyncFranchiseOperationalSchedule(fake.client as never, activeSchedule);
+
+    assert.deepEqual(result, { status: 'failed', message: 'queue unavailable' });
 });

@@ -5,7 +5,7 @@ import {
     buildSupervisionCorrectiveActionSourceSchedule,
     buildSupervisionReportSourceSchedule
 } from '@/lib/franchise-phase2-source-schedules';
-import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import { trySyncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
 import { kstDateKey } from '@/lib/franchise-workflow';
 import { isSupervisionReportStoragePath, SUPERVISION_REPORT_BUCKET } from '@/lib/upload-storage-policy';
 import {
@@ -65,6 +65,32 @@ type ReportTemplateRow = {
     readonly id: string;
     readonly inspection_items: unknown;
 };
+
+type CorrectiveActionPostProcessingResult = {
+    readonly scheduleSyncRequiredCount: number;
+    readonly warning: string | null;
+};
+
+function readPostProcessingErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (isRecord(error) && typeof error.message === 'string') return error.message;
+    return String(error);
+}
+
+export async function captureCorrectiveActionPostProcessing(
+    operation: () => Promise<{ readonly scheduleSyncRequiredCount: number }>
+): Promise<CorrectiveActionPostProcessingResult> {
+    try {
+        const result = await operation();
+        return { ...result, warning: null };
+    } catch (error) {
+        console.error('Supervision corrective action post-processing failed:', readPostProcessingErrorMessage(error));
+        return {
+            scheduleSyncRequiredCount: 1,
+            warning: '보고서는 저장됐지만 시정요청 후처리가 지연되고 있습니다.'
+        };
+    }
+}
 
 export function reportEventTypeFor(event: SupervisionReportStatusEvent): SupervisionReportEventType {
     switch (event.kind) {
@@ -211,7 +237,7 @@ export async function insertCorrectiveActions(input: {
             title: row.title || '시정요청'
         });
         if (!schedule) return { status: 'synced' as const };
-        return syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+        return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
     }));
     const scheduleSyncRequiredCount = scheduleResults.filter(result => result.status === 'failed').length;
 
@@ -355,7 +381,7 @@ export async function syncSupervisionReportWorkflow(input: {
         taskDate: input.reportWrite.reviewedAt || input.reportWrite.submittedAt
     });
     if (!schedule) return { status: 'synced' as const };
-    return syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 export async function reconcileSubmittedSupervisionReport(input: {

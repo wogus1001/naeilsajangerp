@@ -2,7 +2,7 @@ import { canAccessCompanyScope, type RequesterProfile } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import { buildOpeningProjectSourceSchedule } from '@/lib/franchise-phase2-source-schedules';
-import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import { trySyncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
 import {
     buildOpeningProjectPayload,
     buildOpeningProjectUpdates,
@@ -57,8 +57,8 @@ async function syncOpeningProjectSchedule(input: {
         status: input.status || input.project.status || '준비중',
         targetOpenDate: input.project.target_open_date
     });
-    if (!schedule) return;
-    await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    if (!schedule) return { status: 'synced' as const };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 function getErrorCode(error: unknown) {
@@ -197,13 +197,16 @@ export async function POST(request: Request) {
         const { data: saved, error } = await requestBuilder.select().single();
         if (error) throw error;
         const savedProject = saved as OpeningProjectRow;
-        await syncOpeningProjectSchedule({
+        const scheduleSync = await syncOpeningProjectSchedule({
             locationName: location.name || '운영점',
             previousTargetOpenDate: existingProject?.target_open_date,
             project: savedProject,
             supabaseAdmin
         });
-        return ok({ project: transformOpeningProject(savedProject) }, existingProject ? 200 : 201);
+        return ok({
+            project: transformOpeningProject(savedProject),
+            scheduleSyncRequired: scheduleSync.status === 'failed'
+        }, existingProject ? 200 : 201);
     } catch (error) {
         return handleOpeningProjectError(error, 'SAVE');
     }
@@ -239,13 +242,16 @@ export async function PUT(request: Request) {
         if (error) throw error;
         if (!updated) return fail(409, 'VALIDATION_ERROR', '이미 다른 사용자가 수정했습니다. 새로고침 후 다시 시도해주세요.');
         const updatedProject = updated as OpeningProjectRow;
-        await syncOpeningProjectSchedule({
+        const scheduleSync = await syncOpeningProjectSchedule({
             locationName: await readProjectLocationName(supabaseAdmin, updatedProject.location_id),
             previousTargetOpenDate: project.target_open_date,
             project: updatedProject,
             supabaseAdmin
         });
-        return ok({ project: transformOpeningProject(updatedProject) });
+        return ok({
+            project: transformOpeningProject(updatedProject),
+            scheduleSyncRequired: scheduleSync.status === 'failed'
+        });
     } catch (error) {
         return handleOpeningProjectError(error, 'UPDATE');
     }
@@ -270,13 +276,13 @@ export async function DELETE(request: Request) {
 
         const { error } = await supabaseAdmin.from('franchise_opening_projects').delete().eq('id', id);
         if (error) throw error;
-        await syncOpeningProjectSchedule({
+        const scheduleSync = await syncOpeningProjectSchedule({
             locationName: await readProjectLocationName(supabaseAdmin, project.location_id),
             project,
             status: '취소',
             supabaseAdmin
         });
-        return ok({ success: true });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         return handleOpeningProjectError(error, 'DELETE');
     }

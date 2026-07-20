@@ -20,10 +20,21 @@ type OwnerSubmissionScheduleSyncInput = {
     readonly title: string;
 };
 
-export type FranchiseOperationalScheduleSyncResult =
+export type FranchiseOperationalSchedulePersistedResult =
     | { readonly status: 'synced' }
-    | { readonly status: 'queued' }
+    | { readonly status: 'queued' };
+
+export type FranchiseOperationalScheduleSyncResult =
+    | FranchiseOperationalSchedulePersistedResult
     | { readonly status: 'failed'; readonly message: string };
+
+function readScheduleSyncErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+        return error.message;
+    }
+    return String(error);
+}
 
 async function fetchActiveCompanyManagerProfileIds(
     supabaseAdmin: SupabaseClient,
@@ -48,26 +59,33 @@ async function fetchActiveCompanyManagerProfileIds(
 export async function syncFranchiseOperationalSchedule(
     supabaseAdmin: SupabaseClient,
     schedule: FranchiseSourceScheduleInput
+): Promise<FranchiseOperationalSchedulePersistedResult> {
+    const preparedSchedule = await prepareFranchiseSourceSchedule(supabaseAdmin, schedule);
+    const schedulePayload = buildFranchiseSourceSchedulePayload(preparedSchedule);
+    if (!schedulePayload) return { status: 'synced' };
+    const lease = await enqueueFranchiseScheduleSync(supabaseAdmin, schedulePayload, null);
+    const { error } = await supabaseAdmin.rpc('sync_franchise_operational_schedule_from_payload', {
+        schedule_payload: {
+            ...schedulePayload,
+            _sync_job_token: lease.token,
+            _sync_job_updated_at: lease.updatedAt
+        }
+    });
+    if (error) {
+        console.warn('Franchise operational schedule queued for retry:', error);
+        return { status: 'queued' };
+    }
+    return { status: 'synced' };
+}
+
+export async function trySyncFranchiseOperationalSchedule(
+    supabaseAdmin: SupabaseClient,
+    schedule: FranchiseSourceScheduleInput
 ): Promise<FranchiseOperationalScheduleSyncResult> {
     try {
-        const preparedSchedule = await prepareFranchiseSourceSchedule(supabaseAdmin, schedule);
-        const schedulePayload = buildFranchiseSourceSchedulePayload(preparedSchedule);
-        if (!schedulePayload) return { status: 'synced' };
-        const lease = await enqueueFranchiseScheduleSync(supabaseAdmin, schedulePayload, null);
-        const { error } = await supabaseAdmin.rpc('sync_franchise_operational_schedule_from_payload', {
-            schedule_payload: {
-                ...schedulePayload,
-                _sync_job_token: lease.token,
-                _sync_job_updated_at: lease.updatedAt
-            }
-        });
-        if (error) {
-            console.warn('Franchise operational schedule queued for retry:', error);
-            return { status: 'queued' };
-        }
-        return { status: 'synced' };
+        return await syncFranchiseOperationalSchedule(supabaseAdmin, schedule);
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = readScheduleSyncErrorMessage(error);
         console.error('Franchise operational schedule could not be queued:', message);
         return { status: 'failed', message };
     }
@@ -75,7 +93,7 @@ export async function syncFranchiseOperationalSchedule(
 
 export async function safelySyncOwnerSubmissionSchedule(
     input: OwnerSubmissionScheduleSyncInput
-): Promise<void> {
+): Promise<FranchiseOperationalScheduleSyncResult> {
     let managerProfileId = input.managerProfileId || null;
     try {
         const fallbackManagerIds = await fetchWorkflowManagerProfileIds(input.supabaseAdmin, input.companyId);
@@ -102,5 +120,6 @@ export async function safelySyncOwnerSubmissionSchedule(
         submittedAt: input.submittedAt,
         title: input.title
     });
-    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    if (!schedule) return { status: 'synced' };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }

@@ -60,6 +60,14 @@ function cleanText(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+function readScheduleStoreErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+        return error.message;
+    }
+    return error === null || error === undefined ? '' : String(error);
+}
+
 export function sanitizeFranchiseSourceScheduleProfiles(
     input: FranchiseSourceScheduleInput,
     profiles: readonly FranchiseSourceScheduleProfileCandidate[]
@@ -239,11 +247,7 @@ export async function enqueueFranchiseScheduleSync(
 ): Promise<FranchiseScheduleSyncLease> {
     const now = new Date().toISOString();
     const token = randomUUID();
-    const errorMessage = error instanceof Error
-        ? error.message
-        : error === null || error === undefined
-            ? ''
-            : String(error);
+    const errorMessage = readScheduleStoreErrorMessage(error);
     const { error: queueError } = await supabaseAdmin
         .from(FRANCHISE_SCHEDULE_SYNC_JOB_TABLE)
         .upsert({
@@ -257,6 +261,6 @@ export async function enqueueFranchiseScheduleSync(
             lease_token: token,
             updated_at: now
         }, { onConflict: 'company_id,source_type,source_id' });
-    if (queueError) throw queueError;
+    if (queueError) throw new Error(readScheduleStoreErrorMessage(queueError) || 'Franchise schedule sync queue failed');
     return { token, updatedAt: now };
 }

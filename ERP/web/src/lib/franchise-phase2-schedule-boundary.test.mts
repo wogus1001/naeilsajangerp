@@ -27,7 +27,7 @@ void test('Given franchise phase two source routes When auditing persistence The
         const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
         assert.match(
             source,
-            /syncFranchiseOperationalSchedule|safelySyncOwnerSubmissionSchedule/,
+            /(?:trySync|sync)FranchiseOperationalSchedule|safelySyncOwnerSubmissionSchedule/,
             relativePath
         );
     }
@@ -42,6 +42,21 @@ void test('Given franchise source persistence succeeds When schedule sync and re
     }
     const reportRoute = readFileSync(new URL('../app/api/franchise-supervision/reports/route.ts', import.meta.url), 'utf8');
     assert.doesNotMatch(reportRoute, /corrective action sync deferred/);
+});
+
+void test('Given a mutation commits before schedule sync When the queue fails Then the API returns a degraded success marker', () => {
+    const postCommitRoutes = [
+        '../app/api/franchise-supervision/visits/route.ts',
+        '../app/api/franchise-supervision/actions/route.ts',
+        '../app/api/franchise-opening-projects/route.ts',
+        '../app/api/owner/opening-tasks/route.ts',
+        '../app/api/owner/requests/route.ts',
+        '../app/api/franchise-owner-portal/submissions/route.ts'
+    ] as const;
+    for (const relativePath of postCommitRoutes) {
+        const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+        assert.match(source, /scheduleSyncRequired/, relativePath);
+    }
 });
 
 void test('Given legacy franchise operation rows When classifying shared schedules Then every franchise source is excluded', () => {

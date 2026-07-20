@@ -13,6 +13,7 @@ import {
 } from '@/lib/franchise-supervision-api';
 import { mergeInspectionItems, nextReportStatus, normalizeReportStatus } from '@/lib/franchise-supervision';
 import {
+    captureCorrectiveActionPostProcessing,
     fetchReportTemplateItems,
     fetchVisit,
     hasField,
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
             supabaseAdmin: authResult.auth.supabaseAdmin
         });
         const correctiveSync = nextStatus === '제출'
-            ? await insertCorrectiveActions({
+            ? await captureCorrectiveActionPostProcessing(() => insertCorrectiveActions({
                 assigneeProfileId: visit.supervisor_profile_id,
                 companyId: visit.company_id,
                 createdBy: authResult.auth.requester.id,
@@ -106,12 +107,13 @@ export async function POST(request: Request) {
                 locationName: readVisitLocationName(visit),
                 reportId,
                 supabaseAdmin: authResult.auth.supabaseAdmin
-            })
-            : { scheduleSyncRequiredCount: 0 };
+            }))
+            : { scheduleSyncRequiredCount: 0, warning: null };
         return ok({
             id: reportId,
             scheduleSyncRequired: workflowSync.status === 'failed'
-                || correctiveSync.scheduleSyncRequiredCount > 0
+                || correctiveSync.scheduleSyncRequiredCount > 0,
+            warning: correctiveSync.warning || undefined
         }, 201);
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_TEMPLATE_NOT_FOUND') {
@@ -175,7 +177,7 @@ export async function PATCH(request: Request) {
                 supabaseAdmin: authResult.auth.supabaseAdmin,
                 visit
             });
-            const correctiveSync = await insertCorrectiveActions({
+            const correctiveSync = await captureCorrectiveActionPostProcessing(() => insertCorrectiveActions({
                 assigneeProfileId: existing.supervisor_profile_id,
                 companyId: existing.company_id,
                 createdBy: authResult.auth.requester.id,
@@ -184,13 +186,14 @@ export async function PATCH(request: Request) {
                 locationName: readVisitLocationName(visit),
                 reportId: existing.id,
                 supabaseAdmin: authResult.auth.supabaseAdmin
-            });
+            }));
             return ok({
                 success: true,
                 id: existing.id,
                 status: currentStatus,
                 scheduleSyncRequired: workflowSync.status === 'failed'
-                    || correctiveSync.scheduleSyncRequiredCount > 0
+                    || correctiveSync.scheduleSyncRequiredCount > 0,
+                warning: correctiveSync.warning || undefined
             });
         }
         if (nextStatus === currentStatus && event.kind !== 'saveDraft') {
@@ -267,7 +270,7 @@ export async function PATCH(request: Request) {
             supabaseAdmin: authResult.auth.supabaseAdmin
         });
         const correctiveSync = nextStatus === '제출'
-            ? await insertCorrectiveActions({
+            ? await captureCorrectiveActionPostProcessing(() => insertCorrectiveActions({
                 assigneeProfileId: existing.supervisor_profile_id,
                 companyId: existing.company_id,
                 createdBy: authResult.auth.requester.id,
@@ -276,12 +279,13 @@ export async function PATCH(request: Request) {
                 locationName: readVisitLocationName(visit),
                 reportId: existing.id,
                 supabaseAdmin: authResult.auth.supabaseAdmin
-            })
-            : { scheduleSyncRequiredCount: 0 };
+            }))
+            : { scheduleSyncRequiredCount: 0, warning: null };
         return ok({
             success: true,
             scheduleSyncRequired: workflowSync.status === 'failed'
-                || correctiveSync.scheduleSyncRequiredCount > 0
+                || correctiveSync.scheduleSyncRequiredCount > 0,
+            warning: correctiveSync.warning || undefined
         });
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_TEMPLATE_NOT_FOUND') {

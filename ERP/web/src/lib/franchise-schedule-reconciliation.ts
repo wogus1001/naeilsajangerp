@@ -10,7 +10,7 @@ type FranchiseScheduleSyncJob = {
     readonly id: string;
     readonly attempt_count: number;
     readonly lease_token: string;
-    readonly schedule_payload: FranchiseSourceSchedulePayload;
+    readonly schedule_payload: unknown;
     readonly updated_at: string;
 };
 
@@ -39,12 +39,18 @@ function isSyncJob(value: unknown): value is FranchiseScheduleSyncJob {
         && typeof value.attempt_count === 'number'
         && typeof value.lease_token === 'string'
         && typeof value.updated_at === 'string'
-        && isSchedulePayload(value.schedule_payload);
+        && 'schedule_payload' in value;
 }
 
 function retryAvailableAt(attemptCount: number, now: Date): string {
     const delayMinutes = Math.min(60, 2 ** Math.min(attemptCount, 5));
     return new Date(now.getTime() + delayMinutes * 60_000).toISOString();
+}
+
+function readSyncJobErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (isRecord(error) && typeof error.message === 'string') return error.message;
+    return String(error);
 }
 
 async function claimSyncJobs(supabaseAdmin: SupabaseClient): Promise<readonly FranchiseScheduleSyncJob[]> {
@@ -60,7 +66,7 @@ async function failSyncJob(
     now: Date
 ): Promise<void> {
     const nextAttemptCount = job.attempt_count + 1;
-    const message = error instanceof Error ? error.message : String(error);
+    const message = readSyncJobErrorMessage(error);
     const { error: updateError } = await supabaseAdmin
         .from(FRANCHISE_SCHEDULE_SYNC_JOB_TABLE)
         .update({
@@ -85,22 +91,26 @@ export async function runFranchiseScheduleMaintenance(
     let failedCount = 0;
 
     for (const job of jobs) {
-        const schedulePayload = await prepareFranchiseSourceSchedulePayload(
-            supabaseAdmin,
-            job.schedule_payload
-        );
-        const { error } = await supabaseAdmin.rpc(FRANCHISE_OPERATIONAL_SCHEDULE_SYNC_RPC, {
-            schedule_payload: {
-                ...schedulePayload,
-                _sync_job_id: job.id,
-                _sync_job_token: job.lease_token,
-                _sync_job_updated_at: job.updated_at
+        try {
+            if (!isSchedulePayload(job.schedule_payload)) {
+                throw new Error('Malformed franchise schedule sync payload');
             }
-        });
-        if (error) {
+            const schedulePayload = await prepareFranchiseSourceSchedulePayload(
+                supabaseAdmin,
+                job.schedule_payload
+            );
+            const { error } = await supabaseAdmin.rpc(FRANCHISE_OPERATIONAL_SCHEDULE_SYNC_RPC, {
+                schedule_payload: {
+                    ...schedulePayload,
+                    _sync_job_id: job.id,
+                    _sync_job_token: job.lease_token,
+                    _sync_job_updated_at: job.updated_at
+                }
+            });
+            if (error) throw error;
+        } catch (error) {
             failedCount += 1;
             await failSyncJob(supabaseAdmin, job, error, now);
-            continue;
         }
     }
 

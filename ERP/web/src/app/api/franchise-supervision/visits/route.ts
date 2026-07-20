@@ -2,7 +2,7 @@ import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import { buildSupervisionVisitSourceSchedule } from '@/lib/franchise-phase2-source-schedules';
-import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import { trySyncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -87,7 +87,8 @@ async function syncSchedule(input: {
         visitDate: nextVisitDate,
         visitId: input.existing.id
     });
-    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    if (!schedule) return { status: 'synced' as const };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 async function notifyVisitDue(input: {
@@ -137,7 +138,8 @@ async function createVisitScheduleSource(input: {
         visitDate: input.visitDate,
         visitId: input.visitId
     });
-    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    if (!schedule) return { status: 'synced' as const };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 async function readMutationScope(request: Request) {
@@ -204,7 +206,7 @@ export async function POST(request: Request) {
             .select('id')
             .single<{ readonly id: string }>();
         if (error) throw error;
-        await createVisitScheduleSource({
+        const scheduleSync = await createVisitScheduleSource({
             companyId: scope.companyId,
             locationName: location.location.name || '운영점',
             purpose,
@@ -223,7 +225,7 @@ export async function POST(request: Request) {
             visitDate,
             visitId: data.id
         });
-        return ok({ id: data.id }, 201);
+        return ok({ id: data.id, scheduleSyncRequired: scheduleSync.status === 'failed' }, 201);
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_ASSIGNMENT_SCOPE_MISMATCH') {
             return fail(403, 'FORBIDDEN', 'SV 배정의 회사 또는 운영점 범위가 일치하지 않습니다.');
@@ -308,7 +310,7 @@ export async function PATCH(request: Request) {
             .update(updates)
             .eq('id', id);
         if (error) throw error;
-        await syncSchedule({
+        const scheduleSync = await syncSchedule({
             existing,
             nextLocationName: nextLocation?.ok ? nextLocation.location.name || '운영점' : undefined,
             nextPurpose,
@@ -317,7 +319,7 @@ export async function PATCH(request: Request) {
             nextVisitDate: visitDate || null,
             supabaseAdmin: scope.auth.supabaseAdmin
         });
-        return ok({ success: true });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');
@@ -359,7 +361,7 @@ export async function DELETE(request: Request) {
             .eq('id', id);
         if (error) throw error;
 
-        await syncSchedule({
+        const scheduleSync = await syncSchedule({
             existing,
             nextPurpose: normalizeVisitPurpose(existing.purpose),
             nextStatus: '취소',
@@ -367,7 +369,7 @@ export async function DELETE(request: Request) {
             nextVisitDate: null,
             supabaseAdmin: scope.auth.supabaseAdmin
         });
-        return ok({ success: true });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');

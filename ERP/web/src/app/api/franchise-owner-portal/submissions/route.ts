@@ -118,7 +118,7 @@ export async function PATCH(request: Request) {
             })
             .eq('id', submission.id);
         if (error) throw error;
-        await safelySyncOwnerSubmissionSchedule({
+        const scheduleSync = await safelySyncOwnerSubmissionSchedule({
             companyId: submission.company_id,
             locationName: location.location.name || '운영점',
             managerProfileId: location.location.manager_id,
@@ -129,7 +129,7 @@ export async function PATCH(request: Request) {
             supabaseAdmin: authResult.auth.supabaseAdmin,
             title: submission.title
         });
-        return ok({ success: true });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         console.error('Owner portal submissions PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '점주 제출 건을 처리하지 못했습니다.');

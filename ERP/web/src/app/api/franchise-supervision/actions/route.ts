@@ -2,7 +2,7 @@ import { fail, ok } from '@/lib/api-response';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyProfileRecipients } from '@/lib/alimtalk-event-notifications';
 import { buildSupervisionCorrectiveActionSourceSchedule } from '@/lib/franchise-phase2-source-schedules';
-import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import { trySyncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
 import {
     canAccessSupervisorResource,
     cleanString,
@@ -52,8 +52,8 @@ async function syncCorrectiveActionSchedule(input: {
         status: input.action.status || '요청',
         title: input.action.title || '시정요청'
     });
-    if (!schedule) return;
-    await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    if (!schedule) return { status: 'synced' as const };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 async function resolveReportId(input: {
@@ -203,8 +203,8 @@ export async function POST(request: Request) {
             supabaseAdmin: scope.auth.supabaseAdmin,
             title: cleanString(getFirst(scope.body, ['title'])) || '시정요청'
         });
-        await syncCorrectiveActionSchedule({ action: data, supabaseAdmin: scope.auth.supabaseAdmin });
-        return ok({ id: data.id }, 201);
+        const scheduleSync = await syncCorrectiveActionSchedule({ action: data, supabaseAdmin: scope.auth.supabaseAdmin });
+        return ok({ id: data.id, scheduleSyncRequired: scheduleSync.status === 'failed' }, 201);
     } catch (error) {
         if (error instanceof Error && error.message === 'SUPERVISION_REPORT_SCOPE_MISMATCH') {
             return fail(403, 'FORBIDDEN', '보고서의 회사 또는 운영점 범위가 일치하지 않습니다.');
@@ -285,8 +285,8 @@ export async function PATCH(request: Request) {
             supabaseAdmin: scope.auth.supabaseAdmin,
             toStatus: hadStatusUpdate ? String(updates.status || '') : existing.status
         });
-        await syncCorrectiveActionSchedule({ action: updated, supabaseAdmin: scope.auth.supabaseAdmin });
-        return ok({ success: true });
+        const scheduleSync = await syncCorrectiveActionSchedule({ action: updated, supabaseAdmin: scope.auth.supabaseAdmin });
+        return ok({ success: true, scheduleSyncRequired: scheduleSync.status === 'failed' });
     } catch (error) {
         if (isMissingSupervisionSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', '슈퍼바이징 SQL이 아직 적용되지 않았습니다. supabase_franchise_supervision_migration.sql 적용 후 다시 확인해주세요.');

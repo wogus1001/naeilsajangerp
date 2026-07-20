@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    captureCorrectiveActionPostProcessing,
     insertCorrectiveActions,
     readPhotoAttachments,
     reconcileSubmittedSupervisionReport,
@@ -216,4 +217,15 @@ test('Given an existing corrective action When a report is submitted again Then 
     assert.equal(upsertCount, 0);
     assert.equal(typeof schedulePayload === 'object' && schedulePayload !== null && 'status' in schedulePayload ? schedulePayload.status : null, '완료');
     assert.equal(typeof schedulePayload === 'object' && schedulePayload !== null && 'date' in schedulePayload ? schedulePayload.date : null, '2026-07-16');
+});
+
+test('Given a report was persisted When corrective action post-processing fails Then the response warns without requesting a duplicate submission', async () => {
+    const result = await captureCorrectiveActionPostProcessing(async () => {
+        throw { message: 'corrective action write failed' };
+    });
+
+    assert.deepEqual(result, {
+        scheduleSyncRequiredCount: 1,
+        warning: '보고서는 저장됐지만 시정요청 후처리가 지연되고 있습니다.'
+    });
 });

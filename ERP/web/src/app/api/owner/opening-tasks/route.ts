@@ -33,7 +33,7 @@ export async function POST(request: Request) {
             .select('id, created_at')
             .single<{ readonly id: string; readonly created_at: string | null }>();
         if (error) throw error;
-        await safelySyncOwnerSubmissionSchedule({
+        const scheduleSync = await safelySyncOwnerSubmissionSchedule({
             companyId: context.account.company_id,
             locationName: context.location.name || '운영점',
             managerProfileId: context.location.manager_id,
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
             supabaseAdmin,
             title: taskTitle || taskId
         });
-        return ok({ submissionId: data.id }, 201);
+        return ok({ submissionId: data.id, scheduleSyncRequired: scheduleSync.status === 'failed' }, 201);
     } catch (error) {
         console.error('Owner opening task error:', error);
         return fail(500, 'INTERNAL_ERROR', '완료 요청을 등록하지 못했습니다.');

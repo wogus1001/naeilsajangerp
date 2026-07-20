@@ -146,3 +146,97 @@ void test('Given a queued recipient became inactive When maintenance retries The
     assert.deepEqual(replayJobTokens, ['lease-1']);
     assert.deepEqual(replayLeaseTimes, ['2026-07-15T23:59:00.000Z']);
 });
+
+void test('Given one queued job cannot refresh its recipient When maintenance runs Then that job fails and the next job continues', async () => {
+    const failedUpdates: Array<Readonly<Record<string, unknown>>> = [];
+    const replayedSourceIds: string[] = [];
+    let profileLookupCount = 0;
+    const profileQuery = {
+        select() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        async returns() {
+            profileLookupCount += 1;
+            if (profileLookupCount === 1) {
+                return { data: null, error: { message: 'profile lookup failed' } };
+            }
+            return {
+                data: [{ company_id: 'company-1', id: 'profile-1', role: 'staff', status: 'active' }],
+                error: null
+            };
+        }
+    };
+    const client = {
+        async rpc(name: string, args?: Readonly<Record<string, unknown>>) {
+            if (name === 'reconcile_franchise_schedule_lateness') return { data: 0, error: null };
+            if (name === 'claim_franchise_schedule_sync_jobs') {
+                return {
+                    data: [
+                        { id: 'job-1', attempt_count: 0, lease_token: 'lease-1', schedule_payload: schedulePayload('visit-1'), updated_at: '2026-07-15T23:59:00.000Z' },
+                        { id: 'job-2', attempt_count: 0, lease_token: 'lease-2', schedule_payload: schedulePayload('visit-2'), updated_at: '2026-07-15T23:59:30.000Z' }
+                    ],
+                    error: null
+                };
+            }
+            const payload = args?.schedule_payload;
+            if (typeof payload === 'object' && payload !== null && !Array.isArray(payload) && 'source_id' in payload) {
+                replayedSourceIds.push(String(payload.source_id));
+            }
+            return { data: 'schedule-2', error: null };
+        },
+        from(table: string) {
+            if (table === 'profiles') return profileQuery;
+            assert.equal(table, 'franchise_schedule_sync_jobs');
+            return {
+                update(payload: Readonly<Record<string, unknown>>) {
+                    failedUpdates.push(payload);
+                    return {
+                        async match() { return { error: null }; }
+                    };
+                }
+            };
+        }
+    };
+
+    const result = await runFranchiseScheduleMaintenance(client as never, new Date('2026-07-16T00:00:00.000Z'));
+
+    assert.deepEqual(result, { delayedCount: 0, failedCount: 1, processedCount: 2 });
+    assert.equal(failedUpdates[0]?.last_error, 'profile lookup failed');
+    assert.deepEqual(replayedSourceIds, ['visit-2']);
+});
+
+void test('Given a claimed job has a malformed payload When maintenance runs Then the job is failed instead of silently discarded', async () => {
+    const failedUpdates: Array<Readonly<Record<string, unknown>>> = [];
+    const client = {
+        async rpc(name: string) {
+            if (name === 'reconcile_franchise_schedule_lateness') return { data: 0, error: null };
+            if (name === 'claim_franchise_schedule_sync_jobs') {
+                return {
+                    data: [{
+                        id: 'job-malformed',
+                        attempt_count: 0,
+                        lease_token: 'lease-malformed',
+                        schedule_payload: { company_id: 'company-1' },
+                        updated_at: '2026-07-15T23:59:00.000Z'
+                    }],
+                    error: null
+                };
+            }
+            return { data: null, error: null };
+        },
+        from(table: string) {
+            assert.equal(table, 'franchise_schedule_sync_jobs');
+            return {
+                update(payload: Readonly<Record<string, unknown>>) {
+                    failedUpdates.push(payload);
+                    return { async match() { return { error: null }; } };
+                }
+            };
+        }
+    };
+
+    const result = await runFranchiseScheduleMaintenance(client as never, new Date('2026-07-16T00:00:00.000Z'));
+
+    assert.deepEqual(result, { delayedCount: 0, failedCount: 1, processedCount: 1 });
+    assert.equal(failedUpdates[0]?.last_error, 'Malformed franchise schedule sync payload');
+});
