@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { resolveProfileInCompany } from './franchise-supervision-api.js';
+import { isSupervisionResourceInCompany, resolveProfileInCompany } from './franchise-supervision-api.js';
 
 const companyId = '11111111-1111-4111-8111-111111111111';
 const profileId = '22222222-2222-4222-8222-222222222222';
@@ -35,4 +36,19 @@ void test('Given an active same-company profile When assigning supervision work 
     });
 
     assert.deepEqual(result, { ok: true, profileId });
+});
+
+void test('Given an existing supervision row from another company When a scoped mutation runs Then the row is rejected', () => {
+    assert.equal(isSupervisionResourceInCompany({ company_id: companyId }, companyId), true);
+    assert.equal(isSupervisionResourceInCompany({ company_id: 'other-company' }, companyId), false);
+});
+
+void test('Given supervision PATCH routes When mutating an existing row Then both routes enforce source company scope', () => {
+    for (const relativePath of [
+        '../app/api/franchise-supervision/visits/route.ts',
+        '../app/api/franchise-supervision/actions/route.ts'
+    ]) {
+        const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+        assert.match(source, /isSupervisionResourceInCompany\(existing, scope\.companyId\)/, relativePath);
+    }
 });

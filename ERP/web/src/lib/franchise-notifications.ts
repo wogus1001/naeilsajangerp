@@ -47,6 +47,13 @@ export type NotificationLead = {
     readonly disclosureSummary?: LeadDisclosureSummary | null;
 };
 
+export type NotificationLeadManagerProfile = {
+    readonly companyId: string | null;
+    readonly id: string;
+    readonly role: string | null;
+    readonly status: string | null;
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type FranchiseNotificationRow = {
@@ -76,6 +83,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function cleanString(value: unknown): string {
     return String(value || '').trim();
+}
+
+export function sanitizeNotificationLeadManagers(
+    leads: readonly NotificationLead[],
+    profiles: readonly NotificationLeadManagerProfile[]
+): readonly NotificationLead[] {
+    const eligibleManagers = new Set(profiles
+        .filter(profile => profile.status === 'active' && profile.role !== 'partner_vendor')
+        .map(profile => `${cleanString(profile.companyId)}:${cleanString(profile.id)}`));
+
+    return leads.map(lead => {
+        const managerKey = `${cleanString(lead.companyId)}:${cleanString(lead.managerId)}`;
+        return eligibleManagers.has(managerKey) ? lead : { ...lead, managerId: null };
+    });
 }
 
 function toIsoOrNull(value: string | null | undefined): string | null {

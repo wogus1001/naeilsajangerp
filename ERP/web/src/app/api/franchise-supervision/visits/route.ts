@@ -10,6 +10,7 @@ import {
     fetchLocationInCompany,
     getFirst,
     isMissingSupervisionSchemaError,
+    isSupervisionResourceInCompany,
     isSupervisionManager,
     readJsonBody,
     resolveProfileInCompany,
@@ -250,6 +251,9 @@ export async function PATCH(request: Request) {
             .maybeSingle<VisitAccessRow>();
         if (findError) throw findError;
         if (!existing) return fail(404, 'NOT_FOUND', '방문 일정을 찾을 수 없습니다.');
+        if (!isSupervisionResourceInCompany(existing, scope.companyId)) {
+            return fail(403, 'FORBIDDEN', '방문 일정의 회사 범위가 일치하지 않습니다.');
+        }
         if (!canAccessSupervisorResource(scope.auth.requester, existing)) {
             return fail(403, 'FORBIDDEN', '방문 일정을 수정할 권한이 없습니다.');
         }
@@ -338,6 +342,9 @@ export async function DELETE(request: Request) {
             .maybeSingle<VisitAccessRow>();
         if (findError) throw findError;
         if (!existing) return fail(404, 'NOT_FOUND', '방문 일정을 찾을 수 없습니다.');
+        if (!isSupervisionResourceInCompany(existing, scope.companyId)) {
+            return fail(403, 'FORBIDDEN', '선택한 회사의 방문 일정만 삭제할 수 있습니다.');
+        }
         if (!canAccessSupervisorResource(scope.auth.requester, existing)) {
             return fail(403, 'FORBIDDEN', '방문 일정을 삭제할 권한이 없습니다.');
         }

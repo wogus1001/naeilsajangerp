@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import type { FranchiseSourceScheduleInput } from './franchise-source-schedules';
 
 export const FRANCHISE_SCHEDULE_UPSERT_RPC = 'upsert_franchise_schedule_from_payload';
@@ -23,6 +24,11 @@ export type FranchiseSourceSchedulePayload = {
     readonly status: string;
     readonly title: string;
     readonly type: string;
+};
+
+export type FranchiseScheduleSyncLease = {
+    readonly token: string;
+    readonly updatedAt: string;
 };
 
 type FranchiseScheduleRpcResult = {
@@ -109,6 +115,49 @@ async function fetchScheduleProfileCandidates(
     return data || [];
 }
 
+export async function prepareFranchiseSourceSchedulePayload(
+    supabaseAdmin: SupabaseClient,
+    payload: FranchiseSourceSchedulePayload
+): Promise<FranchiseSourceSchedulePayload> {
+    const profileIds = [...new Set([
+        payload.assignee_profile_id,
+        payload.creator_profile_id,
+        payload.manager_profile_id
+    ].filter((profileId): profileId is string => Boolean(profileId)))];
+    if (profileIds.length === 0) return payload;
+
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, company_id, role, status')
+        .eq('company_id', payload.company_id)
+        .in('id', profileIds)
+        .returns<FranchiseSourceScheduleProfileCandidate[]>();
+    if (error) throw error;
+    const activeProfileIds = new Set((data || [])
+        .filter(profile => profile.company_id === payload.company_id
+            && profile.status === 'active'
+            && profile.role !== 'partner_vendor')
+        .map(profile => profile.id));
+    const managerProfileIds = new Set((data || [])
+        .filter(profile => profile.company_id === payload.company_id
+            && profile.status === 'active'
+            && (profile.role === 'admin' || profile.role === 'manager'))
+        .map(profile => profile.id));
+
+    return {
+        ...payload,
+        assignee_profile_id: payload.assignee_profile_id && activeProfileIds.has(payload.assignee_profile_id)
+            ? payload.assignee_profile_id
+            : null,
+        creator_profile_id: payload.creator_profile_id && activeProfileIds.has(payload.creator_profile_id)
+            ? payload.creator_profile_id
+            : null,
+        manager_profile_id: payload.manager_profile_id && managerProfileIds.has(payload.manager_profile_id)
+            ? payload.manager_profile_id
+            : null
+    };
+}
+
 export function buildFranchiseSourceSchedulePayload(
     input: FranchiseSourceScheduleInput
 ): FranchiseSourceSchedulePayload | null {
@@ -187,9 +236,14 @@ export async function enqueueFranchiseScheduleSync(
     supabaseAdmin: SupabaseClient,
     schedulePayload: FranchiseSourceSchedulePayload,
     error: unknown
-): Promise<void> {
+): Promise<FranchiseScheduleSyncLease> {
     const now = new Date().toISOString();
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const token = randomUUID();
+    const errorMessage = error instanceof Error
+        ? error.message
+        : error === null || error === undefined
+            ? ''
+            : String(error);
     const { error: queueError } = await supabaseAdmin
         .from(FRANCHISE_SCHEDULE_SYNC_JOB_TABLE)
         .upsert({
@@ -200,7 +254,9 @@ export async function enqueueFranchiseScheduleSync(
             status: 'pending',
             available_at: now,
             last_error: errorMessage.slice(0, 1000),
+            lease_token: token,
             updated_at: now
         }, { onConflict: 'company_id,source_type,source_id' });
     if (queueError) throw queueError;
+    return { token, updatedAt: now };
 }

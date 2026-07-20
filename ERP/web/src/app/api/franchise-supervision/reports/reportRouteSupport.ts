@@ -160,7 +160,7 @@ export async function insertCorrectiveActions(input: {
     readonly supabaseAdmin: SupabaseClient;
 }) {
     const seeds = buildCorrectiveActionSeeds(input.reportId, input.items);
-    if (seeds.length === 0) return;
+    if (seeds.length === 0) return { scheduleSyncRequiredCount: 0 };
     const now = new Date().toISOString();
     const dueAt = new Date();
     dueAt.setDate(dueAt.getDate() + 7);
@@ -200,7 +200,7 @@ export async function insertCorrectiveActions(input: {
         insertedRows = data || [];
     }
     const syncedRows = [...(existingRows || []), ...insertedRows];
-    await Promise.all(syncedRows.map(async row => {
+    const scheduleResults = await Promise.all(syncedRows.map(async row => {
         const schedule = buildSupervisionCorrectiveActionSourceSchedule({
             actionId: row.id,
             assigneeProfileId: row.assignee_profile_id || input.assigneeProfileId,
@@ -210,12 +210,13 @@ export async function insertCorrectiveActions(input: {
             status: row.status || '요청',
             title: row.title || '시정요청'
         });
-        if (!schedule) return;
-        await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+        if (!schedule) return { status: 'synced' as const };
+        return syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
     }));
+    const scheduleSyncRequiredCount = scheduleResults.filter(result => result.status === 'failed').length;
 
     const newRows = insertedRows.filter(row => row.inspection_item_id && !existingItemIds.has(row.inspection_item_id));
-    if (newRows.length === 0) return;
+    if (newRows.length === 0) return { scheduleSyncRequiredCount };
     const { error: eventError } = await input.supabaseAdmin
         .from('franchise_corrective_action_events')
         .insert(newRows.map(row => ({
@@ -248,6 +249,7 @@ export async function insertCorrectiveActions(input: {
             console.warn('Supervision corrective action AlimTalk notification skipped:', message);
         }
     }));
+    return { scheduleSyncRequiredCount };
 }
 
 export async function notifyReportReviewed(input: {
@@ -352,7 +354,8 @@ export async function syncSupervisionReportWorkflow(input: {
         supervisorProfileId: input.supervisorProfileId,
         taskDate: input.reportWrite.reviewedAt || input.reportWrite.submittedAt
     });
-    if (schedule) await syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+    if (!schedule) return { status: 'synced' as const };
+    return syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
 
 export async function reconcileSubmittedSupervisionReport(input: {
@@ -361,7 +364,7 @@ export async function reconcileSubmittedSupervisionReport(input: {
     readonly supabaseAdmin: SupabaseClient;
     readonly visit: VisitRow | null;
 }) {
-    await syncSupervisionReportWorkflow({
+    return syncSupervisionReportWorkflow({
         actorProfileId: input.actorProfileId,
         companyId: input.report.company_id,
         eventType: '제출',

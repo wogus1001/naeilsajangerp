@@ -148,6 +148,8 @@ begin
 end;
 $$;
 
+revoke all on function public.normalize_franchise_schedule_status(text, timestamp with time zone, text) from public, anon, authenticated;
+grant execute on function public.normalize_franchise_schedule_status(text, timestamp with time zone, text) to service_role;
 revoke all on function public.upsert_franchise_schedule_from_payload(jsonb) from public, anon, authenticated;
 grant execute on function public.upsert_franchise_schedule_from_payload(jsonb) to service_role;
 

@@ -38,7 +38,10 @@ void test('Given franchise source persistence succeeds When schedule sync and re
         const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
         assert.doesNotMatch(source, /Optional .* franchise schedule sync skipped/, relativePath);
         assert.doesNotMatch(source, /Optional supervision visit workflow sync skipped/, relativePath);
+        assert.doesNotMatch(source, /corrective action sync deferred/, relativePath);
     }
+    const reportRoute = readFileSync(new URL('../app/api/franchise-supervision/reports/route.ts', import.meta.url), 'utf8');
+    assert.doesNotMatch(reportRoute, /corrective action sync deferred/);
 });
 
 void test('Given legacy franchise operation rows When classifying shared schedules Then every franchise source is excluded', () => {
@@ -63,7 +66,7 @@ void test('Given a notification list request When auditing schedule writes Then 
     const getStart = source.indexOf('export async function GET');
     const nextHandler = source.indexOf('export async function POST', getStart);
     const getHandler = source.slice(getStart, nextHandler === -1 ? undefined : nextHandler);
-    assert.doesNotMatch(getHandler, /syncNotificationSourceSchedulesSafely/);
+    assert.doesNotMatch(getHandler, /syncNotificationSourceSchedules/);
     assert.doesNotMatch(getHandler, /runScheduledNotificationGeneration/);
 });
 

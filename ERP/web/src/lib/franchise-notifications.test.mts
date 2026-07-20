@@ -6,7 +6,11 @@ import {
     buildDisclosureEmailSentAlimtalkVariables
 } from './alimtalk-event-notifications.js';
 import { buildLeadDisclosureSummary } from './franchise-lead-disclosure-summary.js';
-import { buildAutomaticFranchiseNotifications, transformFranchiseNotification } from './franchise-notifications.js';
+import {
+    buildAutomaticFranchiseNotifications,
+    sanitizeNotificationLeadManagers,
+    transformFranchiseNotification
+} from './franchise-notifications.js';
 import { buildVendorContractNotifications } from './franchise-vendor-contract-notifications.js';
 
 const baseLead = {
@@ -17,6 +21,18 @@ const baseLead = {
     status: '상담중',
     grade: 'WARM'
 } as const;
+
+test('Given a lead manager belongs to another company When sanitizing recipients Then no notification recipient remains', () => {
+    const leads = sanitizeNotificationLeadManagers([baseLead], [{
+        companyId: 'company-2',
+        id: 'profile-1',
+        role: 'manager',
+        status: 'active'
+    }]);
+
+    assert.equal(leads[0]?.managerId, null);
+    assert.deepEqual(buildAutomaticFranchiseNotifications(leads), []);
+});
 
 test('transformFranchiseNotification preserves unknown operational sources as system notifications', () => {
     const notification = transformFranchiseNotification({

@@ -4,11 +4,11 @@ import type {
     VendorContractNotificationRecipient
 } from './franchise-vendor-contract-notifications';
 import type { NotificationLead } from './franchise-notifications';
+import { syncFranchiseOperationalSchedule } from './franchise-phase2-schedule-sync';
 import {
     buildDisclosureEligibilitySchedule,
     buildVendorContractRenewalSchedule
 } from './franchise-source-schedules';
-import { upsertFranchiseSourceSchedule } from './franchise-source-schedule-store';
 
 type NotificationScheduleSyncInput = {
     readonly leads: readonly NotificationLead[];
@@ -35,33 +35,29 @@ function mapManagerByCompany(
     return managers;
 }
 
-export async function syncNotificationSourceSchedulesSafely(
+export async function syncNotificationSourceSchedules(
     supabaseAdmin: SupabaseClient,
     input: NotificationScheduleSyncInput
 ): Promise<void> {
-    try {
-        const now = input.now || new Date();
-        const managerByCompany = mapManagerByCompany(input.vendorRecipients);
-        const disclosureSchedules = input.leads
-            .map(lead => buildDisclosureEligibilitySchedule(lead, now))
-            .filter(schedule => schedule !== null);
-        const vendorSchedules = input.vendorContracts
-            .map(contract => {
-                const companyId = cleanText(contract.companyId);
-                const managerProfileId = managerByCompany.get(companyId) || null;
-                return buildVendorContractRenewalSchedule(contract, {
-                    fallbackAssigneeProfileId: managerProfileId || '',
-                    managerProfileId,
-                    now
-                });
-            })
-            .filter(schedule => schedule !== null);
+    const now = input.now || new Date();
+    const managerByCompany = mapManagerByCompany(input.vendorRecipients);
+    const disclosureSchedules = input.leads
+        .map(lead => buildDisclosureEligibilitySchedule(lead, now))
+        .filter(schedule => schedule !== null);
+    const vendorSchedules = input.vendorContracts
+        .map(contract => {
+            const companyId = cleanText(contract.companyId);
+            const managerProfileId = managerByCompany.get(companyId) || null;
+            return buildVendorContractRenewalSchedule(contract, {
+                fallbackAssigneeProfileId: managerProfileId || '',
+                managerProfileId,
+                now
+            });
+        })
+        .filter(schedule => schedule !== null);
 
-        await Promise.all(
-            [...disclosureSchedules, ...vendorSchedules]
-                .map(schedule => upsertFranchiseSourceSchedule(supabaseAdmin, schedule))
-        );
-    } catch (error) {
-        console.warn('Optional notification source schedule sync skipped:', error);
-    }
+    await Promise.all(
+        [...disclosureSchedules, ...vendorSchedules]
+            .map(schedule => syncFranchiseOperationalSchedule(supabaseAdmin, schedule))
+    );
 }

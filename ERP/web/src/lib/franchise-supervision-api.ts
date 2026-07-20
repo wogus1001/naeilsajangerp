@@ -176,3 +176,10 @@ export function canAccessSupervisorResource(
         || resource.created_by === requester.id
         || resource.assignee_profile_id === requester.id;
 }
+
+export function isSupervisionResourceInCompany(
+    resource: { readonly company_id: string | null },
+    companyId: string
+): boolean {
+    return resource.company_id === companyId;
+}

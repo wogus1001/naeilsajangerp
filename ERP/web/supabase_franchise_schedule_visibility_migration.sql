@@ -112,8 +112,26 @@ as $$
       and p.status = 'active'
       and p.role <> 'partner_vendor'
       and (not manager_only or p.role in ('admin', 'manager'))
+      and (
+        auth.role() = 'service_role'
+        or exists (
+          select 1
+          from public.profiles requester
+          where requester.id = auth.uid()
+            and requester.company_id = target_company_id
+            and requester.status = 'active'
+            and requester.role <> 'partner_vendor'
+        )
+      )
   );
 $$;
+
+revoke all on function public.is_active_franchise_schedule_member(uuid) from public, anon;
+revoke all on function public.can_manage_franchise_schedules(uuid) from public, anon;
+revoke all on function public.is_assignable_franchise_schedule_profile(uuid, uuid, boolean) from public, anon;
+grant execute on function public.is_active_franchise_schedule_member(uuid) to authenticated, service_role;
+grant execute on function public.can_manage_franchise_schedules(uuid) to authenticated, service_role;
+grant execute on function public.is_assignable_franchise_schedule_profile(uuid, uuid, boolean) to authenticated, service_role;
 
 drop policy if exists "Company members can view franchise schedules" on public.franchise_schedules;
 create policy "Company members can view franchise schedules" on public.franchise_schedules

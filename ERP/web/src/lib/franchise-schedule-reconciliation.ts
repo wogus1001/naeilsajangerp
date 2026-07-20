@@ -1,14 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
     FRANCHISE_OPERATIONAL_SCHEDULE_SYNC_RPC,
-    FRANCHISE_SCHEDULE_SYNC_JOB_TABLE
+    FRANCHISE_SCHEDULE_SYNC_JOB_TABLE,
+    prepareFranchiseSourceSchedulePayload
 } from './franchise-source-schedule-store';
 import type { FranchiseSourceSchedulePayload } from './franchise-source-schedule-store';
 
 type FranchiseScheduleSyncJob = {
     readonly id: string;
     readonly attempt_count: number;
+    readonly lease_token: string;
     readonly schedule_payload: FranchiseSourceSchedulePayload;
+    readonly updated_at: string;
 };
 
 export type FranchiseScheduleMaintenanceResult = {
@@ -34,6 +37,8 @@ function isSyncJob(value: unknown): value is FranchiseScheduleSyncJob {
     if (!isRecord(value)) return false;
     return typeof value.id === 'string'
         && typeof value.attempt_count === 'number'
+        && typeof value.lease_token === 'string'
+        && typeof value.updated_at === 'string'
         && isSchedulePayload(value.schedule_payload);
 }
 
@@ -46,14 +51,6 @@ async function claimSyncJobs(supabaseAdmin: SupabaseClient): Promise<readonly Fr
     const { data, error } = await supabaseAdmin.rpc('claim_franchise_schedule_sync_jobs', { job_limit: 50 });
     if (error) throw error;
     return Array.isArray(data) ? data.filter(isSyncJob) : [];
-}
-
-async function completeSyncJob(supabaseAdmin: SupabaseClient, jobId: string): Promise<void> {
-    const { error } = await supabaseAdmin
-        .from(FRANCHISE_SCHEDULE_SYNC_JOB_TABLE)
-        .delete()
-        .eq('id', jobId);
-    if (error) throw error;
 }
 
 async function failSyncJob(
@@ -73,7 +70,7 @@ async function failSyncJob(
             last_error: message.slice(0, 1000),
             updated_at: now.toISOString()
         })
-        .eq('id', job.id);
+        .match({ id: job.id, status: 'processing', updated_at: job.updated_at });
     if (updateError) throw updateError;
 }
 
@@ -88,15 +85,23 @@ export async function runFranchiseScheduleMaintenance(
     let failedCount = 0;
 
     for (const job of jobs) {
+        const schedulePayload = await prepareFranchiseSourceSchedulePayload(
+            supabaseAdmin,
+            job.schedule_payload
+        );
         const { error } = await supabaseAdmin.rpc(FRANCHISE_OPERATIONAL_SCHEDULE_SYNC_RPC, {
-            schedule_payload: job.schedule_payload
+            schedule_payload: {
+                ...schedulePayload,
+                _sync_job_id: job.id,
+                _sync_job_token: job.lease_token,
+                _sync_job_updated_at: job.updated_at
+            }
         });
         if (error) {
             failedCount += 1;
             await failSyncJob(supabaseAdmin, job, error, now);
             continue;
         }
-        await completeSyncJob(supabaseAdmin, job.id);
     }
 
     return {

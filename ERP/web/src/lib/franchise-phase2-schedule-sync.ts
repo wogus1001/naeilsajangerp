@@ -3,7 +3,6 @@ import { buildOwnerSubmissionSourceSchedule } from './franchise-phase2-source-sc
 import {
     buildFranchiseSourceSchedulePayload,
     enqueueFranchiseScheduleSync,
-    executeFranchiseOperationalScheduleSync,
     prepareFranchiseSourceSchedule
 } from './franchise-source-schedule-store';
 import type { FranchiseSourceScheduleInput } from './franchise-source-schedules';
@@ -20,6 +19,11 @@ type OwnerSubmissionScheduleSyncInput = {
     readonly supabaseAdmin: SupabaseClient;
     readonly title: string;
 };
+
+export type FranchiseOperationalScheduleSyncResult =
+    | { readonly status: 'synced' }
+    | { readonly status: 'queued' }
+    | { readonly status: 'failed'; readonly message: string };
 
 async function fetchActiveCompanyManagerProfileIds(
     supabaseAdmin: SupabaseClient,
@@ -44,18 +48,28 @@ async function fetchActiveCompanyManagerProfileIds(
 export async function syncFranchiseOperationalSchedule(
     supabaseAdmin: SupabaseClient,
     schedule: FranchiseSourceScheduleInput
-): Promise<void> {
-    let preparedSchedule = schedule;
+): Promise<FranchiseOperationalScheduleSyncResult> {
     try {
-        preparedSchedule = await prepareFranchiseSourceSchedule(supabaseAdmin, schedule);
-        await executeFranchiseOperationalScheduleSync(preparedSchedule, async (name, args) => {
-            const { error } = await supabaseAdmin.rpc(name, args);
-            return { error };
-        });
-    } catch (error) {
+        const preparedSchedule = await prepareFranchiseSourceSchedule(supabaseAdmin, schedule);
         const schedulePayload = buildFranchiseSourceSchedulePayload(preparedSchedule);
-        if (!schedulePayload) throw error;
-        await enqueueFranchiseScheduleSync(supabaseAdmin, schedulePayload, error);
+        if (!schedulePayload) return { status: 'synced' };
+        const lease = await enqueueFranchiseScheduleSync(supabaseAdmin, schedulePayload, null);
+        const { error } = await supabaseAdmin.rpc('sync_franchise_operational_schedule_from_payload', {
+            schedule_payload: {
+                ...schedulePayload,
+                _sync_job_token: lease.token,
+                _sync_job_updated_at: lease.updatedAt
+            }
+        });
+        if (error) {
+            console.warn('Franchise operational schedule queued for retry:', error);
+            return { status: 'queued' };
+        }
+        return { status: 'synced' };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Franchise operational schedule could not be queued:', message);
+        return { status: 'failed', message };
     }
 }
 

@@ -4,8 +4,9 @@ import {
     toVendorContractView,
     type VendorContractRow
 } from '@/lib/franchise-vendor-contracts';
+import { syncFranchiseOperationalSchedule } from '@/lib/franchise-phase2-schedule-sync';
+import type { FranchiseOperationalScheduleSyncResult } from '@/lib/franchise-phase2-schedule-sync';
 import { buildVendorContractRenewalSchedule } from '@/lib/franchise-source-schedules';
-import { upsertFranchiseSourceSchedule } from '@/lib/franchise-source-schedule-store';
 
 type VendorContractScheduleSyncInput = {
     readonly previousContractEndDate?: string | null;
@@ -36,16 +37,13 @@ export function buildVendorContractScheduleForSync(
     }, context);
 }
 
-export async function syncVendorContractScheduleSafely(input: {
+export async function syncVendorContractSchedule(input: {
     readonly previousContractEndDate?: string | null;
     readonly requester: RequesterProfile;
     readonly row: VendorContractRow;
     readonly supabaseAdmin: SupabaseClient;
-}): Promise<void> {
-    try {
-        const schedule = buildVendorContractScheduleForSync(input);
-        if (schedule) await upsertFranchiseSourceSchedule(input.supabaseAdmin, schedule);
-    } catch (error) {
-        console.warn('Optional vendor contract schedule sync skipped:', error);
-    }
+}): Promise<FranchiseOperationalScheduleSyncResult> {
+    const schedule = buildVendorContractScheduleForSync(input);
+    if (!schedule) return { status: 'synced' };
+    return syncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }

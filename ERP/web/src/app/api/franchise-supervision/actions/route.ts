@@ -10,6 +10,7 @@ import {
     fetchLocationInCompany,
     getFirst,
     isMissingSupervisionSchemaError,
+    isSupervisionResourceInCompany,
     readJsonBody,
     resolveProfileInCompany,
     resolveSupervisionAuth,
@@ -231,6 +232,9 @@ export async function PATCH(request: Request) {
             .maybeSingle<CorrectiveActionRow>();
         if (findError) throw findError;
         if (!existing) return fail(404, 'NOT_FOUND', '시정요청을 찾을 수 없습니다.');
+        if (!isSupervisionResourceInCompany(existing, scope.companyId)) {
+            return fail(403, 'FORBIDDEN', '시정요청의 회사 범위가 일치하지 않습니다.');
+        }
         if (!canAccessSupervisorResource(scope.auth.requester, existing)) {
             return fail(403, 'FORBIDDEN', '시정요청을 수정할 권한이 없습니다.');
         }

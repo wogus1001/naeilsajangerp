@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { RequesterProfile } from '@/lib/api-auth';
 import type { VendorContractRow } from '@/lib/franchise-vendor-contracts';
-import { buildVendorContractScheduleForSync } from './vendorContractScheduleSync.js';
+import {
+    buildVendorContractScheduleForSync,
+    syncVendorContractSchedule
+} from './vendorContractScheduleSync.js';
 
 const requester: RequesterProfile = {
     company_id: 'company-1',
@@ -57,4 +60,48 @@ test('Given a current contract end date When syncing Then the current lifecycle 
 
     assert.equal(schedule?.date, '2026-08-31');
     assert.notEqual(schedule?.status, '취소');
+});
+
+test('Given the operational RPC is unavailable When syncing a vendor contract Then the latest schedule is queued', async () => {
+    const rpcNames: string[] = [];
+    const queuedRows: unknown[] = [];
+    const profileQuery = {
+        select() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        async returns() {
+            return {
+                data: [
+                    { company_id: 'company-1', id: 'manager-1', role: 'manager', status: 'active' },
+                    { company_id: 'company-1', id: 'staff-1', role: 'staff', status: 'active' }
+                ],
+                error: null
+            };
+        }
+    };
+    const client = {
+        from(table: string) {
+            if (table === 'profiles') return profileQuery;
+            assert.equal(table, 'franchise_schedule_sync_jobs');
+            return {
+                async upsert(row: unknown) {
+                    queuedRows.push(row);
+                    return { error: null };
+                }
+            };
+        },
+        async rpc(name: string) {
+            rpcNames.push(name);
+            return { error: { message: 'temporary outage' } };
+        }
+    };
+
+    await syncVendorContractSchedule({
+        requester,
+        row: vendorContractRow(),
+        supabaseAdmin: client as never
+    });
+
+    assert.deepEqual(rpcNames, ['sync_franchise_operational_schedule_from_payload']);
+    assert.equal(queuedRows.length, 1);
 });

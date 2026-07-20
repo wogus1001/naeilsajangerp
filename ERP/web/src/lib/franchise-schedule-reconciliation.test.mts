@@ -35,8 +35,8 @@ void test('Given late schedules and queued sync jobs When maintenance runs Then 
             if (name === 'claim_franchise_schedule_sync_jobs') {
                 return {
                     data: [
-                        { id: 'job-1', attempt_count: 0, schedule_payload: schedulePayload('visit-1') },
-                        { id: 'job-2', attempt_count: 1, schedule_payload: schedulePayload('visit-2') }
+                        { id: 'job-1', attempt_count: 0, lease_token: 'lease-1', schedule_payload: schedulePayload('visit-1'), updated_at: '2026-07-15T23:59:00.000Z' },
+                        { id: 'job-2', attempt_count: 1, lease_token: 'lease-2', schedule_payload: schedulePayload('visit-2'), updated_at: '2026-07-15T23:59:30.000Z' }
                     ],
                     error: null
                 };
@@ -45,13 +45,30 @@ void test('Given late schedules and queued sync jobs When maintenance runs Then 
             return failed ? { data: null, error: { message: 'retry me' } } : { data: 'schedule-1', error: null };
         },
         from(table: string) {
+            if (table === 'profiles') {
+                return {
+                    select() { return this; },
+                    eq() { return this; },
+                    in() { return this; },
+                    async returns() {
+                        return {
+                            data: [{ company_id: 'company-1', id: 'profile-1', role: 'staff', status: 'active' }],
+                            error: null
+                        };
+                    }
+                };
+            }
             assert.equal(table, 'franchise_schedule_sync_jobs');
             return {
                 delete() {
                     return {
-                        async eq(column: string, value: string) {
-                            assert.equal(column, 'id');
-                            deletedIds.push(value);
+                        async match(criteria: Readonly<Record<string, unknown>>) {
+                            deletedIds.push(String(criteria.id));
+                            assert.deepEqual(criteria, {
+                                id: 'job-1',
+                                status: 'processing',
+                                updated_at: '2026-07-15T23:59:00.000Z'
+                            });
                             return { error: null };
                         }
                     };
@@ -59,9 +76,12 @@ void test('Given late schedules and queued sync jobs When maintenance runs Then 
                 update(payload: Readonly<Record<string, unknown>>) {
                     failedUpdates.push(payload);
                     return {
-                        async eq(column: string, value: string) {
-                            assert.equal(column, 'id');
-                            assert.equal(value, 'job-2');
+                        async match(criteria: Readonly<Record<string, unknown>>) {
+                            assert.deepEqual(criteria, {
+                                id: 'job-2',
+                                status: 'processing',
+                                updated_at: '2026-07-15T23:59:30.000Z'
+                            });
                             return { error: null };
                         }
                     };
@@ -73,7 +93,56 @@ void test('Given late schedules and queued sync jobs When maintenance runs Then 
     const result = await runFranchiseScheduleMaintenance(client as never, new Date('2026-07-16T00:00:00.000Z'));
 
     assert.deepEqual(result, { delayedCount: 2, failedCount: 1, processedCount: 2 });
-    assert.deepEqual(deletedIds, ['job-1']);
+    assert.deepEqual(deletedIds, []);
     assert.equal(failedUpdates[0]?.status, 'failed');
     assert.equal(failedUpdates[0]?.attempt_count, 2);
+});
+
+void test('Given a queued recipient became inactive When maintenance retries Then replay omits that recipient and carries its lease', async () => {
+    const replayAssigneeIds: unknown[] = [];
+    const replayJobIds: unknown[] = [];
+    const replayJobTokens: unknown[] = [];
+    const replayLeaseTimes: unknown[] = [];
+    const profileQuery = {
+        select() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        async returns() { return { data: [], error: null }; }
+    };
+    const client = {
+        async rpc(name: string, args?: Readonly<Record<string, unknown>>) {
+            if (name === 'reconcile_franchise_schedule_lateness') return { data: 0, error: null };
+            if (name === 'claim_franchise_schedule_sync_jobs') {
+                return {
+                    data: [{
+                        id: 'job-1',
+                        attempt_count: 0,
+                        lease_token: 'lease-1',
+                        schedule_payload: schedulePayload('visit-1'),
+                        updated_at: '2026-07-15T23:59:00.000Z'
+                    }],
+                    error: null
+                };
+            }
+            const payload = args?.schedule_payload;
+            if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+                if ('assignee_profile_id' in payload) replayAssigneeIds.push(payload.assignee_profile_id);
+                if ('_sync_job_id' in payload) replayJobIds.push(payload._sync_job_id);
+                if ('_sync_job_token' in payload) replayJobTokens.push(payload._sync_job_token);
+                if ('_sync_job_updated_at' in payload) replayLeaseTimes.push(payload._sync_job_updated_at);
+            }
+            return { data: 'schedule-1', error: null };
+        },
+        from(table: string) {
+            assert.equal(table, 'profiles');
+            return profileQuery;
+        }
+    };
+
+    await runFranchiseScheduleMaintenance(client as never, new Date('2026-07-16T00:00:00.000Z'));
+
+    assert.deepEqual(replayAssigneeIds, [null]);
+    assert.deepEqual(replayJobIds, ['job-1']);
+    assert.deepEqual(replayJobTokens, ['lease-1']);
+    assert.deepEqual(replayLeaseTimes, ['2026-07-15T23:59:00.000Z']);
 });

@@ -32,6 +32,9 @@ function fakeSupabase(managerIds: readonly string[]) {
         client: {
             from(table: string) {
                 if (table === 'profiles') return profileQuery;
+                if (table === 'franchise_schedule_sync_jobs') {
+                    return { async upsert() { return { error: null }; } };
+                }
                 assert.equal(table, 'franchise_notifications');
                 return notificationQuery;
             },
@@ -186,6 +189,9 @@ test('Given an existing corrective action When a report is submitted again Then 
         from(table: string) {
             if (table === 'franchise_corrective_actions') return correctiveQuery;
             if (table === 'profiles') return profileQuery;
+            if (table === 'franchise_schedule_sync_jobs') {
+                return { async upsert() { return { error: null }; } };
+            }
             assert.equal(table, 'franchise_notifications');
             return notificationQuery;
         },

@@ -10,6 +10,7 @@ function fakeSupabase(
     activeProfileIds: readonly string[] = ['staff-1', 'staff-2'],
     operationalRpcError: { readonly message: string } | null = null
 ) {
+    const operationOrder: string[] = [];
     const rpcPayloads: unknown[] = [];
     const queuedRows: unknown[] = [];
     const profileQuery = {
@@ -37,17 +38,20 @@ function fakeSupabase(
                 assert.equal(table, 'franchise_schedule_sync_jobs');
                 return {
                     async upsert(rows: unknown) {
+                        operationOrder.push('queue');
                         queuedRows.push(rows);
                         return { error: null };
                     }
                 };
             },
             async rpc(name: string, args: unknown) {
+                operationOrder.push('sync');
                 assert.equal(name, 'sync_franchise_operational_schedule_from_payload');
                 rpcPayloads.push(args);
                 return { error: operationalRpcError };
             }
-        }
+        },
+        operationOrder
     };
 }
 
@@ -75,7 +79,7 @@ void test('Given repeated source sync When persisting Then schedule and notifica
     const secondCall = fake.rpcPayloads[1] as { readonly schedule_payload?: { readonly source_id?: string } };
     assert.equal(firstCall.schedule_payload?.source_id, 'visit-1');
     assert.equal(secondCall.schedule_payload?.source_id, 'visit-1');
-    assert.equal(fake.queuedRows.length, 0);
+    assert.equal(fake.queuedRows.length, 2);
 });
 
 void test('Given a completed source task When syncing Then the atomic RPC receives its terminal state', async () => {
@@ -120,7 +124,7 @@ void test('Given an inactive stored assignee When syncing Then the schedule and 
 
     const rpcCall = fake.rpcPayloads[0] as { readonly schedule_payload?: { readonly assignee_profile_id?: string | null } };
     assert.equal(rpcCall.schedule_payload?.assignee_profile_id, null);
-    assert.equal(fake.queuedRows.length, 0);
+    assert.equal(fake.queuedRows.length, 1);
 });
 
 void test('Given an inactive location manager When syncing owner work Then an active company manager is used', async () => {
@@ -156,5 +160,21 @@ void test('Given a transient operational RPC failure When syncing Then the lates
     };
     assert.equal(queued.source_id, 'visit-1');
     assert.equal(queued.status, 'pending');
-    assert.equal(queued.last_error, 'temporary outage');
+    assert.equal(queued.last_error, '');
+});
+
+void test('Given a source schedule sync When processing Then the durable queue is written before the schedule RPC', async () => {
+    const fake = fakeSupabase();
+
+    await syncFranchiseOperationalSchedule(fake.client as never, activeSchedule);
+
+    assert.deepEqual(fake.operationOrder, ['queue', 'sync']);
+    const rpcCall = fake.rpcPayloads[0] as {
+        readonly schedule_payload?: {
+            readonly _sync_job_token?: string;
+            readonly _sync_job_updated_at?: string;
+        };
+    };
+    assert.match(rpcCall.schedule_payload?._sync_job_token || '', /^[0-9a-f-]{36}$/);
+    assert.match(rpcCall.schedule_payload?._sync_job_updated_at || '', /^\d{4}-\d{2}-\d{2}T/);
 });

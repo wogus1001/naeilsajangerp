@@ -4,11 +4,12 @@ import { fail, ok } from '@/lib/api-response';
 import { isPartnerVendorRole } from '@/lib/franchise-location-access';
 import { runFranchiseScheduleMaintenance } from '@/lib/franchise-schedule-reconciliation';
 import { attachDisclosureSummariesToLeads } from '@/lib/franchise-lead-disclosure-summary';
-import { syncNotificationSourceSchedulesSafely } from '@/lib/franchise-notification-schedule-sync';
+import { syncNotificationSourceSchedules } from '@/lib/franchise-notification-schedule-sync';
 import { canDispatchFranchiseNotificationAlimtalk } from '@/lib/franchise-notification-alimtalk-scope';
 import {
     FRANCHISE_NOTIFICATION_SOURCE_TYPES,
     buildAutomaticFranchiseNotifications,
+    sanitizeNotificationLeadManagers,
     transformFranchiseNotification,
     type FranchiseNotificationCandidate,
     type FranchiseNotificationRow,
@@ -54,6 +55,10 @@ type VendorContractNotificationRow = {
 type NotificationRecipientProfileRow = {
     readonly id: string;
     readonly company_id: string | null;
+};
+type NotificationLeadManagerProfileRow = NotificationRecipientProfileRow & {
+    readonly role: string | null;
+    readonly status: string | null;
 };
 type NotificationCronCompanyRow = {
     readonly company_id: string | null;
@@ -159,8 +164,26 @@ async function fetchNotificationLeads(
     const { data, error } = await query;
     if (error) throw error;
 
-    const leads = ((data || []) as LeadNotificationRow[]).map(mapLeadRow);
-    return attachDisclosureSummariesToLeads(supabaseAdmin, leads);
+    const leads = await attachDisclosureSummariesToLeads(
+        supabaseAdmin,
+        ((data || []) as LeadNotificationRow[]).map(mapLeadRow)
+    );
+    const managerIds = [...new Set(leads.map(lead => cleanString(lead.managerId)).filter(Boolean))];
+    if (managerIds.length === 0) return leads;
+
+    const { data: managerProfiles, error: managerError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, company_id, role, status')
+        .in('id', managerIds)
+        .returns<NotificationLeadManagerProfileRow[]>();
+    if (managerError) throw managerError;
+
+    return sanitizeNotificationLeadManagers(leads, (managerProfiles || []).map(profile => ({
+        companyId: profile.company_id,
+        id: profile.id,
+        role: profile.role,
+        status: profile.status
+    })));
 }
 
 async function fetchVendorContractsForNotifications(
@@ -322,7 +345,7 @@ async function runScheduledNotificationGeneration(): Promise<{
             ...buildAutomaticFranchiseNotifications(leads),
             ...buildVendorContractNotifications(vendorContracts, vendorRecipients)
         ];
-        await syncNotificationSourceSchedulesSafely(supabaseAdmin, {
+        await syncNotificationSourceSchedules(supabaseAdmin, {
             leads,
             vendorContracts,
             vendorRecipients

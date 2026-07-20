@@ -12,6 +12,7 @@ create table if not exists public.franchise_schedule_sync_jobs (
   attempt_count integer default 0 not null,
   available_at timestamp with time zone default timezone('utc'::text, now()) not null,
   last_error text,
+  lease_token uuid default uuid_generate_v4() not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique (company_id, source_type, source_id)
@@ -40,6 +41,10 @@ declare
   );
   notification_source_id text;
   recipient_id uuid;
+  sync_job_id uuid := nullif(schedule_payload->>'_sync_job_id', '')::uuid;
+  sync_job_token uuid := nullif(schedule_payload->>'_sync_job_token', '')::uuid;
+  sync_job_updated_at timestamp with time zone := nullif(schedule_payload->>'_sync_job_updated_at', '')::timestamp with time zone;
+  sync_lease_exists boolean := false;
   now_utc timestamp with time zone := timezone('utc'::text, now());
 begin
   if schedule_company is null or schedule_source_type is null or schedule_source_id is null then
@@ -51,7 +56,34 @@ begin
     0
   ));
 
-  persisted_id := public.upsert_franchise_schedule_from_payload(schedule_payload);
+  if sync_job_token is null or sync_job_updated_at is null then
+    raise exception 'FRANCHISE_SCHEDULE_SYNC_LEASE_REQUIRED';
+  end if;
+
+  select exists (
+    select 1
+    from public.franchise_schedule_sync_jobs job
+    where job.company_id = schedule_company
+      and job.source_type = schedule_source_type
+      and job.source_id = schedule_source_id
+      and job.updated_at = sync_job_updated_at
+      and job.lease_token = sync_job_token
+      and job.status in ('pending', 'processing')
+      and (sync_job_id is null or job.id = sync_job_id)
+  ) into sync_lease_exists;
+
+  if not sync_lease_exists then
+    select id into persisted_id
+    from public.franchise_schedules
+    where company_id = schedule_company
+      and source_type = schedule_source_type
+      and source_id = schedule_source_id;
+    return persisted_id;
+  end if;
+
+  persisted_id := public.upsert_franchise_schedule_from_payload(
+    schedule_payload - '_sync_job_id' - '_sync_job_token' - '_sync_job_updated_at'
+  );
   notification_source_id := schedule_source_type || ':' || schedule_source_id || ':active';
 
   update public.franchise_notifications
@@ -62,6 +94,13 @@ begin
     and source_id = notification_source_id;
 
   if schedule_status in ('완료', '취소') then
+    delete from public.franchise_schedule_sync_jobs
+    where company_id = schedule_company
+      and source_type = schedule_source_type
+      and source_id = schedule_source_id
+      and updated_at = sync_job_updated_at
+      and lease_token = sync_job_token
+      and (sync_job_id is null or id = sync_job_id);
     return persisted_id;
   end if;
 
@@ -111,6 +150,14 @@ begin
       dismissed_at = null,
       updated_at = excluded.updated_at;
   end loop;
+
+  delete from public.franchise_schedule_sync_jobs
+  where company_id = schedule_company
+    and source_type = schedule_source_type
+    and source_id = schedule_source_id
+    and updated_at = sync_job_updated_at
+    and lease_token = sync_job_token
+    and (sync_job_id is null or id = sync_job_id);
 
   return persisted_id;
 end;
@@ -167,12 +214,18 @@ begin
   return query
   update public.franchise_schedule_sync_jobs as job
   set status = 'processing',
+      lease_token = uuid_generate_v4(),
       updated_at = timezone('utc'::text, now())
   where job.id in (
     select candidate.id
     from public.franchise_schedule_sync_jobs as candidate
-    where candidate.status in ('pending', 'failed')
-      and candidate.available_at <= timezone('utc'::text, now())
+    where (
+        candidate.status in ('pending', 'failed')
+        and candidate.available_at <= timezone('utc'::text, now())
+      ) or (
+        candidate.status = 'processing'
+        and candidate.updated_at <= timezone('utc'::text, now()) - interval '15 minutes'
+      )
     order by candidate.available_at, candidate.created_at
     for update skip locked
     limit greatest(1, least(coalesce(job_limit, 50), 200))
