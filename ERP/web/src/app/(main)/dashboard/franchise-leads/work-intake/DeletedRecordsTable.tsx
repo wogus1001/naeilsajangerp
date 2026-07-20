@@ -1,15 +1,18 @@
 "use client";
 
 import React from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import styles from './page.module.css';
 import { WorkIntakeEditModal } from './WorkIntakeEditModal';
 import { buildDeletedRecordEditTarget } from './deleted-record-edit-target';
 import { buildDeletedRecordDetails, cleanText, formatDateTime } from './deleted-record-details';
+import { permanentlyDeleteWorkIntakeRecord } from './requests';
 import type { DeletedWorkIntakeItem } from './types';
 
 type Props = {
     readonly records: readonly DeletedWorkIntakeItem[];
+    readonly onDeletedAction: (recordId: string) => Promise<void>;
 };
 
 function DeletedRecordDetailModal({ record, onCloseAction }: {
@@ -56,8 +59,41 @@ function DeletedRecordDetailModal({ record, onCloseAction }: {
 }
 
 export function DeletedRecordsTable(props: Props) {
+    const { showAlert, showConfirm } = useAppDialog();
     const [selectedRecord, setSelectedRecord] = React.useState<DeletedWorkIntakeItem | null>(null);
+    const [deletingId, setDeletingId] = React.useState('');
     const selectedTarget = selectedRecord ? buildDeletedRecordEditTarget(selectedRecord) : null;
+
+    const permanentlyDelete = async (record: DeletedWorkIntakeItem) => {
+        const confirmed = await showConfirm({
+            title: '삭제 이력 완전삭제',
+            message: `'${record.title}' 삭제 이력을 완전히 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`,
+            confirmText: '완전삭제',
+            cancelText: '취소',
+            isDanger: true
+        });
+        if (!confirmed) return;
+
+        setDeletingId(record.id);
+        try {
+            await permanentlyDeleteWorkIntakeRecord(record.id);
+            if (selectedRecord?.id === record.id) setSelectedRecord(null);
+            await props.onDeletedAction(record.id);
+            await showAlert({
+                title: '완전삭제 완료',
+                message: '삭제 목록에서 완전히 삭제했습니다.',
+                type: 'success'
+            });
+        } catch (error) {
+            await showAlert({
+                title: '완전삭제 실패',
+                message: error instanceof Error ? error.message : '완전삭제 중 오류가 발생했습니다.',
+                type: 'error'
+            });
+        } finally {
+            setDeletingId('');
+        }
+    };
 
     return (
         <>
@@ -85,9 +121,19 @@ export function DeletedRecordsTable(props: Props) {
                                 <td data-label="삭제자"><span>{record.deletedByName}</span></td>
                                 <td data-label="삭제일"><span>{formatDateTime(record.deletedAt)}</span></td>
                                 <td data-label="관리">
-                                    <button type="button" className={styles.actionButton} onClick={() => setSelectedRecord(record)}>
-                                        <Eye size={14} /> 상세 확인
-                                    </button>
+                                    <div className={styles.actionGroup}>
+                                        <button type="button" className={styles.actionButton} onClick={() => setSelectedRecord(record)}>
+                                            <Eye size={14} /> 상세 확인
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={styles.deleteButton}
+                                            disabled={Boolean(deletingId)}
+                                            onClick={() => void permanentlyDelete(record)}
+                                        >
+                                            <Trash2 size={14} /> {deletingId === record.id ? '삭제 중' : '완전삭제'}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

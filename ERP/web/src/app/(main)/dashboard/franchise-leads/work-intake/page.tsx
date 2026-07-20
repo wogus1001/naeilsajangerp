@@ -182,6 +182,26 @@ export default function FranchiseWorkIntakePage() {
     const changePage = (page: number) => {
         setPages(current => ({ ...current, [activeTab]: page }));
     };
+    const removeDeletedRecord = React.useCallback(async (recordId: string) => {
+        setData(current => {
+            const deletedRecords = (current.deletedRecords || []).filter(record => record.id !== recordId);
+            const deletedMeta = current.meta?.deletedRecords;
+            const nextTotal = Math.max(0, (deletedMeta?.total || 0) - 1);
+            return {
+                ...current,
+                deletedRecords,
+                meta: current.meta ? {
+                    ...current.meta,
+                    deletedRecords: {
+                        ...current.meta.deletedRecords,
+                        total: nextTotal,
+                        pageCount: Math.max(1, Math.ceil(nextTotal / current.meta.deletedRecords.pageSize))
+                    }
+                } : current.meta
+            };
+        });
+        await loadData();
+    }, [loadData]);
     return (
         <main className={styles.page}>
             <section className={styles.header}>
@@ -285,7 +305,7 @@ export default function FranchiseWorkIntakePage() {
 
             {activeTab === 'deletedRecords' && canSeeDeletedRecords && (
                 <>
-                    <DeletedRecordsTable records={data.deletedRecords || []} />
+                    <DeletedRecordsTable records={data.deletedRecords || []} onDeletedAction={removeDeletedRecord} />
                     <WorkIntakePagination meta={meta.deletedRecords} onPageChangeAction={changePage} />
                 </>
             )}
