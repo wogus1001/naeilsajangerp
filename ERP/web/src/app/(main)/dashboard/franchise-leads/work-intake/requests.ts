@@ -136,3 +136,26 @@ export async function deleteWorkIntakeItem(target: WorkIntakeEditTarget, request
     if (!response.ok) throw new Error(readWorkIntakeDeleteError(payload));
     return unwrapApiData<WorkIntakeDeleteResult>(payload);
 }
+
+export async function permanentlyDeleteWorkIntakeRecord(recordId: string): Promise<void> {
+    let response: Response;
+    try {
+        response = await fetch(`/api/franchise-work-intake/deleted-records/${encodeURIComponent(recordId)}`, {
+            method: 'DELETE',
+            headers: await getApiAuthHeaders()
+        });
+    } catch {
+        throw new Error('네트워크 연결을 확인한 뒤 완전삭제를 다시 시도해주세요.');
+    }
+
+    let payload: unknown;
+    try {
+        payload = await readPayload(response);
+    } catch {
+        throw new Error('서버 응답을 확인하지 못했습니다. 잠시 후 완전삭제를 다시 시도해주세요.');
+    }
+    if (!response.ok) {
+        const message = readApiError(payload);
+        throw new Error(message === 'Request failed.' ? '완전삭제 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.' : message);
+    }
+}
