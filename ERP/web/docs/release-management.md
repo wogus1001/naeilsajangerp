@@ -238,6 +238,13 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-20 진행현황 삭제 긴급 보정
+  - 작업 브랜치: `codex/hotfix-work-intake-delete-id-type-20260720`
+  - 타입 핫픽스 커밋: `2855ea8 fix(franchise): 진행현황 삭제 RPC 타입 보정`
+  - 주요 기능: `properties.id(text)`와 삭제 RPC UUID 입력 비교를 보정하고, 관리자 삭제 목록에 복구 불가능한 `완전삭제` API·확인 알럿·결과 알럿을 추가했다. 완전삭제는 관리자 UI뿐 아니라 서버에서 활성 세션과 `admin` 역할을 다시 검증하고, 성공한 행위자·대상 ID·처리 시각을 구조화 운영 로그로 남긴다.
+  - SQL: 수정된 `supabase_franchise_work_intake_deleted_records_migration.sql`은 사용자 확인 기준 운영 DB 적용 완료다. 완전삭제 기능의 신규 SQL은 없다. **SQL 등록 완료 확인**.
+  - 운영 확인: 수정 전 DELETE 503 요청이 SQL 반영 후 200으로 전환되고 삭제 목록에 이력이 저장되는 것을 production runtime log로 확인했다.
+
 - 2026-07-16
   - 작업 브랜치: `codex/work-intake-pagination-local-fix-20260716`, release 브랜치 `codex/work-intake-main-release-20260716`
   - 기능 커밋: `a0d5a3b feat(franchise): 진행현황 삭제 목록 상세 확인 개선`, `0729bd2 fix(franchise): 진행현황 목록과 삭제 이력 보강`, `021a079 fix(franchise): 진행현황 범위 조회 정렬 안정화`

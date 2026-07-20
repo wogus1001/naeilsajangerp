@@ -49,4 +49,13 @@ test('Given the snapshot RPC fails inside its body When classifying the error Th
         message: 'operator does not exist: text = uuid',
         details: 'PL/pgSQL function delete_franchise_work_intake_record_with_snapshot(text,uuid,uuid,text,text,jsonb) line 12 at SQL statement'
     }), false);
+    assert.equal(isMissingWorkIntakeDeleteSnapshotRpcError({
+        code: '42883',
+        message: 'function public.some_helper(uuid) does not exist',
+        details: 'PL/pgSQL function delete_franchise_work_intake_record_with_snapshot(text,uuid,uuid,text,text,jsonb) line 12 at SQL statement'
+    }), false);
+    assert.equal(isMissingWorkIntakeDeleteSnapshotRpcError({
+        code: '42883',
+        message: 'function public.delete_franchise_work_intake_record_with_snapshot(text,uuid,uuid,text,text,jsonb) does not exist'
+    }), true);
 });

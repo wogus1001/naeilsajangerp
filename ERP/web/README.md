@@ -402,7 +402,7 @@ Amount fields in the 권리금계약 payload are split: numeric won display valu
 
 Run `supabase_partner_vendor_access_migration.sql` before enabling 협력업체 accounts in production. The migration adds signup phone storage, the `partner_vendor` role support, `created_by` tracking for franchise leads and locations, and RLS helpers for lead/location/opening-project access.
 
-Run the latest `supabase_franchise_work_intake_deleted_records_migration.sql` before enabling the administrator-only deleted work-intake list. The latest file locks the source row, stores the full server-side snapshot, prevents duplicate history, and verifies that exactly one source row was deleted. User confirmation records the latest migration as applied to production on 2026-07-16. **SQL 등록 완료 확인**.
+Run the latest `supabase_franchise_work_intake_deleted_records_migration.sql` before enabling the administrator-only deleted work-intake list. The latest file locks the source row, stores the full server-side snapshot, prevents duplicate history, verifies that exactly one source row was deleted, and casts the UUID RPC input to the text-based `properties.id` column. User confirmation records the corrected function as applied to production on 2026-07-20. **SQL 등록 완료 확인**. Administrators can permanently remove a deleted-list history row after a destructive confirmation; this action does not require additional SQL and cannot be undone.
 
 Access rule: headquarters brand employees can see the company franchise leads, opening candidates, and opening operations; 협력업체 users can see only the leads and opening candidates they created. Opening operations inherit the linked opening-candidate access rule. Server APIs enforce the same rule even when they use the service role.
 
