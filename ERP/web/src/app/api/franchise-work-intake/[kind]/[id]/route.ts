@@ -166,13 +166,11 @@ export function isMissingWorkIntakeDeleteSnapshotRpcError(error: unknown): boole
     if (!isRecord(error)) return false;
     const code = typeof error.code === 'string' ? error.code : '';
     const message = typeof error.message === 'string' ? error.message : '';
-    const details = typeof error.details === 'string' ? error.details : '';
-    const combined = `${message} ${details}`;
+    const normalizedMessage = message.toLowerCase();
     return code === 'PGRST202'
-        || code === '42883'
-        || combined.includes(WORK_INTAKE_DELETE_RPC_NAME)
-        || combined.includes('Could not find the function')
-        || combined.includes('function') && combined.includes('schema cache');
+        || normalizedMessage.includes('could not find the function')
+        || normalizedMessage.includes('function') && normalizedMessage.includes('schema cache')
+        || code === '42883' && normalizedMessage.includes('function') && normalizedMessage.includes('does not exist');
 }
 
 function buildPropertyUpdates(body: Record<string, unknown>, row: IntakeRow) {
