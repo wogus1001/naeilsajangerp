@@ -25,6 +25,16 @@
 
 ## 개발 과정 로그
 
+### 2026-07-20 가맹 운영 일정 내구성 최종 보정
+
+- `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`은 사용자 확인 기준 대상 DB 적용을 완료했다. **SQL 등록 완료 확인**.
+- 원천 저장 전 동기화 경계는 큐 저장 실패를 호출자에게 전달하고, 이미 원본 저장이 끝난 방문·시정요청·오픈 준비·점주 제출·업체 계약·점검 보고서 경로는 성공 응답의 `scheduleSyncRequired`로 후속 동기화 필요 상태를 반환하도록 호출 계약을 분리했다.
+- 점검 보고서가 저장된 뒤 시정요청 후처리가 실패하더라도 500을 반환해 같은 보고서를 다시 생성하지 않도록 성공 응답에 지연 경고를 포함한다.
+- 재처리 배치는 payload별 프로필 재검증과 RPC 오류를 개별 실패로 기록하고 다음 작업을 계속 처리한다. 필수 필드가 없는 payload도 조용히 폐기하지 않고 실패·재시도 대상으로 남기며, Supabase 객체 오류의 `message`를 재시도 로그에 보존한다.
+- 회귀 테스트 28건, 전체 테스트 803건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- mock-session 브라우저 QA에서 `/dashboard/franchise-operations/schedule`의 원천 일정 목록, 상세 이동, 완료 처리와 1440px/390px 레이아웃을 확인했다. 테스트 인증 mock에서 발생하는 다중 GoTrueClient 경고 외 제품 콘솔 오류는 없었다.
+- 남은 live QA는 적용 DB의 실계정으로 원천 변경 1건과 재처리 큐 1건을 확인하는 것이다. 신규 SQL 파일은 없다.
+
 ### 2026-07-16 가맹 운영 원천 일정 내구성 리뷰 보정
 
 - 원천 일정과 현재 담당자 알림을 `sync_franchise_operational_schedule_from_payload` 한 트랜잭션에서 갱신하고, source 단위 advisory lock으로 동시 동기화를 직렬화했다.
