@@ -243,11 +243,13 @@ YYYY-MM-DD
   - 타입 핫픽스 커밋: `2855ea8 fix(franchise): 진행현황 삭제 RPC 타입 보정`
   - 완전삭제 커밋: `cdac47d feat(franchise): 삭제 목록 완전삭제 추가`
   - dev 반영: `b3f82fe fix: 진행현황 삭제 안정화와 완전삭제 (#23)`
-  - main 반영: PR `#24` (`codex/hotfix-work-intake-delete-id-type-20260720` -> `main`)
+  - main 반영: `2f3bfb3 fix: 진행현황 삭제 안정화와 완전삭제 (#24)`
+  - 보호 규칙 예외: 사용자 승인에 따라 필수 리뷰와 사용하지 않는 legacy Netlify preview 실패 체크를 관리자 권한으로 우회했다. 실제 배포 기준인 Vercel preview check는 통과했다.
   - 주요 기능: `properties.id(text)`와 삭제 RPC UUID 입력 비교를 보정하고, 관리자 삭제 목록에 복구 불가능한 `완전삭제` API·확인 알럿·결과 알럿을 추가했다. 완전삭제는 관리자 UI뿐 아니라 서버에서 활성 세션과 `admin` 역할을 다시 검증하고, 성공한 행위자·대상 ID·처리 시각을 구조화 운영 로그로 남긴다.
   - SQL: 수정된 `supabase_franchise_work_intake_deleted_records_migration.sql`은 사용자 확인 기준 운영 DB 적용 완료다. 완전삭제 기능의 신규 SQL은 없다. **SQL 등록 완료 확인**.
   - 운영 확인: 수정 전 DELETE 503 요청이 SQL 반영 후 200으로 전환되고 삭제 목록에 이력이 저장되는 것을 production runtime log로 확인했다.
-  - 운영 배포: `dpl_9GUoyaDDEybDmRziDm9DbUojG6zG`, source `https://naeilsajang-5n5t3k7iw-jaehyuns-projects-b4d20c6f.vercel.app`. `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias와 주요 URL 200 응답을 확인했다.
+  - 임시 운영 배포: `dpl_9GUoyaDDEybDmRziDm9DbUojG6zG`, source `https://naeilsajang-5n5t3k7iw-jaehyuns-projects-b4d20c6f.vercel.app`.
+  - main 자동 운영 배포: `dpl_3RBXoDdctt4QPpJNpKfxwUzKhrEM`, source `https://naeilsajang-539ogcu8h-jaehyuns-projects-b4d20c6f.vercel.app`. `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias와 주요 URL 200 응답을 확인했다.
 
 - 2026-07-16
   - 작업 브랜치: `codex/work-intake-pagination-local-fix-20260716`, release 브랜치 `codex/work-intake-main-release-20260716`
