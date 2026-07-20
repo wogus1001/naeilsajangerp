@@ -54,7 +54,7 @@ begin
     v_source_table := 'properties';
     select p.company_id, to_jsonb(p) into v_company_id, v_source_row
       from public.properties p
-      where p.id = p_source_id and p.operation_type = '물건등록'
+      where p.id = p_source_id::text and p.operation_type = '물건등록'
       for update;
 
     if v_source_row is null then
@@ -72,7 +72,7 @@ begin
     returning id into v_deleted_record_id;
 
     delete from public.properties
-      where id = p_source_id and operation_type = '물건등록';
+      where id = p_source_id::text and operation_type = '물건등록';
     get diagnostics v_deleted_count = row_count;
     if v_deleted_count <> 1 then
       raise exception 'WORK_INTAKE_DELETE_CONFLICT';

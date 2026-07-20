@@ -15,4 +15,6 @@ test('Given work intake delete history migration When inspected Then deleted rec
     assert.match(sql, /get diagnostics v_deleted_count = row_count/);
     assert.match(sql, /create unique index if not exists franchise_work_intake_deleted_source_uidx/);
     assert.match(sql, /jsonb_build_object\('sourceTable', v_source_table, 'row', v_source_row\)/);
+    assert.match(sql, /where p\.id = p_source_id::text and p\.operation_type = '물건등록'/);
+    assert.match(sql, /where id = p_source_id::text and operation_type = '물건등록'/);
 });
