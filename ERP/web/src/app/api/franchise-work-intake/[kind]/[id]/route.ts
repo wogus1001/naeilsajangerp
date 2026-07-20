@@ -170,7 +170,9 @@ export function isMissingWorkIntakeDeleteSnapshotRpcError(error: unknown): boole
     return code === 'PGRST202'
         || normalizedMessage.includes('could not find the function')
         || normalizedMessage.includes('function') && normalizedMessage.includes('schema cache')
-        || code === '42883' && normalizedMessage.includes('function') && normalizedMessage.includes('does not exist');
+        || code === '42883'
+            && normalizedMessage.includes(WORK_INTAKE_DELETE_RPC_NAME)
+            && normalizedMessage.includes('does not exist');
 }
 
 function buildPropertyUpdates(body: Record<string, unknown>, row: IntakeRow) {
