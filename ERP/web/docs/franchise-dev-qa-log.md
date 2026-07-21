@@ -18,6 +18,10 @@
 
 - 향후계획: `ERP/web/docs/franchise-growth-roadmap.md`에 정리
 - 로컬 세션 인수인계: `MAC_CONTEXT.md`에 정리
+- 실행/env/SQL 안내: `ERP/web/README.md`에 정리
+- QA/개발 과정: 이 문서에서 신규 관리 시작
+- 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
+- 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
 ### 2026-07-21 진행현황 입점 요청 네이버 지도 전환
 
@@ -29,10 +33,13 @@
 - 런타임 가설 점검: ① Maps 인증정보 또는 Geocoding 권한 오류 가능성은 실제 공급자 주소 매칭과 유효 좌표 반환으로 기각했다. ② 허용 URL 또는 브라우저 Client ID 오류 가능성은 Naver SDK 인증 200으로 기각했다. ③ 지도 공급자 렌더링 실패 가능성은 보정 후 mount 807x219px, 지도 타일 40개 로드와 유효 이미지 크기, 마커 렌더링으로 기각했다. 새 브라우저 세션의 console error는 0건이었다.
 - 검증: `npx tsx --test src/lib/franchise-property-registration-uploads.test.mts src/lib/naver-maps-client.test.mts src/lib/naver-maps-geocoding.test.mts` 12건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
 - 이번 지도 공급자 교체에는 신규 DB 변경이 없으므로 SQL 등록은 필요하지 않다.
-- 실행/env/SQL 안내: `ERP/web/README.md`에 정리
-- QA/개발 과정: 이 문서에서 신규 관리 시작
-- 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
-- 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
+
+### 2026-07-21 커스텀 업종 카테고리 스키마 복구 QA
+
+- Supabase REST schema에서 `custom_categories`를 찾지 못해 `/api/categories`가 실패하던 환경을 위한 `supabase_custom_categories_migration.sql`을 추가했다. 회사, 업종 분류 계층, 생성자, 생성·수정 시각과 조회 인덱스를 복구한다.
+- API가 서버 service role로만 테이블을 사용하는 현재 구조에 맞춰 RLS를 활성화하고 `anon`, `authenticated`의 직접 접근 권한을 회수했다. 기존 데이터에 동일한 회사·분류·이름 조합이 있어도 migration이 중단되지 않도록 중복 정리와 unique 강제는 이번 복구 범위에서 제외했다.
+- 로컬 Supabase service-role 조회로 전체 6건과 실제 API 조건에 해당하는 회사별 `industry_detail` 5건을 확인했다. 비로그인 `/api/categories`는 예상대로 401을 반환했고, 로그인한 입점 요청 등록 화면은 카테고리 관련 console error 없이 렌더링됐다. 기존 Supabase GoTrueClient 다중 인스턴스 경고는 별도 이슈로 남긴다.
+- 사용자 확인 기준 동일 migration을 운영 Supabase에도 적용했다. **SQL 등록 완료 확인**.
 
 ## 개발 과정 로그
 
