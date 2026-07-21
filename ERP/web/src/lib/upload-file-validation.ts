@@ -9,6 +9,8 @@ type UploadFileInput = {
     readonly size: number;
 };
 
+type UploadFileMetadata = Omit<UploadFileInput, 'bytes'>;
+
 export type UploadFileValidationResult =
     | {
         readonly ok: true;
@@ -139,6 +141,32 @@ function isValidImage(input: UploadFileInput): boolean {
     return isOneOf(mimeType, IMAGE_MIME_TYPES)
         && validateImageExtension(mimeType, fileExtension(input.fileName))
         && validateImageSignature(mimeType, input.bytes);
+}
+
+export function validateUploadFileMetadataForTarget(
+    target: UploadStorageTarget,
+    input: UploadFileMetadata
+): UploadFileValidationResult {
+    if (input.size <= 0 || input.size > MAX_UPLOAD_FILE_BYTES) {
+        return {
+            ok: false,
+            error: input.size <= 0 ? 'File is empty' : 'File size must be 20MB or less',
+            status: input.size <= 0 ? 400 : 413
+        };
+    }
+
+    const mimeType = normalizeText(input.mimeType);
+    const extension = fileExtension(input.fileName);
+    const isValid = target.bucket === 'property-images'
+        ? isOneOf(mimeType, IMAGE_MIME_TYPES) && validateImageExtension(mimeType, extension)
+        : (
+            (mimeType === 'application/pdf' && extension === 'pdf') ||
+            (isOneOf(mimeType, IMAGE_MIME_TYPES) && validateImageExtension(mimeType, extension))
+        );
+
+    return isValid
+        ? { ok: true }
+        : { ok: false, error: 'Unsupported file type', status: 400 };
 }
 
 export function shouldReturnUploadPublicUrl(target: UploadStorageTarget): boolean {

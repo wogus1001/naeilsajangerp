@@ -4,7 +4,8 @@ import {
     buildPropertyRegistrationUploadPath,
     getPropertyRegistrationUploadBucket,
     isOpenablePropertyAttachment,
-    isPreviewablePropertyAttachment
+    isPreviewablePropertyAttachment,
+    uploadPropertyRegistrationAttachments
 } from './franchise-property-registration-uploads.js';
 
 test('Given property image attachments When resolving upload target Then property-images path is used', () => {
@@ -58,4 +59,39 @@ test('Given stored attachment URL When rendering attachment Then image preview a
         type: 'image/png',
         publicUrl: 'https://storage.test/property-1/file.png'
     }), true);
+});
+
+test('Given a large phone photo When uploading an attachment Then file bytes bypass the Next API request body', async () => {
+    const file = new File([new Uint8Array(6 * 1024 * 1024)], 'store.jpg', { type: 'image/jpeg' });
+    const requestCalls: Array<{ readonly method: string; readonly url: string }> = [];
+    const directUploads: Array<{ readonly bucket: string; readonly path: string; readonly size: number }> = [];
+    const publicUrl = 'https://storage.test/property-1/store.jpg';
+
+    const result = await uploadPropertyRegistrationAttachments({
+        propertyId: 'property-1',
+        files: [file],
+        attachments: [{ name: file.name, size: file.size, type: file.type }]
+    }, {
+        request: async (url, init) => {
+            requestCalls.push({ method: init?.method || 'GET', url: String(url) });
+            if (init?.method === 'POST') {
+                return Response.json({ path: 'property-1/store.jpg', token: 'signed-token' });
+            }
+            return Response.json({ path: 'property-1/store.jpg', publicUrl });
+        },
+        uploadToSignedUrl: async (bucket, path, _token, uploadFile) => {
+            directUploads.push({ bucket, path, size: uploadFile.size });
+        }
+    });
+
+    assert.deepEqual(requestCalls, [
+        { method: 'POST', url: '/api/upload/sign' },
+        { method: 'PUT', url: '/api/upload/sign' }
+    ]);
+    assert.deepEqual(directUploads, [{
+        bucket: 'property-images',
+        path: 'property-1/store.jpg',
+        size: file.size
+    }]);
+    assert.equal(result[0]?.publicUrl, publicUrl);
 });
