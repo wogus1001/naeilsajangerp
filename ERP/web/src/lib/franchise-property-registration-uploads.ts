@@ -100,7 +100,7 @@ export function isOpenablePropertyAttachment(attachment: PropertyRegistrationFil
 
 function createDefaultUploadDependencies(): PropertyUploadDependencies {
     return {
-        request: fetch,
+        request: (...args) => window.fetch(...args),
         uploadToSignedUrl: async (bucket, path, token, file) => {
             const { error } = await createClient().storage.from(bucket).uploadToSignedUrl(path, token, file, {
                 contentType: file.type

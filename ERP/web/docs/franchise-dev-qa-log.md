@@ -18,6 +18,17 @@
 
 - 향후계획: `ERP/web/docs/franchise-growth-roadmap.md`에 정리
 - 로컬 세션 인수인계: `MAC_CONTEXT.md`에 정리
+
+### 2026-07-21 진행현황 입점 요청 네이버 지도 전환
+
+- `/dashboard/franchise-leads/work-intake`의 입점 요청 상세 주소 지도를 Kakao 지도에서 Naver Maps Dynamic Map으로 교체했다. 주소 좌표 변환은 인증된 `/api/integrations/naver/maps/geocode`가 서버 전용 Client Secret으로 처리하고, 브라우저에는 Maps Client ID만 전달한다.
+- 지도 SDK/지오코딩 설정 누락, 주소 미검색, 공급자 네트워크 실패를 구분해 한국어 상태 메시지로 표시하고 외부 이동 링크를 `네이버 지도에서 보기`로 변경했다. 기존 사진 갤러리와 상세 확인/수정 흐름은 유지한다.
+- 실제 로컬 Maps 인증정보로 Naver Geocoding을 호출해 설정 감지, 주소 매칭, 유효 좌표 반환을 확인했다. 인증·입력 길이·설정·검색 결과·공급자 오류·동시/순차 중복 요청·SDK 재시도 및 클라이언트 응답 파서 테스트를 추가했고, 서버 좌표 결과 캐시는 5분·최대 100개로 제한한다.
+- 코드리뷰에서 지도 SDK DOM 정리 시 React 오류 상태까지 지울 수 있는 경계를 확인해 SDK mount와 상태 표시 영역을 분리했다. Naver SDK가 mount 요소의 inline `position`을 덮어써 로컬 지도 높이가 0이 되던 문제는 mount에 명시적인 너비·높이를 지정해 보정했다.
+- 로컬 첨부 업로드의 `Failed to execute 'fetch' on 'Window': Illegal invocation`은 기본 의존성에 저장한 `fetch`가 객체 메서드로 호출되며 브라우저 바인딩을 잃은 것이 원인이었다. 기본 요청 함수를 `window.fetch(...args)` 래퍼로 바꿔 운영과 같은 사진 업로드 흐름을 유지했다. 오류 당시 저장된 URL 없는 첨부 메타데이터는 원본 파일을 다시 선택해야 한다.
+- 런타임 가설 점검: ① Maps 인증정보 또는 Geocoding 권한 오류 가능성은 실제 공급자 주소 매칭과 유효 좌표 반환으로 기각했다. ② 허용 URL 또는 브라우저 Client ID 오류 가능성은 Naver SDK 인증 200으로 기각했다. ③ 지도 공급자 렌더링 실패 가능성은 보정 후 mount 807x219px, 지도 타일 40개 로드와 유효 이미지 크기, 마커 렌더링으로 기각했다. 새 브라우저 세션의 console error는 0건이었다.
+- 검증: `npx tsx --test src/lib/franchise-property-registration-uploads.test.mts src/lib/naver-maps-client.test.mts src/lib/naver-maps-geocoding.test.mts` 12건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
+- 이번 지도 공급자 교체에는 신규 DB 변경이 없으므로 SQL 등록은 필요하지 않다.
 - 실행/env/SQL 안내: `ERP/web/README.md`에 정리
 - QA/개발 과정: 이 문서에서 신규 관리 시작
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리

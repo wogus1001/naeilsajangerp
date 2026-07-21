@@ -212,6 +212,15 @@ The competitor scan endpoint is `/api/franchise-locations/competitors`. Both add
 
 Competitor scans use `competitionKeyword` first, then `brand`. They intentionally do not fall back to the location name because area names such as "군자" or "강남" return unrelated nearby places.
 
+The `업무 > 진행현황 > 입점 요청` detail map uses Naver Maps Dynamic Map and server-side Geocoding. Configure both values in local and Vercel environments, then restart or rebuild the app:
+
+```bash
+NEXT_PUBLIC_NAVER_MAP_CLIENT_ID=
+NAVER_MAP_CLIENT_SECRET=
+```
+
+`NEXT_PUBLIC_NAVER_MAP_CLIENT_ID` is the Maps Application Client ID and is exposed only for the browser map SDK. `NAVER_MAP_CLIENT_SECRET` is used only by `/api/integrations/naver/maps/geocode` and must never be exposed to client code. These values are separate from the `NAVER_CLIENT_ID` and `NAVER_CLIENT_SECRET` used by Naver Search/DataLab. Register `Dynamic Map` and `Geocoding` in NCP Maps and allow the production and local web service URLs before browser QA.
+
 Optional environment variables for competitor review/ad enrichment:
 
 ```bash
