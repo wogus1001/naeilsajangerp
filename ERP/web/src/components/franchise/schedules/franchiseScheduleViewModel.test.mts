@@ -15,9 +15,9 @@ import type { FranchiseScheduleFilters, FranchiseScheduleItem } from './franchis
 const filters: FranchiseScheduleFilters = { status: 'all', source: 'all', visibility: 'all', assignee: '' };
 
 const rows: readonly FranchiseScheduleItem[] = [
-    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', status: '진행중', source: 'supervision-report', visibility: 'shared', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '/dashboard/franchise-supervision' },
-    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', status: '예정', source: 'manual', visibility: 'personal', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '' },
-    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', status: '진행중', source: 'approval-document', visibility: 'shared', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '', actionUrl: '' }
+    { id: 'late-1', title: '보고서 보완', date: '2026-07-01', dueAt: '', status: '진행중', source: 'supervision-report', visibility: 'shared', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '/dashboard/franchise-supervision' },
+    { id: 'today-1', title: '점주 미팅', date: '2026-07-10', dueAt: '', status: '예정', source: 'manual', visibility: 'personal', assigneeProfileId: 'staff-1', assigneeName: '김SV', managerName: '운영팀', details: '', approvalDocumentId: '', completedAt: '', actionUrl: '' },
+    { id: 'approval-1', title: '방문 결재', date: '2026-07-12', dueAt: '', status: '진행중', source: 'approval-document', visibility: 'shared', assigneeProfileId: 'staff-2', assigneeName: '이SV', managerName: '운영팀', details: '', approvalDocumentId: 'doc-1', completedAt: '', actionUrl: '' }
 ];
 
 test('Given API contract When reading client endpoint Then only franchise schedule API is used', () => {
@@ -162,6 +162,43 @@ test('Given schedule rows When building view model Then approval work stays out 
     assert.equal(model.kpis.find(kpi => kpi.label === '진행 중')?.value, 1);
     assert.equal(model.kpis.find(kpi => kpi.label === '지연 일정')?.value, 1);
     assert.equal(model.filteredItems.some(item => item.source === 'approval-document'), false);
+});
+
+test('Given an owner request from yesterday with a future exact deadline When building KPIs Then it is not overdue early', () => {
+    const [ownerRequest] = parseFranchiseScheduleItems({
+        data: [{
+            id: 'owner-request-1',
+            title: '점주 시설 문의',
+            date: '2026-07-19',
+            dueAt: '2026-07-20T12:00:00.000Z',
+            status: '진행중',
+            sourceType: 'owner-facility-request'
+        }]
+    });
+    assert.ok(ownerRequest);
+
+    const beforeDeadline = buildFranchiseScheduleViewModel({
+        items: [ownerRequest],
+        filters,
+        selectedDate: '2026-07-19',
+        monthDate: new Date('2026-07-01T00:00:00.000Z'),
+        state: 'ready',
+        today: '2026-07-20',
+        now: new Date('2026-07-20T11:59:59.999Z')
+    });
+    const atDeadline = buildFranchiseScheduleViewModel({
+        items: [ownerRequest],
+        filters,
+        selectedDate: '2026-07-19',
+        monthDate: new Date('2026-07-01T00:00:00.000Z'),
+        state: 'ready',
+        today: '2026-07-20',
+        now: new Date('2026-07-20T12:00:00.000Z')
+    });
+
+    assert.equal(ownerRequest.dueAt, '2026-07-20T12:00:00.000Z');
+    assert.equal(beforeDeadline.kpis.find(kpi => kpi.label === '지연 일정')?.value, 0);
+    assert.equal(atDeadline.kpis.find(kpi => kpi.label === '지연 일정')?.value, 1);
 });
 
 test('Given response states When building view model Then empty, sql, forbidden and loading states stay defined', () => {

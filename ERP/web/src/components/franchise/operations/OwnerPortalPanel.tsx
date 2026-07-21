@@ -10,6 +10,7 @@ import {
     type OwnerNoticeAttachment,
     type OwnerPortalChecklistTask
 } from '@/lib/franchise-owner-portal';
+import type { OwnerSubmissionActivitySummary } from '@/lib/franchise-owner-automation';
 import type { FranchiseLocation } from './types';
 import {
     OwnerPortalAccountsSection,
@@ -50,6 +51,22 @@ type NoticeAttachmentUploadResponse = {
     readonly attachment: OwnerNoticeAttachment;
 };
 
+type OwnerSubmissionPageResponse = {
+    readonly activitySummary: OwnerSubmissionActivitySummary;
+    readonly pagination: {
+        readonly page: number;
+        readonly totalPages: number;
+    };
+    readonly submissions: readonly OwnerSubmission[];
+};
+
+const EMPTY_OWNER_ACTIVITY_SUMMARY: OwnerSubmissionActivitySummary = {
+    averageResolutionHours: null,
+    completedLast7Days: 0,
+    overdueCount: 0,
+    pendingCount: 0
+};
+
 async function requestJson<T>(url: string, init?: JsonRequestInit): Promise<T> {
     const headers = await getApiAuthHeaders(init?.headers);
     const response = await fetch(url, { ...init, headers, cache: 'no-store' });
@@ -76,6 +93,22 @@ function countChecklistIssues(checklists: readonly OwnerChecklistSetting[]): num
     return keys.size;
 }
 
+async function loadOwnerSubmissionPages(baseParams: URLSearchParams): Promise<OwnerSubmissionPageResponse> {
+    const firstParams = new URLSearchParams(baseParams);
+    firstParams.set('page', '1');
+    firstParams.set('pageSize', '100');
+    const firstPage = await requestJson<OwnerSubmissionPageResponse>(`/api/franchise-owner-portal/submissions?${firstParams.toString()}`);
+    const submissions = [...firstPage.submissions];
+    for (let page = 2; page <= firstPage.pagination.totalPages; page += 1) {
+        const nextParams = new URLSearchParams(baseParams);
+        nextParams.set('page', String(page));
+        nextParams.set('pageSize', '100');
+        const nextPage = await requestJson<OwnerSubmissionPageResponse>(`/api/franchise-owner-portal/submissions?${nextParams.toString()}`);
+        submissions.push(...nextPage.submissions);
+    }
+    return { ...firstPage, submissions };
+}
+
 export function OwnerPortalPanel({
     userId,
     companyName,
@@ -89,6 +122,7 @@ export function OwnerPortalPanel({
     const [accounts, setAccounts] = React.useState<OwnerAccount[]>([]);
     const [notices, setNotices] = React.useState<OwnerNotice[]>([]);
     const [submissions, setSubmissions] = React.useState<OwnerSubmission[]>([]);
+    const [submissionActivitySummary, setSubmissionActivitySummary] = React.useState<OwnerSubmissionActivitySummary>(EMPTY_OWNER_ACTIVITY_SUMMARY);
     const [checklists, setChecklists] = React.useState<OwnerChecklistSetting[]>([]);
     const [locationId, setLocationId] = React.useState(selectedLocationId || locations[0]?.id || '');
     const [noticeTarget, setNoticeTarget] = React.useState<'all' | 'single'>('all');
@@ -120,12 +154,13 @@ export function OwnerPortalPanel({
             requestJson<{ readonly accounts: readonly OwnerAccount[] }>(`/api/franchise-owner-portal/accounts?${params.toString()}`),
             requestJson<{ readonly notices: readonly OwnerNotice[] }>(`/api/franchise-owner-portal/notices?${params.toString()}`),
             requestJson<{ readonly checklists: readonly OwnerChecklistSetting[] }>(`/api/franchise-owner-portal/checklists?${params.toString()}`),
-            requestJson<{ readonly submissions: readonly OwnerSubmission[] }>(`/api/franchise-owner-portal/submissions?${params.toString()}`)
+            loadOwnerSubmissionPages(params)
         ]);
         setAccounts([...accountData.accounts]);
         setNotices([...noticeData.notices]);
         setChecklists([...checklistData.checklists]);
         setSubmissions([...submissionData.submissions]);
+        setSubmissionActivitySummary(submissionData.activitySummary);
     }, [companyName, userId]);
 
     React.useEffect(() => {
@@ -413,6 +448,7 @@ export function OwnerPortalPanel({
             ) : null}
             {activeView === 'submissions' ? (
                 <OwnerPortalSubmissionsSection
+                    activitySummary={submissionActivitySummary}
                     locations={locations}
                     submissions={submissions}
                     selectedSubmissionId={selectedSubmissionId}

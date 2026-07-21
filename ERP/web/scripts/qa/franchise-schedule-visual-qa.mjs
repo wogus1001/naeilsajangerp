@@ -19,6 +19,7 @@ const fixtureDate = new Intl.DateTimeFormat('en-CA', {
     month: '2-digit',
     day: '2-digit'
 }).format(new Date());
+const overdueOwnerSubmissionDate = new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString();
 
 if (mode !== 'mocked') {
     console.error('Only --mode mocked is supported by this safe visual QA script.');
@@ -103,7 +104,7 @@ function scheduleFixture() {
             { id: 'report-1', title: '점검 보고서 검토', date: fixtureDate, status: '진행중', sourceType: 'supervision-report', assigneeName: '박매니저', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?reportId=report-1' } },
             { id: 'action-1', title: '냉장고 온도 시정조치', date: fixtureDate, status: '완료', sourceType: 'supervision-corrective-action', assigneeName: '김SV', managerName: '박매니저', metadata: { actionUrl: '/dashboard/franchise-supervision?actionId=action-1' } },
             { id: 'opening-1', title: '강남점 오픈 준비', date: fixtureDate, status: '진행중', sourceType: 'opening-project', assigneeName: '오픈 담당자', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-leads?leadId=lead-1&mode=contractChecklist' } },
-            { id: 'request-1', title: '강남점 시설 문의', date: fixtureDate, status: '지연', sourceType: 'owner-facility-request', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1' } },
+            { id: 'request-1', title: '강남점 시설 문의', date: fixtureDate, dueAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(), status: '지연', sourceType: 'owner-facility-request', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1' } },
             { id: 'checklist-1', title: '강남점 체크리스트 완료', date: fixtureDate, status: '완료', sourceType: 'owner-checklist-completion', assigneeName: '운영팀', managerName: '운영팀', metadata: { actionUrl: '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status' } }
         ]
     };
@@ -185,7 +186,15 @@ async function installMocks(page, scenario) {
             return route.fulfill({
                 status: 200,
                 contentType: 'application/json',
-                body: JSON.stringify({ data: { submissions: [{
+                body: JSON.stringify({ data: {
+                    activitySummary: {
+                        averageResolutionHours: 8.5,
+                        completedLast7Days: 3,
+                        overdueCount: 1,
+                        pendingCount: 1
+                    },
+                    pagination: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
+                    submissions: [{
                     id: 'submission-1',
                     location_id: 'location-1',
                     submission_type: 'facility_request',
@@ -194,7 +203,9 @@ async function installMocks(page, scenario) {
                     payload: {},
                     status: 'submitted',
                     review_note: null,
-                    created_at: `${fixtureDate}T01:00:00.000Z`,
+                    reviewed_at: null,
+                    submitted_at: overdueOwnerSubmissionDate,
+                    created_at: overdueOwnerSubmissionDate,
                     files: []
                 }] } })
             });
@@ -276,6 +287,9 @@ async function runScenario(browser, scenario) {
         await page.locator(`a[href="${ownerDetailPath}"]`).click();
         await page.waitForURL(url => `${url.pathname}${url.search}` === ownerDetailPath, { timeout: 10000 });
         await page.locator('article[aria-current="true"] details[open]').waitFor({ timeout: 10000 });
+        await page.getByText('24시간 초과', { exact: true }).waitFor({ timeout: 10000 });
+        await page.getByText('평균 처리시간', { exact: true }).waitFor({ timeout: 10000 });
+        await page.getByText('처리 기한 초과', { exact: true }).waitFor({ timeout: 10000 });
         await page.goBack({ waitUntil: 'domcontentloaded' });
         await page.getByTestId('franchise-schedule-root').waitFor({ timeout: readyTimeoutMs });
         await waitForScheduleData(page);
@@ -306,6 +320,16 @@ async function runScenario(browser, scenario) {
         await page.getByLabel('담당자').selectOption('user-1');
         await page.getByRole('button', { name: '저장' }).click();
         await page.getByRole('alertdialog', { name: '처리 완료' }).waitFor({ timeout: 10000 });
+    }
+    if (scenario === 'mobile') {
+        const ownerDetailPath = '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1';
+        await page.goto(`${baseUrl}${ownerDetailPath}`, { waitUntil: 'domcontentloaded' });
+        await page.locator('article[aria-current="true"] details[open]').waitFor({ timeout: 10000 });
+        await page.getByText('24시간 초과', { exact: true }).waitFor({ timeout: 10000 });
+        await page.getByText('평균 처리시간', { exact: true }).waitFor({ timeout: 10000 });
+        await page.getByText('처리 기한 초과', { exact: true }).waitFor({ timeout: 10000 });
+        await assertNoOverflow(page);
+        await page.screenshot({ path: resolve(evidenceDir, 'mobile-owner-submissions.png'), fullPage: true });
     }
     if (scenario === 'sql') await page.getByText('프랜차이즈 일정 SQL 등록 필요').waitFor({ timeout: 10000 });
     if (scenario === 'forbidden') await page.getByText('가맹 운영 일정 접근 권한이 없습니다.').waitFor({ timeout: 10000 });

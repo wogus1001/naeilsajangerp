@@ -61,6 +61,7 @@ create table if not exists public.franchise_owner_submissions (
   review_note text,
   reviewed_by uuid references public.profiles(id),
   reviewed_at timestamptz,
+  submitted_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
