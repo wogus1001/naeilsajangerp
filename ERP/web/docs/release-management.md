@@ -238,6 +238,14 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-21 입점 요청 사진 업로드 긴급 보정
+  - 작업 브랜치: `codex/work-intake-photo-upload-hotfix-20260721`
+  - 주요 기능: 큰 사진이 Vercel `/api/upload` 본문 제한에 걸리지 않도록 Supabase Storage signed upload로 전환하고, 서버측 최종 바이트 검증과 10MB/50MB 중앙 커스텀 용량 알럿을 추가했다.
+  - 운영 근거: 신고 시각의 production runtime log에서 `/api/upload` 413을 확인했다. DB 저장 후 업로드가 실패한 기존 건은 배포 후 사진 재첨부가 필요하다.
+  - 검증: 직접 업로드·위조 파일 제거 테스트 8건, `tsc`, lint, build, `git diff --check`, 로컬 브라우저 용량 초과 알럿 QA 통과.
+  - SQL: 신규 SQL 없음.
+  - dev/main 반영: dev-first 통합과 운영 승격 진행 예정.
+
 - 2026-07-20 진행현황 삭제 긴급 보정
   - 작업 브랜치: `codex/hotfix-work-intake-delete-id-type-20260720`
   - 타입 핫픽스 커밋: `2855ea8 fix(franchise): 진행현황 삭제 RPC 타입 보정`

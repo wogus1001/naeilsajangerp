@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Save } from 'lucide-react';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import {
     PROPERTY_REGISTRATION_INITIAL_FORM,
@@ -35,6 +36,7 @@ type SaveMessage = {
 
 export function PropertyRegistrationForm() {
     const router = useRouter();
+    const { showAlert } = useAppDialog();
     const [form, setForm] = React.useState<PropertyRegistrationFormState>(PROPERTY_REGISTRATION_INITIAL_FORM);
     const [pendingFiles, setPendingFiles] = React.useState<readonly File[]>([]);
     const [message, setMessage] = React.useState<SaveMessage | null>(null);
@@ -89,6 +91,11 @@ export function PropertyRegistrationForm() {
 
     const showFileError = (text: string) => {
         setMessage({ kind: 'error', text });
+        void showAlert({
+            message: text,
+            title: '첨부파일 확인',
+            type: 'error'
+        });
     };
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -140,10 +147,18 @@ export function PropertyRegistrationForm() {
             setMessage({ kind: 'success', text: '입점 요청 DB에 저장했습니다.' });
             router.replace('/dashboard/franchise-leads/work-intake?tab=properties');
         } catch (error) {
+            const errorText = error instanceof Error ? error.message : '입점 요청 저장 중 오류가 발생했습니다.';
             setMessage({
                 kind: 'error',
-                text: error instanceof Error ? error.message : '입점 요청 저장 중 오류가 발생했습니다.'
+                text: errorText
             });
+            if (errorText.includes('용량') || errorText.includes('업로드')) {
+                void showAlert({
+                    message: errorText,
+                    title: '사진 업로드 실패',
+                    type: 'error'
+                });
+            }
         } finally {
             setIsSaving(false);
         }

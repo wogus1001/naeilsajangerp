@@ -104,7 +104,7 @@ export function PropertyRegistrationFileInput({
 
         const tooLarge = selected.find(file => file.size > PROPERTY_ATTACHMENT_POLICY.maxFileSizeBytes);
         if (tooLarge) {
-            onError(`파일 1개 용량은 ${formatByteSize(PROPERTY_ATTACHMENT_POLICY.maxFileSizeBytes)} 이하로 등록해주세요.`);
+            onError(`${tooLarge.name} 파일은 ${formatByteSize(tooLarge.size)}입니다.\n파일 1개는 ${formatByteSize(PROPERTY_ATTACHMENT_POLICY.maxFileSizeBytes)} 이하로 등록해주세요.`);
             return;
         }
 
@@ -119,7 +119,7 @@ export function PropertyRegistrationFileInput({
         }
 
         if (totalSize(nextAttachments) > PROPERTY_ATTACHMENT_POLICY.maxTotalSizeBytes) {
-            onError(`첨부 파일 총 용량은 ${formatByteSize(PROPERTY_ATTACHMENT_POLICY.maxTotalSizeBytes)} 이하로 등록해주세요.`);
+            onError(`현재 선택한 파일은 총 ${formatByteSize(totalSize(nextAttachments))}입니다.\n첨부 파일 총 용량은 ${formatByteSize(PROPERTY_ATTACHMENT_POLICY.maxTotalSizeBytes)} 이하로 등록해주세요.`);
             return;
         }
 

@@ -1426,3 +1426,12 @@
 - 응답 정합성: 업체 계약과 슈퍼바이징 보고서의 원본 저장이 완료된 뒤 일정 동기화가 지연되면 원본 저장 자체를 500으로 오인하지 않도록 `scheduleSync` 또는 `scheduleSyncRequired`를 응답한다. 큐 저장까지 실패한 경우에는 실패 상태를 명시해 운영에서 재처리 필요 여부를 확인할 수 있다.
 - 자동 검증: 집중 테스트 56건, 전체 테스트 797건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 빌드에는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남고 실패는 없다.
 - SQL 상태: `supabase_franchise_schedule_durable_sync_migration.sql`은 사용자 확인 기준 적용 완료다. 기존 적용 환경에는 lease 컬럼·RPC·claim 함수·profile helper 권한을 최신 상태로 맞추는 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 추가 적용해야 한다. **SQL 등록 필요**.
+
+# 2026-07-21 입점 요청 사진 업로드 긴급 QA
+
+- 운영 증거: Vercel runtime log에서 신고 시각과 일치하는 `/api/upload` 413 응답 2건을 확인했다. DB 등록 뒤 첨부 업로드를 실행하고 JSON이 아닌 413 본문을 `response.json()`으로 읽던 흐름이 사용자 오류 문구와 사진 URL 누락을 함께 만들었다.
+- 수정: 파일 본문은 signed URL로 Supabase Storage에 직접 업로드하고, Next.js API에는 작은 JSON 메타데이터만 전달한다. 최종 확정 API는 Storage 객체를 다시 읽어 실제 파일 시그니처와 선언 크기를 검증하며 위조 파일은 즉시 제거한다.
+- 용량 안내: 11MB JPG를 선택해 파일명·실제 용량·10MB 제한이 중앙 `첨부파일 확인` 알럿에 표시되는 것을 확인했다. 전체 선택 용량이 50MB를 넘는 경우에도 현재 총 용량과 허용 한도를 같은 방식으로 안내한다.
+- 자동 검증: signed upload·파일 바이트 검증 집중 테스트 8건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 빌드는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남았다.
+- 실행 가설: (1) 허용 확장자 오류 가능성은 동일 JPG가 작은 파일에서는 성공해 기각했다. (2) 저장 URL 권한 문제 가능성은 413 시 최종 URL 생성 단계에 도달하지 않은 운영 로그로 기각했다. (3) Vercel 요청 본문 한도 가능성은 신고 시각의 413 응답과 6MB 파일이 Next API 본문을 우회하는 회귀 테스트로 확인하고 해소했다.
+- 남은 live QA: 기존 실패 건은 Storage URL이 없으므로 배포 후 사진을 재첨부해야 한다. 신규 SQL은 없다.
