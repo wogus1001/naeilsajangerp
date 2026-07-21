@@ -17,6 +17,7 @@
 - 입점 요청 사진·PDF는 파일 본문을 Next.js API로 전송하지 않고 Supabase Storage signed upload로 직접 전송한다. 서버는 서명 전 파일 메타데이터와 권한을 검사하고, 업로드 후 저장된 바이트의 실제 형식·크기를 다시 확인한 뒤 공개 URL을 확정한다.
 - 파일당 10MB 또는 전체 50MB 제한을 넘기면 파일명, 실제 용량, 허용 용량을 중앙 커스텀 알럿으로 안내한다. 과거 업로드 실패 건은 저장된 파일 URL이 없으므로 배포 후 수정 화면에서 사진을 다시 첨부해야 한다.
 - 집중 테스트, `tsc`, lint, build, `git diff --check`와 로컬 브라우저 용량 초과 알럿 QA를 통과했다. 신규 SQL은 없다.
+- 점주 문의 SLA 자동화 3단계 1차는 `f0032f6`으로 별도 커밋하고 PR #26을 통해 `dev` `61e865f`에 통합했다. dev deployment `dpl_66VJBL1yjFVjLJ2S9r5R9rNjGGL7`은 READY이며, `supabase_franchise_owner_submission_sla_migration.sql` 적용 확인 전에는 운영으로 승격하지 않는다. **SQL 등록 필요**.
 
 ## 2026-07-16 진행현황 검색·삭제 이력 보강
 

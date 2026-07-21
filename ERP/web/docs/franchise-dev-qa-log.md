@@ -1435,3 +1435,5 @@
 - 자동 검증: signed upload·파일 바이트 검증 집중 테스트 8건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 빌드는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남았다.
 - 실행 가설: (1) 허용 확장자 오류 가능성은 동일 JPG가 작은 파일에서는 성공해 기각했다. (2) 저장 URL 권한 문제 가능성은 413 시 최종 URL 생성 단계에 도달하지 않은 운영 로그로 기각했다. (3) Vercel 요청 본문 한도 가능성은 신고 시각의 413 응답과 6MB 파일이 Next API 본문을 우회하는 회귀 테스트로 확인하고 해소했다.
 - 남은 live QA: 기존 실패 건은 Storage URL이 없으므로 배포 후 사진을 재첨부해야 한다. 신규 SQL은 없다.
+- dev 통합: 점주 문의 SLA 자동화 3단계 1차와 사진 업로드 핫픽스를 PR #26으로 `dev`에 합쳐 `61e865f`가 됐다. 53건 집중 회귀, `tsc`, lint, build, `git diff --check`를 재통과했고 deployment `dpl_66VJBL1yjFVjLJ2S9r5R9rNjGGL7` READY를 확인했다.
+- 운영 분리 기준: 사진 업로드 핫픽스는 신규 SQL 없이 운영 승격 가능하다. 3단계 1차는 `supabase_franchise_owner_submission_sla_migration.sql` 적용 확인 전까지 dev에만 유지한다. **SQL 등록 필요**.
