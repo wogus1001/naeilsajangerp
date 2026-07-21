@@ -2,100 +2,99 @@
 
 import React from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
-import { Map, MapMarker, useKakaoLoader } from 'react-kakao-maps-sdk';
-import { KAKAO_MAP_LOADER_OPTIONS } from '@/lib/kakao-map-config';
+import {
+    buildNaverMapSearchUrl,
+    loadNaverMapsSdk,
+    parseNaverGeocodeApiResponse
+} from '@/lib/naver-maps-client';
+import type { NaverGeocodePosition } from '@/lib/naver-maps-geocoding';
+import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import styles from './WorkIntakeEditModal.module.css';
-
-type MapPosition = {
-    readonly lat: number;
-    readonly lng: number;
-};
 
 type PropertyAddressMapProps = {
     readonly address: string;
     readonly detailAddress: string;
 };
 
-function geocodeAddress(address: string): Promise<MapPosition | null> {
-    return new Promise(resolve => {
-        const geocoder = new kakao.maps.services.Geocoder();
-        geocoder.addressSearch(address, (results, status) => {
-            const first = results[0];
-            const lat = Number(first?.y);
-            const lng = Number(first?.x);
-            resolve(status === kakao.maps.services.Status.OK && Number.isFinite(lat) && Number.isFinite(lng)
-                ? { lat, lng }
-                : null);
-        });
-    });
-}
+type MapState =
+    | { readonly kind: 'loading' }
+    | { readonly kind: 'ready'; readonly position: NaverGeocodePosition }
+    | { readonly kind: 'error'; readonly message: string };
 
-function relayoutMap(map: kakao.maps.Map, center: MapPosition) {
-    const update = () => {
-        map.relayout();
-        map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
-    };
-    window.requestAnimationFrame(() => window.requestAnimationFrame(update));
-    window.setTimeout(update, 180);
-    window.setTimeout(update, 520);
+async function requestGeocode(address: string, signal: AbortSignal): Promise<NaverGeocodePosition> {
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(`/api/integrations/naver/maps/geocode?query=${encodeURIComponent(address)}`, {
+        headers,
+        signal
+    });
+    const payload: unknown = await response.json();
+    const position = parseNaverGeocodeApiResponse(payload);
+    if (!response.ok || !position) {
+        throw new Error(response.status === 404
+            ? '주소의 지도 위치를 찾지 못했습니다.'
+            : '네이버 지도를 불러오지 못했습니다.');
+    }
+    return position;
 }
 
 export function PropertyAddressMap({ address, detailAddress }: PropertyAddressMapProps) {
-    const mapRef = React.useRef<kakao.maps.Map | null>(null);
     const mapHostRef = React.useRef<HTMLDivElement | null>(null);
-    const [isKakaoLoading, kakaoLoadError] = useKakaoLoader(KAKAO_MAP_LOADER_OPTIONS);
-    const [position, setPosition] = React.useState<MapPosition | null>(null);
-    const [isGeocoding, setIsGeocoding] = React.useState(false);
+    const [state, setState] = React.useState<MapState>({ kind: 'loading' });
     const fullAddress = [address, detailAddress].filter(Boolean).join(' ');
-    const relayoutCurrentMap = React.useCallback(() => {
-        if (mapRef.current && position) relayoutMap(mapRef.current, position);
-    }, [position]);
+    const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID?.trim() || '';
 
     React.useEffect(() => {
-        let cancelled = false;
-        setPosition(null);
-        setIsGeocoding(false);
-        if (!address || isKakaoLoading || kakaoLoadError) return;
+        if (!address) return undefined;
+        if (!clientId) {
+            setState({ kind: 'error', message: '네이버 지도 연동 설정이 필요합니다.' });
+            return undefined;
+        }
 
-        setIsGeocoding(true);
-        const timeoutId = window.setTimeout(() => {
-            void geocodeAddress(address)
-                .then(nextPosition => {
-                    if (!cancelled) setPosition(nextPosition);
-                })
-                .catch(() => {
-                    if (!cancelled) setPosition(null);
-                })
-                .finally(() => {
-                    if (!cancelled) setIsGeocoding(false);
-                });
-        }, 350);
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timeoutId);
-        };
-    }, [address, isKakaoLoading, kakaoLoadError]);
+        const controller = new AbortController();
+        setState({ kind: 'loading' });
+        void Promise.all([
+            loadNaverMapsSdk(clientId),
+            requestGeocode(address, controller.signal)
+        ]).then(([, position]) => {
+            if (!controller.signal.aborted) setState({ kind: 'ready', position });
+        }).catch(error => {
+            if (controller.signal.aborted) return;
+            setState({
+                kind: 'error',
+                message: error instanceof Error ? error.message : '네이버 지도를 불러오지 못했습니다.'
+            });
+        });
+
+        return () => controller.abort();
+    }, [address, clientId]);
 
     React.useEffect(() => {
         const host = mapHostRef.current;
-        if (!host || typeof ResizeObserver === 'undefined') return undefined;
-        const observer = new ResizeObserver(relayoutCurrentMap);
-        observer.observe(host);
-        return () => observer.disconnect();
-    }, [relayoutCurrentMap]);
+        if (!host || state.kind !== 'ready') return undefined;
 
-    React.useEffect(() => {
-        relayoutCurrentMap();
-    }, [relayoutCurrentMap]);
+        const center = new naver.maps.LatLng(state.position.lat, state.position.lng);
+        const map = new naver.maps.Map(host, { center, zoom: 16, zoomControl: true });
+        const marker = new naver.maps.Marker({ map, position: center });
+        const resize = () => {
+            map.setSize(new naver.maps.Size(host.clientWidth, host.clientHeight));
+            map.setCenter(center);
+        };
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
+        observer?.observe(host);
+        const resizeFrame = window.requestAnimationFrame(resize);
+
+        return () => {
+            observer?.disconnect();
+            window.cancelAnimationFrame(resizeFrame);
+            marker.setMap(null);
+            host.replaceChildren();
+        };
+    }, [state]);
 
     if (!address) return null;
 
-    const mapLink = `https://map.kakao.com/link/search/${encodeURIComponent(fullAddress)}`;
-    const status = kakaoLoadError
-        ? '지도를 불러오지 못했습니다.'
-        : isKakaoLoading || isGeocoding
-            ? '주소 위치를 확인하고 있습니다.'
-            : '주소의 지도 위치를 찾지 못했습니다.';
+    const mapLink = buildNaverMapSearchUrl(fullAddress);
+    const status = state.kind === 'loading' ? '주소 위치를 확인하고 있습니다.' : state.kind === 'error' ? state.message : '';
 
     return (
         <section className={styles.addressMap} aria-label="입점 요청 주소 지도">
@@ -105,23 +104,12 @@ export function PropertyAddressMap({ address, detailAddress }: PropertyAddressMa
                     <span>{fullAddress}</span>
                 </div>
                 <a href={mapLink} target="_blank" rel="noreferrer">
-                    카카오맵에서 보기 <ExternalLink size={14} aria-hidden="true" />
+                    네이버 지도에서 보기 <ExternalLink size={14} aria-hidden="true" />
                 </a>
             </div>
-            <div ref={mapHostRef} className={styles.addressMapCanvas}>
-                {position ? (
-                    <Map
-                        center={position}
-                        level={3}
-                        onCreate={map => {
-                            mapRef.current = map;
-                            relayoutMap(map, position);
-                        }}
-                        style={{ width: '100%', height: '100%' }}
-                    >
-                        <MapMarker position={position} />
-                    </Map>
-                ) : (
+            <div className={styles.addressMapCanvas}>
+                <div ref={mapHostRef} className={styles.addressMapMount} aria-hidden="true" />
+                {state.kind !== 'ready' && (
                     <div className={styles.addressMapFallback} role="status" aria-live="polite">{status}</div>
                 )}
             </div>
