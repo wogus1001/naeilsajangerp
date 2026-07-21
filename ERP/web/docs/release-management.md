@@ -238,6 +238,14 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-21 입점 요청 사진 업로드 긴급 보정
+  - 작업 브랜치: `codex/work-intake-photo-upload-hotfix-20260721`
+  - 주요 기능: 큰 사진이 Vercel `/api/upload` 본문 제한에 걸리지 않도록 Supabase Storage signed upload로 전환하고, 서버측 최종 바이트 검증과 10MB/50MB 중앙 커스텀 용량 알럿을 추가했다.
+  - 운영 근거: 신고 시각의 production runtime log에서 `/api/upload` 413을 확인했다. DB 저장 후 업로드가 실패한 기존 건은 배포 후 사진 재첨부가 필요하다.
+  - 검증: 직접 업로드·위조 파일 제거 테스트 8건, `tsc`, lint, build, `git diff --check`, 로컬 브라우저 용량 초과 알럿 QA 통과.
+  - SQL: 신규 SQL 없음.
+  - dev/main 반영: dev-first 통합과 운영 승격 진행 예정.
+
 - 2026-07-20 진행현황 삭제 긴급 보정
   - 작업 브랜치: `codex/hotfix-work-intake-delete-id-type-20260720`
   - 타입 핫픽스 커밋: `2855ea8 fix(franchise): 진행현황 삭제 RPC 타입 보정`
@@ -775,3 +783,9 @@ YYYY-MM-DD
 - 검증: 집중 테스트 56건, 전체 테스트 797건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다.
 - SQL 적용 순서: 최신 `supabase_franchise_schedule_visibility_migration.sql` -> `supabase_franchise_source_schedule_upsert_migration.sql` -> `supabase_franchise_source_schedule_profile_security_migration.sql` -> `supabase_franchise_schedule_durable_sync_migration.sql` -> `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`. 사용자 확인 기준 기본 durable migration까지 적용 완료이며 마지막 리뷰 보완 파일은 추가 적용해야 한다. **SQL 등록 필요**.
 - 승격 상태: 보완 SQL 적용 확인 후 `feature -> dev PR -> dev 배포·QA -> main PR -> production` 순서로 진행한다. dev와 production DB가 분리돼 있으면 두 환경에 같은 보완 SQL이 적용됐는지 각각 확인한다.
+
+## 2026-07-20 점주 포털 3단계 1차 승격 준비
+
+- 범위: 점주 문의 24시간 처리 SLA, 본사 처리 현황, 제출 건별 마감/초과 표시, 재제출 `submitted_at`, 가맹운영 일정 `due_at` 동기화를 3단계 1차 승격 단위로 관리한다.
+- SQL 적용 순서: `supabase_franchise_owner_portal_migration.sql` 적용 상태 확인 -> `supabase_franchise_schedule_durable_sync_review_fix_migration.sql` -> `supabase_franchise_owner_submission_sla_migration.sql`. 후자는 현재 제출 시각 컬럼과 DB KPI 집계를 추가하고 기존 재제출 시각·문의 일정 마감·조기 지연 상태를 보정하며, 날짜 단위 지연 판정을 정확한 `due_at` 시각 판정으로 교체한다. 적용 중에는 실행 worker와 같은 source advisory lock을 획득하고 제출 원본 기준으로 기존 일정·알림·동기화 큐를 보정한다. Supabase Cron은 새로 지연된 일정만 알림 처리한다. **SQL 등록 필요**.
+- 승격 기준: 기능 커밋과 SQL을 dev에 반영한 후 실계정 시설 문의 1건으로 최초 제출·반려·재제출을 실행해 새 `submitted_at`, 24시간 `due_at`, 본사 처리, 일정 완료, 점주 결과 확인을 검증한다. Supabase Cron에서 `franchise-schedule-hourly-lateness` 실행 이력도 확인한 뒤 main PR과 production 배포를 진행한다.

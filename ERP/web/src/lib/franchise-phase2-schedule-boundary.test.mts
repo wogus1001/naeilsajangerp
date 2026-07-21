@@ -94,3 +94,14 @@ void test('Given the notification cron When dispatching generation Then it uses 
     assert.match(vercelConfig.replace(/\s+/g, ' '), /"path": "\/api\/franchise-notifications\/cron", "schedule": "0 15 \* \* \*"/);
     assert.doesNotMatch(vercelConfig, /franchise-notifications\?cron=1/);
 });
+
+void test('Given a rejected facility request When it is resubmitted Then the portal and schedule share the new submission timestamp', () => {
+    const ownerRequestRoute = readFileSync(new URL('../app/api/owner/requests/route.ts', import.meta.url), 'utf8');
+    assert.match(ownerRequestRoute, /submitted_at: resubmittedAt/);
+    assert.match(ownerRequestRoute, /submittedAt: resubmittedAt/);
+    const staffSubmissionRoute = readFileSync(new URL('../app/api/franchise-owner-portal/submissions/route.ts', import.meta.url), 'utf8');
+    assert.match(staffSubmissionRoute, /submittedAt: submission\.submitted_at \|\| submission\.created_at/);
+    assert.match(staffSubmissionRoute, /get_franchise_owner_submission_activity_summary/);
+    assert.match(staffSubmissionRoute, /\.order\('submitted_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/);
+    assert.match(staffSubmissionRoute, /pagination: \{/);
+});

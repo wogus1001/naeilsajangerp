@@ -25,6 +25,7 @@ export type FranchiseScheduleItem = {
     readonly id: string;
     readonly title: string;
     readonly date: string;
+    readonly dueAt: string;
     readonly status: FranchiseScheduleStatus;
     readonly source: FranchiseScheduleSource;
     readonly visibility: FranchiseScheduleVisibility;
@@ -123,6 +124,7 @@ export function parseFranchiseScheduleItems(payload: unknown): readonly Franchis
             id,
             title,
             date,
+            dueAt: readString(entry, 'dueAt'),
             status: normalizeStatus(readString(entry, 'status')),
             source: normalizeFranchiseScheduleSource(readString(entry, 'sourceType') || readString(entry, 'source')),
             visibility: normalizeVisibility(readString(entry, 'visibility')),
@@ -186,8 +188,10 @@ export function buildFranchiseScheduleViewModel(input: {
     readonly state: FranchiseScheduleLoadState;
     readonly message?: string;
     readonly today?: string;
+    readonly now?: Date;
 }): FranchiseScheduleViewModel {
     const today = input.today || toDateKey(new Date());
+    const now = input.now || new Date();
     const operationalItems = input.items.filter(item => item.source !== 'approval-document');
     const filteredItems = operationalItems.filter(item =>
         (input.filters.status === 'all' || item.status === input.filters.status) &&
@@ -201,7 +205,11 @@ export function buildFranchiseScheduleViewModel(input: {
     weekEnd.setDate(weekEnd.getDate() + 7);
     const weekEndKey = toDateKey(weekEnd);
     const inProgress = filteredItems.filter(item => item.status === '진행중').length;
-    const overdue = filteredItems.filter(item => item.date < today && item.status !== '완료' && item.status !== '취소').length;
+    const overdue = filteredItems.filter(item => {
+        if (item.status === '완료' || item.status === '취소') return false;
+        const dueAt = item.dueAt ? Date.parse(item.dueAt) : Number.NaN;
+        return Number.isFinite(dueAt) ? dueAt <= now.getTime() : item.date < today;
+    }).length;
     const thisWeek = filteredItems.filter(item => item.date >= today && item.date <= weekEndKey && item.status !== '취소').length;
     const todayCount = filteredItems.filter(item => item.date === today && item.status !== '취소').length;
 

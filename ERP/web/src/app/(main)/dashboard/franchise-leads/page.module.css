@@ -5117,7 +5117,8 @@
     min-width: 0;
 }
 
-.ownerPortalChecklistSummary {
+.ownerPortalChecklistSummary,
+.ownerPortalSubmissionSummary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
@@ -5125,7 +5126,8 @@
     padding: 14px;
 }
 
-.ownerPortalChecklistSummary div {
+.ownerPortalChecklistSummary div,
+.ownerPortalSubmissionSummary div {
     display: grid;
     gap: 5px;
     min-width: 0;
@@ -5135,19 +5137,37 @@
     padding: 12px;
 }
 
-.ownerPortalChecklistSummary span {
+.ownerPortalChecklistSummary span,
+.ownerPortalSubmissionSummary span {
     color: #6b7684;
     font-size: 12px;
     font-weight: 750;
 }
 
-.ownerPortalChecklistSummary strong {
+.ownerPortalChecklistSummary strong,
+.ownerPortalSubmissionSummary strong {
     overflow: hidden;
     color: #191f28;
     font-size: 18px;
     font-weight: 850;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.ownerPortalSubmissionSla,
+.ownerPortalSubmissionSlaOverdue {
+    width: fit-content;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #1b64da;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.ownerPortalSubmissionSlaOverdue {
+    background: #fff0f0;
+    color: #e42939;
 }
 
 .ownerPortalChecklistWorkspace {
@@ -11344,6 +11364,10 @@
     .ownerPortalChecklistSummary,
     .ownerPortalChecklistWorkspace {
         grid-template-columns: 1fr;
+    }
+
+    .ownerPortalSubmissionSummary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .ownerPortalViewTab,

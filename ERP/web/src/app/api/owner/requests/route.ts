@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 type OwnerRequestInsertRow = {
     readonly id: string;
     readonly created_at: string | null;
+    readonly submitted_at: string | null;
 };
 
 export async function POST(request: Request) {
@@ -45,9 +46,10 @@ export async function POST(request: Request) {
                 payload: { title },
                 status: 'submitted'
             })
-            .select('id, created_at')
+            .select('id, created_at, submitted_at')
             .single<OwnerRequestInsertRow>();
         if (error) throw error;
+        const submittedAt = data.submitted_at || data.created_at || new Date();
         if (type === 'facility_request') {
             await safelyNotifyOwnerPortalAlimtalk(() => notifyOwnerFacilityRequestCreated({
                 companyId: context.account.company_id,
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
                 ownerName: context.account.owner_name,
                 requestTitle: title || submissionTitle,
                 sourceId: data.id,
-                submittedAt: data.created_at || new Date(),
+                submittedAt,
                 supabaseAdmin
             }), 'Owner facility request created');
         }
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
             status: 'submitted',
             submissionId: data.id,
             submissionType: type,
-            submittedAt: data.created_at || new Date(),
+            submittedAt,
             supabaseAdmin,
             title: title || submissionTitle
         });
@@ -107,6 +109,7 @@ export async function PATCH(request: Request) {
             return fail(409, 'CONFLICT', '반려된 문의만 수정해 다시 제출할 수 있습니다.');
         }
 
+        const resubmittedAt = new Date().toISOString();
         const { error } = await supabaseAdmin
             .from('franchise_owner_submissions')
             .update({
@@ -117,7 +120,8 @@ export async function PATCH(request: Request) {
                 review_note: null,
                 reviewed_by: null,
                 reviewed_at: null,
-                updated_at: new Date().toISOString()
+                submitted_at: resubmittedAt,
+                updated_at: resubmittedAt
             })
             .eq('id', submission.id);
         if (error) throw error;
@@ -128,7 +132,7 @@ export async function PATCH(request: Request) {
             requestTitle: title || submissionTitle,
             sourceId: submission.id,
             sourceType: 'owner-facility-request-resubmitted',
-            submittedAt: new Date(),
+            submittedAt: resubmittedAt,
             supabaseAdmin
         }), 'Owner facility request resubmitted');
         const scheduleSync = await safelySyncOwnerSubmissionSchedule({
@@ -138,7 +142,7 @@ export async function PATCH(request: Request) {
             status: 'submitted',
             submissionId: submission.id,
             submissionType: 'facility_request',
-            submittedAt: new Date(),
+            submittedAt: resubmittedAt,
             supabaseAdmin,
             title: title || submissionTitle
         });

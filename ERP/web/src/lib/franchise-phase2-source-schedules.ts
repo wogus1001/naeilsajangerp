@@ -1,4 +1,5 @@
 import { dateKeyFromScheduleValue, kstDateKey, type WorkflowScheduleStatus } from './franchise-workflow';
+import { buildOwnerSubmissionSla } from './franchise-owner-automation';
 import type { FranchiseSourceScheduleInput } from './franchise-source-schedules';
 
 export const SUPERVISION_VISIT_SOURCE_TYPE = 'supervision-visit';
@@ -237,11 +238,19 @@ export function buildOwnerSubmissionSourceSchedule(
     const checklistCompletion = sourceType === OWNER_CHECKLIST_COMPLETION_SOURCE_TYPE;
     const terminal = input.status === 'approved' || input.status === 'resolved';
     const rejected = input.status === 'rejected';
+    const submissionSla = buildOwnerSubmissionSla({
+        createdAt: input.submittedAt instanceof Date ? input.submittedAt.toISOString() : input.submittedAt,
+        reviewedAt: terminal || rejected ? now.toISOString() : null,
+        status: input.status,
+        submissionType: input.submissionType
+    }, now);
     const status: WorkflowScheduleStatus = rejected
         ? '취소'
         : checklistCompletion || terminal
             ? '완료'
-            : activeStatus(date, now, '진행중');
+            : submissionSla?.isOverdue
+                ? '지연'
+                : '진행중';
 
     const actionUrl = checklistCompletion
         ? '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status'
@@ -257,7 +266,7 @@ export function buildOwnerSubmissionSourceSchedule(
             : sourceType === OWNER_GENERAL_REQUEST_SOURCE_TYPE
                 ? '점주 문의를 확인하고 처리합니다.'
                 : '점주 시설 문의를 확인하고 처리합니다.',
-        dueAt: dayEnd(date),
+        dueAt: submissionSla?.dueAt || dayEnd(date),
         managerProfileId: cleanText(input.managerProfileId) || null,
         metadata: {
             actionUrl,
