@@ -3,6 +3,7 @@ import {
     type FranchiseFileAttachment
 } from '@/lib/franchise-file-attachments';
 import type { PropertyRegistrationFileAttachment } from '@/lib/franchise-property-registration';
+import { createClient } from '@/utils/supabase/client';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 
@@ -19,6 +20,20 @@ const UPLOADABLE_DOCUMENT_TYPES = [
 type UploadResult = {
     readonly path?: string;
     readonly publicUrl?: string;
+};
+
+type SignedUploadResult = UploadResult & {
+    readonly token?: string;
+};
+
+type PropertyUploadDependencies = {
+    readonly request: typeof fetch;
+    readonly uploadToSignedUrl: (
+        bucket: string,
+        path: string,
+        token: string,
+        file: File
+    ) => Promise<void>;
 };
 
 type PropertyRegistrationUploadPathInput = {
@@ -83,27 +98,68 @@ export function isOpenablePropertyAttachment(attachment: PropertyRegistrationFil
     return Boolean(attachment.publicUrl);
 }
 
-async function uploadPropertyAttachment(propertyId: string, file: File, bucket: string): Promise<UploadResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bucket', bucket);
-    formData.append('path', buildUploadPath(propertyId, file, bucket));
+function createDefaultUploadDependencies(): PropertyUploadDependencies {
+    return {
+        request: fetch,
+        uploadToSignedUrl: async (bucket, path, token, file) => {
+            const { error } = await createClient().storage.from(bucket).uploadToSignedUrl(path, token, file, {
+                contentType: file.type
+            });
+            if (error) throw new Error(error.message);
+        }
+    };
+}
 
-    const response = await fetch('/api/upload', {
-        body: formData,
-        headers: await getApiAuthHeaders(),
+async function readUploadPayload<T>(response: Response): Promise<T> {
+    const text = await response.text();
+    let payload: unknown = {};
+    if (text) {
+        try {
+            payload = JSON.parse(text);
+        } catch {
+            if (!response.ok) {
+                throw new Error(response.status === 413
+                    ? '사진 용량이 업로드 한도를 초과했습니다.'
+                    : '파일 업로드 서버 응답을 확인하지 못했습니다.');
+            }
+        }
+    }
+    if (!response.ok) throw new Error(readApiError(payload));
+    return unwrapApiData<T>(payload);
+}
+
+async function uploadPropertyAttachment(
+    propertyId: string,
+    file: File,
+    bucket: string,
+    dependencies: PropertyUploadDependencies
+): Promise<UploadResult> {
+    const path = buildUploadPath(propertyId, file, bucket);
+    const requestBody = { bucket, fileName: file.name, fileSize: file.size, mimeType: file.type, path };
+    const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
+    const signResponse = await dependencies.request('/api/upload/sign', {
+        body: JSON.stringify(requestBody),
+        headers,
         method: 'POST'
     });
-    const payload: unknown = await response.json();
-    if (!response.ok) throw new Error(readApiError(payload));
-    return unwrapApiData<UploadResult>(payload);
+    const signedUpload = await readUploadPayload<SignedUploadResult>(signResponse);
+    if (!signedUpload.path || !signedUpload.token) throw new Error('파일 업로드 준비 정보를 확인하지 못했습니다.');
+
+    await dependencies.uploadToSignedUrl(bucket, signedUpload.path, signedUpload.token, file);
+
+    const finalizeResponse = await dependencies.request('/api/upload/sign', {
+        body: JSON.stringify({ ...requestBody, path: signedUpload.path }),
+        headers,
+        method: 'PUT'
+    });
+    return readUploadPayload<UploadResult>(finalizeResponse);
 }
 
 export async function uploadPropertyRegistrationAttachments(input: {
     readonly propertyId: string;
     readonly files: readonly File[];
     readonly attachments: readonly PropertyRegistrationFileAttachment[];
-}): Promise<readonly PropertyRegistrationFileAttachment[]> {
+}, dependencies: PropertyUploadDependencies = createDefaultUploadDependencies()): Promise<readonly PropertyRegistrationFileAttachment[]> {
     if (input.files.length === 0) return input.attachments;
     const unsupportedFile = input.files.find(file => !getPropertyRegistrationUploadBucket(file));
     if (unsupportedFile) {
@@ -113,7 +169,7 @@ export async function uploadPropertyRegistrationAttachments(input: {
     const uploadedByKey = new Map<string, PropertyRegistrationFileAttachment>();
     for (const file of input.files) {
         const storageBucket = getPropertyRegistrationUploadBucket(file);
-        const uploadResult = await uploadPropertyAttachment(input.propertyId, file, storageBucket);
+        const uploadResult = await uploadPropertyAttachment(input.propertyId, file, storageBucket, dependencies);
         const storagePath = uploadResult.path || '';
         const publicUrl = uploadResult.publicUrl || '';
         if (!storagePath || !publicUrl) {
