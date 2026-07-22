@@ -1496,3 +1496,11 @@
 - 자동 검증: `npx tsx --test src/components/franchise/leadDisclosureWorkflowRequests.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build에는 기존 workspace root와 오래된 브라우저 데이터 경고만 남았다.
 - 실계정 QA: 분리 서버 `localhost:3017`에서 최초 Google `redirect_uri_mismatch`를 확인하고 정확한 callback URI를 OAuth 클라이언트에 등록했다. 재시도 후 사용자가 Gmail 로컬 연결 완료를 확인했다. 운영 callback `https://www.fcerp.co.kr/api/integrations/gmail/callback` 등록도 확인했다.
 - 기능 커밋: `60ee429`. 신규 SQL 없음. 공개 데모 흐름 영향 없음.
+
+## 2026-07-22 Gmail OAuth 팝업 연결 QA
+
+- 재현: 정보공개서 상세에서 `Gmail 연결`을 누르면 Google 인증이 현재 탭을 대체하고, 완료 후 모객 DB 목록으로 이동해 열어 둔 상세와 입력 상태가 사라졌다.
+- 수정: 인증 URL을 별도 팝업에 열고 callback 완료 페이지가 same-origin `postMessage`로 결과를 원래 창에 전달한 뒤 닫히도록 변경했다. 기존 redirect 방식은 호환 경로로 유지한다.
+- 자동 검증: Gmail 요청·결과 계약과 기존 정보공개서 유틸 테스트 10건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: 로컬 분리 서버에서 원래 창과 완료 팝업을 열어 연결 결과 이메일 전달, 팝업 자동 종료, 원래 창 유지, console error 0건을 확인했다. 실제 Google 계정 선택·동의 화면은 운영 배포 후 실계정으로 최종 확인한다.
+- SQL 및 데모 영향: 신규 SQL 없음. `/landing`과 `/demo`의 공개 설명에는 영향 없음.

@@ -129,6 +129,13 @@
 - `ERP/web/docs/franchise-growth-roadmap.md`: 제품 방향, API 정책, 다음 작업 목록.
 - `ERP/web/docs/documentation-agent.md`: Docs Steward 권한과 문서 갱신 규칙.
 
+## 2026-07-22 Gmail 연결 팝업 전환
+
+- 모객 DB 정보공개서의 `Gmail 연결`은 현재 화면을 Google 인증 페이지로 바꾸지 않고 별도 팝업에서 진행한다.
+- 인증 callback은 전용 완료 화면으로 이동해 원래 모객 DB 창에 연결 결과를 전달하고 자동으로 닫힌다. 원래 상세 모달과 작성 중인 입력값은 유지된다.
+- 팝업 차단, 사용자의 인증 창 종료, Google 인증 실패는 원래 화면의 한국어 안내로 표시한다.
+- 신규 SQL은 없다. 점주 포털 3단계 `supabase_franchise_owner_phase3_migration.sql`은 사용자 확인 기준 적용 완료다. **SQL 등록 완료 확인**.
+
 ## 2026-07-13 전사 전자결재 v2 구현 상태
 
 - 상위 메뉴 `/approvals`에 전자결재 홈, 작성하기, 결재 대기, 내 문서함, 부서 문서함, 양식 관리, 조직·결재 설정을 추가했다.
