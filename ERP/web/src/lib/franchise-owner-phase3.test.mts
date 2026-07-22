@@ -128,10 +128,12 @@ test('Given failed private file deletion When daily maintenance runs Then pendin
 });
 
 test('Given legacy Phase 3 rows When rerunning the migration Then backfills run once without deleting or rewriting history', () => {
-    assert.match(migration, /create temporary table franchise_owner_phase3_backfill_flags/);
-    assert.match(migration, /update public\.franchise_owner_content_receipts receipt[\s\S]+where \(select receipt_version_backfill_required/);
-    assert.match(migration, /update public\.franchise_owner_reminders reminder[\s\S]+set source_version = content\.version[\s\S]+where \(select reminder_source_version_backfill_required/);
-    assert.match(migration, /'migration_backfill'[\s\S]+where \(select content_snapshot_backfill_required/);
+    assert.doesNotMatch(migration, /franchise_owner_phase3_backfill_flags/);
+    assert.match(migration, /column_name = 'content_version'[\s\S]+alter table public\.franchise_owner_content_attachments[\s\S]+update public\.franchise_owner_content_attachments attachment/);
+    assert.match(migration, /column_name = 'content_version'[\s\S]+alter table public\.franchise_owner_content_receipts[\s\S]+update public\.franchise_owner_content_receipts receipt/);
+    assert.match(migration, /column_name = 'source_version'[\s\S]+alter table public\.franchise_owner_reminders[\s\S]+update public\.franchise_owner_reminders reminder/);
+    assert.match(migration, /'migration_backfill'[\s\S]+on conflict \(content_id, content_version\) do nothing/);
+    assert.equal(migration.match(/phase3_history_missing boolean := to_regclass\('public\.franchise_owner_content_versions'\) is null/g)?.length, 3);
     assert.doesNotMatch(migration, /delete from public\.franchise_owner_content_receipts/);
     assert.equal(migration.match(/set source_version = content\.version/g)?.length, 1);
 });

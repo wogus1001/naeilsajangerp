@@ -1,46 +1,5 @@
 begin;
 
-create temporary table franchise_owner_phase3_backfill_flags (
-  attachment_scope_backfill_required boolean not null,
-  receipt_version_backfill_required boolean not null,
-  reminder_source_version_backfill_required boolean not null,
-  content_snapshot_backfill_required boolean not null
-) on commit drop;
-
-insert into franchise_owner_phase3_backfill_flags values (
-  to_regclass('public.franchise_owner_content_attachments') is not null
-    and (
-      not exists (
-        select 1 from information_schema.columns
-        where table_schema = 'public'
-          and table_name = 'franchise_owner_content_attachments'
-          and column_name = 'location_id'
-      )
-      or not exists (
-        select 1 from information_schema.columns
-        where table_schema = 'public'
-          and table_name = 'franchise_owner_content_attachments'
-          and column_name = 'content_version'
-      )
-    ),
-  to_regclass('public.franchise_owner_content_receipts') is not null
-    and not exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public'
-        and table_name = 'franchise_owner_content_receipts'
-        and column_name = 'content_version'
-    ),
-  to_regclass('public.franchise_owner_reminders') is not null
-    and not exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public'
-        and table_name = 'franchise_owner_reminders'
-        and column_name = 'source_version'
-    ),
-  to_regclass('public.franchise_owner_content_items') is not null
-    and to_regclass('public.franchise_owner_content_versions') is null
-);
-
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'franchise-owner-private',
@@ -116,20 +75,48 @@ create table if not exists public.franchise_owner_content_attachments (
   check (storage_bucket = 'franchise-owner-private')
 );
 
+do $$
+declare
+  phase3_history_missing boolean := to_regclass('public.franchise_owner_content_versions') is null;
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'franchise_owner_content_attachments'
+      and column_name = 'location_id'
+  ) then
+    alter table public.franchise_owner_content_attachments
+      add column location_id uuid references public.franchise_locations(id) on delete cascade;
+
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'franchise_owner_content_attachments'
+      and column_name = 'content_version'
+  ) then
+    alter table public.franchise_owner_content_attachments
+      add column content_version integer not null default 1;
+
+  end if;
+
+  if phase3_history_missing then
+    update public.franchise_owner_content_attachments attachment
+    set location_id = content.location_id,
+        content_version = content.version
+    from public.franchise_owner_content_items content
+    where content.id = attachment.content_id
+      and content.company_id = attachment.company_id
+      and (attachment.location_id is distinct from content.location_id or attachment.content_version is distinct from content.version);
+  end if;
+end $$;
+
 alter table public.franchise_owner_content_attachments
-  add column if not exists location_id uuid references public.franchise_locations(id) on delete cascade,
-  add column if not exists content_version integer not null default 1,
   add column if not exists deletion_state text not null default 'active',
   add column if not exists deleted_at timestamptz;
-
-update public.franchise_owner_content_attachments attachment
-set location_id = content.location_id,
-    content_version = content.version
-from public.franchise_owner_content_items content
-where (select attachment_scope_backfill_required from franchise_owner_phase3_backfill_flags)
-  and content.id = attachment.content_id
-  and content.company_id = attachment.company_id
-  and (attachment.location_id is distinct from content.location_id or attachment.content_version is distinct from content.version);
 
 do $$
 begin
@@ -542,17 +529,34 @@ create table if not exists public.franchise_owner_content_receipts (
   unique (content_id, owner_account_id, content_version)
 );
 
-alter table public.franchise_owner_content_receipts
-  add column if not exists content_version integer not null default 1,
-  add column if not exists viewed_at timestamptz;
+do $$
+declare
+  phase3_history_missing boolean := to_regclass('public.franchise_owner_content_versions') is null;
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'franchise_owner_content_receipts'
+      and column_name = 'content_version'
+  ) then
+    alter table public.franchise_owner_content_receipts
+      add column content_version integer not null default 1;
 
-update public.franchise_owner_content_receipts receipt
-set content_version = content.version
-from public.franchise_owner_content_items content
-where (select receipt_version_backfill_required from franchise_owner_phase3_backfill_flags)
-  and content.id = receipt.content_id
-  and content.company_id = receipt.company_id
-  and receipt.content_version is distinct from content.version;
+  end if;
+
+  if phase3_history_missing then
+    update public.franchise_owner_content_receipts receipt
+    set content_version = content.version
+    from public.franchise_owner_content_items content
+    where content.id = receipt.content_id
+      and content.company_id = receipt.company_id
+      and receipt.content_version is distinct from content.version;
+  end if;
+end $$;
+
+alter table public.franchise_owner_content_receipts
+  add column if not exists viewed_at timestamptz;
 
 alter table public.franchise_owner_content_receipts
   alter column acknowledged_at drop not null;
@@ -584,17 +588,32 @@ create table if not exists public.franchise_owner_reminders (
   unique (company_id, owner_account_id, source_type, source_id, reminder_kind)
 );
 
-alter table public.franchise_owner_reminders
-  add column if not exists source_version integer not null default 1;
+do $$
+declare
+  phase3_history_missing boolean := to_regclass('public.franchise_owner_content_versions') is null;
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'franchise_owner_reminders'
+      and column_name = 'source_version'
+  ) then
+    alter table public.franchise_owner_reminders
+      add column source_version integer not null default 1;
 
-update public.franchise_owner_reminders reminder
-set source_version = content.version
-from public.franchise_owner_content_items content
-where (select reminder_source_version_backfill_required from franchise_owner_phase3_backfill_flags)
-  and reminder.source_type = 'content_item'
-  and reminder.source_id = content.id::text
-  and reminder.company_id = content.company_id
-  and reminder.source_version is distinct from content.version;
+  end if;
+
+  if phase3_history_missing then
+    update public.franchise_owner_reminders reminder
+    set source_version = content.version
+    from public.franchise_owner_content_items content
+    where reminder.source_type = 'content_item'
+      and reminder.source_id = content.id::text
+      and reminder.company_id = content.company_id
+      and reminder.source_version is distinct from content.version;
+  end if;
+end $$;
 
 alter table public.franchise_owner_reminders
   add column if not exists request_idempotency_key uuid,
@@ -994,8 +1013,7 @@ select
   'migration_backfill',
   now()
 from public.franchise_owner_content_items content
-where (select content_snapshot_backfill_required from franchise_owner_phase3_backfill_flags)
-  and (
+where (
     content.status in ('published', 'archived')
     or exists (
       select 1
@@ -1021,8 +1039,7 @@ join public.franchise_owner_content_attachments attachment
 join public.franchise_owner_content_items current_content
   on current_content.id = version_snapshot.content_id
  and current_content.version = version_snapshot.content_version
-where (select content_snapshot_backfill_required from franchise_owner_phase3_backfill_flags)
-  and attachment.deletion_state = 'active'
+where attachment.deletion_state = 'active'
 on conflict (content_id, content_version, attachment_id) do nothing;
 
 create or replace function public.enforce_franchise_owner_phase3_scope()
