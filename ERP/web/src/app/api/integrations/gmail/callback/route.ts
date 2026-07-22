@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import {
     canAccessCompanyScope,
-    getRequesterProfile,
+    getActiveRequesterProfileById,
     isAdmin
 } from '@/lib/api-auth';
 import {
@@ -14,16 +14,14 @@ import {
     fetchGmailUserEmail,
     getGmailRedirectUriFromRequest
 } from '@/lib/gmail-provider';
+import {
+    GMAIL_OAUTH_NONCE_COOKIE,
+    GMAIL_OAUTH_STATE_COOKIE,
+    parseGmailOAuthCallbackState
+} from '@/lib/gmail-oauth-state';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-
-type GmailOAuthState = {
-    readonly nonce?: string;
-    readonly requesterId?: string;
-    readonly companyId?: string;
-    readonly redirectPath?: string;
-};
 
 type ExistingConnection = {
     readonly encrypted_refresh_token: string | null;
@@ -31,15 +29,6 @@ type ExistingConnection = {
 
 function getAppUrl(request: Request) {
     return process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-}
-
-function decodeState(value: string | null): GmailOAuthState | null {
-    if (!value) return null;
-    try {
-        return JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as GmailOAuthState;
-    } catch {
-        return null;
-    }
 }
 
 function buildRedirectUrl(request: Request, path: string | undefined, params: Record<string, string>) {
@@ -53,18 +42,28 @@ export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
-    const state = decodeState(searchParams.get('state'));
     const errorReason = searchParams.get('error_reason') || searchParams.get('error');
     const cookieStore = await cookies();
-    const nonceCookie = cookieStore.get('gmail_oauth_nonce')?.value;
+    const state = parseGmailOAuthCallbackState(
+        searchParams.get('state'),
+        cookieStore.get(GMAIL_OAUTH_STATE_COOKIE)?.value || null,
+        cookieStore.get(GMAIL_OAUTH_NONCE_COOKIE)?.value || null
+    );
+
+    const clearOAuthCookies = () => {
+        cookieStore.delete(GMAIL_OAUTH_NONCE_COOKIE);
+        cookieStore.delete(GMAIL_OAUTH_STATE_COOKIE);
+    };
 
     if (errorReason) {
+        clearOAuthCookies();
         return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
             gmail: 'error',
             reason: errorReason
         }));
     }
-    if (!code || !state?.requesterId || !state.companyId || !state.nonce || state.nonce !== nonceCookie) {
+    if (!code || !state) {
+        clearOAuthCookies();
         return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
             gmail: 'error',
             reason: 'invalid_state'
@@ -72,14 +71,16 @@ export async function GET(request: Request) {
     }
 
     try {
-        const requesterProfile = await getRequesterProfile(supabaseAdmin, request, state.requesterId);
+        const requesterProfile = await getActiveRequesterProfileById(supabaseAdmin, state.requesterId);
         if (!requesterProfile) {
+            clearOAuthCookies();
             return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
                 gmail: 'error',
                 reason: 'auth_required'
             }));
         }
         if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, state.companyId)) {
+            clearOAuthCookies();
             return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
                 gmail: 'error',
                 reason: 'company_scope'
@@ -114,12 +115,13 @@ export async function GET(request: Request) {
             }, { onConflict: 'profile_id,company_id' });
         if (error) throw error;
 
-        cookieStore.delete('gmail_oauth_nonce');
+        clearOAuthCookies();
         return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
             gmail: 'connected',
             email: gmailEmail
         }));
     } catch (error) {
+        clearOAuthCookies();
         console.error('Gmail OAuth callback error:', error);
         const reason = error instanceof GmailIntegrationError || error instanceof Error
             ? error.message.slice(0, 80)

@@ -767,6 +767,15 @@ YYYY-MM-DD
 - 승격: 기능 브랜치를 dev PR로 반영해 dev 배포를 확인한 뒤 main PR과 production으로 승격한다. 운영에서는 `Gmail 연결`이 Google 승인 화면으로 이동하고 callback 후 연결 상태가 표시되는지 확인한다.
 - 신규 SQL: 없음. 데모 영향 없음.
 
+## 2026-07-22 Gmail OAuth callback 세션 후속 보정
+
+- 기능 브랜치: `codex/gmail-callback-session-20260722`
+- 주요 기능: Google 동의 후 bearer 헤더가 없는 callback을 정상 OAuth 반환으로 처리한다. 연결 시작 시 발급한 전체 state를 HttpOnly 쿠키에 묶고 callback에서 원문 일치, nonce, 활성 사용자, 회사 범위를 차례로 검증한 뒤 Gmail 연결 정보를 저장한다.
+- 보안: callback query의 `requesterId`와 `companyId`를 단독으로 신뢰하지 않으며, 발급 당시 state와 다른 callback은 `invalid_state`로 차단한다.
+- 검증: Gmail OAuth state·provider·암호화·API 인증 테스트 15건, TypeScript, lint, production build, `git diff --check` 통과. 로컬 브라우저 callback에서 로그인 헤더 없이 Google 토큰 교환 단계 진입을 확인했다.
+- 승격: feature → dev PR → Vercel dev check → main PR → `naeilsajang` production 순서로 진행한다.
+- 신규 SQL: 없음. 데모 영향 없음.
+
 ## 2026-07-14 플랫폼 통합 리뷰 및 운영 릴리스
 
 - 승격 경로: 플랫폼 코드리뷰 PR #4, main 문서 동기화 PR #6, 업무 접수 모바일 보정 PR #7·#8을 `dev`에 순차 반영한 뒤 `dev -> main` PR #5를 병합했다. 운영 기준 main 커밋은 `7306723`이며 병합 시점의 `origin/dev`와 `origin/main` 파일 트리는 동일하다.
