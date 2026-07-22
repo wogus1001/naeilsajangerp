@@ -799,3 +799,12 @@ YYYY-MM-DD
 - 검증: 네이버 지도·첨부 업로드 집중 테스트 12건, TypeScript, lint, build, diff check를 통과했다. 로컬 실환경 브라우저에서 Geocoding·SDK 인증 200, 지도 mount 807x219px, 타일 40개와 마커 렌더링, console error 0건을 확인했다.
 - 승격: 기능 브랜치를 `dev`에 반영해 개발 배포를 확인한 뒤, 운영 `main`에 있는 대용량 사진 업로드 보정을 유지하면서 이번 검증 커밋만 release branch로 선별 반영한다. 운영은 `naeilsajang` Fast Release Runbook으로 배포한다.
 - SQL: 신규 DB 변경이 없으므로 SQL 등록은 필요하지 않다.
+
+## 2026-07-22 커스텀 업종 스키마 및 점주 포털 3단계 QA 승격
+
+- 작업 브랜치: `codex/custom-categories-schema-20260721`.
+- 승격 커밋: `b1dbc76 fix(franchise): 커스텀 업종 스키마 복구`, `6956d95 docs(franchise): 3단계 QA 결과 정리`와 이 릴리즈 문서 커밋을 `dev`와 `main`에 순서대로 반영한다.
+- 범위: `/api/categories`가 사용하는 `custom_categories` 스키마를 복구하고, 점주 일반·시설 문의의 24시간 SLA 집계·초과 표시·가맹운영 일정 연결을 적용 DB와 로컬 브라우저에서 재검증한 결과를 현재 상태와 QA 문서에 반영한다.
+- 검증: 점주 SLA·원천 일정·일정 경계·migration·reconciliation·알림 동기화 집중 테스트 36건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 1440px/390px 브라우저에서 처리 현황, 초과 배지, 가맹운영 일정 상세 이동과 가로 넘침 0을 확인했다.
+- SQL: 사용자 확인 기준 `supabase_custom_categories_schema_migration.sql`과 `supabase_franchise_owner_submission_sla_migration.sql` 적용 완료다. **SQL 등록 완료 확인**.
+- 승격 절차: 기능 브랜치 push 후 dev PR과 Vercel check를 통과시키고 `https://naeilsajang-dev.vercel.app`에서 smoke QA한다. 이후 dev 전체의 운영 승격 가능성을 확인해 main PR을 만들고, production READY와 운영 도메인 주요 URL을 확인한다.
