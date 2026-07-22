@@ -164,5 +164,6 @@
 
 - 정보공개서 발송 화면의 `Gmail 연결`은 보호 API로 직접 이동하지 않고, 현재 Supabase 로그인 세션을 인증 헤더에 담아 연결 API에서 Google 승인 URL을 받은 뒤 이동한다. 주소의 `requesterId`만 신뢰하도록 서버 인증을 낮추지 않는다.
 - 연결 API는 기존 nonce 쿠키와 state 검증 흐름을 유지하면서 인증된 JSON handoff를 지원한다. 비로그인 요청은 `로그인 인증이 필요합니다.`로 명확히 안내한다.
+- Google 동의 후 callback은 브라우저 전체 이동이라 ERP bearer 헤더가 없는 것이 정상이다. callback은 연결 시작 시 발급한 전체 state와 HttpOnly 쿠키가 정확히 일치하는지 확인한 뒤, state에 묶인 활성 사용자와 회사 권한을 서버에서 다시 조회한다. 따라서 정상 동의가 `auth_required`로 끝나지 않으면서 사용자·회사 ID 변조도 허용하지 않는다.
 - 로컬 `http://localhost:3017/api/integrations/gmail/callback`을 Google OAuth 승인 리디렉션 URI에 등록한 뒤 실계정 연결 완료를 확인했다. 운영 승인 URI `https://www.fcerp.co.kr/api/integrations/gmail/callback`도 등록 상태를 확인했다.
-- 기능 커밋은 `60ee429`다. 신규 SQL과 데모 시나리오 변경은 없다.
+- 최초 연결 보정 기능 커밋은 `60ee429`이며 callback 세션 후속 보정은 `codex/gmail-callback-session-20260722`에서 진행했다. 신규 SQL과 데모 시나리오 변경은 없다.
