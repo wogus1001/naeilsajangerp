@@ -1,6 +1,6 @@
 import { fail, ok } from '@/lib/api-response';
 import { OWNER_PHASE3_STORAGE } from '@/lib/franchise-owner-phase3';
-import { resolveOwnerPortalCompanyScope, resolveOwnerPortalStaffAuth } from '@/lib/franchise-owner-portal-api';
+import { isOwnerPortalManager, resolveOwnerPortalCompanyScope, resolveOwnerPortalStaffAuth } from '@/lib/franchise-owner-portal-api';
 import {
     isMissingOwnerSettlementSchemaError,
     isOwnerSettlementFileStoragePath,
@@ -11,13 +11,16 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const FILE_SELECT = 'id, submission_id, company_id, location_id, owner_account_id, file_name, mime_type, file_size, storage_bucket, storage_path, created_at';
+const FILE_SELECT = 'id, submission_id, company_id, location_id, owner_account_id, client_file_id, file_name, mime_type, file_size, content_sha256, storage_bucket, storage_path, upload_state, deletion_state, deleted_at, created_at';
 const SUBMISSION_SELECT = 'id, request_id, company_id, location_id, owner_account_id, status, total_amount, note, review_note, submitted_at, reviewed_by, reviewed_at, created_at, updated_at';
 
 export async function GET(request: Request) {
     try {
         const authResult = await resolveOwnerPortalStaffAuth(request);
         if (!authResult.ok) return authResult.response;
+        if (!isOwnerPortalManager(authResult.auth.requester)) {
+            return fail(403, 'FORBIDDEN', '정산 파일을 열람할 권한이 없습니다.');
+        }
         const { searchParams } = new URL(request.url);
         const companyScope = await resolveOwnerPortalCompanyScope(
             authResult.auth,
@@ -32,7 +35,9 @@ export async function GET(request: Request) {
         let query = authResult.auth.supabaseAdmin
             .from('franchise_owner_settlement_files')
             .select(FILE_SELECT)
-            .eq('company_id', companyScope.scope.companyId);
+            .eq('company_id', companyScope.scope.companyId)
+            .eq('upload_state', 'active')
+            .eq('deletion_state', 'active');
         query = fileId ? query.eq('id', fileId) : query.eq('storage_path', storagePath);
         const { data: file, error } = await query.maybeSingle<OwnerSettlementFileRow>();
         if (error) throw error;

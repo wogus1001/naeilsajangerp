@@ -3,7 +3,7 @@ import {
     isAcceptedOwnerNoticeAttachmentFileName,
     isAcceptedOwnerNoticeAttachmentMime
 } from '@/lib/franchise-owner-portal-attachments';
-import { isOwnerPhase3Uuid } from '@/lib/franchise-owner-phase3';
+import { isOwnerPhase3Uuid, parseOwnerPhase3DateTime } from '@/lib/franchise-owner-phase3';
 
 export const OWNER_CONTENT_SCHEMA_MESSAGE = '점주 포털 3단계 콘텐츠 라이브러리 SQL이 아직 적용되지 않았습니다. supabase_franchise_owner_phase3_migration.sql을 등록해주세요.';
 
@@ -80,13 +80,32 @@ export type OwnerContentAttachmentRow = {
     readonly id: string;
     readonly content_id: string;
     readonly company_id: string;
+    readonly location_id: string | null;
+    readonly content_version: number;
     readonly file_name: string;
     readonly mime_type: string;
     readonly file_size: number;
     readonly storage_bucket: string;
     readonly storage_path: string;
+    readonly deletion_state: 'active' | 'pending' | 'deleted';
+    readonly deleted_at: string | null;
     readonly created_by: string | null;
     readonly created_at: string;
+};
+
+export type OwnerContentVersionAttachmentRow = {
+    readonly content_id: string;
+    readonly content_version: number;
+    readonly attachment_id: string;
+    readonly company_id: string;
+    readonly location_id: string | null;
+    readonly file_name: string;
+    readonly mime_type: string;
+    readonly file_size: number;
+    readonly storage_bucket: string;
+    readonly storage_path: string;
+    readonly attachment_created_at: string;
+    readonly captured_at: string;
 };
 
 export type OwnerContentCreateInput = {
@@ -138,8 +157,7 @@ function needsLocation(contentType: OwnerContentType): boolean {
 function parseOptionalDate(value: unknown): string | null | undefined {
     const raw = cleanText(value);
     if (!raw) return null;
-    const date = new Date(raw);
-    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+    return parseOwnerPhase3DateTime(raw) ?? undefined;
 }
 
 function safeFileName(fileName: string): string {
@@ -324,6 +342,20 @@ export function parseOwnerContentAction(value: unknown): OwnerContentPublishActi
     return null;
 }
 
+export function parseOwnerContentExpectedVersion(value: unknown): number | null {
+    if (!isRecord(value)) return null;
+    const raw = value.expectedVersion ?? value.expected_version ?? value.contentVersion ?? value.content_version;
+    const parsed = typeof raw === 'number' ? raw : Number(cleanText(raw));
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function hasOwnerContentTargetScopeChanged(
+    current: Pick<OwnerContentItemRow, 'location_id'>,
+    next: Pick<OwnerContentCreateInput, 'locationId'>
+): boolean {
+    return current.location_id !== next.locationId;
+}
+
 export function buildOwnerContentStoragePath(
     scope: OwnerContentStorageScope & { readonly fileName: string; readonly uniqueId?: string }
 ): string | null {
@@ -386,7 +418,7 @@ export function isMissingOwnerContentSchemaError(error: unknown): boolean {
         readErrorProperty(error, 'hint')
     ].join(' ').toLowerCase();
     if (text.includes('bucket not found')) return true;
-    if (!/franchise_owner_content_|franchise-owner-private/.test(text)) return false;
+    if (!/franchise_owner_content_|franchise_owner_file_deletion_outbox|enqueue_franchise_owner_stale_file_cleanup|franchise-owner-private/.test(text)) return false;
     return ['PGRST204', 'PGRST205', '42P01', '42703'].includes(code)
         || /schema cache|does not exist|could not find|undefined table|undefined column/.test(text);
 }

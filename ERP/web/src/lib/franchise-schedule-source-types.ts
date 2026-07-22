@@ -6,6 +6,7 @@ const FRANCHISE_OPERATIONS_SCHEDULE_SOURCE_TYPES = new Set([
     'owner-general-request',
     'owner-facility-request',
     'owner-checklist-completion',
+    'owner-settlement-review',
     'vendor-contract-renewal',
     'disclosure-contract-eligible'
 ]);

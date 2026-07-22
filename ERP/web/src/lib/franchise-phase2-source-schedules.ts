@@ -9,6 +9,7 @@ export const OPENING_PROJECT_SOURCE_TYPE = 'opening-project';
 export const OWNER_GENERAL_REQUEST_SOURCE_TYPE = 'owner-general-request';
 export const OWNER_FACILITY_REQUEST_SOURCE_TYPE = 'owner-facility-request';
 export const OWNER_CHECKLIST_COMPLETION_SOURCE_TYPE = 'owner-checklist-completion';
+export const OWNER_SETTLEMENT_REVIEW_SOURCE_TYPE = 'owner-settlement-review';
 
 type VisitScheduleInput = {
     readonly companyId: string;
@@ -61,6 +62,16 @@ type OwnerSubmissionScheduleInput = {
     readonly submissionType: string;
     readonly submittedAt: string | Date;
     readonly title: string;
+};
+
+type OwnerSettlementScheduleInput = {
+    readonly companyId: string;
+    readonly dueAt: string;
+    readonly locationName: string;
+    readonly managerProfileId: string | null;
+    readonly requestTitle: string;
+    readonly status: string;
+    readonly submissionId: string;
 };
 
 function cleanText(value: unknown): string {
@@ -279,4 +290,58 @@ export function buildOwnerSubmissionSourceSchedule(
         type: checklistCompletion ? '점주 체크리스트' : '점주 문의',
         userId: cleanText(input.managerProfileId) || null
     };
+}
+
+export function buildOwnerSettlementSourceSchedule(
+    input: OwnerSettlementScheduleInput,
+    now: Date = new Date()
+): FranchiseSourceScheduleInput | null {
+    const date = dateKeyFromScheduleValue(input.dueAt);
+    if (!validCore({ companyId: input.companyId, sourceId: input.submissionId }) || !date) return null;
+    const confirmed = input.status === 'confirmed';
+    const status: WorkflowScheduleStatus = confirmed
+        ? '완료'
+        : activeStatus(date, now, '진행중');
+    return {
+        assigneeProfileId: cleanText(input.managerProfileId) || null,
+        color: '#0f766e',
+        companyId: input.companyId,
+        completedAt: confirmed ? now.toISOString() : null,
+        date,
+        details: input.status === 'rejected' ? '반려된 정산 증빙의 재제출을 확인합니다.' : '점주가 제출한 정산 금액과 증빙을 검토합니다.',
+        dueAt: input.dueAt,
+        managerProfileId: cleanText(input.managerProfileId) || null,
+        metadata: {
+            actionUrl: `/dashboard/franchise-operations/owner-portal?view=settlements&submissionId=${encodeURIComponent(input.submissionId)}`,
+            settlementStatus: input.status,
+            submissionId: input.submissionId
+        },
+        sourceId: input.submissionId,
+        sourceType: OWNER_SETTLEMENT_REVIEW_SOURCE_TYPE,
+        status,
+        title: `정산 검토: ${cleanText(input.locationName) || '운영점'} ${cleanText(input.requestTitle) || '정산 자료'}`,
+        type: '점주 정산',
+        userId: cleanText(input.managerProfileId) || null
+    };
+}
+
+type OwnerSettlementScheduleSnapshot = {
+    readonly due_at: string | null;
+    readonly metadata: Record<string, unknown> | null;
+    readonly status: string;
+};
+
+export function needsOwnerSettlementScheduleReconciliation(
+    input: OwnerSettlementScheduleInput,
+    schedule: OwnerSettlementScheduleSnapshot | null,
+    now: Date = new Date()
+): boolean {
+    const expected = buildOwnerSettlementSourceSchedule(input, now);
+    if (!expected) return false;
+    if (!schedule) return true;
+    const actualDueAt = schedule.due_at ? Date.parse(schedule.due_at) : Number.NaN;
+    const expectedDueAt = expected.dueAt ? Date.parse(expected.dueAt) : Number.NaN;
+    return schedule.status !== expected.status
+        || actualDueAt !== expectedDueAt
+        || schedule.metadata?.settlementStatus !== input.status;
 }

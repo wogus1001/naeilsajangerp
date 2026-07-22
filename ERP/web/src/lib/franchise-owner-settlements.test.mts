@@ -6,8 +6,12 @@ import {
     isOwnerSettlementFileStoragePath,
     isOwnerSettlementMutableStatus,
     isOwnerSettlementRequestTarget,
+    parseOwnerSettlementClientFileId,
+    parseOwnerSettlementExpectedUpdatedAt,
     parseOwnerSettlementAmount,
     parseOwnerSettlementReview,
+    retainOwnerSettlementFilesAfterMutation,
+    shouldHydrateOwnerSettlementDraft,
     validateOwnerSettlementFile
 } from './franchise-owner-settlements.js';
 
@@ -15,6 +19,23 @@ void test('Given settlement amounts When parsing Then valid values are normalize
     assert.equal(parseOwnerSettlementAmount(' 1,234.5 '), '1234.50');
     assert.equal(parseOwnerSettlementAmount(0), '0.00');
     assert.equal(parseOwnerSettlementAmount('9999999999999999.99'), '9999999999999999.99');
+});
+
+void test('Given a PostgreSQL concurrency token When parsing Then microseconds remain byte-for-byte intact', () => {
+    const token = '2026-07-22T01:02:03.123456+00:00';
+    assert.equal(parseOwnerSettlementExpectedUpdatedAt(token), token);
+});
+
+void test('Given a saved settlement When preserving pending uploads Then the latest concurrency token replaces the stale one', () => {
+    const files = [{ id: 'client-file-key-1' }];
+    const merged = retainOwnerSettlementFilesAfterMutation(
+        { id: 'submission-1', updated_at: '2026-07-22T02:03:04.123456+00:00' },
+        files
+    );
+    assert.equal(merged.updated_at, '2026-07-22T02:03:04.123456+00:00');
+    assert.equal(merged.files, files);
+    assert.equal(shouldHydrateOwnerSettlementDraft('submission-1', merged.id), false);
+    assert.equal(shouldHydrateOwnerSettlementDraft('submission-1', 'submission-2'), true);
 });
 
 void test('Given invalid settlement amounts When parsing Then negative, imprecise and oversized values are rejected', () => {
@@ -112,6 +133,20 @@ void test('Given settlement file metadata When checking storage scope Then compa
         storagePath,
         submissionId: companyId
     }), false);
+});
+
+void test('Given settlement upload retries When parsing client file ids Then only stable UUID keys are accepted', () => {
+    const clientFileId = '46eb499f-6127-47ac-b9cc-df04f47565d6';
+    assert.equal(parseOwnerSettlementClientFileId(clientFileId), clientFileId);
+    assert.equal(parseOwnerSettlementClientFileId(` ${clientFileId} `), clientFileId);
+    assert.equal(parseOwnerSettlementClientFileId('receipt.pdf'), null);
+});
+
+void test('Given settlement edit tokens When parsing expected update times Then only valid timestamps are accepted', () => {
+    assert.equal(parseOwnerSettlementExpectedUpdatedAt('2026-07-22T01:02:03.000Z'), '2026-07-22T01:02:03.000Z');
+    assert.equal(parseOwnerSettlementExpectedUpdatedAt(' 2026-07-22T10:02:03+09:00 '), '2026-07-22T10:02:03+09:00');
+    assert.equal(parseOwnerSettlementExpectedUpdatedAt(''), null);
+    assert.equal(parseOwnerSettlementExpectedUpdatedAt('yesterday'), null);
 });
 
 void test('Given Supabase errors When detecting missing settlement schema Then only migration dependencies map to 424', () => {

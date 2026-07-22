@@ -1,8 +1,8 @@
 import {
-    buildOwnerPhase3SourceKey,
     cleanOwnerPhase3Text,
     isOwnerPhase3SourceType,
-    isOwnerPhase3Uuid
+    isOwnerPhase3Uuid,
+    parseOwnerPhase3DateTime
 } from './franchise-owner-phase3';
 import { isOwnerRecord } from './franchise-owner-portal';
 
@@ -10,8 +10,7 @@ export const OWNER_REMINDER_SOURCE_TYPES = ['checklist_issue', 'content_item'] a
 export type OwnerReminderSourceType = typeof OWNER_REMINDER_SOURCE_TYPES[number];
 export type OwnerReminderEventType = 'reminder_created' | 'reminder_acknowledged';
 
-export const OWNER_REMINDER_SELECT = 'id, company_id, location_id, owner_account_id, source_type, source_id, reminder_kind, message, due_at, sent_at, acknowledged_at, created_by, created_at' as const;
-export const OWNER_REMINDER_ON_CONFLICT = 'company_id,owner_account_id,source_type,source_id,reminder_kind' as const;
+export const OWNER_REMINDER_SELECT = 'id, company_id, location_id, owner_account_id, source_type, source_id, source_version, request_idempotency_key, delivery_id, reminder_kind, message, due_at, sent_at, acknowledged_at, created_by, created_at' as const;
 
 export type OwnerReminderRow = {
     readonly id: string;
@@ -20,6 +19,9 @@ export type OwnerReminderRow = {
     readonly owner_account_id: string;
     readonly source_type: OwnerReminderSourceType;
     readonly source_id: string;
+    readonly source_version: number;
+    readonly request_idempotency_key: string;
+    readonly delivery_id: string;
     readonly reminder_kind: string;
     readonly message: string;
     readonly due_at: string | null;
@@ -32,7 +34,9 @@ export type OwnerReminderRow = {
 export type OwnerReminderCreateInput = {
     readonly sourceType: OwnerReminderSourceType;
     readonly sourceId: string;
+    readonly sourceVersion: number;
     readonly locationIds: readonly string[];
+    readonly requestIdempotencyKey: string;
     readonly reminderKind: string;
     readonly message: string;
     readonly dueAt: string | null;
@@ -97,21 +101,26 @@ export function parseOwnerReminderCreateInput(value: unknown): OwnerReminderCrea
     if (!isOwnerRecord(value)) return null;
     const sourceType = cleanOwnerPhase3Text(value.sourceType ?? value.source_type);
     const sourceId = cleanOwnerPhase3Text(value.sourceId ?? value.source_id);
+    const sourceVersion = Number(value.sourceVersion ?? value.source_version);
+    const requestIdempotencyKey = cleanOwnerPhase3Text(value.requestIdempotencyKey ?? value.request_idempotency_key);
     const rawLocations = readOwnerReminderRawLocations(value.locationIds ?? value.location_ids ?? value.locationId ?? value.location_id);
     const locationTexts = rawLocations.map(cleanOwnerPhase3Text).filter(Boolean);
     const locationIds = normalizeOwnerReminderLocationIds(rawLocations);
     const dueText = cleanOwnerPhase3Text(value.dueAt ?? value.due_at);
-    const dueTime = dueText ? new Date(dueText).getTime() : 0;
+    const dueAt = dueText ? parseOwnerPhase3DateTime(dueText) : null;
     if (!isOwnerReminderSourceType(sourceType) || !sourceId || locationIds.length === 0) return null;
+    if (!Number.isSafeInteger(sourceVersion) || sourceVersion < 1 || !isOwnerPhase3Uuid(requestIdempotencyKey)) return null;
     if (locationTexts.some(locationId => !isOwnerPhase3Uuid(locationId)) || locationIds.length !== new Set(locationTexts).size) return null;
-    if (dueText && !Number.isFinite(dueTime)) return null;
+    if (dueText && !dueAt) return null;
     return {
         sourceType,
         sourceId,
+        sourceVersion,
         locationIds,
+        requestIdempotencyKey,
         reminderKind: cleanOwnerPhase3Text(value.reminderKind ?? value.reminder_kind) || 'manual',
         message: cleanOwnerPhase3Text(value.message ?? value.reminderMessage ?? value.reminder_message),
-        dueAt: dueText ? new Date(dueText).toISOString() : null
+        dueAt
     };
 }
 
@@ -130,17 +139,9 @@ export function shouldIncludeAcknowledgedOwnerReminders(searchParams: URLSearchP
 export function buildOwnerReminderIdempotencyKey(input: {
     readonly companyId: string;
     readonly ownerAccountId: string;
-    readonly sourceType: OwnerReminderSourceType;
-    readonly sourceId: string;
-    readonly reminderKind: string;
+    readonly requestIdempotencyKey: string;
 }): string {
-    return `${buildOwnerPhase3SourceKey({
-        companyId: input.companyId,
-        locationId: null,
-        ownerAccountId: input.ownerAccountId,
-        sourceType: input.sourceType,
-        sourceId: input.sourceId
-    })}:${input.ownerAccountId}:${input.reminderKind}`;
+    return `${input.companyId}:${input.ownerAccountId}:${input.requestIdempotencyKey}`;
 }
 
 export function buildOwnerReminderPortalEvent(input: {

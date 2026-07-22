@@ -10,6 +10,7 @@ import {
     Paperclip,
     ReceiptText,
     Send,
+    Trash2,
     XCircle
 } from 'lucide-react';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -119,7 +120,7 @@ type Phase3Props = {
 };
 
 type JsonRequestInit = {
-    readonly method?: 'GET' | 'POST' | 'PATCH';
+    readonly method?: 'DELETE' | 'GET' | 'POST' | 'PATCH';
     readonly body?: string;
     readonly headers?: Record<string, string>;
 };
@@ -141,6 +142,7 @@ type ConfirmState = {
 type ReminderSource = {
     readonly id: string;
     readonly sourceId: string;
+    readonly sourceVersion: number;
     readonly sourceType: 'checklist_issue' | 'content_item';
     readonly label: string;
     readonly locationIds: readonly string[];
@@ -227,6 +229,7 @@ export function OwnerPortalPhase3Sections({
     const [reminderLocationIds, setReminderLocationIds] = React.useState<readonly string[]>([]);
     const [reminderMessage, setReminderMessage] = React.useState('');
     const [reminderDueAt, setReminderDueAt] = React.useState('');
+    const reminderRequestRef = React.useRef<{ readonly fingerprint: string; readonly key: string } | null>(null);
 
     const [contentType, setContentType] = React.useState('education');
     const [contentLocationId, setContentLocationId] = React.useState('');
@@ -238,6 +241,7 @@ export function OwnerPortalPhase3Sections({
     const [contentRequiresAck, setContentRequiresAck] = React.useState(false);
     const [contentFiles, setContentFiles] = React.useState<readonly File[]>([]);
     const [editingContentId, setEditingContentId] = React.useState('');
+    const [editingContentVersion, setEditingContentVersion] = React.useState<number | null>(null);
 
     const [settlementLocationId, setSettlementLocationId] = React.useState('');
     const [settlementTitle, setSettlementTitle] = React.useState('');
@@ -245,6 +249,7 @@ export function OwnerPortalPhase3Sections({
     const [periodStart, setPeriodStart] = React.useState('');
     const [periodEnd, setPeriodEnd] = React.useState('');
     const [settlementDueAt, setSettlementDueAt] = React.useState('');
+    const settlementRequestKeyRef = React.useRef(crypto.randomUUID());
     const [reviewNotes, setReviewNotes] = React.useState<Readonly<Record<string, string>>>({});
 
     const companyParams = React.useMemo(() => {
@@ -285,13 +290,15 @@ export function OwnerPortalPhase3Sections({
         const checklistSources = checklists.flatMap(checklist => (checklist.issues || []).map(issue => ({
             id: `checklist_issue:${issue.id}:${checklist.locationId}`,
             sourceId: issue.id,
+            sourceVersion: 1,
             sourceType: 'checklist_issue' as const,
             label: `체크리스트 · ${checklist.locationName} · ${issue.tasks.map(task => task.title).join(', ') || '확인 요청'}`,
             locationIds: [checklist.locationId]
         })));
         const contentSources = contentItems.filter(item => item.status === 'published').map(item => ({
-            id: `content_item:${item.id}`,
+            id: `content_item:${item.id}:${item.version}`,
             sourceId: item.id,
+            sourceVersion: item.version,
             sourceType: 'content_item' as const,
             label: `자료 · ${item.title}`,
             locationIds: item.location_id ? [item.location_id] : locations.map(location => location.id)
@@ -313,12 +320,17 @@ export function OwnerPortalPhase3Sections({
             : [...current, locationId]);
     };
 
-    const runAction = async (action: () => Promise<void>, successMessage: string) => {
+    const runAction = async (
+        action: () => Promise<{ readonly warning?: string } | void>,
+        successMessage: string
+    ) => {
         setIsBusy(true);
         try {
-            await action();
+            const result = await action();
             await load();
-            setAlert({ type: 'success', title: '처리 완료', message: successMessage });
+            setAlert(result?.warning
+                ? { type: 'info', title: '처리 완료', message: result.warning }
+                : { type: 'success', title: '처리 완료', message: successMessage });
         } catch (caught) {
             setAlert({
                 type: 'error',
@@ -336,6 +348,20 @@ export function OwnerPortalPhase3Sections({
             return;
         }
         void runAction(async () => {
+            const reminderPayload = {
+                sourceType: selectedReminderSource.sourceType,
+                sourceId: selectedReminderSource.sourceId,
+                sourceVersion: selectedReminderSource.sourceVersion,
+                locationIds: reminderLocationIds,
+                reminderKind: 'manual',
+                message: reminderMessage,
+                dueAt: reminderDueAt || null
+            };
+            const fingerprint = JSON.stringify(reminderPayload);
+            const requestKey = reminderRequestRef.current?.fingerprint === fingerprint
+                ? reminderRequestRef.current.key
+                : crypto.randomUUID();
+            reminderRequestRef.current = { fingerprint, key: requestKey };
             await requestJson('/api/franchise-owner-portal/reminders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -343,29 +369,28 @@ export function OwnerPortalPhase3Sections({
                     requesterId: userId,
                     companyId,
                     companyName,
-                    sourceType: selectedReminderSource.sourceType,
-                    sourceId: selectedReminderSource.sourceId,
-                    locationIds: reminderLocationIds,
-                    reminderKind: 'manual',
-                    message: reminderMessage,
-                    dueAt: reminderDueAt || null
+                    ...reminderPayload,
+                    requestIdempotencyKey: requestKey
                 })
             });
+            reminderRequestRef.current = null;
             setReminderMessage('');
             setReminderDueAt('');
         }, '선택한 운영점에 리마인더를 등록했습니다.');
     };
 
-    const uploadContentFile = async (contentId: string, file: File) => {
+    const uploadContentFile = async (contentId: string, expectedVersion: number, file: File): Promise<number> => {
         const formData = new FormData();
         formData.set('file', file);
         formData.set('contentId', contentId);
+        formData.set('expectedVersion', String(expectedVersion));
         formData.set('companyId', companyId);
         formData.set('companyName', companyName);
         const headers = await getApiAuthHeaders();
         const response = await fetch('/api/franchise-owner-portal/content/attachments', { method: 'POST', headers, body: formData, cache: 'no-store' });
         const payload: unknown = await response.json();
         if (!response.ok) throw new Error(readApiError(payload));
+        return unwrapApiData<{ readonly contentVersion: number }>(payload).contentVersion;
     };
 
     const createContent = () => {
@@ -386,6 +411,7 @@ export function OwnerPortalPhase3Sections({
                     companyId,
                     companyName,
                     contentId: editingContentId || undefined,
+                    expectedVersion: editingContentId ? editingContentVersion : undefined,
                     action: editingContentId ? 'update' : undefined,
                     locationId: contentLocationId || null,
                     contentType,
@@ -397,7 +423,14 @@ export function OwnerPortalPhase3Sections({
                     dueAt: contentDueAt || null
                 })
             });
-            for (const file of contentFiles) await uploadContentFile(data.item.id, file);
+            let contentVersion = data.item.version;
+            setEditingContentId(data.item.id);
+            setEditingContentVersion(contentVersion);
+            for (const file of contentFiles) {
+                contentVersion = await uploadContentFile(data.item.id, contentVersion, file);
+                setEditingContentVersion(contentVersion);
+                setContentFiles(current => current.filter(selectedFile => selectedFile !== file));
+            }
             setContentCategory('');
             setContentTitle('');
             setContentSummary('');
@@ -406,11 +439,13 @@ export function OwnerPortalPhase3Sections({
             setContentRequiresAck(false);
             setContentFiles([]);
             setEditingContentId('');
+            setEditingContentVersion(null);
         }, editingContentId ? '자료를 수정하고 새 버전으로 반영했습니다.' : '자료 초안과 첨부 파일을 저장했습니다.');
     };
 
     const startContentEdit = (item: OwnerContentItem) => {
         setEditingContentId(item.id);
+        setEditingContentVersion(item.version);
         setContentType(item.content_type);
         setContentLocationId(item.location_id || '');
         setContentCategory(item.category);
@@ -424,6 +459,7 @@ export function OwnerPortalPhase3Sections({
 
     const cancelContentEdit = () => {
         setEditingContentId('');
+        setEditingContentVersion(null);
         setContentCategory('');
         setContentTitle('');
         setContentSummary('');
@@ -453,7 +489,7 @@ export function OwnerPortalPhase3Sections({
                 await requestJson('/api/franchise-owner-portal/content', {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterId: userId, companyId, companyName, contentId: item.id, action })
+                    body: JSON.stringify({ requesterId: userId, companyId, companyName, contentId: item.id, expectedVersion: item.version, action })
                 });
             }, action === 'publish' ? '자료를 게시했습니다.' : '자료를 보관 처리했습니다.')
         });
@@ -468,6 +504,21 @@ export function OwnerPortalPhase3Sections({
         } catch (caught) {
             setAlert({ type: 'error', title: '파일 열기 실패', message: caught instanceof Error ? caught.message : '파일을 열지 못했습니다.' });
         }
+    };
+
+    const deleteContentFile = (item: OwnerContentItem, attachment: OwnerContentAttachment) => {
+        setConfirm({
+            title: '첨부 파일 삭제',
+            message: `"${attachment.file_name}"을 현재 자료에서 삭제할까요? 이미 게시된 이전 버전의 파일은 이력 보존을 위해 유지됩니다.`,
+            confirmText: '삭제',
+            isDanger: true,
+            onConfirm: () => void runAction(async () => {
+                const params = new URLSearchParams(companyParams);
+                params.set('attachmentId', attachment.id);
+                params.set('expectedVersion', String(item.version));
+                await requestJson(`/api/franchise-owner-portal/content/attachments?${params.toString()}`, { method: 'DELETE' });
+            }, '첨부 파일을 현재 자료에서 삭제했습니다.')
+        });
     };
 
     const createSettlement = () => {
@@ -488,9 +539,11 @@ export function OwnerPortalPhase3Sections({
                     instructions: settlementInstructions,
                     periodStart,
                     periodEnd,
-                    dueAt: settlementDueAt
+                    dueAt: settlementDueAt,
+                    requestIdempotencyKey: settlementRequestKeyRef.current
                 })
             });
+            settlementRequestKeyRef.current = crypto.randomUUID();
             setSettlementTitle('');
             setSettlementInstructions('');
             setPeriodStart('');
@@ -527,11 +580,14 @@ export function OwnerPortalPhase3Sections({
             confirmText: action === 'confirm' ? '확정' : '반려',
             isDanger: action === 'reject',
             onConfirm: () => void runAction(async () => {
-                await requestJson('/api/franchise-owner-portal/settlements', {
+                const result = await requestJson<{ readonly scheduleSyncRequired: boolean }>('/api/franchise-owner-portal/settlements', {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterId: userId, companyId, companyName, submissionId: submission.id, action, reviewNote })
                 });
+                return result.scheduleSyncRequired
+                    ? { warning: `${action === 'confirm' ? '정산 확정' : '정산 반려'}은 완료됐습니다. 일정 연결은 자동으로 다시 시도합니다.` }
+                    : undefined;
             }, action === 'confirm' ? '정산을 확정했습니다.' : '정산을 반려했습니다.')
         });
     };
@@ -601,7 +657,7 @@ export function OwnerPortalPhase3Sections({
                         </div>
                         <div className={styles.ownerPortalSubPanel}>
                             <div className={styles.ownerPortalSubHeader}><strong>자료 목록</strong><span>초안을 게시하거나 이용이 끝난 자료를 보관합니다.</span></div>
-                            <div className={styles.ownerPhase3List}>{contentItems.length === 0 ? <div className={styles.locationEmpty}>등록된 자료가 없습니다.</div> : contentItems.map(item => <article className={styles.ownerPhase3Item} key={item.id}><div className={styles.ownerPhase3ItemHeader}><div><strong>{item.title}</strong><span>{contentTypeLabel(item.content_type)} · {locationName(locations, item.location_id)} · v{item.version}</span></div><span className={item.status === 'published' ? styles.ownerPortalSuccessPill : item.status === 'draft' ? styles.ownerPortalWarningPill : styles.ownerPortalMutedAction}>{contentStatusLabel(item.status)}</span></div>{item.summary ? <p>{item.summary}</p> : null}<div className={styles.ownerPhase3Meta}><span>확인 기한 {formatDate(item.due_at)}</span><span>첨부 {item.attachments.length}건</span>{item.requires_acknowledgement ? <span>확인 {item.receiptStats.acknowledgedCount}/{item.receiptStats.targetCount}명</span> : <span>확인 불필요</span>}</div>{item.attachments.length > 0 ? <div className={styles.ownerPortalFileStrip}>{item.attachments.map(file => <button className={styles.ownerPortalFileLink} type="button" key={file.id} onClick={() => void openContentFile(file)}><Download size={13} /><span>{file.file_name}</span></button>)}</div> : null}<div className={styles.ownerPhase3Actions}>{item.status !== 'archived' ? <button type="button" disabled={isBusy} onClick={() => startContentEdit(item)}>수정</button> : null}{item.status === 'draft' ? <button type="button" disabled={isBusy} onClick={() => updateContentStatus(item, 'publish')}><Send size={13} /> 게시</button> : null}{item.status !== 'archived' ? <button type="button" disabled={isBusy} onClick={() => updateContentStatus(item, 'archive')}><Archive size={13} /> 보관</button> : null}</div></article>)}</div>
+                            <div className={styles.ownerPhase3List}>{contentItems.length === 0 ? <div className={styles.locationEmpty}>등록된 자료가 없습니다.</div> : contentItems.map(item => <article className={styles.ownerPhase3Item} key={item.id}><div className={styles.ownerPhase3ItemHeader}><div><strong>{item.title}</strong><span>{contentTypeLabel(item.content_type)} · {locationName(locations, item.location_id)} · v{item.version}</span></div><span className={item.status === 'published' ? styles.ownerPortalSuccessPill : item.status === 'draft' ? styles.ownerPortalWarningPill : styles.ownerPortalMutedAction}>{contentStatusLabel(item.status)}</span></div>{item.summary ? <p>{item.summary}</p> : null}<div className={styles.ownerPhase3Meta}><span>확인 기한 {formatDate(item.due_at)}</span><span>첨부 {item.attachments.length}건</span>{item.requires_acknowledgement ? <span>확인 {item.receiptStats.acknowledgedCount}/{item.receiptStats.targetCount}명</span> : <span>확인 불필요</span>}</div>{item.attachments.length > 0 ? <div className={styles.ownerPortalFileStrip}>{item.attachments.map(file => <span className={styles.ownerPortalFileGroup} key={file.id}><button className={styles.ownerPortalFileLink} type="button" onClick={() => void openContentFile(file)}><Download size={13} /><span>{file.file_name}</span></button>{item.status !== 'archived' ? <button className={styles.ownerPortalFileDelete} aria-label={`${file.file_name} 삭제`} title="첨부 삭제" type="button" disabled={isBusy} onClick={() => deleteContentFile(item, file)}><Trash2 size={13} /></button> : null}</span>)}</div> : null}<div className={styles.ownerPhase3Actions}>{item.status !== 'archived' ? <button type="button" disabled={isBusy} onClick={() => startContentEdit(item)}>수정</button> : null}{item.status === 'draft' ? <button type="button" disabled={isBusy} onClick={() => updateContentStatus(item, 'publish')}><Send size={13} /> 게시</button> : null}{item.status !== 'archived' ? <button type="button" disabled={isBusy} onClick={() => updateContentStatus(item, 'archive')}><Archive size={13} /> 보관</button> : null}</div></article>)}</div>
                         </div>
                     </div>
                 </section>

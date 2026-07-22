@@ -43,6 +43,16 @@ export function cleanOwnerPhase3Text(value: unknown): string {
     return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+export function parseOwnerPhase3DateTime(value: unknown): string | null {
+    const text = cleanOwnerPhase3Text(value);
+    if (!text) return null;
+    const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/.test(text)
+        ? `${text}+09:00`
+        : text;
+    const timestamp = Date.parse(normalized);
+    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+}
+
 export function isOwnerPhase3Uuid(value: unknown): value is string {
     return UUID_PATTERN.test(cleanOwnerPhase3Text(value));
 }

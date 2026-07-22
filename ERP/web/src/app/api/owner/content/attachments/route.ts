@@ -5,15 +5,15 @@ import {
     isOwnerContentStoragePath,
     OWNER_CONTENT_SCHEMA_MESSAGE,
     OWNER_CONTENT_STORAGE,
-    type OwnerContentAttachmentRow,
-    type OwnerContentItemRow
+    type OwnerContentItemRow,
+    type OwnerContentVersionAttachmentRow
 } from '@/lib/franchise-owner-content';
 import { getOwnerSessionContext } from '@/lib/franchise-owner-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
-const ATTACHMENT_SELECT = 'id, content_id, company_id, file_name, mime_type, file_size, storage_bucket, storage_path, created_by, created_at';
+const ATTACHMENT_SELECT = 'content_id, content_version, attachment_id, company_id, location_id, file_name, mime_type, file_size, storage_bucket, storage_path, attachment_created_at, captured_at';
 
 export async function GET(request: Request) {
     try {
@@ -26,26 +26,30 @@ export async function GET(request: Request) {
         if (!attachmentId && !storagePath) return fail(400, 'VALIDATION_ERROR', '다운로드할 파일을 선택해주세요.');
 
         let attachmentQuery = supabaseAdmin
-            .from('franchise_owner_content_attachments')
+            .from('franchise_owner_content_version_attachments')
             .select(ATTACHMENT_SELECT)
-            .eq('company_id', context.account.company_id);
+            .eq('company_id', context.account.company_id)
+            .order('content_version', { ascending: false })
+            .limit(1);
         attachmentQuery = attachmentId
-            ? attachmentQuery.eq('id', attachmentId)
+            ? attachmentQuery.eq('attachment_id', attachmentId)
             : attachmentQuery.eq('storage_path', storagePath);
-        const attachmentResult = await attachmentQuery.maybeSingle<OwnerContentAttachmentRow>();
+        const attachmentResult = await attachmentQuery.maybeSingle<OwnerContentVersionAttachmentRow>();
         if (attachmentResult.error) throw attachmentResult.error;
         if (!attachmentResult.data) return fail(404, 'NOT_FOUND', '첨부 파일을 찾을 수 없습니다.');
 
         const contentResult = await supabaseAdmin
             .from('franchise_owner_content_items')
-            .select('id, company_id, location_id, status')
+            .select('id, company_id, location_id, version, status')
             .eq('id', attachmentResult.data.content_id)
             .eq('company_id', context.account.company_id)
             .eq('status', 'published')
-            .maybeSingle<Pick<OwnerContentItemRow, 'id' | 'company_id' | 'location_id' | 'status'>>();
+            .maybeSingle<Pick<OwnerContentItemRow, 'id' | 'company_id' | 'location_id' | 'version' | 'status'>>();
         if (contentResult.error) throw contentResult.error;
         const content = contentResult.data;
-        if (!content || !canOwnerReadContent(content, context.account.company_id, context.location.id)) {
+        if (!content
+            || content.version !== attachmentResult.data.content_version
+            || !canOwnerReadContent(content, context.account.company_id, context.location.id)) {
             return fail(404, 'NOT_FOUND', '첨부 파일을 찾을 수 없습니다.');
         }
         if (!isOwnerContentStoragePath({

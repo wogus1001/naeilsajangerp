@@ -5,6 +5,7 @@ import {
     OWNER_CONTENT_SCHEMA_MESSAGE,
     parseOwnerContentAction,
     parseOwnerContentCreate,
+    parseOwnerContentExpectedVersion,
     summarizeOwnerContentReceiptStats,
     targetOwnerAccountIdsForContent,
     type OwnerContentAttachmentRow,
@@ -23,7 +24,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const CONTENT_SELECT = 'id, company_id, location_id, source_type, source_id, content_type, category, title, summary, body, version, status, requires_acknowledgement, due_at, published_at, created_by, updated_by, created_at, updated_at';
-const ATTACHMENT_SELECT = 'id, content_id, company_id, file_name, mime_type, file_size, storage_bucket, storage_path, created_by, created_at';
+const ATTACHMENT_SELECT = 'id, content_id, company_id, location_id, content_version, file_name, mime_type, file_size, storage_bucket, storage_path, deletion_state, deleted_at, created_by, created_at';
 
 const EMPTY_RECEIPT_STATS: OwnerContentReceiptStats = {
     targetCount: 0,
@@ -35,6 +36,15 @@ function readBodyText(value: unknown, key: string): string {
     if (!value || typeof value !== 'object') return '';
     const field = Reflect.get(value, key);
     return typeof field === 'string' ? field.trim() : '';
+}
+
+function readContentMutationError(error: unknown): string {
+    if (!error || typeof error !== 'object') return '';
+    const text = ['message', 'details', 'hint']
+        .map(key => Reflect.get(error, key))
+        .filter((value): value is string => typeof value === 'string')
+        .join(' ');
+    return text.match(/OWNER_CONTENT_[A-Z_]+/)?.[0] || '';
 }
 
 export async function GET(request: Request) {
@@ -79,6 +89,7 @@ export async function GET(request: Request) {
                 .select(ATTACHMENT_SELECT)
                 .eq('company_id', companyScope.scope.companyId)
                 .in('content_id', contentIds)
+                .eq('deletion_state', 'active')
                 .order('created_at', { ascending: true })
                 .returns<OwnerContentAttachmentRow[]>();
             if (attachmentResult.error) throw attachmentResult.error;
@@ -192,7 +203,10 @@ export async function PATCH(request: Request) {
         const body: unknown = await request.json();
         const contentId = readBodyText(body, 'contentId') || readBodyText(body, 'id');
         const action = parseOwnerContentAction(body);
-        if (!contentId || !action) return fail(400, 'VALIDATION_ERROR', '자료와 처리 동작을 다시 확인해주세요.');
+        const expectedVersion = parseOwnerContentExpectedVersion(body);
+        if (!contentId || !action || !expectedVersion) {
+            return fail(400, 'VALIDATION_ERROR', '자료, 버전, 처리 동작을 다시 확인해주세요.');
+        }
         const companyScope = await resolveOwnerPortalCompanyScope(
             authResult.auth,
             readBodyText(body, 'companyId'),
@@ -200,16 +214,17 @@ export async function PATCH(request: Request) {
         );
         if (!companyScope.ok) return companyScope.response;
 
-        const existingResult = await authResult.auth.supabaseAdmin
-            .from('franchise_owner_content_items')
-            .select(CONTENT_SELECT)
-            .eq('id', contentId)
-            .eq('company_id', companyScope.scope.companyId)
-            .maybeSingle<OwnerContentItemRow>();
-        if (existingResult.error) throw existingResult.error;
-        if (!existingResult.data) return fail(404, 'NOT_FOUND', '콘텐츠를 찾을 수 없습니다.');
+        let contentInput = {
+            body: '',
+            category: '',
+            contentType: null as string | null,
+            dueAt: null as string | null,
+            locationId: null as string | null,
+            requiresAcknowledgement: false,
+            summary: '',
+            title: ''
+        };
         if (action === 'update') {
-            if (existingResult.data.status === 'archived') return fail(409, 'CONFLICT', '보관한 자료는 수정할 수 없습니다.');
             const parsed = parseOwnerContentCreate(body);
             if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
             if (parsed.input.locationId) {
@@ -220,58 +235,35 @@ export async function PATCH(request: Request) {
                 );
                 if (!locationResult.ok) return locationResult.response;
             }
-            const now = new Date().toISOString();
-            const nextVersion = existingResult.data.status === 'published'
-                ? existingResult.data.version + 1
-                : existingResult.data.version;
-            const updateResult = await authResult.auth.supabaseAdmin
-                .from('franchise_owner_content_items')
-                .update({
-                    body: parsed.input.body,
-                    category: parsed.input.category,
-                    content_type: parsed.input.contentType,
-                    due_at: parsed.input.dueAt,
-                    location_id: parsed.input.locationId,
-                    published_at: existingResult.data.status === 'published' ? now : existingResult.data.published_at,
-                    requires_acknowledgement: parsed.input.requiresAcknowledgement,
-                    summary: parsed.input.summary,
-                    title: parsed.input.title,
-                    updated_at: now,
-                    updated_by: authResult.auth.requester.id,
-                    version: nextVersion
-                })
-                .eq('id', existingResult.data.id)
-                .eq('company_id', companyScope.scope.companyId)
-                .eq('status', existingResult.data.status)
-                .eq('version', existingResult.data.version)
-                .select(CONTENT_SELECT)
-                .maybeSingle<OwnerContentItemRow>();
-            if (updateResult.error) throw updateResult.error;
-            if (!updateResult.data) return fail(409, 'CONFLICT', '다른 사용자가 자료를 수정했습니다. 새로고침 후 다시 시도해주세요.');
-            return ok({ item: updateResult.data });
+            contentInput = parsed.input;
         }
-        const nextStatus = action === 'publish' ? 'published' : 'archived';
-        if (existingResult.data.status === nextStatus) return fail(409, 'CONFLICT', '콘텐츠가 이미 해당 상태입니다.');
-        const now = new Date().toISOString();
-        const { data, error } = await authResult.auth.supabaseAdmin
-            .from('franchise_owner_content_items')
-            .update({
-                published_at: action === 'publish' ? now : existingResult.data.published_at,
-                status: nextStatus,
-                updated_at: now,
-                updated_by: authResult.auth.requester.id
-            })
-            .eq('id', existingResult.data.id)
-            .eq('company_id', companyScope.scope.companyId)
-            .eq('status', existingResult.data.status)
-            .select(CONTENT_SELECT)
-            .maybeSingle<OwnerContentItemRow>();
+        const { data, error } = await authResult.auth.supabaseAdmin.rpc('mutate_franchise_owner_content', {
+            p_action: action,
+            p_actor_id: authResult.auth.requester.id,
+            p_body: contentInput.body,
+            p_category: contentInput.category,
+            p_company_id: companyScope.scope.companyId,
+            p_content_id: contentId,
+            p_content_type: contentInput.contentType,
+            p_due_at: contentInput.dueAt,
+            p_expected_version: expectedVersion,
+            p_location_id: contentInput.locationId,
+            p_requires_acknowledgement: contentInput.requiresAcknowledgement,
+            p_summary: contentInput.summary,
+            p_title: contentInput.title
+        });
         if (error) throw error;
-        if (!data) return fail(409, 'CONFLICT', '콘텐츠 상태가 변경되었습니다.');
-        return ok({ item: data });
+        if (!data) return fail(409, 'CONFLICT', '콘텐츠 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.');
+        return ok({ item: data as OwnerContentItemRow });
     } catch (error) {
         if (isMissingOwnerContentSchemaError(error)) return fail(424, 'VALIDATION_ERROR', OWNER_CONTENT_SCHEMA_MESSAGE);
         if (error instanceof SyntaxError) return fail(400, 'VALIDATION_ERROR', '콘텐츠 상태 변경 내용을 확인해주세요.');
+        const mutationError = readContentMutationError(error);
+        if (mutationError === 'OWNER_CONTENT_NOT_FOUND') return fail(404, 'NOT_FOUND', '콘텐츠를 찾을 수 없습니다.');
+        if (mutationError === 'OWNER_CONTENT_SCOPE_LOCKED_BY_ATTACHMENTS') {
+            return fail(409, 'CONFLICT', '첨부 파일이 있는 자료는 대상 운영점을 변경할 수 없습니다. 파일을 먼저 삭제해주세요.');
+        }
+        if (mutationError) return fail(409, 'CONFLICT', '다른 변경이 반영되었습니다. 새로고침 후 다시 시도해주세요.');
         if (error instanceof Error) console.error('Staff content PATCH failed', error);
         else console.error('Staff content PATCH failed with an unknown error');
         return fail(500, 'INTERNAL_ERROR', '콘텐츠 상태를 변경하지 못했습니다.');

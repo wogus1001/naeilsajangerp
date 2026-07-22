@@ -4,7 +4,6 @@ import { isOwnerRecord } from '@/lib/franchise-owner-portal';
 import { isMissingOwnerPortalSchemaError } from '@/lib/franchise-owner-portal-api';
 import { cleanOwnerPhase3Text } from '@/lib/franchise-owner-phase3';
 import {
-    buildOwnerReminderPortalEvent,
     OWNER_REMINDER_SELECT,
     readOwnerReminderId,
     shouldIncludeAcknowledgedOwnerReminders,
@@ -52,37 +51,20 @@ export async function PATCH(request: Request) {
         const searchParams = new URL(request.url).searchParams;
         const reminderId = readOwnerReminderId(body) || cleanOwnerPhase3Text(searchParams.get('id'));
         if (!reminderId) return fail(400, 'VALIDATION_ERROR', '확인할 리마인더를 선택해주세요.');
-        const { data: current, error: currentError } = await supabaseAdmin
-            .from('franchise_owner_reminders')
-            .select(OWNER_REMINDER_SELECT)
-            .eq('id', reminderId)
-            .eq('company_id', context.account.company_id)
-            .eq('location_id', context.location.id)
-            .eq('owner_account_id', context.account.id)
-            .maybeSingle<OwnerReminderRow>();
-        if (currentError) throw currentError;
-        if (!current) return fail(404, 'NOT_FOUND', '내 리마인더를 찾을 수 없습니다.');
-        if (current.acknowledged_at) return ok({ reminder: current, acknowledged: true });
-        const occurredAt = new Date().toISOString();
-        const { data: reminder, error: updateError } = await supabaseAdmin
-            .from('franchise_owner_reminders')
-            .update({ acknowledged_at: occurredAt })
-            .eq('id', current.id)
-            .eq('company_id', context.account.company_id)
-            .eq('location_id', context.location.id)
-            .eq('owner_account_id', context.account.id)
-            .is('acknowledged_at', null)
-            .select(OWNER_REMINDER_SELECT)
-            .maybeSingle<OwnerReminderRow>();
-        if (updateError) throw updateError;
+        const { data, error } = await supabaseAdmin.rpc('acknowledge_franchise_owner_reminder', {
+            p_company_id: context.account.company_id,
+            p_location_id: context.location.id,
+            p_owner_account_id: context.account.id,
+            p_reminder_id: reminderId
+        });
+        if (error) throw error;
+        const reminder = data as OwnerReminderRow | null;
         if (!reminder) return fail(404, 'NOT_FOUND', '내 리마인더를 찾을 수 없습니다.');
-        const { error: eventError } = await supabaseAdmin
-            .from('franchise_owner_portal_events')
-            .insert(buildOwnerReminderPortalEvent({ reminder, eventType: 'reminder_acknowledged', occurredAt, actorId: context.account.id }));
-        if (eventError) throw eventError;
         return ok({ reminder, acknowledged: Boolean(reminder.acknowledged_at) });
     } catch (error) {
         if (isMissingOwnerPortalSchemaError(error)) return fail(424, 'VALIDATION_ERROR', PHASE3_SCHEMA_MESSAGE);
+        const text = error && typeof error === 'object' ? String(Reflect.get(error, 'message') || '') : '';
+        if (text.includes('OWNER_REMINDER_NOT_FOUND')) return fail(404, 'NOT_FOUND', '내 리마인더를 찾을 수 없습니다.');
         console.error('Owner reminders PATCH error:', error);
         return fail(500, 'INTERNAL_ERROR', '리마인더를 확인 처리하지 못했습니다.');
     }

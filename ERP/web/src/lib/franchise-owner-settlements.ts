@@ -1,5 +1,6 @@
 import {
     cleanOwnerPhase3Text,
+    isOwnerPhase3Uuid,
     isOwnerPhase3StoragePath,
     OWNER_PHASE3_STORAGE,
     type OwnerSettlementStatus
@@ -14,6 +15,7 @@ export const OWNER_SETTLEMENT_SCHEMA_MESSAGE = '점주 포털 3단계 정산·�
 
 export type OwnerSettlementRequestRow = {
     readonly id: string;
+    readonly request_idempotency_key: string;
     readonly company_id: string;
     readonly location_id: string | null;
     readonly title: string;
@@ -50,13 +52,41 @@ export type OwnerSettlementFileRow = {
     readonly company_id: string;
     readonly location_id: string;
     readonly owner_account_id: string;
+    readonly client_file_id: string;
     readonly file_name: string;
     readonly mime_type: string;
     readonly file_size: number;
+    readonly content_sha256: string;
     readonly storage_bucket: string;
     readonly storage_path: string;
+    readonly upload_state: 'reserved' | 'active';
+    readonly deletion_state: 'active' | 'pending' | 'deleted';
+    readonly deleted_at: string | null;
     readonly created_at: string;
 };
+
+export type OwnerSettlementSubmissionWithFiles = OwnerSettlementSubmissionRow & {
+    readonly files: readonly OwnerSettlementFileRow[];
+};
+
+export function retainOwnerSettlementFilesAfterMutation<
+    T extends Pick<OwnerSettlementSubmissionRow, 'id' | 'updated_at'>,
+    F extends Pick<OwnerSettlementFileRow, 'id'>
+>(
+    submission: T,
+    files: readonly F[]
+): T & { readonly files: readonly F[] } {
+    return { ...submission, files };
+}
+
+export function shouldHydrateOwnerSettlementDraft(previousRequestId: string, nextRequestId: string): boolean {
+    return previousRequestId !== nextRequestId;
+}
+
+export function isOwnerSettlementStorageConflict(error: unknown): boolean {
+    const text = [readErrorProperty(error, 'message'), readErrorProperty(error, 'details')].join(' ').toLowerCase();
+    return /already exists|duplicate/.test(text);
+}
 
 export type OwnerSettlementReview = {
     readonly status: 'rejected' | 'confirmed';
@@ -188,6 +218,17 @@ export function isOwnerSettlementRequestTarget(requestLocationId: string | null,
 
 export function isOwnerSettlementMutableStatus(value: unknown): value is 'draft' | 'rejected' {
     return value === 'draft' || value === 'rejected';
+}
+
+export function parseOwnerSettlementClientFileId(value: unknown): string | null {
+    const clientFileId = cleanOwnerPhase3Text(value);
+    return isOwnerPhase3Uuid(clientFileId) ? clientFileId : null;
+}
+
+export function parseOwnerSettlementExpectedUpdatedAt(value: unknown): string | null {
+    const text = cleanOwnerPhase3Text(value);
+    if (!text) return null;
+    return Number.isFinite(Date.parse(text)) ? text : null;
 }
 
 export function isOwnerSettlementFileStoragePath(input: OwnerSettlementStorageInput): boolean {

@@ -7,8 +7,10 @@ import {
     isMissingOwnerContentSchemaError,
     isOwnerContentStoragePath,
     OWNER_CONTENT_STORAGE,
+    hasOwnerContentTargetScopeChanged,
     parseOwnerContentAction,
     parseOwnerContentCreate,
+    parseOwnerContentExpectedVersion,
     parseOwnerContentReceiptAction,
     mergeOwnerContentReceipt,
     summarizeOwnerContentReceiptStats,
@@ -58,6 +60,20 @@ test('publish and archive actions reject unrelated status changes', () => {
     assert.equal(parseOwnerContentAction({ status: 'archived' }), 'archive');
     assert.equal(parseOwnerContentAction({ action: 'update' }), 'update');
     assert.equal(parseOwnerContentAction({ action: 'draft' }), null);
+});
+
+test('Given content mutations When parsing expected versions Then only positive integers are accepted', () => {
+    assert.equal(parseOwnerContentExpectedVersion({ expectedVersion: 3 }), 3);
+    assert.equal(parseOwnerContentExpectedVersion({ expected_version: '2' }), 2);
+    assert.equal(parseOwnerContentExpectedVersion({ expectedVersion: 0 }), null);
+    assert.equal(parseOwnerContentExpectedVersion({ expectedVersion: 1.5 }), null);
+    assert.equal(parseOwnerContentExpectedVersion({}), null);
+});
+
+test('Given content attachments When changing target scope Then location changes are detected', () => {
+    assert.equal(hasOwnerContentTargetScopeChanged({ location_id: locationId }, { locationId }), false);
+    assert.equal(hasOwnerContentTargetScopeChanged({ location_id: locationId }, { locationId: otherLocationId }), true);
+    assert.equal(hasOwnerContentTargetScopeChanged({ location_id: null }, { locationId }), true);
 });
 
 test('owner content receipt action accepts acknowledgement only', () => {
@@ -199,5 +215,13 @@ test('missing schema detection is limited to content migration dependencies', ()
         message: "Could not find the table 'franchise_owner_content_items' in the schema cache"
     }), true);
     assert.equal(isMissingOwnerContentSchemaError({ message: 'Bucket not found' }), true);
+    assert.equal(isMissingOwnerContentSchemaError({
+        code: 'PGRST205',
+        message: "Could not find the table 'franchise_owner_file_deletion_outbox' in the schema cache"
+    }), true);
+    assert.equal(isMissingOwnerContentSchemaError({
+        code: 'PGRST202',
+        message: "Could not find the function public.enqueue_franchise_owner_stale_file_cleanup in the schema cache"
+    }), true);
     assert.equal(isMissingOwnerContentSchemaError({ code: 'PGRST205', message: 'unrelated table is missing' }), false);
 });

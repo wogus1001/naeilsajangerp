@@ -6,7 +6,13 @@ import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import type { OwnerContentType, OwnerSettlementStatus } from '@/lib/franchise-owner-phase3';
 import type { OwnerReminderRow } from '@/lib/franchise-owner-reminders';
-import type { OwnerSettlementFileRow, OwnerSettlementRequestRow, OwnerSettlementSubmissionRow } from '@/lib/franchise-owner-settlements';
+import {
+    retainOwnerSettlementFilesAfterMutation,
+    shouldHydrateOwnerSettlementDraft,
+    type OwnerSettlementFileRow,
+    type OwnerSettlementRequestRow,
+    type OwnerSettlementSubmissionRow
+} from '@/lib/franchise-owner-settlements';
 import styles from '../owner.module.css';
 import { formatOwnerDate, OwnerPortalFrame, readOwnerApiData } from './ownerPortalShared';
 
@@ -30,6 +36,7 @@ type ContentItem = {
 type SettlementSubmission = OwnerSettlementSubmissionRow & { readonly files: readonly OwnerSettlementFileRow[] };
 type SettlementRequest = OwnerSettlementRequestRow & { readonly submission: SettlementSubmission | null };
 type DeleteIntent = { readonly fileId: string; readonly fileName: string; readonly requestId: string };
+type PendingSettlementFile = { readonly clientFileId: string; readonly file: File };
 
 const CONTENT_TYPES = [
     { value: 'all', label: '전체' },
@@ -88,18 +95,22 @@ function Reminders() {
     const [error, setError] = React.useState('');
     const [savingId, setSavingId] = React.useState('');
     const [alert, setAlert] = React.useState<AlertState | null>(null);
+    const loadSequenceRef = React.useRef(0);
 
     const load = React.useCallback(async () => {
+        const sequence = ++loadSequenceRef.current;
         setLoading(true);
         setError('');
         try {
             const suffix = filter === 'all' ? '?status=all' : '';
             const data = await readOwnerApiData<{ readonly reminders: readonly OwnerReminderRow[] }>(await fetch(`/api/owner/reminders${suffix}`, { cache: 'no-store' }));
+            if (sequence !== loadSequenceRef.current) return;
             setRows(data.reminders);
         } catch (caught) {
+            if (sequence !== loadSequenceRef.current) return;
             setError(caughtMessage(caught, '리마인더를 불러오지 못했습니다.'));
         } finally {
-            setLoading(false);
+            if (sequence === loadSequenceRef.current) setLoading(false);
         }
     }, [filter]);
 
@@ -173,16 +184,19 @@ function Resources() {
         void load();
     }, []);
 
-    const acknowledge = async (contentId: string) => {
-        setAcknowledgingId(contentId);
+    const acknowledge = async (content: Pick<ContentItem, 'id' | 'version'>) => {
+        setAcknowledgingId(content.id);
         try {
-            await readOwnerApiData(await fetch('/api/owner/content', {
+            const data = await readOwnerApiData<{ readonly receipt: { readonly acknowledged_at: string | null; readonly viewed_at: string | null } }>(await fetch('/api/owner/content', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contentId, action: 'acknowledge' })
+                body: JSON.stringify({ contentId: content.id, contentVersion: content.version, action: 'acknowledge' })
             }));
-            const acknowledgedAt = new Date().toISOString();
-            setItems(current => current.map(item => item.id === contentId ? { ...item, acknowledged_at: acknowledgedAt, viewed_at: item.viewed_at || acknowledgedAt } : item));
+            setItems(current => current.map(item => item.id === content.id && item.version === content.version ? {
+                ...item,
+                acknowledged_at: data.receipt.acknowledged_at,
+                viewed_at: data.receipt.viewed_at
+            } : item));
             setAlert({ type: 'success', title: '수신 확인 완료', message: '자료를 확인 처리했습니다.' });
         } catch (caught) {
             const message = caught instanceof Error ? caught.message : '자료를 확인 처리하지 못했습니다.';
@@ -194,16 +208,24 @@ function Resources() {
 
     const selectContent = (item: ContentItem) => {
         setSelectedId(item.id);
-        if (item.viewed_at || viewingIdsRef.current.has(item.id)) return;
-        viewingIdsRef.current.add(item.id);
+        const receiptKey = `${item.id}:${item.version}`;
+        if (item.viewed_at || viewingIdsRef.current.has(receiptKey)) return;
+        viewingIdsRef.current.add(receiptKey);
         void fetch('/api/owner/content', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contentId: item.id, action: 'view' })
-        }).then(readOwnerApiData).then(() => {
-            const viewedAt = new Date().toISOString();
-            setItems(current => current.map(row => row.id === item.id ? { ...row, viewed_at: viewedAt } : row));
-        }).catch(() => undefined).finally(() => viewingIdsRef.current.delete(item.id));
+            body: JSON.stringify({ contentId: item.id, contentVersion: item.version, action: 'view' })
+        }).then(response => readOwnerApiData<{ readonly receipt: { readonly viewed_at: string | null } }>(response)).then(data => {
+            setItems(current => current.map(row => row.id === item.id && row.version === item.version
+                ? { ...row, viewed_at: data.receipt.viewed_at }
+                : row));
+        }).catch(() => {
+            setAlert({
+                type: 'error',
+                title: '열람 기록 실패',
+                message: '열람 기록을 저장하지 못했습니다. 네트워크를 확인한 뒤 이 자료를 다시 선택해주세요.'
+            });
+        }).finally(() => viewingIdsRef.current.delete(receiptKey));
     };
 
     const needle = query.trim().toLocaleLowerCase('ko-KR');
@@ -229,12 +251,12 @@ function Resources() {
     </section>;
 }
 
-function ResourceDetail({ item, isAcknowledging, onAcknowledge }: { readonly item: ContentItem; readonly isAcknowledging: boolean; readonly onAcknowledge: (contentId: string) => Promise<void> }) {
+function ResourceDetail({ item, isAcknowledging, onAcknowledge }: { readonly item: ContentItem; readonly isAcknowledging: boolean; readonly onAcknowledge: (item: Pick<ContentItem, 'id' | 'version'>) => Promise<void> }) {
     const receiptClassName = !item.requires_acknowledgement ? styles.receiptStatusOptional : item.acknowledged_at ? styles.receiptStatusDone : styles.receiptStatusRequired;
     return <article className={styles.resourceDetail}>
         <div className={styles.resourceDetailHeader}><div><span className={styles.badge}>{contentLabel(item.content_type)}</span><h2>{item.title}</h2><p>{item.summary}</p></div><span className={styles.itemMeta}>버전 {item.version} · {formatOwnerDate(item.published_at)}</span></div>
         {item.due_at ? <div className={styles.warning}>확인 기한 {dateTime(item.due_at)}</div> : null}
-        <div className={`${styles.receiptStatus} ${receiptClassName}`} aria-live="polite"><div><strong>{contentReceiptLabel(item)}</strong><span>{!item.requires_acknowledgement ? '이 자료는 별도 수신 확인이 필요하지 않습니다.' : item.acknowledged_at ? `${dateTime(item.acknowledged_at)} 확인 처리했습니다.` : '내용을 확인한 뒤 수신 확인을 처리해주세요.'}</span></div>{item.requires_acknowledgement && !item.acknowledged_at ? <button className={styles.secondaryButton} type="button" disabled={isAcknowledging} onClick={() => void onAcknowledge(item.id)}><Check size={15} /> {isAcknowledging ? '처리 중' : '확인 처리'}</button> : null}</div>
+        <div className={`${styles.receiptStatus} ${receiptClassName}`} aria-live="polite"><div><strong>{contentReceiptLabel(item)}</strong><span>{!item.requires_acknowledgement ? '이 자료는 별도 수신 확인이 필요하지 않습니다.' : item.acknowledged_at ? `${dateTime(item.acknowledged_at)} 확인 처리했습니다.` : '내용을 확인한 뒤 수신 확인을 처리해주세요.'}</span></div>{item.requires_acknowledgement && !item.acknowledged_at ? <button className={styles.secondaryButton} type="button" disabled={isAcknowledging} onClick={() => void onAcknowledge(item)}><Check size={15} /> {isAcknowledging ? '처리 중' : '확인 처리'}</button> : null}</div>
         <div className={styles.resourceBody}>{item.body || '본문 내용이 없습니다.'}</div>
         {item.attachments.length > 0 ? <div className={styles.attachmentList}><strong>첨부 파일</strong>{item.attachments.map(file => <a className={styles.attachmentRow} href={`/api/owner/content/attachments?fileId=${encodeURIComponent(file.id)}`} key={file.id}><FileText size={17} /><span>{file.file_name}</span><small>{fileSize(file.file_size)}</small><Download size={16} /></a>)}</div> : null}
     </article>;
@@ -246,11 +268,12 @@ export function OwnerSettlementsPage() {
 
 function Settlements() {
     const inputRef = React.useRef<HTMLInputElement>(null);
+    const hydratedRequestIdRef = React.useRef('');
     const [requests, setRequests] = React.useState<readonly SettlementRequest[]>([]);
     const [selectedId, setSelectedId] = React.useState('');
     const [amount, setAmount] = React.useState('');
     const [note, setNote] = React.useState('');
-    const [files, setFiles] = React.useState<readonly File[]>([]);
+    const [files, setFiles] = React.useState<readonly PendingSettlementFile[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
     const [error, setError] = React.useState('');
@@ -274,6 +297,9 @@ function Settlements() {
     React.useEffect(() => { void load(); }, [load]);
     const selected = requests.find(request => request.id === selectedId) || requests[0] || null;
     React.useEffect(() => {
+        const nextRequestId = selected?.id || '';
+        if (!shouldHydrateOwnerSettlementDraft(hydratedRequestIdRef.current, nextRequestId)) return;
+        hydratedRequestIdRef.current = nextRequestId;
         setAmount(selected ? String(selected.submission?.total_amount ?? '') : '');
         setNote(selected?.submission?.note || '');
         setFiles([]);
@@ -281,21 +307,21 @@ function Settlements() {
     const mutable = Boolean(selected && selected.status === 'open' && (!selected.submission || selected.submission.status === 'draft' || selected.submission.status === 'rejected'));
 
     const upload = async (submissionId: string) => {
-        for (const file of files) {
+        for (const pending of files) {
             const form = new FormData();
             form.set('submissionId', submissionId);
-            form.set('file', file);
+            form.set('clientFileId', pending.clientFileId);
+            form.set('file', pending.file);
             await readOwnerApiData(await fetch('/api/owner/settlements/files', { method: 'POST', body: form }));
+            setFiles(current => current.filter(file => file.clientFileId !== pending.clientFileId));
         }
     };
 
     const deleteSettlementFile = async (intent: DeleteIntent) => {
         setDeletingFileId(intent.fileId);
         try {
-            await readOwnerApiData(await fetch('/api/owner/settlements/files', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileId: intent.fileId })
+            await readOwnerApiData(await fetch(`/api/owner/settlements/files?fileId=${encodeURIComponent(intent.fileId)}`, {
+                method: 'DELETE'
             }));
             setRequests(current => current.map(request => request.id === intent.requestId && request.submission ? {
                 ...request,
@@ -316,17 +342,45 @@ function Settlements() {
         setSaving(true);
         setError('');
         try {
-            const draft = await readOwnerApiData<{ readonly submission: OwnerSettlementSubmissionRow }>(await fetch('/api/owner/settlements', {
+            let mutation = await readOwnerApiData<{
+                readonly scheduleSyncRequired: boolean;
+                readonly submission: OwnerSettlementSubmissionRow;
+            }>(await fetch('/api/owner/settlements', {
                 method: selected.submission ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requestId: selected.id, action: files.length ? 'save' : action, totalAmount: amount, note })
+                body: JSON.stringify({
+                    requestId: selected.id,
+                    action: files.length ? 'save' : action,
+                    totalAmount: amount,
+                    note,
+                    expectedUpdatedAt: selected.submission?.updated_at ?? null
+                })
             }));
-            if (files.length) await upload(draft.submission.id);
-            if (action === 'submit' && files.length) await readOwnerApiData(await fetch('/api/owner/settlements', {
-                method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: selected.id, action: 'submit', totalAmount: amount, note })
+            setRequests(current => current.map(request => request.id === selected.id
+                ? {
+                    ...request,
+                    submission: retainOwnerSettlementFilesAfterMutation(
+                        mutation.submission,
+                        request.submission?.files || []
+                    )
+                }
+                : request));
+            if (files.length) await upload(mutation.submission.id);
+            if (action === 'submit' && files.length) mutation = await readOwnerApiData(await fetch('/api/owner/settlements', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requestId: selected.id,
+                    action: 'submit',
+                    totalAmount: amount,
+                    note,
+                    expectedUpdatedAt: mutation.submission.updated_at
+                })
             }));
             setFiles([]);
             await load();
-            setAlert({ type: 'success', title: action === 'submit' ? '제출 완료' : '임시저장 완료', message: action === 'submit' ? '정산 자료를 본사에 제출했습니다.' : '작성 중인 정산 내용과 첨부 파일을 저장했습니다.' });
+            setAlert(mutation.scheduleSyncRequired
+                ? { type: 'info', title: '제출 완료', message: '정산 자료는 제출됐습니다. 본사 일정 연결은 자동으로 다시 시도합니다.' }
+                : { type: 'success', title: action === 'submit' ? '제출 완료' : '임시저장 완료', message: action === 'submit' ? '정산 자료를 본사에 제출했습니다.' : '작성 중인 정산 내용과 첨부 파일을 저장했습니다.' });
         } catch (caught) {
             const message = caughtMessage(caught, '정산을 저장하지 못했습니다.');
             setError(message);
@@ -352,9 +406,9 @@ function Settlements() {
                         <label className={styles.field}>전달 메모<textarea className={styles.textarea} value={note} disabled={!mutable} onChange={event => setNote(event.currentTarget.value)} placeholder="정산 관련 참고사항을 입력하세요." /></label>
                         <div className={styles.settlementFiles}>
                             <div className={styles.fileUploadHeader}><div><strong>증빙 파일</strong><span>이미지, PDF, 오피스 문서 · 파일당 10MB · 최대 10개</span></div>{mutable ? <button className={styles.secondaryButton} type="button" onClick={() => inputRef.current?.click()}><Upload size={15} /> 파일 선택</button> : null}</div>
-                            <input ref={inputRef} className={styles.fileInput} type="file" accept={FILE_ACCEPT} multiple onChange={event => { const available = Math.max(0, 10 - (selected.submission?.files.length || 0)); setFiles(current => [...current, ...Array.from(event.currentTarget.files || [])].slice(0, available)); event.currentTarget.value = ''; }} />
+                            <input ref={inputRef} className={styles.fileInput} type="file" accept={FILE_ACCEPT} multiple onChange={event => { const selectedFiles = Array.from(event.currentTarget.files || []); setFiles(current => { const available = Math.max(0, 10 - (selected.submission?.files.length || 0) - current.length); return [...current, ...selectedFiles.slice(0, available).map(file => ({ clientFileId: crypto.randomUUID(), file }))]; }); event.currentTarget.value = ''; }} />
                             {selected.submission?.files.map(file => <div className={styles.settlementFileRow} key={file.id}><a className={styles.attachmentRow} href={`/api/owner/settlements/files?fileId=${encodeURIComponent(file.id)}`}><Paperclip size={16} /><span>{file.file_name}</span><small>{fileSize(file.file_size)}</small><Download size={16} /></a>{mutable ? <button className={styles.fileDeleteButton} type="button" disabled={deletingFileId === file.id} aria-label={`${file.file_name} 삭제`} title="증빙 파일 삭제" onClick={() => setDeleteIntent({ fileId: file.id, fileName: file.file_name, requestId: selected.id })}><Trash2 size={16} /></button> : null}</div>)}
-                            {files.map((file, index) => <div className={styles.pendingFileRow} key={`${file.name}-${file.lastModified}-${index}`}><Paperclip size={16} /><span>{file.name}</span><small>{fileSize(file.size)}</small><button type="button" aria-label={`${file.name} 제거`} title="선택 파일 제거" onClick={() => setFiles(current => current.filter((_, fileIndex) => fileIndex !== index))}><X size={15} /></button></div>)}
+                            {files.map(pending => <div className={styles.pendingFileRow} key={pending.clientFileId}><Paperclip size={16} /><span>{pending.file.name}</span><small>{fileSize(pending.file.size)}</small><button type="button" aria-label={`${pending.file.name} 제거`} title="선택 파일 제거" onClick={() => setFiles(current => current.filter(file => file.clientFileId !== pending.clientFileId))}><X size={15} /></button></div>)}
                             {!selected.submission?.files.length && files.length === 0 ? <div className={styles.fileEmpty}>첨부된 증빙 파일이 없습니다.</div> : null}
                         </div>
                         {mutable ? <div className={styles.actionRow}><button className={styles.secondaryButton} type="button" disabled={saving} onClick={() => void mutate('save')}>임시저장</button><button className={styles.button} type="button" disabled={saving} onClick={() => void mutate('submit')}><Send size={15} /> 본사 제출</button></div> : null}
