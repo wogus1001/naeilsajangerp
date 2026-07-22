@@ -1454,7 +1454,7 @@
 - 자동 검증: 점주 SLA·일정·migration 집중 테스트 31건과 `src/lib` 및 일정 화면 모델 전체 테스트 467건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 빌드의 기존 workspace root·Browserslist 경고만 남았다.
 - 브라우저 QA: 1440px에서 가맹운영 일정의 점주 시설 문의 링크로 제출 처리 상세를 열고 24시간 초과 KPI·평균 처리시간·처리 기한 초과 배지를 확인했다. 390px에서는 KPI 2열 배치, 상태 탭·필터·선택 제출 상세와 가로 넘침 0을 확인했다. 증적은 `.omo/evidence/task-7-franchise-independent-schedule/`에 생성했다.
 - 실행 가설: (1) 제출 시각으로부터 24시간이 지났지만 DB 일정이 다음 KST 날짜까지 `진행중`으로 남을 수 있는 가설은 기존 날짜 비교와 일 1회 실행으로 확인했고 `due_at <= now()` 비교와 Supabase 시간당 maintenance로 보정했다. (2) 재제출 건의 과거 `reviewed_at`과 최초 `created_at`이 완료 집계·새 SLA에 섞일 수 있는 가설은 회귀 테스트에서 재현한 뒤 상태 판정과 `submitted_at`으로 해소했다. (3) 모바일 KPI가 너무 길어 실제 접수 목록을 밀어낼 수 있는 가설은 390px 캡처에서 확인한 뒤 2열로 보정하고 재캡처해 해소했다.
-- SQL 상태: `supabase_franchise_owner_submission_sla_migration.sql`을 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql` 다음에 적용해야 한다. **SQL 등록 필요**.
+- SQL 상태: `supabase_franchise_owner_submission_sla_migration.sql` 적용을 확인했다. **SQL 등록 완료 확인**.
 - 단계 판정: 3단계 전체 완료가 아닌 1차 자동화 범위 검증 완료다. 교육자료·정산·증빙·리마인드·문서 수령 확인은 후속 범위다.
 
 # 2026-07-21 입점 요청 사진 업로드 긴급 QA
@@ -1465,3 +1465,11 @@
 - 자동 검증: signed upload·파일 바이트 검증 집중 테스트 8건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. 빌드는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남았다.
 - 실행 가설: (1) 허용 확장자 오류 가능성은 동일 JPG가 작은 파일에서는 성공해 기각했다. (2) 저장 URL 권한 문제 가능성은 413 시 최종 URL 생성 단계에 도달하지 않은 운영 로그로 기각했다. (3) Vercel 요청 본문 한도 가능성은 신고 시각의 413 응답과 6MB 파일이 Next API 본문을 우회하는 회귀 테스트로 확인하고 해소했다.
 - 남은 live QA: 기존 실패 건은 Storage URL이 없으므로 배포 후 사진을 재첨부해야 한다. 신규 SQL은 없다.
+
+# 2026-07-22 점주 포털 업무 자동화 3단계 1차 재검증
+
+- 적용 DB QA: SLA 스키마 준비 상태와 회사별 활동 집계 RPC를 읽기 전용으로 확인했다. 일반·시설 문의 3건 표본에서 처리 필요 0건, 24시간 초과 0건, 최근 7일 처리 0건, 평균 처리시간 0.2시간이 원본 제출 직접 집계와 일치했다. 기존 일정의 `due_at` 불일치와 누락 일정은 각각 0건이었다.
+- 자동 검증: 점주 SLA, 원천 일정, 일정 경계, migration, reconciliation, 알림 동기화 집중 테스트 36건과 `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 빌드는 기존 workspace root와 오래된 Browserslist 데이터 경고만 남았다.
+- 브라우저 QA: 로컬 로그인 세션에서 실제 제출 집계와 화면 KPI가 일치함을 확인했다. 25시간 경과 시설 문의 fixture에서는 처리 필요 1건, 24시간 초과 1건, `처리 기한 초과` 배지와 처리 버튼이 표시됐다. 390x844 화면의 가로 넘침은 0px였다.
+- 일정 연결 QA: 가맹운영 일정관리에서 `점주 시설 문의` 원천 일정과 지연 상태를 표시하고, `업무 열기`가 `/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=...`로 이동함을 확인했다. 점포개발 업무 일정 경로로 이동하지 않는다.
+- 제한 사항: 적용 DB 표본에는 현재 처리 대기 중인 일반·시설 문의가 없어, 실제 대기 행을 대상으로 한 시간당 maintenance 실행 결과는 읽기 전용 QA에서 재현하지 않았다. 신규 운영 데이터를 만들지 않고 RPC·일정 정합성 및 브라우저 fixture로 대체 검증했다.
