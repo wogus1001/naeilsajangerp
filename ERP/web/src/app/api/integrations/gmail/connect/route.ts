@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const requesterProfile = await getRequesterProfile(supabaseAdmin, request);
     if (!requesterProfile) {
-        return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
+        return NextResponse.json({ error: '로그인 인증이 필요합니다.' }, { status: 401 });
     }
     if (!isGmailConfigured()) {
         return NextResponse.json({ error: 'Gmail OAuth environment is not configured' }, { status: 424 });
@@ -59,8 +59,13 @@ export async function GET(request: Request) {
         maxAge: 60 * 10
     });
 
-    return NextResponse.redirect(buildGmailAuthUrl({
+    const authorizationUrl = buildGmailAuthUrl({
         redirectUri: getGmailRedirectUriFromRequest(request),
         state
-    }));
+    }).toString();
+
+    if (searchParams.get('response') === 'json') {
+        return NextResponse.json({ authorizationUrl });
+    }
+    return NextResponse.redirect(authorizationUrl);
 }

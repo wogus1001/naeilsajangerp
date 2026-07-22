@@ -757,6 +757,16 @@ YYYY-MM-DD
 - 이 커밋은 지역 인사이트 고도화, 정보공개서 Gmail 발송/열람 추정/수신 확인, 문서 관리 팝업, 문서 삭제를 포함한다.
 - production Gmail 발송은 Vercel production 환경변수 설정 전까지 `configReady: false`가 정상 상태다.
 
+## 2026-07-22 Gmail OAuth 연결 인증 보정
+
+- 기능 브랜치: `codex/gmail-connect-auth-20260722`
+- 기능 커밋: `60ee429 fix(franchise): Gmail OAuth 연결 인증 보정`
+- 주요 기능: 정보공개서 `Gmail 연결`을 bearer 인증 없는 전체 페이지 이동에서 인증된 JSON handoff 후 Google OAuth 이동으로 변경했다. nonce/state와 회사 범위 검증은 유지하고 query `requesterId`만으로 인증하지 않는다.
+- OAuth 설정: 로컬 `http://localhost:3017/api/integrations/gmail/callback`과 운영 `https://www.fcerp.co.kr/api/integrations/gmail/callback`의 승인 리디렉션 URI 등록을 확인했다.
+- 검증: 요청 회귀 테스트 3건, TypeScript, lint, production build, `git diff --check` 통과. 분리 로컬 서버에서 실계정 Gmail 연결 완료를 확인했다.
+- 승격: 기능 브랜치를 dev PR로 반영해 dev 배포를 확인한 뒤 main PR과 production으로 승격한다. 운영에서는 `Gmail 연결`이 Google 승인 화면으로 이동하고 callback 후 연결 상태가 표시되는지 확인한다.
+- 신규 SQL: 없음. 데모 영향 없음.
+
 ## 2026-07-14 플랫폼 통합 리뷰 및 운영 릴리스
 
 - 승격 경로: 플랫폼 코드리뷰 PR #4, main 문서 동기화 PR #6, 업무 접수 모바일 보정 PR #7·#8을 `dev`에 순차 반영한 뒤 `dev -> main` PR #5를 병합했다. 운영 기준 main 커밋은 `7306723`이며 병합 시점의 `origin/dev`와 `origin/main` 파일 트리는 동일하다.

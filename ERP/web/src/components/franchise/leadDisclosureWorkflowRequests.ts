@@ -75,6 +75,12 @@ type DeleteDisclosureDocumentInput = {
     readonly documentId: string;
 };
 
+type RequestGmailAuthorizationUrlInput = {
+    readonly requesterId: string;
+    readonly companyName: string;
+    readonly redirectPath: string;
+};
+
 function buildUploadSuffix(): string {
     return Math.random().toString(36).slice(2, 10) || 'upload';
 }
@@ -172,6 +178,26 @@ export async function fetchGmailConnectionStatus(input: {
     const payload = await response.json();
     if (!response.ok) throw new Error(readApiError(payload));
     return unwrapApiData<GmailConnectionStatus>(payload);
+}
+
+export async function requestGmailAuthorizationUrl(input: RequestGmailAuthorizationUrlInput): Promise<string> {
+    const params = new URLSearchParams({
+        requesterId: input.requesterId,
+        redirect: input.redirectPath,
+        response: 'json'
+    });
+    if (input.companyName) params.set('company', input.companyName);
+
+    const response = await fetch(`/api/integrations/gmail/connect?${params.toString()}`, {
+        cache: 'no-store',
+        headers: await getApiAuthHeaders({ Accept: 'application/json' })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(readApiError(payload));
+
+    const data = unwrapApiData<{ readonly authorizationUrl?: string }>(payload);
+    if (!data.authorizationUrl) throw new Error('Gmail 연결 주소를 받지 못했습니다.');
+    return data.authorizationUrl;
 }
 
 export async function disconnectGmailRequest(input: {

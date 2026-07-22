@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { deleteDisclosureDocumentRequest, sendDisclosureEmailRequest } from './leadDisclosureWorkflowRequests.js';
+import {
+    deleteDisclosureDocumentRequest,
+    requestGmailAuthorizationUrl,
+    sendDisclosureEmailRequest
+} from './leadDisclosureWorkflowRequests.js';
 
 type FetchCall = {
     readonly url: string;
@@ -65,4 +69,32 @@ test('sendDisclosureEmailRequest includes customer phone in request body', async
         recipientPhone: '010-6447-4633',
         memo: '발송 테스트'
     });
+});
+
+test('requestGmailAuthorizationUrl requests an authenticated JSON handoff before leaving the app', async () => {
+    let requestUrl = '';
+    let requestInit: RequestInit | undefined;
+    globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
+        requestUrl = String(input);
+        requestInit = init;
+        return new Response(JSON.stringify({ authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=test' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+        });
+    };
+
+    const authorizationUrl = await requestGmailAuthorizationUrl({
+        requesterId: 'profile-1',
+        companyName: '테스트',
+        redirectPath: '/dashboard/franchise-leads?tab=disclosure'
+    });
+
+    const url = new URL(requestUrl, 'http://localhost:3000');
+    assert.equal(url.pathname, '/api/integrations/gmail/connect');
+    assert.equal(url.searchParams.get('requesterId'), 'profile-1');
+    assert.equal(url.searchParams.get('company'), '테스트');
+    assert.equal(url.searchParams.get('redirect'), '/dashboard/franchise-leads?tab=disclosure');
+    assert.equal(url.searchParams.get('response'), 'json');
+    assert.equal(new Headers(requestInit?.headers).get('accept'), 'application/json');
+    assert.equal(authorizationUrl, 'https://accounts.google.com/o/oauth2/v2/auth?state=test');
 });
