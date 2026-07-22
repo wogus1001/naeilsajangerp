@@ -95,6 +95,7 @@ supabase_franchise_schedule_durable_sync_migration.sql
 supabase_franchise_schedule_durable_sync_review_fix_migration.sql
 supabase_franchise_owner_portal_migration.sql
 supabase_franchise_owner_submission_sla_migration.sql
+supabase_franchise_owner_phase3_migration.sql
 supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_company_login_scope.sql
 supabase_franchise_owner_notice_attachments_migration.sql
@@ -112,6 +113,8 @@ supabase_realty_import_migration.sql
 그 다음 `supabase_franchise_schedule_durable_sync_migration.sql`을 적용한다. 원천 일정과 수신자 알림을 한 트랜잭션에서 갱신하고, 일시 실패 작업을 재시도 큐에 보관하며, 매일 KST 자정에 지난 일정을 `지연`으로 재평가한다. 사용자 확인 기준 대상 DB에 적용 완료됐다. 이어서 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 적용한다. 이 보완 파일은 최신 payload를 먼저 큐에 기록하고 고유 lease로 실행 권한을 검증해 오래된 worker의 덮어쓰기를 막으며, 재시도 시 수신자 자격과 RPC 실행 권한을 다시 확인한다. 사용자 확인 기준 2026-07-20 대상 DB에 적용 완료됐다. **SQL 등록 완료 확인**.
 
 점주 문의의 24시간 본사 처리 SLA를 활성화하려면 위 내구성 리뷰 보완 후 `supabase_franchise_owner_submission_sla_migration.sql`을 적용한다. 이 보완은 문의의 현재 제출 시각을 `submitted_at`에 저장하고 기존 일반·시설 문의 일정의 `due_at`도 일괄 보정한다. 과거 반려 후 재제출은 기존 `updated_at`을 제출 시각으로 복원하고, 이전 날짜 기준 판정으로 너무 일찍 지연된 일정과 알림도 정확한 상태·마감으로 되돌린다. migration은 실행 중 worker와 동일한 source advisory lock을 먼저 획득한 뒤 제출 원본을 기준으로 일정과 대기·처리·실패 큐 payload를 보정하고 lease를 교체한다. 따라서 일정이 아직 생성되지 않은 큐와 이미 lease를 확인한 worker도 오래된 마감으로 다시 덮어쓸 수 없다. 본사 KPI는 회사별 DB 집계 함수로 계산하며, Supabase Cron의 `franchise-schedule-hourly-lateness` 작업은 매시간 상태를 재평가하되 새로 지연된 일정의 알림만 다시 활성화한다. 사용자 확인 기준 대상 DB에 적용 완료됐다. **SQL 등록 완료 확인**.
+
+점주 포털 업무 자동화 3단계 통합 기능은 위 SLA migration 다음 `supabase_franchise_owner_phase3_migration.sql`을 적용한다. 이 파일은 체크리스트·자료 수령 리마인드, 자료 버전·열람 이력, 정산 요청·증빙 제출, 파일 삭제 outbox와 재처리 RPC를 한 번에 추가한다. 증빙과 자료 파일은 공개 bucket을 사용하지 않고 private bucket `franchise-owner-private`의 회사·운영점 범위 경로와 signed URL로만 접근한다. 요청·발송·파일 업로드는 idempotency key와 파일 SHA-256을 사용하고, 정산 저장은 PostgreSQL `updated_at` 원문 토큰을 비교한다. 동일 리마인드 요청 재시도는 현재 계정을 다시 계산하지 않고 최초 발송 결과를 반환하며, 게시 후 보관된 자료에 연결된 기존 리마인드도 수령 확인할 수 있다. 자료는 초안 수정·게시·보관·첨부 변경마다 잠금 버전을 올리고, 첨부 경로를 만든 운영점과 등록 시점의 운영점이 다르면 저장하지 않는다. 이미 버전 스냅샷에 포함된 첨부는 현재 자료에서 제거해도 과거 파일을 삭제하지 않는다. 정산 일정은 cron이 전체 제출 건을 페이지 순회하면서 누락되거나 상태가 달라진 건만 재동기화한다. migration은 재실행해도 기존 수령 이력과 불변 버전 스냅샷을 삭제하거나 현재 버전으로 덮어쓰지 않아야 한다. dev와 main Supabase는 별도 환경이므로 각각 SQL 적용, schema cache reload, bucket 정책, 본사·점주 실계정 교차 접근 차단을 확인한다. **SQL 등록 필요**.
 
 ## Franchise Supervision Setup
 

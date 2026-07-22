@@ -21,6 +21,20 @@ test('parseGmailOAuthCallbackState accepts the exact state issued at connect tim
     );
 });
 
+test('parseGmailOAuthCallbackState preserves the popup completion contract', () => {
+    const popupInput = {
+        ...input,
+        completionMode: 'popup' as const,
+        openerOrigin: 'https://www.fcerp.co.kr'
+    };
+    const encodedState = encodeGmailOAuthState(popupInput);
+
+    assert.deepEqual(
+        parseGmailOAuthCallbackState(encodedState, encodedState, popupInput.nonce),
+        popupInput
+    );
+});
+
 test('parseGmailOAuthCallbackState rejects a state whose requester was changed after issuance', () => {
     const issuedState = encodeGmailOAuthState(input);
     const changedState = encodeGmailOAuthState({

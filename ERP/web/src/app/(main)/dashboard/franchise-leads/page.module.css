@@ -5038,10 +5038,12 @@
 }
 
 .ownerPortalViewTabs {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
     gap: 8px;
     min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
 }
 
 .ownerPortalViewTab,
@@ -5059,6 +5061,12 @@
     font-size: 13px;
     font-weight: 850;
     cursor: pointer;
+}
+
+.ownerPortalViewTab,
+.ownerPortalViewTabActive {
+    min-width: 132px;
+    flex: 1 0 132px;
 }
 
 .ownerPortalViewTab small,
@@ -6151,6 +6159,13 @@
     margin-top: 10px;
 }
 
+.ownerPortalFileGroup {
+    display: inline-flex;
+    min-width: 0;
+    align-items: stretch;
+    gap: 4px;
+}
+
 .ownerPortalFileLink,
 .ownerPortalFileFallback {
     display: inline-flex;
@@ -6182,6 +6197,314 @@
 .ownerPortalFileLink span {
     overflow: hidden;
     max-width: 180px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPortalFileDelete {
+    display: inline-grid;
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    place-items: center;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #dc2626;
+    cursor: pointer;
+}
+
+@media (max-width: 720px) {
+    .ownerPortalFileDelete {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+.ownerPortalFileDelete:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.ownerPhase3Summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px 12px 0;
+}
+
+.ownerPhase3Summary div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px;
+}
+
+.ownerPhase3Summary span,
+.ownerPhase3Item span,
+.ownerPhase3Item small,
+.ownerPhase3CompactList span {
+    color: #6b7684;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ownerPhase3Summary strong {
+    color: #191f28;
+    font-size: 20px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.ownerPhase3Form {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.ownerPhase3Form label,
+.ownerPhase3ReviewNote {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ownerPhase3Form input,
+.ownerPhase3Form select,
+.ownerPhase3ReviewNote textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #191f28;
+    padding: 0 11px;
+    font: inherit;
+    outline: none;
+}
+
+.ownerPhase3Form input:focus,
+.ownerPhase3Form select:focus,
+.ownerPhase3ReviewNote textarea:focus,
+.ownerPortalTextarea:focus {
+    border-color: #3182f6;
+    box-shadow: 0 0 0 3px rgb(49 130 246 / 12%);
+}
+
+.ownerPhase3FormRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ownerPhase3Check {
+    display: flex !important;
+    min-height: 40px;
+    align-items: center;
+    align-self: end;
+    gap: 8px !important;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 0 11px;
+}
+
+.ownerPhase3Check input {
+    width: 16px;
+    min-height: 16px;
+    margin: 0;
+}
+
+.ownerPhase3FileButton {
+    display: inline-flex !important;
+    min-height: 40px;
+    width: fit-content;
+    align-items: center;
+    justify-content: center;
+    gap: 7px !important;
+    border: 1px dashed #8ab8ff;
+    border-radius: 8px;
+    background: #f8fbff;
+    color: #1b64da !important;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.ownerPhase3FileButton input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.ownerPhase3SelectedFiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ownerPhase3SelectedFiles span {
+    overflow: hidden;
+    max-width: 100%;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #4e5968;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ownerPhase3List {
+    display: grid;
+    gap: 10px;
+    max-height: 720px;
+    overflow: auto;
+    padding: 12px;
+}
+
+.ownerPhase3Item {
+    display: grid;
+    gap: 9px;
+    min-width: 0;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.ownerPhase3ItemHeader {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ownerPhase3ItemHeader > div {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.ownerPhase3ItemHeader strong {
+    overflow-wrap: anywhere;
+    color: #191f28;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.ownerPhase3Item p {
+    margin: 0;
+    color: #4e5968;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.ownerPhase3Meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
+.ownerPhase3Amount {
+    color: #191f28;
+    font-size: 20px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.ownerPhase3Actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.ownerPhase3Actions button,
+.ownerPhase3CompactList button {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 0 11px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.ownerPhase3Actions button:first-child {
+    border-color: #bfdbfe;
+    color: #1b64da;
+}
+
+.ownerPhase3Actions button:disabled,
+.ownerPhase3CompactList button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ownerPhase3ReviewNote {
+    margin-top: 2px;
+}
+
+.ownerPhase3ReviewNote textarea {
+    min-height: 72px;
+    resize: vertical;
+    padding: 9px 10px;
+    line-height: 1.5;
+}
+
+.ownerPhase3CompactList {
+    display: grid;
+    gap: 8px;
+    border-top: 1px solid #e5e8eb;
+    padding: 12px;
+}
+
+.ownerPhase3CompactList article {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 10px;
+}
+
+.ownerPhase3CompactList article > div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.ownerPhase3CompactList strong {
+    overflow: hidden;
+    color: #191f28;
+    font-size: 12px;
+    font-weight: 850;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -11373,6 +11696,26 @@
     .ownerPortalViewTab,
     .ownerPortalViewTabActive {
         min-height: 52px;
+        min-width: 148px;
+        flex-basis: 148px;
+    }
+
+    .ownerPhase3Summary,
+    .ownerPhase3FormRow {
+        grid-template-columns: 1fr;
+    }
+
+    .ownerPhase3ItemHeader,
+    .ownerPhase3CompactList article {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ownerPhase3Actions,
+    .ownerPhase3Actions button,
+    .ownerPhase3CompactList button,
+    .ownerPhase3FileButton {
+        width: 100%;
     }
 
     .ownerPortalInlineTabs {

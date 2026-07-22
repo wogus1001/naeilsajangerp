@@ -95,6 +95,7 @@ test('requestGmailAuthorizationUrl requests an authenticated JSON handoff before
     assert.equal(url.searchParams.get('company'), '테스트');
     assert.equal(url.searchParams.get('redirect'), '/dashboard/franchise-leads?tab=disclosure');
     assert.equal(url.searchParams.get('response'), 'json');
+    assert.equal(url.searchParams.get('flow'), 'popup');
     assert.equal(new Headers(requestInit?.headers).get('accept'), 'application/json');
     assert.equal(authorizationUrl, 'https://accounts.google.com/o/oauth2/v2/auth?state=test');
 });

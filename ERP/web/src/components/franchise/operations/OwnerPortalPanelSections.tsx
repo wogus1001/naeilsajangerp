@@ -89,7 +89,7 @@ export type OwnerChecklistSetting = {
     readonly issues?: readonly OwnerPortalChecklistIssue[];
 };
 
-export type OwnerPortalView = 'accounts' | 'notices' | 'checklists' | 'submissions';
+export type OwnerPortalView = 'accounts' | 'notices' | 'checklists' | 'submissions' | 'reminders' | 'content' | 'settlements';
 
 export const OWNER_PORTAL_VIEWS: readonly {
     readonly key: OwnerPortalView;
@@ -98,6 +98,9 @@ export const OWNER_PORTAL_VIEWS: readonly {
 }[] = [
     { key: 'notices', label: '공지/공문', description: '운영점 점주에게 공지를 발행합니다.' },
     { key: 'checklists', label: '체크리스트', description: '점주 운영 체크리스트를 세팅합니다.' },
+    { key: 'reminders', label: '리마인더', description: '미확인 업무와 자료 확인을 재안내합니다.' },
+    { key: 'content', label: '자료실', description: '교육·매뉴얼·공문 자료를 배포합니다.' },
+    { key: 'settlements', label: '정산/증빙', description: '정산 요청과 점주 제출을 검토합니다.' },
     { key: 'submissions', label: '제출 처리', description: '점주 요청과 제출 건을 처리합니다.' },
     { key: 'accounts', label: '점주 계정 설정', description: '발급, 재발급, 중지 상태를 관리합니다.' }
 ];
@@ -108,15 +111,21 @@ type ViewTabProps = {
     readonly checklistsCount: number;
     readonly noticesCount: number;
     readonly submissionsCount: number;
+    readonly remindersCount: number;
+    readonly contentCount: number;
+    readonly settlementsCount: number;
     readonly onChange: (view: OwnerPortalView) => void;
 };
 
-export function OwnerPortalViewTabs({ activeView, accountsCount, checklistsCount, noticesCount, submissionsCount, onChange }: ViewTabProps) {
+export function OwnerPortalViewTabs({ activeView, accountsCount, checklistsCount, noticesCount, submissionsCount, remindersCount, contentCount, settlementsCount, onChange }: ViewTabProps) {
     const countByView: Record<OwnerPortalView, string> = {
         accounts: `${accountsCount}건`,
         checklists: `${checklistsCount}건`,
         notices: `${noticesCount}건`,
-        submissions: `${submissionsCount}건`
+        submissions: `${submissionsCount}건`,
+        reminders: `${remindersCount}건`,
+        content: `${contentCount}건`,
+        settlements: `${settlementsCount}건`
     };
 
     return (
