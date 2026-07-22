@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -43,4 +44,16 @@ test('settlement review transitions reject terminal-state rewrites', () => {
     assert.equal(canTransitionOwnerSettlementStatus('rejected', 'submitted'), true);
     assert.equal(canTransitionOwnerSettlementStatus('confirmed', 'rejected'), false);
     assert.equal(canTransitionOwnerSettlementStatus('draft', 'confirmed'), false);
+});
+
+test('settlement RLS limits direct staff reads to operational managers', () => {
+    const migration = readFileSync(new URL('../../supabase_franchise_owner_phase3_migration.sql', import.meta.url), 'utf8');
+    for (const table of [
+        'franchise_owner_settlement_requests',
+        'franchise_owner_settlement_submissions',
+        'franchise_owner_settlement_files'
+    ]) {
+        assert.match(migration, new RegExp(`'${table}'`));
+    }
+    assert.match(migration, /p\.role in \(''manager'', ''sub_manager''\)/);
 });

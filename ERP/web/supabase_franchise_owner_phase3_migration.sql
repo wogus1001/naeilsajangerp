@@ -247,6 +247,24 @@ begin
   end loop;
 end $$;
 
+do $$
+declare
+  target_table text;
+begin
+  foreach target_table in array array[
+    'franchise_owner_settlement_requests',
+    'franchise_owner_settlement_submissions',
+    'franchise_owner_settlement_files'
+  ]
+  loop
+    execute format('drop policy if exists %I on public.%I', target_table || '_staff_select', target_table);
+    execute format(
+      'create policy %I on public.%I for select to authenticated using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.status = ''active'' and (p.role = ''admin'' or (p.company_id = %I.company_id and p.role in (''manager'', ''sub_manager'')))))',
+      target_table || '_staff_select', target_table, target_table
+    );
+  end loop;
+end $$;
+
 notify pgrst, 'reload schema';
 
 commit;
