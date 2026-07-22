@@ -1473,3 +1473,13 @@
 - 브라우저 QA: 로컬 로그인 세션에서 실제 제출 집계와 화면 KPI가 일치함을 확인했다. 25시간 경과 시설 문의 fixture에서는 처리 필요 1건, 24시간 초과 1건, `처리 기한 초과` 배지와 처리 버튼이 표시됐다. 390x844 화면의 가로 넘침은 0px였다.
 - 일정 연결 QA: 가맹운영 일정관리에서 `점주 시설 문의` 원천 일정과 지연 상태를 표시하고, `업무 열기`가 `/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=...`로 이동함을 확인했다. 점포개발 업무 일정 경로로 이동하지 않는다.
 - 제한 사항: 적용 DB 표본에는 현재 처리 대기 중인 일반·시설 문의가 없어, 실제 대기 행을 대상으로 한 시간당 maintenance 실행 결과는 읽기 전용 QA에서 재현하지 않았다. 신규 운영 데이터를 만들지 않고 RPC·일정 정합성 및 브라우저 fixture로 대체 검증했다.
+
+# 2026-07-22 정보공개서 Gmail OAuth 연결 회귀 수정
+
+- 재현: 로그인된 정보공개서 발송 화면에서 `Gmail 연결`을 누르면 URL에 `requesterId`가 있어도 `/api/integrations/gmail/connect`가 401 `requesterId is required`를 반환했다.
+- 원인: 브라우저 전체 이동은 일반 Gmail 상태·해제·발송 요청과 달리 Supabase bearer 인증 헤더를 전달할 수 없었다. 서버의 `getRequesterProfile()`은 query의 `requesterId`를 인증값이 아니라 로그인 사용자 일치 확인값으로만 사용한다.
+- 수정: 화면이 `getApiAuthHeaders()`를 포함한 same-origin 요청으로 Google 승인 URL을 먼저 받고, 서버가 nonce 쿠키를 설정한 응답을 완료한 뒤 Google OAuth 화면으로 이동한다. 연결 준비 실패는 원시 JSON 페이지 대신 기존 화면 오류 영역에 표시한다.
+- 회귀 테스트: 인증된 JSON handoff 요청이 `requesterId`, 회사, 복귀 경로, `response=json`, JSON Accept 헤더를 포함하고 Google 승인 URL을 반환하는지 검증한다. 실패 테스트를 먼저 확인한 뒤 구현 후 관련 테스트 3건을 통과했다.
+- 자동 검증: `npx tsx --test src/components/franchise/leadDisclosureWorkflowRequests.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build에는 기존 workspace root와 오래된 브라우저 데이터 경고만 남았다.
+- 실계정 QA: 분리 서버 `localhost:3017`에서 최초 Google `redirect_uri_mismatch`를 확인하고 정확한 callback URI를 OAuth 클라이언트에 등록했다. 재시도 후 사용자가 Gmail 로컬 연결 완료를 확인했다. 운영 callback `https://www.fcerp.co.kr/api/integrations/gmail/callback` 등록도 확인했다.
+- 기능 커밋: `60ee429`. 신규 SQL 없음. 공개 데모 흐름 영향 없음.
