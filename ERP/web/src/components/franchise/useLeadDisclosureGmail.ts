@@ -2,6 +2,7 @@ import React from 'react';
 import {
     disconnectGmailRequest,
     fetchGmailConnectionStatus,
+    requestGmailAuthorizationUrl,
     sendDisclosureEmailRequest,
     type GmailConnectionStatus
 } from './leadDisclosureWorkflowRequests';
@@ -72,15 +73,21 @@ export function useLeadDisclosureGmail({
         setErrorMessage(oauthMessage.message);
     }, [setErrorMessage, setMessage]);
 
-    const connectGmail = React.useCallback(() => {
+    const connectGmail = React.useCallback(async () => {
         if (!userId || typeof window === 'undefined') return;
-        const params = new URLSearchParams({
-            requesterId: userId,
-            redirect: `${window.location.pathname}${window.location.search}`
-        });
-        if (companyName) params.set('company', companyName);
-        window.location.href = `/api/integrations/gmail/connect?${params.toString()}`;
-    }, [companyName, userId]);
+        setMessage('');
+        setErrorMessage('');
+        try {
+            const authorizationUrl = await requestGmailAuthorizationUrl({
+                requesterId: userId,
+                companyName,
+                redirectPath: `${window.location.pathname}${window.location.search}`
+            });
+            window.location.assign(authorizationUrl);
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : 'Gmail 연결을 시작하지 못했습니다.');
+        }
+    }, [companyName, setErrorMessage, setMessage, userId]);
 
     const disconnectGmail = async () => {
         setMessage('');

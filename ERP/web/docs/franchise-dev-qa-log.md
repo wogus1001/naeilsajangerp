@@ -1486,3 +1486,13 @@
 - 실행 가설: (1) migration 재실행 또는 현재 첨부 삭제가 기존 receipt/version 파일을 훼손할 가능성은 one-time backfill flag, parent delete 제한과 snapshot 참조 검사로 차단했다. (2) 동시 리마인드·정산 요청과 정산 저장이 중복 또는 last-write-wins가 될 가능성은 요청 ledger 잠금, 대상 운영점 fingerprint와 PostgreSQL `updated_at` 원문 비교로 차단했다. (3) 브라우저가 upload 응답 전에 종료되거나 같은 키에 다른 파일을 재사용할 가능성은 SHA-256 reservation, 비덮어쓰기 업로드, 사후 reconciliation, deletion outbox와 stale cleanup RPC로 회수·거부 경로를 만들었다.
 - 제한 사항: 로컬 Docker/Postgres가 없어 `supabase db lint --local`은 연결 단계에서 실행하지 못했다. 신규 migration은 아직 Supabase에 적용하지 않았으므로 SQL 파싱·RLS·private bucket·signed URL의 실제 DB 검증과 본사/점주 실계정 1440px·390px 완료 흐름은 dev 적용 후 게이트 D에서 진행한다.
 - SQL 상태: `supabase_franchise_owner_submission_sla_migration.sql` 다음 `supabase_franchise_owner_phase3_migration.sql`을 dev DB에 적용하고 schema cache를 갱신해야 한다. **SQL 등록 필요**.
+
+# 2026-07-22 정보공개서 Gmail OAuth 연결 회귀 수정
+
+- 재현: 로그인된 정보공개서 발송 화면에서 `Gmail 연결`을 누르면 URL에 `requesterId`가 있어도 `/api/integrations/gmail/connect`가 401 `requesterId is required`를 반환했다.
+- 원인: 브라우저 전체 이동은 일반 Gmail 상태·해제·발송 요청과 달리 Supabase bearer 인증 헤더를 전달할 수 없었다. 서버의 `getRequesterProfile()`은 query의 `requesterId`를 인증값이 아니라 로그인 사용자 일치 확인값으로만 사용한다.
+- 수정: 화면이 `getApiAuthHeaders()`를 포함한 same-origin 요청으로 Google 승인 URL을 먼저 받고, 서버가 nonce 쿠키를 설정한 응답을 완료한 뒤 Google OAuth 화면으로 이동한다. 연결 준비 실패는 원시 JSON 페이지 대신 기존 화면 오류 영역에 표시한다.
+- 회귀 테스트: 인증된 JSON handoff 요청이 `requesterId`, 회사, 복귀 경로, `response=json`, JSON Accept 헤더를 포함하고 Google 승인 URL을 반환하는지 검증한다. 실패 테스트를 먼저 확인한 뒤 구현 후 관련 테스트 3건을 통과했다.
+- 자동 검증: `npx tsx --test src/components/franchise/leadDisclosureWorkflowRequests.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build에는 기존 workspace root와 오래된 브라우저 데이터 경고만 남았다.
+- 실계정 QA: 분리 서버 `localhost:3017`에서 최초 Google `redirect_uri_mismatch`를 확인하고 정확한 callback URI를 OAuth 클라이언트에 등록했다. 재시도 후 사용자가 Gmail 로컬 연결 완료를 확인했다. 운영 callback `https://www.fcerp.co.kr/api/integrations/gmail/callback` 등록도 확인했다.
+- 기능 커밋: `60ee429`. 신규 SQL 없음. 공개 데모 흐름 영향 없음.
