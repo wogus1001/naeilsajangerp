@@ -14,6 +14,10 @@ import {
     fetchGmailUserEmail,
     getGmailRedirectUriFromRequest
 } from '@/lib/gmail-provider';
+import {
+    buildGmailOAuthResultUrl,
+    type GmailOAuthCompletionMode
+} from '@/lib/gmail-oauth-flow';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +27,8 @@ type GmailOAuthState = {
     readonly requesterId?: string;
     readonly companyId?: string;
     readonly redirectPath?: string;
+    readonly completionMode?: GmailOAuthCompletionMode;
+    readonly openerOrigin?: string;
 };
 
 type ExistingConnection = {
@@ -42,11 +48,26 @@ function decodeState(value: string | null): GmailOAuthState | null {
     }
 }
 
-function buildRedirectUrl(request: Request, path: string | undefined, params: Record<string, string>) {
-    const safePath = path?.startsWith('/') ? path : '/dashboard/franchise-leads';
-    const url = new URL(safePath, getAppUrl(request));
-    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-    return url;
+function getResultAppUrl(request: Request, state: GmailOAuthState | null): string {
+    if (state?.completionMode !== 'popup' || !state.openerOrigin) return getAppUrl(request);
+    try {
+        const openerUrl = new URL(state.openerOrigin);
+        if (openerUrl.protocol === 'https:' || openerUrl.hostname === 'localhost' || openerUrl.hostname === '127.0.0.1') {
+            return openerUrl.origin;
+        }
+    } catch {
+        return getAppUrl(request);
+    }
+    return getAppUrl(request);
+}
+
+function buildResultResponse(request: Request, state: GmailOAuthState | null, params: Record<string, string>) {
+    return NextResponse.redirect(buildGmailOAuthResultUrl({
+        appUrl: getResultAppUrl(request, state),
+        completionMode: state?.completionMode === 'popup' ? 'popup' : 'redirect',
+        redirectPath: state?.redirectPath,
+        params
+    }));
 }
 
 export async function GET(request: Request) {
@@ -59,31 +80,31 @@ export async function GET(request: Request) {
     const nonceCookie = cookieStore.get('gmail_oauth_nonce')?.value;
 
     if (errorReason) {
-        return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'error',
             reason: errorReason
-        }));
+        });
     }
     if (!code || !state?.requesterId || !state.companyId || !state.nonce || state.nonce !== nonceCookie) {
-        return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'error',
             reason: 'invalid_state'
-        }));
+        });
     }
 
     try {
         const requesterProfile = await getRequesterProfile(supabaseAdmin, request, state.requesterId);
         if (!requesterProfile) {
-            return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
+            return buildResultResponse(request, state, {
                 gmail: 'error',
                 reason: 'auth_required'
-            }));
+            });
         }
         if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, state.companyId)) {
-            return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
+            return buildResultResponse(request, state, {
                 gmail: 'error',
                 reason: 'company_scope'
-            }));
+            });
         }
 
         const token = await exchangeGmailCode(code, getGmailRedirectUriFromRequest(request));
@@ -115,18 +136,18 @@ export async function GET(request: Request) {
         if (error) throw error;
 
         cookieStore.delete('gmail_oauth_nonce');
-        return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'connected',
             email: gmailEmail
-        }));
+        });
     } catch (error) {
         console.error('Gmail OAuth callback error:', error);
         const reason = error instanceof GmailIntegrationError || error instanceof Error
             ? error.message.slice(0, 80)
             : 'callback_failed';
-        return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'error',
             reason
-        }));
+        });
     }
 }

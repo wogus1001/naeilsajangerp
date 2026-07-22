@@ -47,7 +47,9 @@ export async function GET(request: Request) {
         nonce,
         requesterId: requesterProfile.id,
         companyId,
-        redirectPath: redirectPath.startsWith('/') ? redirectPath : '/dashboard/franchise-leads'
+        redirectPath: redirectPath.startsWith('/') ? redirectPath : '/dashboard/franchise-leads',
+        completionMode: searchParams.get('flow') === 'popup' ? 'popup' : 'redirect',
+        openerOrigin: new URL(request.url).origin
     });
 
     const cookieStore = await cookies();

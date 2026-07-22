@@ -7,6 +7,10 @@ import {
     type GmailConnectionStatus
 } from './leadDisclosureWorkflowRequests';
 import { getGmailOAuthResultMessage } from './leadDisclosureFormUtils';
+import {
+    parseGmailOAuthResultMessage,
+    type GmailOAuthResultMessage
+} from '@/lib/gmail-oauth-flow';
 
 type UseLeadDisclosureGmailInput = {
     readonly userId: string;
@@ -40,6 +44,7 @@ export function useLeadDisclosureGmail({
     const [recipientPhone, setRecipientPhone] = React.useState(leadContact.includes('@') ? '' : leadContact);
     const [gmailStatus, setGmailStatus] = React.useState<GmailConnectionStatus | null>(null);
     const [isSendingEmail, setIsSendingEmail] = React.useState(false);
+    const gmailPopupRef = React.useRef<Window | null>(null);
 
     const refreshGmailStatus = React.useCallback(async () => {
         if (!userId) {
@@ -60,6 +65,22 @@ export function useLeadDisclosureGmail({
         void refreshGmailStatus();
     }, [refreshGmailStatus]);
 
+    const applyOAuthResult = React.useCallback(async (result: GmailOAuthResultMessage) => {
+        const params = new URLSearchParams({ gmail: result.gmail });
+        if (result.email) params.set('email', result.email);
+        if (result.reason) params.set('reason', result.reason);
+        const oauthMessage = getGmailOAuthResultMessage(params);
+        if (!oauthMessage) return;
+        if (oauthMessage.type === 'success') {
+            await refreshGmailStatus();
+            setMessage(oauthMessage.message);
+            setErrorMessage('');
+            return;
+        }
+        setMessage('');
+        setErrorMessage(oauthMessage.message);
+    }, [refreshGmailStatus, setErrorMessage, setMessage]);
+
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
         const oauthMessage = getGmailOAuthResultMessage(new URLSearchParams(window.location.search));
@@ -73,18 +94,50 @@ export function useLeadDisclosureGmail({
         setErrorMessage(oauthMessage.message);
     }, [setErrorMessage, setMessage]);
 
+    React.useEffect(() => {
+        const handleOAuthMessage = (event: MessageEvent<unknown>) => {
+            if (event.origin !== window.location.origin) return;
+            if (gmailPopupRef.current && event.source !== gmailPopupRef.current) return;
+            const result = parseGmailOAuthResultMessage(event.data);
+            if (!result) return;
+            gmailPopupRef.current?.close();
+            gmailPopupRef.current = null;
+            void applyOAuthResult(result);
+        };
+        window.addEventListener('message', handleOAuthMessage);
+        return () => window.removeEventListener('message', handleOAuthMessage);
+    }, [applyOAuthResult]);
+
     const connectGmail = React.useCallback(async () => {
         if (!userId || typeof window === 'undefined') return;
         setMessage('');
         setErrorMessage('');
+        const popup = window.open(
+            '',
+            'fcerp-gmail-oauth',
+            'popup=yes,width=560,height=760,resizable=yes,scrollbars=yes'
+        );
+        if (!popup) {
+            setErrorMessage('Gmail 연결 팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 시도해주세요.');
+            return;
+        }
+        gmailPopupRef.current = popup;
         try {
             const authorizationUrl = await requestGmailAuthorizationUrl({
                 requesterId: userId,
                 companyName,
                 redirectPath: `${window.location.pathname}${window.location.search}`
             });
-            window.location.assign(authorizationUrl);
+            if (popup.closed) {
+                gmailPopupRef.current = null;
+                setErrorMessage('Gmail 연결 창이 닫혔습니다. 다시 연결해주세요.');
+                return;
+            }
+            popup.location.replace(authorizationUrl);
+            popup.focus();
         } catch (error) {
+            popup.close();
+            gmailPopupRef.current = null;
             setErrorMessage(error instanceof Error ? error.message : 'Gmail 연결을 시작하지 못했습니다.');
         }
     }, [companyName, setErrorMessage, setMessage, userId]);
