@@ -115,7 +115,7 @@ export async function GET(request: Request) {
                 continue;
             }
             const targetIds = targetOwnerAccountIdsForContent(item, companyScope.scope.companyId, targetAccounts);
-            receiptStatsByContentId.set(item.id, summarizeOwnerContentReceiptStats(item.id, targetIds, receipts));
+            receiptStatsByContentId.set(item.id, summarizeOwnerContentReceiptStats(item.id, item.version, targetIds, receipts));
         }
         return ok({
             items: items.map(item => ({
@@ -192,7 +192,7 @@ export async function PATCH(request: Request) {
         const body: unknown = await request.json();
         const contentId = readBodyText(body, 'contentId') || readBodyText(body, 'id');
         const action = parseOwnerContentAction(body);
-        if (!contentId || !action) return fail(400, 'VALIDATION_ERROR', '콘텐츠와 publish/archive 동작을 확인해주세요.');
+        if (!contentId || !action) return fail(400, 'VALIDATION_ERROR', '자료와 처리 동작을 다시 확인해주세요.');
         const companyScope = await resolveOwnerPortalCompanyScope(
             authResult.auth,
             readBodyText(body, 'companyId'),
@@ -208,6 +208,48 @@ export async function PATCH(request: Request) {
             .maybeSingle<OwnerContentItemRow>();
         if (existingResult.error) throw existingResult.error;
         if (!existingResult.data) return fail(404, 'NOT_FOUND', '콘텐츠를 찾을 수 없습니다.');
+        if (action === 'update') {
+            if (existingResult.data.status === 'archived') return fail(409, 'CONFLICT', '보관한 자료는 수정할 수 없습니다.');
+            const parsed = parseOwnerContentCreate(body);
+            if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
+            if (parsed.input.locationId) {
+                const locationResult = await fetchOwnerPortalLocation(
+                    authResult.auth.supabaseAdmin,
+                    companyScope.scope.companyId,
+                    parsed.input.locationId
+                );
+                if (!locationResult.ok) return locationResult.response;
+            }
+            const now = new Date().toISOString();
+            const nextVersion = existingResult.data.status === 'published'
+                ? existingResult.data.version + 1
+                : existingResult.data.version;
+            const updateResult = await authResult.auth.supabaseAdmin
+                .from('franchise_owner_content_items')
+                .update({
+                    body: parsed.input.body,
+                    category: parsed.input.category,
+                    content_type: parsed.input.contentType,
+                    due_at: parsed.input.dueAt,
+                    location_id: parsed.input.locationId,
+                    published_at: existingResult.data.status === 'published' ? now : existingResult.data.published_at,
+                    requires_acknowledgement: parsed.input.requiresAcknowledgement,
+                    summary: parsed.input.summary,
+                    title: parsed.input.title,
+                    updated_at: now,
+                    updated_by: authResult.auth.requester.id,
+                    version: nextVersion
+                })
+                .eq('id', existingResult.data.id)
+                .eq('company_id', companyScope.scope.companyId)
+                .eq('status', existingResult.data.status)
+                .eq('version', existingResult.data.version)
+                .select(CONTENT_SELECT)
+                .maybeSingle<OwnerContentItemRow>();
+            if (updateResult.error) throw updateResult.error;
+            if (!updateResult.data) return fail(409, 'CONFLICT', '다른 사용자가 자료를 수정했습니다. 새로고침 후 다시 시도해주세요.');
+            return ok({ item: updateResult.data });
+        }
         const nextStatus = action === 'publish' ? 'published' : 'archived';
         if (existingResult.data.status === nextStatus) return fail(409, 'CONFLICT', '콘텐츠가 이미 해당 상태입니다.');
         const now = new Date().toISOString();

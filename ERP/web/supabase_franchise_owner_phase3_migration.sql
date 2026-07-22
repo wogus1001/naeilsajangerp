@@ -84,13 +84,25 @@ create table if not exists public.franchise_owner_content_receipts (
   company_id uuid not null references public.companies(id) on delete cascade,
   location_id uuid not null references public.franchise_locations(id) on delete cascade,
   owner_account_id uuid not null references public.franchise_owner_accounts(id) on delete cascade,
-  acknowledged_at timestamptz not null default now(),
+  content_version integer not null default 1 check (content_version > 0),
+  viewed_at timestamptz,
+  acknowledged_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (content_id, owner_account_id)
+  unique (content_id, owner_account_id, content_version)
 );
 
+alter table public.franchise_owner_content_receipts
+  add column if not exists content_version integer not null default 1,
+  add column if not exists viewed_at timestamptz;
+alter table public.franchise_owner_content_receipts
+  alter column acknowledged_at drop not null;
+alter table public.franchise_owner_content_receipts
+  drop constraint if exists franchise_owner_content_receipts_content_id_owner_account_id_key;
+create unique index if not exists franchise_owner_content_receipts_version_unique
+  on public.franchise_owner_content_receipts(content_id, owner_account_id, content_version);
+
 create index if not exists franchise_owner_content_receipts_company_content_idx
-  on public.franchise_owner_content_receipts(company_id, content_id, owner_account_id);
+  on public.franchise_owner_content_receipts(company_id, content_id, content_version, owner_account_id);
 create index if not exists franchise_owner_content_receipts_owner_idx
   on public.franchise_owner_content_receipts(company_id, location_id, owner_account_id, acknowledged_at);
 

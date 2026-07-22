@@ -2,7 +2,7 @@ import { fail, ok } from '@/lib/api-response';
 import {
     canOwnerReadContent,
     isMissingOwnerContentSchemaError,
-    mergeOwnerContentAcknowledgedAt,
+    mergeOwnerContentReceipt,
     OWNER_CONTENT_SCHEMA_MESSAGE,
     OWNER_CONTENT_RECEIPT_ON_CONFLICT,
     OWNER_CONTENT_RECEIPT_SELECT,
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
             receipts = receiptResult.data || [];
         }
 
-        const itemsWithAcknowledgement = mergeOwnerContentAcknowledgedAt(items, receipts, context.account.id);
+        const itemsWithAcknowledgement = mergeOwnerContentReceipt(items, receipts, context.account.id);
         return ok({
             items: itemsWithAcknowledgement.map(item => ({
                 ...item,
@@ -109,8 +109,9 @@ export async function PATCH(request: Request) {
             || searchParams.get('contentId')?.trim()
             || searchParams.get('id')?.trim()
             || '';
-        if (!contentId || !parseOwnerContentReceiptAction(body)) {
-            return fail(400, 'VALIDATION_ERROR', '확인할 콘텐츠와 acknowledge 동작을 확인해주세요.');
+        const action = parseOwnerContentReceiptAction(body);
+        if (!contentId || !action) {
+            return fail(400, 'VALIDATION_ERROR', '확인할 자료와 확인 동작을 다시 확인해주세요.');
         }
 
         const contentResult = await supabaseAdmin
@@ -122,19 +123,23 @@ export async function PATCH(request: Request) {
             .or(`location_id.is.null,location_id.eq.${context.location.id}`)
             .maybeSingle<OwnerContentItemRow>();
         if (contentResult.error) throw contentResult.error;
-        if (!contentResult.data) return fail(404, 'NOT_FOUND', '확인할 콘텐츠를 찾을 수 없습니다.');
-        if (!contentResult.data.requires_acknowledgement) {
-            return fail(400, 'VALIDATION_ERROR', '이 콘텐츠는 확인 대상이 아닙니다.');
+        if (!contentResult.data) return fail(404, 'NOT_FOUND', '확인할 자료를 찾을 수 없습니다.');
+        if (action === 'acknowledge' && !contentResult.data.requires_acknowledgement) {
+            return fail(400, 'VALIDATION_ERROR', '이 자료는 수신 확인 대상이 아닙니다.');
         }
 
+        const now = new Date().toISOString();
         const receiptResult = await supabaseAdmin
             .from('franchise_owner_content_receipts')
             .upsert({
+                acknowledged_at: action === 'acknowledge' ? now : undefined,
                 company_id: context.account.company_id,
                 content_id: contentResult.data.id,
+                content_version: contentResult.data.version,
                 location_id: context.location.id,
-                owner_account_id: context.account.id
-            }, { onConflict: OWNER_CONTENT_RECEIPT_ON_CONFLICT, ignoreDuplicates: true })
+                owner_account_id: context.account.id,
+                viewed_at: now
+            }, { onConflict: OWNER_CONTENT_RECEIPT_ON_CONFLICT })
             .select(OWNER_CONTENT_RECEIPT_SELECT)
             .maybeSingle<OwnerContentReceiptRow>();
         if (receiptResult.error) throw receiptResult.error;
@@ -145,6 +150,7 @@ export async function PATCH(request: Request) {
                 .from('franchise_owner_content_receipts')
                 .select(OWNER_CONTENT_RECEIPT_SELECT)
                 .eq('content_id', contentResult.data.id)
+                .eq('content_version', contentResult.data.version)
                 .eq('company_id', context.account.company_id)
                 .eq('location_id', context.location.id)
                 .eq('owner_account_id', context.account.id)
@@ -154,18 +160,20 @@ export async function PATCH(request: Request) {
         }
         if (!receipt) return fail(409, 'CONFLICT', '콘텐츠 확인 상태를 확인하지 못했습니다.');
 
-        const reminderResult = await supabaseAdmin
-            .from('franchise_owner_reminders')
-            .update({ acknowledged_at: receipt.acknowledged_at })
-            .eq('company_id', context.account.company_id)
-            .eq('location_id', context.location.id)
-            .eq('owner_account_id', context.account.id)
-            .eq('source_type', 'content_item')
-            .eq('source_id', contentResult.data.id)
-            .is('acknowledged_at', null);
-        if (reminderResult.error) throw reminderResult.error;
+        if (action === 'acknowledge') {
+            const reminderResult = await supabaseAdmin
+                .from('franchise_owner_reminders')
+                .update({ acknowledged_at: receipt.acknowledged_at || now })
+                .eq('company_id', context.account.company_id)
+                .eq('location_id', context.location.id)
+                .eq('owner_account_id', context.account.id)
+                .eq('source_type', 'content_item')
+                .eq('source_id', contentResult.data.id)
+                .is('acknowledged_at', null);
+            if (reminderResult.error) throw reminderResult.error;
+        }
 
-        return ok({ receipt, acknowledged: true });
+        return ok({ receipt, acknowledged: Boolean(receipt.acknowledged_at), viewed: Boolean(receipt.viewed_at) });
     } catch (error) {
         if (isMissingOwnerContentSchemaError(error)) {
             return fail(424, 'VALIDATION_ERROR', OWNER_CONTENT_SCHEMA_MESSAGE);

@@ -6,9 +6,12 @@ import React from 'react';
 import type { OwnerNoticeAttachment, OwnerPortalChecklistIssue } from '@/lib/franchise-owner-portal';
 import {
     Bell,
+    BellRing,
     ClipboardCheck,
+    FolderOpen,
     Home,
     LogOut,
+    ReceiptText,
     Send,
     Store,
     Wrench
@@ -96,7 +99,7 @@ type OwnerPortalFrameProps = {
     readonly children: (data: OwnerDashboardData, reload: () => Promise<void>) => React.ReactNode;
 };
 
-type OwnerNavKey = 'dashboard' | 'store' | 'notices' | 'tasks' | 'requests' | 'submissions' | 'password';
+type OwnerNavKey = 'dashboard' | 'store' | 'notices' | 'reminders' | 'resources' | 'tasks' | 'requests' | 'settlements' | 'submissions' | 'password';
 
 const NAV_ITEMS: readonly {
     readonly key: OwnerNavKey;
@@ -107,8 +110,11 @@ const NAV_ITEMS: readonly {
     { key: 'dashboard', label: '홈', href: '/owner/dashboard', icon: Home },
     { key: 'store', label: '내 매장', href: '/owner/store', icon: Store },
     { key: 'notices', label: '공지/공문', href: '/owner/notices', icon: Bell },
+    { key: 'reminders', label: '리마인더', href: '/owner/reminders', icon: BellRing },
+    { key: 'resources', label: '자료실', href: '/owner/resources', icon: FolderOpen },
     { key: 'tasks', label: '운영 체크리스트', href: '/owner/opening-tasks', icon: ClipboardCheck },
     { key: 'requests', label: '시설 문의', href: '/owner/requests', icon: Wrench },
+    { key: 'settlements', label: '정산 제출', href: '/owner/settlements', icon: ReceiptText },
     { key: 'submissions', label: '제출 이력', href: '/owner/submissions', icon: Send }
 ];
 

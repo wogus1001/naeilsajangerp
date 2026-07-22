@@ -48,8 +48,8 @@ export type OwnerContentItemRow = {
     readonly updated_at: string;
 };
 
-export const OWNER_CONTENT_RECEIPT_SELECT = 'id, content_id, company_id, location_id, owner_account_id, acknowledged_at, created_at' as const;
-export const OWNER_CONTENT_RECEIPT_ON_CONFLICT = 'content_id,owner_account_id' as const;
+export const OWNER_CONTENT_RECEIPT_SELECT = 'id, content_id, company_id, location_id, owner_account_id, content_version, viewed_at, acknowledged_at, created_at' as const;
+export const OWNER_CONTENT_RECEIPT_ON_CONFLICT = 'content_id,owner_account_id,content_version' as const;
 
 export type OwnerContentReceiptRow = {
     readonly id: string;
@@ -57,7 +57,9 @@ export type OwnerContentReceiptRow = {
     readonly company_id: string;
     readonly location_id: string;
     readonly owner_account_id: string;
-    readonly acknowledged_at: string;
+    readonly content_version: number;
+    readonly viewed_at: string | null;
+    readonly acknowledged_at: string | null;
     readonly created_at: string;
 };
 
@@ -98,7 +100,7 @@ export type OwnerContentCreateInput = {
     readonly title: string;
 };
 
-export type OwnerContentPublishAction = 'archive' | 'publish';
+export type OwnerContentPublishAction = 'archive' | 'publish' | 'update';
 
 type OwnerContentFileInput = {
     readonly bytes: Uint8Array;
@@ -216,30 +218,33 @@ export function canOwnerReadContent(
         && (item.location_id === null || item.location_id === locationId);
 }
 
-export function parseOwnerContentReceiptAction(value: unknown): 'acknowledge' | null {
+export function parseOwnerContentReceiptAction(value: unknown): 'acknowledge' | 'view' | null {
     if (!isRecord(value)) return null;
     const action = cleanText(value.action || value.status).toLowerCase();
-    return action === 'acknowledge' ? 'acknowledge' : null;
+    if (action === 'acknowledge') return 'acknowledge';
+    return action === 'view' ? 'view' : null;
 }
 
-export function mergeOwnerContentAcknowledgedAt<
-    T extends Pick<OwnerContentItemRow, 'id' | 'requires_acknowledgement'>
+export function mergeOwnerContentReceipt<
+    T extends Pick<OwnerContentItemRow, 'id' | 'requires_acknowledgement' | 'version'>
 >(
     items: readonly T[],
-    receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'owner_account_id' | 'acknowledged_at'>[],
+    receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'owner_account_id' | 'content_version' | 'viewed_at' | 'acknowledged_at'>[],
     ownerAccountId: string
-): readonly (T & { readonly acknowledged_at: string | null })[] {
-    const acknowledgedAtByContentId = new Map(
+): readonly (T & { readonly viewed_at: string | null; readonly acknowledged_at: string | null })[] {
+    const receiptByContentVersion = new Map(
         receipts
             .filter(receipt => receipt.owner_account_id === ownerAccountId)
-            .map(receipt => [receipt.content_id, receipt.acknowledged_at] as const)
+            .map(receipt => [`${receipt.content_id}:${receipt.content_version}`, receipt] as const)
     );
-    return items.map(item => ({
-        ...item,
-        acknowledged_at: item.requires_acknowledgement
-            ? acknowledgedAtByContentId.get(item.id) || null
-            : null
-    }));
+    return items.map(item => {
+        const receipt = receiptByContentVersion.get(`${item.id}:${item.version}`);
+        return {
+            ...item,
+            viewed_at: receipt?.viewed_at || null,
+            acknowledged_at: item.requires_acknowledgement ? receipt?.acknowledged_at || null : null
+        };
+    });
 }
 
 export function targetOwnerAccountIdsForContent(
@@ -258,13 +263,15 @@ export function targetOwnerAccountIdsForContent(
 
 export function summarizeOwnerContentReceiptStats(
     contentId: string,
+    contentVersion: number,
     targetOwnerAccountIds: readonly string[],
-    receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'owner_account_id' | 'acknowledged_at'>[]
+    receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'content_version' | 'owner_account_id' | 'acknowledged_at'>[]
 ): OwnerContentReceiptStats {
     const targetIds = new Set(targetOwnerAccountIds);
     const acknowledgedIds = new Set(
         receipts
             .filter(receipt => receipt.content_id === contentId
+                && receipt.content_version === contentVersion
                 && targetIds.has(receipt.owner_account_id)
                 && Boolean(receipt.acknowledged_at))
             .map(receipt => receipt.owner_account_id)
@@ -281,15 +288,15 @@ export function summarizeOwnerContentReceiptStats(
 export function parseOwnerContentCreate(value: unknown):
     | { readonly ok: true; readonly input: OwnerContentCreateInput }
     | { readonly ok: false; readonly message: string } {
-    if (!isRecord(value)) return { ok: false, message: '콘텐츠 내용을 입력해주세요.' };
+    if (!isRecord(value)) return { ok: false, message: '자료 내용을 입력해주세요.' };
     const contentTypeRaw = cleanText(value.contentType || value.content_type);
-    if (!isContentType(contentTypeRaw)) return { ok: false, message: '콘텐츠 유형을 확인해주세요.' };
+    if (!isContentType(contentTypeRaw)) return { ok: false, message: '자료 유형을 확인해주세요.' };
     const title = cleanText(value.title);
-    if (!title) return { ok: false, message: '콘텐츠 제목을 입력해주세요.' };
+    if (!title) return { ok: false, message: '자료 제목을 입력해주세요.' };
     const locationId = cleanText(value.locationId || value.location_id) || null;
     if (locationId && !isOwnerPhase3Uuid(locationId)) return { ok: false, message: '운영점 정보를 확인해주세요.' };
     if (needsLocation(contentTypeRaw) && !locationId) {
-        return { ok: false, message: '이 콘텐츠 유형은 운영점을 선택해야 합니다.' };
+        return { ok: false, message: '시정 요청과 계약 서류는 운영점을 선택해야 합니다.' };
     }
     const dueAt = parseOptionalDate(value.dueAt || value.due_at);
     if (dueAt === undefined) return { ok: false, message: '마감 일시를 확인해주세요.' };
@@ -313,6 +320,7 @@ export function parseOwnerContentAction(value: unknown): OwnerContentPublishActi
     const action = cleanText(value.action || value.status).toLowerCase();
     if (action === 'publish' || action === 'published') return 'publish';
     if (action === 'archive' || action === 'archived') return 'archive';
+    if (action === 'update') return 'update';
     return null;
 }
 

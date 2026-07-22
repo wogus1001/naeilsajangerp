@@ -10,7 +10,7 @@ import {
     parseOwnerContentAction,
     parseOwnerContentCreate,
     parseOwnerContentReceiptAction,
-    mergeOwnerContentAcknowledgedAt,
+    mergeOwnerContentReceipt,
     summarizeOwnerContentReceiptStats,
     targetOwnerAccountIdsForContent,
     type OwnerContentReceiptRow,
@@ -41,7 +41,7 @@ test('content creation requires valid types and a location for location-only con
     assert.equal(globalResult.ok, true);
 
     const missingLocation = parseOwnerContentCreate({ contentType: 'corrective_action', title: '시정조치' });
-    assert.deepEqual(missingLocation, { ok: false, message: '이 콘텐츠 유형은 운영점을 선택해야 합니다.' });
+    assert.deepEqual(missingLocation, { ok: false, message: '시정 요청과 계약 서류는 운영점을 선택해야 합니다.' });
 
     const scopedResult = parseOwnerContentCreate({
         contentType: 'contract_document',
@@ -56,28 +56,31 @@ test('content creation requires valid types and a location for location-only con
 test('publish and archive actions reject unrelated status changes', () => {
     assert.equal(parseOwnerContentAction({ action: 'publish' }), 'publish');
     assert.equal(parseOwnerContentAction({ status: 'archived' }), 'archive');
+    assert.equal(parseOwnerContentAction({ action: 'update' }), 'update');
     assert.equal(parseOwnerContentAction({ action: 'draft' }), null);
 });
 
 test('owner content receipt action accepts acknowledgement only', () => {
     assert.equal(parseOwnerContentReceiptAction({ action: 'acknowledge' }), 'acknowledge');
+    assert.equal(parseOwnerContentReceiptAction({ action: 'view' }), 'view');
     assert.equal(parseOwnerContentReceiptAction({ status: 'acknowledged' }), null);
     assert.equal(parseOwnerContentReceiptAction({ action: 'archive' }), null);
 });
 
 test('owner content acknowledgement merge is current-owner and requirement scoped', () => {
     const items = [
-        { id: contentId, requires_acknowledgement: true },
-        { id: uniqueId, requires_acknowledgement: false }
+        { id: contentId, requires_acknowledgement: true, version: 2 },
+        { id: uniqueId, requires_acknowledgement: false, version: 1 }
     ] as const;
-    const receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'owner_account_id' | 'acknowledged_at'>[] = [
-        { content_id: contentId, owner_account_id: uniqueId, acknowledged_at: '2026-07-22T01:00:00.000Z' },
-        { content_id: contentId, owner_account_id: otherLocationId, acknowledged_at: '2026-07-22T02:00:00.000Z' }
+    const receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'owner_account_id' | 'content_version' | 'viewed_at' | 'acknowledged_at'>[] = [
+        { content_id: contentId, owner_account_id: uniqueId, content_version: 1, viewed_at: '2026-07-21T01:00:00.000Z', acknowledged_at: '2026-07-21T01:00:00.000Z' },
+        { content_id: contentId, owner_account_id: uniqueId, content_version: 2, viewed_at: '2026-07-22T00:30:00.000Z', acknowledged_at: '2026-07-22T01:00:00.000Z' },
+        { content_id: contentId, owner_account_id: otherLocationId, content_version: 2, viewed_at: '2026-07-22T02:00:00.000Z', acknowledged_at: '2026-07-22T02:00:00.000Z' }
     ];
 
-    assert.deepEqual(mergeOwnerContentAcknowledgedAt(items, receipts, uniqueId), [
-        { id: contentId, requires_acknowledgement: true, acknowledged_at: '2026-07-22T01:00:00.000Z' },
-        { id: uniqueId, requires_acknowledgement: false, acknowledged_at: null }
+    assert.deepEqual(mergeOwnerContentReceipt(items, receipts, uniqueId), [
+        { id: contentId, requires_acknowledgement: true, version: 2, viewed_at: '2026-07-22T00:30:00.000Z', acknowledged_at: '2026-07-22T01:00:00.000Z' },
+        { id: uniqueId, requires_acknowledgement: false, version: 1, viewed_at: null, acknowledged_at: null }
     ]);
 });
 
@@ -92,15 +95,15 @@ test('receipt stats target active owner accounts globally or by content location
         { id: suspendedOwnerId, company_id: companyId, location_id: locationId, status: 'suspended' },
         { id: otherCompanyOwnerId, company_id: otherCompanyId, location_id: locationId, status: 'active' }
     ] as const;
-    const receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'owner_account_id' | 'acknowledged_at'>[] = [
-        { content_id: contentId, owner_account_id: firstOwnerId, acknowledged_at: '2026-07-22T01:00:00.000Z' },
-        { content_id: contentId, owner_account_id: firstOwnerId, acknowledged_at: '2026-07-22T01:00:00.000Z' },
-        { content_id: contentId, owner_account_id: otherCompanyOwnerId, acknowledged_at: '2026-07-22T02:00:00.000Z' }
+    const receipts: readonly Pick<OwnerContentReceiptRow, 'content_id' | 'content_version' | 'owner_account_id' | 'acknowledged_at'>[] = [
+        { content_id: contentId, content_version: 1, owner_account_id: firstOwnerId, acknowledged_at: '2026-07-21T01:00:00.000Z' },
+        { content_id: contentId, content_version: 2, owner_account_id: firstOwnerId, acknowledged_at: '2026-07-22T01:00:00.000Z' },
+        { content_id: contentId, content_version: 2, owner_account_id: otherCompanyOwnerId, acknowledged_at: '2026-07-22T02:00:00.000Z' }
     ];
 
     const globalTargets = targetOwnerAccountIdsForContent({ location_id: null }, companyId, accounts);
     assert.deepEqual(globalTargets, [firstOwnerId, secondOwnerId]);
-    assert.deepEqual(summarizeOwnerContentReceiptStats(contentId, globalTargets, receipts), {
+    assert.deepEqual(summarizeOwnerContentReceiptStats(contentId, 2, globalTargets, receipts), {
         targetCount: 2,
         acknowledgedCount: 1,
         unacknowledgedCount: 1
@@ -108,13 +111,13 @@ test('receipt stats target active owner accounts globally or by content location
 
     const locationTargets = targetOwnerAccountIdsForContent({ location_id: locationId }, companyId, accounts);
     assert.deepEqual(locationTargets, [firstOwnerId]);
-    assert.deepEqual(summarizeOwnerContentReceiptStats(contentId, locationTargets, receipts), {
+    assert.deepEqual(summarizeOwnerContentReceiptStats(contentId, 2, locationTargets, receipts), {
         targetCount: 1,
         acknowledgedCount: 1,
         unacknowledgedCount: 0
     });
 
-    assert.deepEqual(summarizeOwnerContentReceiptStats(uniqueId, globalTargets, receipts), {
+    assert.deepEqual(summarizeOwnerContentReceiptStats(uniqueId, 1, globalTargets, receipts), {
         targetCount: 2,
         acknowledgedCount: 0,
         unacknowledgedCount: 2
