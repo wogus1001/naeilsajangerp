@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { extractBearerToken, getRequesterProfile, isActiveRequester, resolveUserUuid } from './api-auth.js';
+import {
+    extractBearerToken,
+    getActiveRequesterProfileById,
+    getRequesterProfile,
+    isActiveRequester,
+    resolveUserUuid
+} from './api-auth.js';
 
 test('extractBearerToken reads the bearer authorization token first', () => {
     const request = new Request('https://example.test/api', {
@@ -57,4 +63,32 @@ test('isActiveRequester rejects deactivated and status-less profiles', () => {
     assert.equal(isActiveRequester({ id: 'inactive', role: 'admin', company_id: 'company', status: 'inactive' }), false);
     assert.equal(isActiveRequester({ id: 'legacy', role: 'admin', company_id: 'company' }), false);
     assert.equal(isActiveRequester(null), false);
+});
+
+test('getActiveRequesterProfileById resolves a callback requester without a bearer request', async () => {
+    const query = {
+        select: () => query,
+        eq: () => query,
+        maybeSingle: async () => ({
+            data: {
+                id: 'requester-123',
+                role: 'staff',
+                company_id: 'company-123',
+                status: 'active'
+            }
+        })
+    };
+    const supabase = {
+        from: () => query
+    } as unknown as Parameters<typeof getActiveRequesterProfileById>[0];
+
+    assert.deepEqual(
+        await getActiveRequesterProfileById(supabase, 'requester-123'),
+        {
+            id: 'requester-123',
+            role: 'staff',
+            company_id: 'company-123',
+            status: 'active'
+        }
+    );
 });
