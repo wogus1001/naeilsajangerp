@@ -186,6 +186,7 @@ export function getRequestedOwnerTaskIds(submissions: readonly OwnerSubmission[]
 export function OwnerPortalFrame({ activeKey, children }: OwnerPortalFrameProps) {
     const router = useRouter();
     const pathname = usePathname();
+    const activeNavLinkRef = React.useRef<HTMLAnchorElement | null>(null);
     const [data, setData] = React.useState<OwnerDashboardData | null>(null);
     const [error, setError] = React.useState('');
 
@@ -206,6 +207,12 @@ export function OwnerPortalFrame({ activeKey, children }: OwnerPortalFrameProps)
     React.useEffect(() => {
         void loadDashboard();
     }, [loadDashboard]);
+
+    React.useEffect(() => {
+        if (window.matchMedia('(max-width: 720px)').matches) {
+            activeNavLinkRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+    }, [activeKey, data?.location.id, pathname]);
 
     const logout = async () => {
         await fetch('/api/owner/auth/logout', { method: 'POST' });
@@ -242,6 +249,8 @@ export function OwnerPortalFrame({ activeKey, children }: OwnerPortalFrameProps)
                                     className={`${styles.ownerNavLink} ${isActive ? styles.ownerNavLinkActive : ''}`}
                                     href={item.href}
                                     key={item.key}
+                                    ref={isActive ? activeNavLinkRef : undefined}
+                                    aria-current={isActive ? 'page' : undefined}
                                 >
                                     <Icon size={16} />
                                     {item.label}

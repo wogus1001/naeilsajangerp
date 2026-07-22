@@ -556,6 +556,7 @@
 
 .ownerMain {
     min-width: 0;
+    width: 100%;
 }
 
 .loginWrap {
@@ -1449,11 +1450,14 @@
 
     .portalLayout {
         display: block;
+        width: 100%;
     }
 
     .ownerSidebar {
         position: static;
         height: auto;
+        min-width: 0;
+        width: 100%;
         border-right: 0;
         border-bottom: 1px solid #e5e8eb;
         padding: 12px;
@@ -1465,13 +1469,29 @@
 
     .ownerNav {
         display: flex;
+        min-width: 0;
+        max-width: 100%;
+        gap: 6px;
         overflow-x: auto;
-        padding-bottom: 2px;
+        overflow-y: hidden;
+        overscroll-behavior-inline: contain;
+        padding: 0 2px 4px;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+    }
+
+    .ownerNav::-webkit-scrollbar {
+        display: none;
     }
 
     .ownerNavLink {
         flex: 0 0 auto;
+        min-height: 44px;
+        gap: 8px;
+        padding: 0 12px;
+        scroll-snap-align: start;
         white-space: nowrap;
+        font-size: 13px;
     }
 
     .grid,
@@ -1514,6 +1534,9 @@
     }
 
     .content {
+        width: 100%;
+        max-width: none;
+        margin: 0;
         padding: 14px;
     }
 }
