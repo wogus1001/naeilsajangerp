@@ -3,12 +3,12 @@ import {
     isOwnerPhase3StoragePath,
     OWNER_PHASE3_STORAGE,
     type OwnerSettlementStatus
-} from './franchise-owner-phase3.js';
+} from './franchise-owner-phase3';
 import {
     isAcceptedOwnerNoticeAttachmentBytes,
     isAcceptedOwnerNoticeAttachmentFileName,
     isAcceptedOwnerNoticeAttachmentMime
-} from './franchise-owner-portal-attachments.js';
+} from './franchise-owner-portal-attachments';
 
 export const OWNER_SETTLEMENT_SCHEMA_MESSAGE = '점주 포털 3단계 정산·증빙 SQL이 아직 적용되지 않았습니다. supabase_franchise_owner_phase3_migration.sql을 등록해주세요.';
 
