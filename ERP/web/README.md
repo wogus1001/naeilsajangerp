@@ -93,8 +93,9 @@ supabase_franchise_source_schedule_upsert_migration.sql
 supabase_franchise_source_schedule_profile_security_migration.sql
 supabase_franchise_schedule_durable_sync_migration.sql
 supabase_franchise_schedule_durable_sync_review_fix_migration.sql
-supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_portal_migration.sql
+supabase_franchise_owner_submission_sla_migration.sql
+supabase_franchise_labor_planning_migration.sql
 supabase_franchise_owner_company_login_scope.sql
 supabase_franchise_owner_notice_attachments_migration.sql
 supabase_franchise_owner_portal_alimtalk_templates_migration.sql
@@ -109,6 +110,8 @@ supabase_realty_import_migration.sql
 가맹운영 원천 일정은 위 visibility migration 다음 `supabase_franchise_source_schedule_upsert_migration.sql`, `supabase_franchise_source_schedule_profile_security_migration.sql` 순서로 적용한다. 두 migration은 원천별 결정적 upsert와 활성 회사 직원·관리자 검증을 제공한다. 사용자 확인 기준 대상 DB에는 두 파일 모두 적용 완료됐다. **SQL 등록 완료 확인**.
 
 그 다음 `supabase_franchise_schedule_durable_sync_migration.sql`을 적용한다. 원천 일정과 수신자 알림을 한 트랜잭션에서 갱신하고, 일시 실패 작업을 재시도 큐에 보관하며, 매일 KST 자정에 지난 일정을 `지연`으로 재평가한다. 사용자 확인 기준 대상 DB에 적용 완료됐다. 이어서 `supabase_franchise_schedule_durable_sync_review_fix_migration.sql`을 적용한다. 이 보완 파일은 최신 payload를 먼저 큐에 기록하고 고유 lease로 실행 권한을 검증해 오래된 worker의 덮어쓰기를 막으며, 재시도 시 수신자 자격과 RPC 실행 권한을 다시 확인한다. 사용자 확인 기준 2026-07-20 대상 DB에 적용 완료됐다. **SQL 등록 완료 확인**.
+
+점주 문의의 24시간 본사 처리 SLA를 활성화하려면 위 내구성 리뷰 보완 후 `supabase_franchise_owner_submission_sla_migration.sql`을 적용한다. 이 보완은 문의의 현재 제출 시각을 `submitted_at`에 저장하고 기존 일반·시설 문의 일정의 `due_at`도 일괄 보정한다. 과거 반려 후 재제출은 기존 `updated_at`을 제출 시각으로 복원하고, 이전 날짜 기준 판정으로 너무 일찍 지연된 일정과 알림도 정확한 상태·마감으로 되돌린다. migration은 실행 중 worker와 동일한 source advisory lock을 먼저 획득한 뒤 제출 원본을 기준으로 일정과 대기·처리·실패 큐 payload를 보정하고 lease를 교체한다. 따라서 일정이 아직 생성되지 않은 큐와 이미 lease를 확인한 worker도 오래된 마감으로 다시 덮어쓸 수 없다. 본사 KPI는 회사별 DB 집계 함수로 계산하며, Supabase Cron의 `franchise-schedule-hourly-lateness` 작업은 매시간 상태를 재평가하되 새로 지연된 일정의 알림만 다시 활성화한다. 사용자 확인 기준 대상 DB에 적용 완료됐다. **SQL 등록 완료 확인**.
 
 ## Franchise Supervision Setup
 
@@ -252,7 +255,7 @@ Franchise-specific intake uses separate protected routes:
 - `/dashboard/franchise-leads/work-intake`: staff-facing `진행현황` tabs for 입점 요청 and 예비 창업자 등록 intake records.
 - `/admin/franchise-intake`: admin review tabs for `입점 요청 리스트` and `예비 창업자 등록`.
 
-The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/matching-requests/promote` to create a first-ingress `franchise_leads` record from an 예비 창업자 등록 request. The hidden lead-registration route keeps `/api/admin/franchise-intake/leads/promote` available for future internal review flows. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target through the matching or property update endpoint. The staff edit modal supports the same file attachment metadata policy as the intake form, and promotion no longer creates an automatic 상담 이력 entry in the target lead; only explicit staff-entered 상담 이력 appears in lead detail.
+The franchise property and matching forms reuse existing 업종 data sources: company `franchise_brands` categories and `custom_categories` with `category_type='industry_detail'`, falling back to built-in common industry options. If `custom_categories` is missing, apply `supabase_custom_categories_migration.sql`; the table is accessed only through the authenticated server `/api/categories` route, while direct `anon` and `authenticated` table access remains revoked. The migration preserves existing duplicate category rows and adds lookup indexes without enforcing a new uniqueness constraint. Admin promotion uses `/api/admin/franchise-intake/properties/promote` to create a `franchise_locations` opening candidate and `/api/admin/franchise-intake/matching-requests/promote` to create a first-ingress `franchise_leads` record from an 예비 창업자 등록 request. The hidden lead-registration route keeps `/api/admin/franchise-intake/leads/promote` available for future internal review flows. Fields that map to the target table columns are written directly, and source-only fields are summarized into the target memo/data snapshot. When a source record is edited after promotion, admin sees a `수정` state and must click `업데이트` to sync the promoted target through the matching or property update endpoint. The staff edit modal supports the same file attachment metadata policy as the intake form, and promotion no longer creates an automatic 상담 이력 entry in the target lead; only explicit staff-entered 상담 이력 appears in lead detail.
 
 When `SOLAPI_SMS_ENABLED=true`, intake registration can send a Solapi SMS after the core DB write succeeds. Set `FRANCHISE_INTAKE_ALERT_PHONES` to comma-separated receiver numbers for 입점요청/예비 창업자 등록 alerts. If this env is empty, the route falls back to `SIGNUP_ADMIN_ALERT_PHONES`. Missing Solapi env or SMS failure is logged and does not block registration.
 

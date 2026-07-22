@@ -22,6 +22,10 @@ const durableReviewFixMigration = readFileSync(
     new URL('../../supabase_franchise_schedule_durable_sync_review_fix_migration.sql', import.meta.url),
     'utf8'
 );
+const ownerSubmissionSlaMigration = readFileSync(
+    new URL('../../supabase_franchise_owner_submission_sla_migration.sql', import.meta.url),
+    'utf8'
+);
 
 void test('Given the source schedule RPC When permissions are installed Then only service role can execute it', () => {
     assert.match(migration, /revoke all on function public\.normalize_franchise_schedule_status\(text, timestamp with time zone, text\) from public, anon, authenticated/);
@@ -93,4 +97,27 @@ void test('Given the durable migration was already applied When installing the r
     assert.match(durableReviewFixMigration, /lease_token = sync_job_token/);
     assert.match(durableReviewFixMigration, /delete from public\.franchise_schedule_sync_jobs/);
     assert.match(durableReviewFixMigration, /auth\.uid\(\)[\s\S]*target_company_id/);
+});
+
+void test('Given a source schedule has an exact due time When SLA maintenance runs Then lateness uses the timestamp before the fallback date', () => {
+    assert.match(ownerSubmissionSlaMigration, /add column if not exists submitted_at timestamp with time zone/);
+    assert.match(ownerSubmissionSlaMigration, /status = 'submitted'[\s\S]*updated_at > created_at[\s\S]*then updated_at[\s\S]*else created_at/);
+    assert.match(ownerSubmissionSlaMigration, /update public\.franchise_schedules as schedule[\s\S]*submission\.submitted_at \+ interval '24 hours'[\s\S]*owner-general-request[\s\S]*owner-facility-request/);
+    assert.match(ownerSubmissionSlaMigration, /submission\.status = 'submitted'[\s\S]*submission\.submitted_at \+ interval '24 hours' <= now\(\)[\s\S]*then '지연'[\s\S]*when submission\.status = 'submitted' then '진행중'/);
+    assert.match(ownerSubmissionSlaMigration, /for source_record in[\s\S]*order by submission\.company_id, source_type, source_id[\s\S]*pg_advisory_xact_lock\(hashtextextended/);
+    assert.match(ownerSubmissionSlaMigration, /update public\.franchise_notifications as notification[\s\S]*schedule\.status = '지연'[\s\S]*due_at = schedule\.due_at/);
+    assert.match(ownerSubmissionSlaMigration, /where schedule\.source_type in \('owner-general-request', 'owner-facility-request'\)/);
+    assert.match(ownerSubmissionSlaMigration, /schedule\.status in \('완료', '취소'\)[\s\S]*then now\(\)[\s\S]*else notification\.dismissed_at/);
+    assert.doesNotMatch(ownerSubmissionSlaMigration, /update public\.franchise_notifications as notification[\s\S]*schedule\.due_at > now\(\)/);
+    assert.match(ownerSubmissionSlaMigration, /update public\.franchise_schedule_sync_jobs as job[\s\S]*from public\.franchise_owner_submissions as submission[\s\S]*job\.source_id = submission\.id::text/);
+    assert.match(ownerSubmissionSlaMigration, /submission\.status = 'submitted'[\s\S]*submission\.submitted_at \+ interval '24 hours' <= now\(\)[\s\S]*then '지연'/);
+    assert.match(ownerSubmissionSlaMigration, /job\.status in \('pending', 'processing', 'failed'\)[\s\S]*lease_token = uuid_generate_v4\(\)|lease_token = uuid_generate_v4\(\)[\s\S]*job\.status in \('pending', 'processing', 'failed'\)/);
+    assert.match(ownerSubmissionSlaMigration, /create or replace function public\.reconcile_franchise_schedule_lateness/);
+    assert.match(ownerSubmissionSlaMigration, /due_at is not null[\s\S]*due_at <= now_utc/);
+    assert.match(ownerSubmissionSlaMigration, /due_at is null[\s\S]*date < today_kst/);
+    assert.match(ownerSubmissionSlaMigration, /grant execute on function public\.reconcile_franchise_schedule_lateness\(\) to service_role/);
+    assert.match(ownerSubmissionSlaMigration, /create extension if not exists pg_cron/);
+    assert.match(ownerSubmissionSlaMigration, /cron\.schedule\([\s\S]*franchise-schedule-hourly-lateness[\s\S]*5 \* \* \* \*/);
+    assert.match(ownerSubmissionSlaMigration, /late_schedule_ids text\[\]/);
+    assert.match(ownerSubmissionSlaMigration, /returning schedule\.id::text[\s\S]*schedule\.id::text = any \(late_schedule_ids\)/);
 });

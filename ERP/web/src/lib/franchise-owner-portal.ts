@@ -60,6 +60,7 @@ export type OwnerSubmissionRow = {
     readonly status: string;
     readonly review_note: string | null;
     readonly reviewed_at: string | null;
+    readonly submitted_at: string | null;
     readonly created_at: string | null;
 };
 

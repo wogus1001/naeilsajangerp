@@ -19,6 +19,12 @@
 - 집중 테스트, `tsc`, lint, build, `git diff --check`와 로컬 브라우저 용량 초과 알럿 QA를 통과했다. 신규 SQL은 없다.
 - 점주 문의 SLA 자동화 3단계 1차는 `f0032f6`으로 별도 커밋하고 PR #26을 통해 `dev` `61e865f`에 통합했다. dev deployment `dpl_66VJBL1yjFVjLJ2S9r5R9rNjGGL7`은 READY이며, `supabase_franchise_owner_submission_sla_migration.sql` 적용 확인 전에는 운영으로 승격하지 않는다. **SQL 등록 필요**.
 
+## 2026-07-21 커스텀 업종 카테고리 스키마 복구
+
+- `/api/categories`가 Supabase에서 `custom_categories` 테이블을 찾지 못해 반복하던 schema 오류를 `supabase_custom_categories_migration.sql`로 복구했다. 입점 요청과 예비 창업자 화면은 회사별 `industry_detail` 옵션을 다시 조회할 수 있다.
+- 테이블은 서비스 역할을 사용하는 인증 서버 API에서만 접근하며 `anon`과 `authenticated`의 직접 테이블 권한은 차단한다. 기존 중복 카테고리는 운영 데이터 보존을 위해 삭제하거나 강제 병합하지 않고 일반 조회 인덱스만 추가했다.
+- 로컬 DB에서 테이블 6건과 API 동일 조건의 회사별 5건 조회를 확인했고, 사용자 확인 기준 운영 DB에도 최신 SQL 적용을 완료했다. **SQL 등록 완료 확인**.
+
 ## 2026-07-16 진행현황 검색·삭제 이력 보강
 
 - `/dashboard/franchise-leads/work-intake`는 입점 요청과 예비 창업자 등록의 검색, 실제 상태 필터, 기간 필터, 10건 페이지네이션을 제공한다. 같은 회사 내부 직원은 목록을 함께 확인하되 수정·삭제는 실제 작성자, 팀장, 관리자만 가능하고, 협력업체는 본인 작성 건만 조회한다.
@@ -29,6 +35,8 @@
 
 ## 2026-07-20 기준 현재 상태
 
+- 3단계 1차: 점주 일반 문의·시설/고장 문의에 24시간 본사 처리 SLA를 적용했다. `점주 소통 > 제출 처리`에서 처리 필요, 24시간 초과, 최근 7일 처리, 평균 처리시간을 확인하고 각 접수 건의 마감 시각을 표시한다. 최초 제출과 반려 후 재제출은 현재 `submitted_at`을 기준으로 포털·DB 통계·가맹운영 일정이 같은 24시간 `due_at`을 사용한다. migration은 worker와 같은 source 잠금 안에서 제출 원본 기준으로 기존 일정·알림·동기화 큐를 보정하고, Supabase Cron은 새로 지연된 일정만 매시간 승격·알림 처리한다. 1440px·390px mocked browser QA에서 상세 이동·초과 배지·가로 넘침 0을 확인했다. 3단계 전체는 아직 개발 중이다.
+- 3단계 SQL: `supabase_franchise_owner_submission_sla_migration.sql` 적용을 확인했다. 2026-07-22 적용 DB QA에서 활동 집계 RPC와 원본 제출 집계가 일치하고, 기존 일정의 `due_at` 불일치와 누락 일정이 없음을 확인했다. **SQL 등록 완료 확인**.
 - 순차 개발 현재 단계: 전자결재 1단계는 문서함·결재선·첨부·PDF·알림 QA와 보안 SQL 적용을 마쳐 `완료`다. 가맹운영 일정·알림 2단계는 원천 연결, 상태·담당자 수명주기, 저장소 경계, 내구성 재처리, 자동/mock-session QA와 코드 보안 보정을 마쳤다. 기본·리뷰 보완 내구성 SQL은 사용자 확인 기준 적용 완료했고, dev/production 승격을 진행하는 상태다.
 - 2단계 알림·일정 1차: 헤더 알림에 `전자결재/가맹운영` 구분과 서버 필터를 추가하고 기존 `source_type`으로 분류한다. 가맹운영 일정에서는 전자결재 행과 `승인 대기` KPI를 제외하며, 전자결재 요청은 헤더 알림과 `/approvals`에서 처리한다. 가맹점·인력 세팅·슈퍼바이징·오픈 준비·업무 접수의 브라우저 기본 알럿/확인은 공용 중앙 커스텀 다이얼로그로 전환한다. 다이얼로그는 동시 요청을 순서대로 처리하고 알림 상세 이동은 앱 내부 경로만 허용한다. 신규 SQL은 없다.
 - 2단계 원천 일정 1차: 업체 계약 만료일과 정보공개서 계약 가능일을 가맹 운영 일정으로 동기화하는 구현·자동 검증·mock-session 브라우저 QA를 완료했다. 수동·자동·원천 연동을 포함한 모든 프랜차이즈 일정은 `franchise_schedules`와 `/dashboard/franchise-operations/schedule`만 사용하며, 점포개발·전사 업무용 `schedules`, `/api/schedules`, `/schedule`에는 저장하거나 표시하지 않는다. 계약 ID와 후보자 ID를 원천 키로 사용해 반복 동기화 시 한 건만 유지하고, 계약 종료일 제거도 기존 갱신 일정을 취소한다. 정보공개서와 업체 계약 일정에는 원천 화면 바로가기를 제공하며 일반 알림 조회는 일정을 다시 쓰지 않는다. `supabase_franchise_source_schedule_upsert_migration.sql`과 `supabase_franchise_source_schedule_profile_security_migration.sql`은 사용자 확인 기준 대상 DB 적용 완료다. **SQL 등록 완료 확인**.

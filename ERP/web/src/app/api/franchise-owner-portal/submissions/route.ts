@@ -1,4 +1,6 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { fail, ok } from '@/lib/api-response';
+import { parseOwnerSubmissionActivitySummary } from '@/lib/franchise-owner-automation';
 import {
     canReviewOwnerSubmission,
     cleanOwnerText,
@@ -19,6 +21,26 @@ import { safelySyncOwnerSubmissionSchedule } from '@/lib/franchise-phase2-schedu
 
 export const dynamic = 'force-dynamic';
 
+const OWNER_SUBMISSION_DEFAULT_PAGE_SIZE = 80;
+const OWNER_SUBMISSION_MAX_PAGE_SIZE = 100;
+
+async function fetchOwnerSubmissionActivitySummary(
+    supabaseAdmin: SupabaseClient,
+    companyId: string
+): Promise<ReturnType<typeof parseOwnerSubmissionActivitySummary>> {
+    const { data, error } = await supabaseAdmin.rpc('get_franchise_owner_submission_activity_summary', {
+        target_company_id: companyId
+    });
+    if (error) throw error;
+    return parseOwnerSubmissionActivitySummary(data);
+}
+
+function readPositiveInteger(value: string | null, fallback: number, maximum: number): number {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) return fallback;
+    return Math.min(parsed, maximum);
+}
+
 export async function GET(request: Request) {
     try {
         const authResult = await resolveOwnerPortalStaffAuth(request);
@@ -27,14 +49,21 @@ export async function GET(request: Request) {
         const companyScope = await resolveOwnerPortalCompanyScope(authResult.auth, searchParams.get('companyId'), searchParams.get('company'));
         if (!companyScope.ok) return companyScope.response;
         const status = searchParams.get('status');
+        const page = readPositiveInteger(searchParams.get('page'), 1, Number.MAX_SAFE_INTEGER);
+        const pageSize = readPositiveInteger(searchParams.get('pageSize'), OWNER_SUBMISSION_DEFAULT_PAGE_SIZE, OWNER_SUBMISSION_MAX_PAGE_SIZE);
+        const rangeStart = (page - 1) * pageSize;
         let query = authResult.auth.supabaseAdmin
             .from('franchise_owner_submissions')
-            .select('id, company_id, location_id, owner_account_id, submission_type, title, body, payload, status, review_note, reviewed_at, created_at')
+            .select('id, company_id, location_id, owner_account_id, submission_type, title, body, payload, status, review_note, reviewed_at, submitted_at, created_at', { count: 'exact' })
             .eq('company_id', companyScope.scope.companyId)
-            .order('created_at', { ascending: false })
-            .limit(80);
+            .order('submitted_at', { ascending: false })
+            .order('id', { ascending: false })
+            .range(rangeStart, rangeStart + pageSize - 1);
         if (status && status !== 'all') query = query.eq('status', toOwnerSubmissionStatus(status));
-        const { data, error } = await query.returns<OwnerSubmissionRow[]>();
+        const [{ data, error, count }, activitySummary] = await Promise.all([
+            query.returns<OwnerSubmissionRow[]>(),
+            fetchOwnerSubmissionActivitySummary(authResult.auth.supabaseAdmin, companyScope.scope.companyId)
+        ]);
         if (error) throw error;
         const submissionIds = (data || []).map(submission => submission.id);
         const fileResult = submissionIds.length > 0
@@ -55,13 +84,25 @@ export async function GET(request: Request) {
             filesBySubmission.set(file.submission_id, current);
         }
         return ok({
+            activitySummary,
+            pagination: {
+                page,
+                pageSize,
+                total: count || 0,
+                totalPages: Math.max(1, Math.ceil((count || 0) / pageSize))
+            },
             submissions: (data || []).map(submission => ({
                 ...submission,
                 files: filesBySubmission.get(submission.id) || []
             }))
         });
     } catch (error) {
-        if (isMissingOwnerPortalSchemaError(error)) return ok({ submissions: [], schemaReady: false });
+        if (isMissingOwnerPortalSchemaError(error)) return ok({
+            activitySummary: parseOwnerSubmissionActivitySummary(null),
+            pagination: { page: 1, pageSize: OWNER_SUBMISSION_DEFAULT_PAGE_SIZE, total: 0, totalPages: 1 },
+            submissions: [],
+            schemaReady: false
+        });
         console.error('Owner portal submissions GET error:', error);
         return fail(500, 'INTERNAL_ERROR', '점주 제출 목록을 불러오지 못했습니다.');
     }
@@ -82,7 +123,7 @@ export async function PATCH(request: Request) {
         }
         const { data: submission, error: submissionError } = await authResult.auth.supabaseAdmin
             .from('franchise_owner_submissions')
-            .select('id, company_id, location_id, owner_account_id, submission_type, title, body, payload, status, review_note, reviewed_at, created_at')
+            .select('id, company_id, location_id, owner_account_id, submission_type, title, body, payload, status, review_note, reviewed_at, submitted_at, created_at')
             .eq('id', submissionId)
             .maybeSingle<OwnerSubmissionRow>();
         if (submissionError) throw submissionError;
@@ -125,7 +166,7 @@ export async function PATCH(request: Request) {
             status: nextStatus,
             submissionId: submission.id,
             submissionType: submission.submission_type,
-            submittedAt: submission.created_at || new Date(),
+            submittedAt: submission.submitted_at || submission.created_at || new Date(),
             supabaseAdmin: authResult.auth.supabaseAdmin,
             title: submission.title
         });

@@ -144,6 +144,16 @@ void test('Given owner submissions When projecting them Then facility work stays
         submittedAt: '2026-07-15T01:00:00.000Z',
         title: '냉장고 고장'
     }, NOW);
+    const overdueFacility = buildOwnerSubmissionSourceSchedule({
+        companyId: 'company-1',
+        locationName: '강남점',
+        managerProfileId: 'manager-1',
+        status: 'submitted',
+        submissionId: 'submission-overdue',
+        submissionType: 'facility_request',
+        submittedAt: '2026-07-14T00:59:59.000Z',
+        title: '냉장고 고장'
+    }, NOW);
     const checklist = buildOwnerSubmissionSourceSchedule({
         companyId: 'company-1',
         locationName: '강남점',
@@ -167,10 +177,14 @@ void test('Given owner submissions When projecting them Then facility work stays
 
     assert.equal(generalRequest?.sourceType, 'owner-general-request');
     assert.equal(generalRequest?.status, '진행중');
+    assert.equal(generalRequest?.dueAt, '2026-07-16T01:00:00.000Z');
     assert.equal(generalRequest?.metadata?.actionUrl, '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-0');
     assert.equal(facility?.sourceType, 'owner-facility-request');
     assert.equal(facility?.status, '진행중');
+    assert.equal(facility?.dueAt, '2026-07-16T01:00:00.000Z');
     assert.equal(facility?.metadata?.actionUrl, '/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=submission-1');
+    assert.equal(overdueFacility?.status, '지연');
+    assert.equal(overdueFacility?.dueAt, '2026-07-15T00:59:59.000Z');
     assert.equal(checklist?.sourceType, 'owner-checklist-completion');
     assert.equal(checklist?.status, '완료');
     assert.equal(checklist?.metadata?.actionUrl, '/dashboard/franchise-operations/owner-portal?view=checklists&checklistView=status');
