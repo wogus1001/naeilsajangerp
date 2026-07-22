@@ -816,4 +816,5 @@ YYYY-MM-DD
 - 검증: 점주 SLA·원천 일정·일정 경계·migration·reconciliation·알림 동기화 집중 테스트 36건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 1440px/390px 브라우저에서 처리 현황, 초과 배지, 가맹운영 일정 상세 이동과 가로 넘침 0을 확인했다.
 - SQL: 사용자 확인 기준 `supabase_custom_categories_migration.sql`과 `supabase_franchise_owner_submission_sla_migration.sql` 적용 완료다. **SQL 등록 완료 확인**.
 - dev 반영: PR #30을 squash merge해 `240d60d`가 됐다. deployment `dpl_3VBEvTwQFKoeKG38Vc9CPiTFqg4V` READY와 `https://naeilsajang-dev.vercel.app`의 `/login`, 점주 소통, 가맹운영 일정 200 응답을 확인했다.
-- main 승격: dev와 main의 기존 squash 이력 차이로 직접 PR #31은 닫고, `origin/main` 기준 release branch에 실제 tree delta만 적용한다. main PR과 production READY, 운영 도메인 주요 URL을 최종 확인한다.
+- main 승격: dev와 main의 기존 squash 이력 차이로 직접 PR #31은 닫고, `origin/main` 기준 release branch에 실제 tree delta만 적용했다. PR #32를 squash merge한 운영 기준 커밋은 `4d43567`이다.
+- production: Fast Release Runbook의 dry run 후 deployment `dpl_BTeDA4c4CSFLueekD9r4ZQwo2ALy`를 배포했다. `naeilsajang` production READY, `https://www.fcerp.co.kr`과 `https://fcerp.co.kr` alias, `/login`, 점주 소통, 가맹운영 일정 200 응답을 확인했다.
