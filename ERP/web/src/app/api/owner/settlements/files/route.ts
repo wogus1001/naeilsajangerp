@@ -159,3 +159,66 @@ export async function POST(request: Request) {
         return fail(500, 'INTERNAL_ERROR', '정산 파일을 업로드하지 못했습니다.');
     }
 }
+
+export async function DELETE(request: Request) {
+    try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const context = await getOwnerSessionContext(supabaseAdmin);
+        if (!context) return fail(401, 'AUTH_REQUIRED', '점주 로그인이 필요합니다.');
+        const { searchParams } = new URL(request.url);
+        const fileId = searchParams.get('fileId')?.trim() || '';
+        if (!fileId) return fail(400, 'VALIDATION_ERROR', '삭제할 파일을 선택해주세요.');
+
+        const { data: file, error: fileError } = await supabaseAdmin
+            .from('franchise_owner_settlement_files')
+            .select(FILE_SELECT)
+            .eq('id', fileId)
+            .eq('company_id', context.account.company_id)
+            .eq('location_id', context.location.id)
+            .eq('owner_account_id', context.account.id)
+            .maybeSingle<OwnerSettlementFileRow>();
+        if (fileError) throw fileError;
+        if (!file || !isOwnerSettlementFileStoragePath({
+            companyId: file.company_id,
+            locationId: file.location_id,
+            storageBucket: file.storage_bucket,
+            storagePath: file.storage_path,
+            submissionId: file.submission_id
+        })) return fail(404, 'NOT_FOUND', '정산 파일을 찾을 수 없습니다.');
+
+        const { data: submission, error: submissionError } = await supabaseAdmin
+            .from('franchise_owner_settlement_submissions')
+            .select(SUBMISSION_SELECT)
+            .eq('id', file.submission_id)
+            .eq('company_id', context.account.company_id)
+            .eq('location_id', context.location.id)
+            .eq('owner_account_id', context.account.id)
+            .maybeSingle<OwnerSettlementSubmissionRow>();
+        if (submissionError) throw submissionError;
+        if (!submission) return fail(404, 'NOT_FOUND', '정산 제출 건을 찾을 수 없습니다.');
+        if (!isOwnerSettlementMutableStatus(submission.status)) {
+            return fail(409, 'CONFLICT', '임시저장 또는 반려 상태에서만 파일을 삭제할 수 있습니다.');
+        }
+
+        const { error: storageError } = await supabaseAdmin.storage
+            .from(OWNER_PHASE3_STORAGE.bucket)
+            .remove([file.storage_path]);
+        if (storageError) throw storageError;
+        const { error: deleteError } = await supabaseAdmin
+            .from('franchise_owner_settlement_files')
+            .delete()
+            .eq('id', file.id)
+            .eq('company_id', context.account.company_id)
+            .eq('location_id', context.location.id)
+            .eq('owner_account_id', context.account.id);
+        if (deleteError) throw deleteError;
+        return ok({ deleted: true, fileId: file.id });
+    } catch (error) {
+        if (isMissingOwnerSettlementSchemaError(error)) {
+            return fail(424, 'VALIDATION_ERROR', OWNER_SETTLEMENT_SCHEMA_MESSAGE);
+        }
+        if (error instanceof Error) console.error('Owner settlement file delete failed', error);
+        else console.error('Owner settlement file delete failed with an unknown error');
+        return fail(500, 'INTERNAL_ERROR', '정산 파일을 삭제하지 못했습니다.');
+    }
+}

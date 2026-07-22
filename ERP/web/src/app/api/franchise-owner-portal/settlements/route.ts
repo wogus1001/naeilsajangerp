@@ -1,7 +1,12 @@
 import { fail, ok } from '@/lib/api-response';
 import { canTransitionOwnerSettlementStatus, cleanOwnerPhase3Text } from '@/lib/franchise-owner-phase3';
 import { isOwnerRecord } from '@/lib/franchise-owner-portal';
-import { fetchOwnerPortalLocation, resolveOwnerPortalCompanyScope, resolveOwnerPortalStaffAuth } from '@/lib/franchise-owner-portal-api';
+import {
+    fetchOwnerPortalLocation,
+    isOwnerPortalManager,
+    resolveOwnerPortalCompanyScope,
+    resolveOwnerPortalStaffAuth
+} from '@/lib/franchise-owner-portal-api';
 import { isMissingOwnerSettlementSchemaError, OWNER_SETTLEMENT_SCHEMA_MESSAGE, parseOwnerSettlementReview, type OwnerSettlementFileRow, type OwnerSettlementRequestRow, type OwnerSettlementSubmissionRow } from '@/lib/franchise-owner-settlements';
 
 export const dynamic = 'force-dynamic';
@@ -9,10 +14,6 @@ export const dynamic = 'force-dynamic';
 const REQUEST_SELECT = 'id, company_id, location_id, title, instructions, period_start, period_end, due_at, status, created_by, created_at, updated_at';
 const SUBMISSION_SELECT = 'id, request_id, company_id, location_id, owner_account_id, status, total_amount, note, review_note, submitted_at, reviewed_by, reviewed_at, created_at, updated_at';
 const FILE_SELECT = 'id, submission_id, company_id, location_id, owner_account_id, file_name, mime_type, file_size, storage_bucket, storage_path, created_at';
-
-function canManageSettlements(role: string | null): boolean {
-    return role === 'admin' || role === 'manager';
-}
 
 function parseIsoDate(value: unknown): string | null {
     const date = cleanOwnerPhase3Text(value);
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     try {
         const authResult = await resolveOwnerPortalStaffAuth(request);
         if (!authResult.ok) return authResult.response;
-        if (!canManageSettlements(authResult.auth.requester.role)) {
+        if (!isOwnerPortalManager(authResult.auth.requester)) {
             return fail(403, 'FORBIDDEN', '정산 요청을 조회할 권한이 없습니다.');
         }
         const { searchParams } = new URL(request.url);
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     try {
         const authResult = await resolveOwnerPortalStaffAuth(request);
         if (!authResult.ok) return authResult.response;
-        if (!canManageSettlements(authResult.auth.requester.role)) {
+        if (!isOwnerPortalManager(authResult.auth.requester)) {
             return fail(403, 'FORBIDDEN', '정산 요청을 등록할 권한이 없습니다.');
         }
         const body: unknown = await request.json();
@@ -151,7 +152,7 @@ export async function PATCH(request: Request) {
     try {
         const authResult = await resolveOwnerPortalStaffAuth(request);
         if (!authResult.ok) return authResult.response;
-        if (!canManageSettlements(authResult.auth.requester.role)) {
+        if (!isOwnerPortalManager(authResult.auth.requester)) {
             return fail(403, 'FORBIDDEN', '정산을 처리할 권한이 없습니다.');
         }
         const body: unknown = await request.json();
