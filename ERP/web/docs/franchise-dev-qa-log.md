@@ -1504,3 +1504,12 @@
 - 자동 검증: Gmail 요청·결과 계약과 기존 정보공개서 유틸 테스트 10건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
 - 브라우저 QA: 로컬 분리 서버에서 원래 창과 완료 팝업을 열어 연결 결과 이메일 전달, 팝업 자동 종료, 원래 창 유지, console error 0건을 확인했다. 실제 Google 계정 선택·동의 화면은 운영 배포 후 실계정으로 최종 확인한다.
 - SQL 및 데모 영향: 신규 SQL 없음. `/landing`과 `/demo`의 공개 설명에는 영향 없음.
+
+## 2026-07-22 Gmail OAuth callback 세션 후속 보정
+
+- 재현: 운영에서 Google 계정 선택과 `gmail.send` 동의까지 완료해도 정보공개서 화면이 `로그인 정보가 만료되었습니다. 다시 로그인한 뒤 Gmail을 연결해주세요.`를 표시하고 Gmail 상태가 `미연결`로 유지됐다.
+- 원인: Google callback은 ERP bearer 헤더가 없는 브라우저 이동인데, callback route가 일반 보호 API용 `getRequesterProfile()`을 다시 호출해 유효한 OAuth 반환을 `auth_required`로 판정했다.
+- 수정: 연결 시작 시 전체 OAuth state를 HttpOnly 쿠키에도 저장하고 callback query의 state와 정확히 일치하는지 검사한다. 검증된 state의 사용자 ID로 활성 profile을 서버에서 조회하고 회사 범위를 다시 확인한 뒤 토큰 교환과 연결 저장을 진행한다. 성공·거부·오류 시 OAuth 임시 쿠키를 모두 정리한다.
+- 보안: nonce만 비교할 때 남아 있던 state 내부 사용자·회사 ID 변경 가능성을 전체 state 일치 검증으로 차단했다. query의 사용자 ID만으로 callback 사용자를 신뢰하지 않는다.
+- 검증: 실패 테스트에서 state helper 부재를 확인한 뒤 state 원문 변경·nonce 누락/불일치·bearer 없는 활성 callback 사용자 조회를 포함한 Gmail/인증 테스트 15건, TypeScript, lint, production build, `git diff --check`를 통과했다. 로컬 브라우저 callback은 `auth_required`와 `invalid_state`를 지나 Google 토큰 교환 단계까지 도달했다.
+- 신규 SQL 없음. 운영 실계정의 최종 `연결됨` 표시는 dev/main 승격과 production 배포 후 다시 확인한다.

@@ -102,6 +102,14 @@ async function fetchRequesterProfileById(
     };
 }
 
+export async function getActiveRequesterProfileById(
+    supabaseAdmin: SupabaseClient,
+    requesterId: string
+): Promise<RequesterProfile | null> {
+    const requester = await fetchRequesterProfileById(supabaseAdmin, requesterId);
+    return isActiveRequester(requester) ? requester : null;
+}
+
 export async function resolveCompanyIdByName(
     supabaseAdmin: SupabaseClient,
     companyName: string | null | undefined
@@ -133,8 +141,7 @@ export async function getRequesterProfile(
         if (!requesterId || requesterId !== authenticatedUserId) return null;
     }
 
-    const requester = await fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
-    return isActiveRequester(requester) ? requester : null;
+    return getActiveRequesterProfileById(supabaseAdmin, authenticatedUserId);
 }
 
 export async function getAuthenticatedRequesterProfile(
@@ -143,8 +150,7 @@ export async function getAuthenticatedRequesterProfile(
 ): Promise<RequesterProfile | null> {
     const authenticatedUserId = await resolveAuthenticatedUserId(request);
     if (!authenticatedUserId) return null;
-    const requester = await fetchRequesterProfileById(supabaseAdmin, authenticatedUserId);
-    return isActiveRequester(requester) ? requester : null;
+    return getActiveRequesterProfileById(supabaseAdmin, authenticatedUserId);
 }
 
 export function isAdmin(requester: RequesterProfile | null): boolean {

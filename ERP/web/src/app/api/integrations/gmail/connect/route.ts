@@ -12,13 +12,14 @@ import {
     buildGmailAuthUrl,
     getGmailRedirectUriFromRequest
 } from '@/lib/gmail-provider';
+import {
+    encodeGmailOAuthState,
+    GMAIL_OAUTH_NONCE_COOKIE,
+    GMAIL_OAUTH_STATE_COOKIE
+} from '@/lib/gmail-oauth-state';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-
-function encodeState(value: Record<string, string>) {
-    return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
-}
 
 export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
 
     const nonce = randomUUID();
     const redirectPath = searchParams.get('redirect') || '/dashboard/franchise-leads';
-    const state = encodeState({
+    const state = encodeGmailOAuthState({
         nonce,
         requesterId: requesterProfile.id,
         companyId,
@@ -53,13 +54,15 @@ export async function GET(request: Request) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set('gmail_oauth_nonce', nonce, {
+    const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 10
-    });
+    } as const;
+    cookieStore.set(GMAIL_OAUTH_NONCE_COOKIE, nonce, cookieOptions);
+    cookieStore.set(GMAIL_OAUTH_STATE_COOKIE, state, cookieOptions);
 
     const authorizationUrl = buildGmailAuthUrl({
         redirectUri: getGmailRedirectUriFromRequest(request),
