@@ -78,6 +78,22 @@ create table if not exists public.franchise_owner_content_attachments (
 create index if not exists franchise_owner_content_attachments_content_idx
   on public.franchise_owner_content_attachments(content_id, created_at);
 
+create table if not exists public.franchise_owner_content_receipts (
+  id uuid primary key default gen_random_uuid(),
+  content_id uuid not null references public.franchise_owner_content_items(id) on delete cascade,
+  company_id uuid not null references public.companies(id) on delete cascade,
+  location_id uuid not null references public.franchise_locations(id) on delete cascade,
+  owner_account_id uuid not null references public.franchise_owner_accounts(id) on delete cascade,
+  acknowledged_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (content_id, owner_account_id)
+);
+
+create index if not exists franchise_owner_content_receipts_company_content_idx
+  on public.franchise_owner_content_receipts(company_id, content_id, owner_account_id);
+create index if not exists franchise_owner_content_receipts_owner_idx
+  on public.franchise_owner_content_receipts(company_id, location_id, owner_account_id, acknowledged_at);
+
 create table if not exists public.franchise_owner_reminders (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
@@ -184,6 +200,7 @@ begin
   foreach target_table in array array[
     'franchise_owner_content_items',
     'franchise_owner_content_attachments',
+    'franchise_owner_content_receipts',
     'franchise_owner_reminders',
     'franchise_owner_portal_events',
     'franchise_owner_settlement_requests',
@@ -218,6 +235,16 @@ create policy franchise_owner_content_items_staff_write on public.franchise_owne
       select 1 from public.profiles p
       where p.id = auth.uid() and p.status = 'active'
         and (p.role = 'admin' or (p.company_id = franchise_owner_content_items.company_id and p.role in ('manager', 'sub_manager')))
+    )
+  );
+
+drop policy if exists franchise_owner_content_receipts_staff_select on public.franchise_owner_content_receipts;
+create policy franchise_owner_content_receipts_staff_select on public.franchise_owner_content_receipts
+  for select to authenticated using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.status = 'active'
+        and (p.role = 'admin' or p.company_id = franchise_owner_content_receipts.company_id)
     )
   );
 
