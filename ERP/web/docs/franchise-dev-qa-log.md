@@ -1474,6 +1474,19 @@
 - 일정 연결 QA: 가맹운영 일정관리에서 `점주 시설 문의` 원천 일정과 지연 상태를 표시하고, `업무 열기`가 `/dashboard/franchise-operations/owner-portal?view=submissions&submissionId=...`로 이동함을 확인했다. 점포개발 업무 일정 경로로 이동하지 않는다.
 - 제한 사항: 적용 DB 표본에는 현재 처리 대기 중인 일반·시설 문의가 없어, 실제 대기 행을 대상으로 한 시간당 maintenance 실행 결과는 읽기 전용 QA에서 재현하지 않았다. 신규 운영 데이터를 만들지 않고 RPC·일정 정합성 및 브라우저 fixture로 대체 검증했다.
 
+# 2026-07-22 점주 포털 업무 자동화 3단계 통합 구현 QA
+
+- 범위: 기존 후속 범위였던 체크리스트·자료 미확인 리마인드, 공지·공문·시정요청·계약 자료 수령 확인, 교육자료·운영 매뉴얼 버전·열람 관리, 정산·영수증·증빙 제출을 하나의 공통 데이터 모델과 private Storage 계약으로 구현했다.
+- 게이트 A: 본사는 운영점 대상 리마인드를 발송하고 전달·확인 현황을 집계하며, 점주는 자기 운영점 리마인드와 자료를 확인한다. 요청 idempotency key, 대상 운영점 스냅샷과 fingerprint ledger를 트랜잭션 안에서 잠가 중복 발송과 다른 payload 재사용을 차단한다. PostgreSQL `INSERT ... RETURNING` 충돌 시 `NULL`이 되는 분기까지 명시적으로 처리해 같은 키 재시도는 이후 계정 상태가 바뀌어도 최초 발송 결과를 반환한다. 게시 후 보관된 자료의 기존 리마인드는 불변 버전 스냅샷을 기준으로 확인 처리한다.
+- 게이트 B: 자료의 현재 버전과 불변 버전 스냅샷, 버전별 첨부, 열람·수령 시각을 분리했다. 초안 수정·게시·보관·첨부 추가·삭제도 매번 잠금 버전을 올려 동시 변경의 덮어쓰기를 막고, 첨부 등록은 경로 생성 시점과 DB 잠금 시점의 운영점이 같을 때만 허용한다. migration 재실행은 기존 수령 이력과 과거 버전을 삭제하거나 현재 버전으로 다시 기록하지 않는다. 과거 버전에 참조된 첨부 삭제는 현재 목록에서만 제외하고 Storage 원본과 이력 스냅샷은 보존한다.
+- 게이트 C: 본사는 정산 기간과 제출 기한을 멱등 요청으로 만들고, 점주는 임시저장·증빙 업로드·제출·반려 후 재제출을 처리한다. 저장 시 PostgreSQL `updated_at` 원문을 낙관적 잠금 토큰으로 사용하며, 저장 뒤 첨부가 실패해도 응답받은 최신 토큰과 선택 파일 키를 유지한다. 닫힌 요청의 신규 파일 예약·활성화와 제출을 차단하고, 같은 파일 재시도는 SHA-256과 메타데이터를 모두 비교해 기존 객체를 덮어쓰지 않는다. 중단된 예약 파일과 추적되지 않은 Storage 객체는 24시간 후 deletion outbox로 보내고 cron에서 재처리한다. 제출·확정·반려 상태는 가맹운영 일정 `owner-settlement-review`에 동기화하며, cron은 모든 제출 건을 페이지 순회해 일정 누락·상태 불일치 건만 복구한다.
+- 권한·Storage: 본사 API는 회사 범위, 점주 API는 전용 세션의 회사·운영점·계정 범위를 검증한다. 자료와 정산 파일은 `franchise-owner-private` bucket의 company/location 범위 경로와 signed URL로만 접근하며, immutable version snapshot의 update/delete 권한을 service role에서도 제거한다.
+- 자동 검증: 최신 `dev` 병합 후 전체 `npx tsx --test` 919건 통과, 점주 3단계 집중 테스트 63건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 빌드는 기존 workspace root 추론과 오래된 Browserslist 데이터 경고만 남았다.
+- HTTP·화면 경계 QA: 로컬 `http://localhost:3137`에서 인증 없는 `/owner/resources`가 `/owner/login`으로 이동하고, `/api/owner/reminders`, `/api/owner/content`, `/api/owner/settlements`, `/api/franchise-owner-portal/reminders`가 한국어 `401 AUTH_REQUIRED`로 차단되는 것을 확인했다. 390x844 로그인 화면의 문서 가로 넘침은 0이었다.
+- 실행 가설: (1) migration 재실행 또는 현재 첨부 삭제가 기존 receipt/version 파일을 훼손할 가능성은 one-time backfill flag, parent delete 제한과 snapshot 참조 검사로 차단했다. (2) 동시 리마인드·정산 요청과 정산 저장이 중복 또는 last-write-wins가 될 가능성은 요청 ledger 잠금, 대상 운영점 fingerprint와 PostgreSQL `updated_at` 원문 비교로 차단했다. (3) 브라우저가 upload 응답 전에 종료되거나 같은 키에 다른 파일을 재사용할 가능성은 SHA-256 reservation, 비덮어쓰기 업로드, 사후 reconciliation, deletion outbox와 stale cleanup RPC로 회수·거부 경로를 만들었다.
+- 제한 사항: 로컬 Docker/Postgres가 없어 `supabase db lint --local`은 연결 단계에서 실행하지 못했다. 신규 migration은 아직 Supabase에 적용하지 않았으므로 SQL 파싱·RLS·private bucket·signed URL의 실제 DB 검증과 본사/점주 실계정 1440px·390px 완료 흐름은 dev 적용 후 게이트 D에서 진행한다.
+- SQL 상태: `supabase_franchise_owner_submission_sla_migration.sql` 다음 `supabase_franchise_owner_phase3_migration.sql`을 dev DB에 적용하고 schema cache를 갱신해야 한다. **SQL 등록 필요**.
+
 # 2026-07-22 정보공개서 Gmail OAuth 연결 회귀 수정
 
 - 재현: 로그인된 정보공개서 발송 화면에서 `Gmail 연결`을 누르면 URL에 `requesterId`가 있어도 `/api/integrations/gmail/connect`가 401 `requesterId is required`를 반환했다.
@@ -1483,6 +1496,14 @@
 - 자동 검증: `npx tsx --test src/components/franchise/leadDisclosureWorkflowRequests.test.mts`, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build에는 기존 workspace root와 오래된 브라우저 데이터 경고만 남았다.
 - 실계정 QA: 분리 서버 `localhost:3017`에서 최초 Google `redirect_uri_mismatch`를 확인하고 정확한 callback URI를 OAuth 클라이언트에 등록했다. 재시도 후 사용자가 Gmail 로컬 연결 완료를 확인했다. 운영 callback `https://www.fcerp.co.kr/api/integrations/gmail/callback` 등록도 확인했다.
 - 기능 커밋: `60ee429`. 신규 SQL 없음. 공개 데모 흐름 영향 없음.
+
+## 2026-07-22 Gmail OAuth 팝업 연결 QA
+
+- 재현: 정보공개서 상세에서 `Gmail 연결`을 누르면 Google 인증이 현재 탭을 대체하고, 완료 후 모객 DB 목록으로 이동해 열어 둔 상세와 입력 상태가 사라졌다.
+- 수정: 인증 URL을 별도 팝업에 열고 callback 완료 페이지가 same-origin `postMessage`로 결과를 원래 창에 전달한 뒤 닫히도록 변경했다. 기존 redirect 방식은 호환 경로로 유지한다.
+- 자동 검증: Gmail 요청·결과 계약과 기존 정보공개서 유틸 테스트 10건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과.
+- 브라우저 QA: 로컬 분리 서버에서 원래 창과 완료 팝업을 열어 연결 결과 이메일 전달, 팝업 자동 종료, 원래 창 유지, console error 0건을 확인했다. 실제 Google 계정 선택·동의 화면은 운영 배포 후 실계정으로 최종 확인한다.
+- SQL 및 데모 영향: 신규 SQL 없음. `/landing`과 `/demo`의 공개 설명에는 영향 없음.
 
 ## 2026-07-22 Gmail OAuth callback 세션 후속 보정
 

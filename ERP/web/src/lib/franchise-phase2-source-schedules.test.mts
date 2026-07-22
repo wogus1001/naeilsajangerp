@@ -2,13 +2,40 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     buildOpeningProjectSourceSchedule,
+    buildOwnerSettlementSourceSchedule,
     buildOwnerSubmissionSourceSchedule,
     buildSupervisionCorrectiveActionSourceSchedule,
     buildSupervisionReportSourceSchedule,
-    buildSupervisionVisitSourceSchedule
+    buildSupervisionVisitSourceSchedule,
+    needsOwnerSettlementScheduleReconciliation
 } from './franchise-phase2-source-schedules.js';
 
 const NOW = new Date('2026-07-15T03:00:00.000Z');
+
+void test('Given a submitted owner settlement When projecting it Then review appears in franchise operations schedule', () => {
+    const schedule = buildOwnerSettlementSourceSchedule({
+        companyId: 'company-1', dueAt: '2026-07-16T23:59:00+09:00', locationName: '강남점',
+        managerProfileId: 'manager-1', requestTitle: '7월 정산', status: 'submitted', submissionId: 'submission-1'
+    }, NOW);
+    assert.equal(schedule?.sourceType, 'owner-settlement-review');
+    assert.equal(schedule?.status, '진행중');
+    assert.equal(schedule?.metadata?.actionUrl, '/dashboard/franchise-operations/owner-portal?view=settlements&submissionId=submission-1');
+    assert.equal(schedule?.metadata?.settlementStatus, 'submitted');
+});
+
+void test('Given settlement schedules When reconciling Then only missing or stale projections are retried', () => {
+    const input = {
+        companyId: 'company-1', dueAt: '2026-07-16T23:59:00+09:00', locationName: '강남점',
+        managerProfileId: 'manager-1', requestTitle: '7월 정산', status: 'submitted', submissionId: 'submission-1'
+    };
+    assert.equal(needsOwnerSettlementScheduleReconciliation(input, null, NOW), true);
+    assert.equal(needsOwnerSettlementScheduleReconciliation(input, {
+        due_at: '2026-07-16T14:59:00.000Z', metadata: { settlementStatus: 'submitted' }, status: '진행중'
+    }, NOW), false);
+    assert.equal(needsOwnerSettlementScheduleReconciliation(input, {
+        due_at: '2026-07-16T14:59:00.000Z', metadata: { settlementStatus: 'rejected' }, status: '진행중'
+    }, NOW), true);
+});
 
 void test('Given an overdue SV visit When projecting it Then it becomes a franchise-operation late schedule', () => {
     const schedule = buildSupervisionVisitSourceSchedule({

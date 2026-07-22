@@ -244,14 +244,22 @@ YYYY-MM-DD
   - 운영 근거: 신고 시각의 production runtime log에서 `/api/upload` 413을 확인했다. DB 저장 후 업로드가 실패한 기존 건은 배포 후 사진 재첨부가 필요하다.
   - 검증: 직접 업로드·위조 파일 제거 테스트 8건, `tsc`, lint, build, `git diff --check`, 로컬 브라우저 용량 초과 알럿 QA 통과.
   - SQL: 신규 SQL 없음.
-  - dev/main 반영: dev-first 통합과 운영 승격 진행 예정.
+  - dev 반영: 점주 문의 SLA 자동화 3단계 1차와 함께 PR #26으로 통합해 `61e865f`가 됐고, dev deployment `dpl_66VJBL1yjFVjLJ2S9r5R9rNjGGL7` READY를 확인했다.
+  - main 반영: 점주 문의 SLA 자동화는 SQL 적용 확인 전까지 제외하고, 사진 업로드 핫픽스만 별도 main PR과 Fast Release Runbook으로 승격한다.
+  - 3단계 1차: `f0032f6 feat(franchise): 점주 문의 SLA 자동화 1차`. `supabase_franchise_owner_submission_sla_migration.sql` 적용 확인 전 운영 승격 금지. **SQL 등록 필요**.
 
 - 2026-07-20 진행현황 삭제 긴급 보정
   - 작업 브랜치: `codex/hotfix-work-intake-delete-id-type-20260720`
   - 타입 핫픽스 커밋: `2855ea8 fix(franchise): 진행현황 삭제 RPC 타입 보정`
+  - 완전삭제 커밋: `cdac47d feat(franchise): 삭제 목록 완전삭제 추가`
+  - dev 반영: `b3f82fe fix: 진행현황 삭제 안정화와 완전삭제 (#23)`
+  - main 반영: `2f3bfb3 fix: 진행현황 삭제 안정화와 완전삭제 (#24)`
+  - 보호 규칙 예외: 사용자 승인에 따라 필수 리뷰와 사용하지 않는 legacy Netlify preview 실패 체크를 관리자 권한으로 우회했다. 실제 배포 기준인 Vercel preview check는 통과했다.
   - 주요 기능: `properties.id(text)`와 삭제 RPC UUID 입력 비교를 보정하고, 관리자 삭제 목록에 복구 불가능한 `완전삭제` API·확인 알럿·결과 알럿을 추가했다. 완전삭제는 관리자 UI뿐 아니라 서버에서 활성 세션과 `admin` 역할을 다시 검증하고, 성공한 행위자·대상 ID·처리 시각을 구조화 운영 로그로 남긴다.
   - SQL: 수정된 `supabase_franchise_work_intake_deleted_records_migration.sql`은 사용자 확인 기준 운영 DB 적용 완료다. 완전삭제 기능의 신규 SQL은 없다. **SQL 등록 완료 확인**.
   - 운영 확인: 수정 전 DELETE 503 요청이 SQL 반영 후 200으로 전환되고 삭제 목록에 이력이 저장되는 것을 production runtime log로 확인했다.
+  - 임시 운영 배포: `dpl_9GUoyaDDEybDmRziDm9DbUojG6zG`, source `https://naeilsajang-5n5t3k7iw-jaehyuns-projects-b4d20c6f.vercel.app`.
+  - main 자동 운영 배포: `dpl_3RBXoDdctt4QPpJNpKfxwUzKhrEM`, source `https://naeilsajang-539ogcu8h-jaehyuns-projects-b4d20c6f.vercel.app`. `https://www.fcerp.co.kr`, `https://fcerp.co.kr` alias와 주요 URL 200 응답을 확인했다.
 
 - 2026-07-16
   - 작업 브랜치: `codex/work-intake-pagination-local-fix-20260716`, release 브랜치 `codex/work-intake-main-release-20260716`
@@ -825,5 +833,16 @@ YYYY-MM-DD
 - 승격 커밋: `b1dbc76 fix(franchise): 커스텀 업종 스키마 복구`, `6956d95 docs(franchise): 3단계 QA 결과 정리`와 이 릴리즈 문서 커밋을 `dev`와 `main`에 순서대로 반영한다.
 - 범위: `/api/categories`가 사용하는 `custom_categories` 스키마를 복구하고, 점주 일반·시설 문의의 24시간 SLA 집계·초과 표시·가맹운영 일정 연결을 적용 DB와 로컬 브라우저에서 재검증한 결과를 현재 상태와 QA 문서에 반영한다.
 - 검증: 점주 SLA·원천 일정·일정 경계·migration·reconciliation·알림 동기화 집중 테스트 36건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 1440px/390px 브라우저에서 처리 현황, 초과 배지, 가맹운영 일정 상세 이동과 가로 넘침 0을 확인했다.
-- SQL: 사용자 확인 기준 `supabase_custom_categories_schema_migration.sql`과 `supabase_franchise_owner_submission_sla_migration.sql` 적용 완료다. **SQL 등록 완료 확인**.
-- 승격 절차: 기능 브랜치 push 후 dev PR과 Vercel check를 통과시키고 `https://naeilsajang-dev.vercel.app`에서 smoke QA한다. 이후 dev 전체의 운영 승격 가능성을 확인해 main PR을 만들고, production READY와 운영 도메인 주요 URL을 확인한다.
+- SQL: 사용자 확인 기준 `supabase_custom_categories_migration.sql`과 `supabase_franchise_owner_submission_sla_migration.sql` 적용 완료다. **SQL 등록 완료 확인**.
+- dev 반영: PR #30을 squash merge해 `240d60d`가 됐다. deployment `dpl_3VBEvTwQFKoeKG38Vc9CPiTFqg4V` READY와 `https://naeilsajang-dev.vercel.app`의 `/login`, 점주 소통, 가맹운영 일정 200 응답을 확인했다.
+- main 승격: dev와 main의 기존 squash 이력 차이로 직접 PR #31은 닫고, `origin/main` 기준 release branch에 실제 tree delta만 적용했다. PR #32를 squash merge한 운영 기준 커밋은 `4d43567`이다.
+- production: Fast Release Runbook의 dry run 후 deployment `dpl_BTeDA4c4CSFLueekD9r4ZQwo2ALy`를 배포했다. `naeilsajang` production READY, `https://www.fcerp.co.kr`과 `https://fcerp.co.kr` alias, `/login`, 점주 소통, 가맹운영 일정 200 응답을 확인했다.
+
+## 2026-07-22 점주 포털 3단계 통합 및 Gmail 팝업 연결 승격
+
+- 작업 브랜치: `codex/phase3-integrated-franchise-ops-20260722`.
+- 범위: 점주 포털 3단계 통합 기능과 migration 보정, 정보공개서 Gmail OAuth 팝업 연결을 한 dev 검증 단위로 승격한다.
+- Gmail 보정: `Gmail 연결`은 현재 모객 DB 탭을 벗어나지 않고 별도 창에서 Google 인증을 완료한다. callback 완료 창은 결과를 원래 창에 전달하고 자동 종료하며 기존 상세 모달과 입력 상태를 유지한다.
+- 검증: Gmail 관련 테스트 10건, TypeScript, lint, production build, `git diff --check` 통과. 로컬 브라우저에서 결과 메시지 전달, 팝업 자동 종료, 원래 창 유지와 console error 0건을 확인했다.
+- SQL: Gmail 변경의 신규 SQL은 없다. 점주 포털 3단계 `supabase_franchise_owner_phase3_migration.sql`은 사용자 확인 기준 적용 완료다. **SQL 등록 완료 확인**.
+- 승격: 기능 브랜치 push 후 protected branch 절차에 따라 dev PR과 dev deployment를 확인하고, 검증된 범위를 main PR과 `naeilsajang` production으로 승격한다. 최종 deployment ID와 운영 실계정 Gmail 연결 확인은 배포 보고에 남긴다.

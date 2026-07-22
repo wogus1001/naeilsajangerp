@@ -6,6 +6,8 @@ export type GmailOAuthState = {
     readonly requesterId: string;
     readonly companyId: string;
     readonly redirectPath: string;
+    readonly completionMode?: 'redirect' | 'popup';
+    readonly openerOrigin?: string;
 };
 
 function isNonEmptyString(value: unknown): value is string {
@@ -24,6 +26,8 @@ function decodeGmailOAuthState(value: string): GmailOAuthState | null {
             || !isNonEmptyString(state.companyId)
             || !isNonEmptyString(state.redirectPath)
             || !state.redirectPath.startsWith('/')
+            || (state.completionMode !== undefined && state.completionMode !== 'redirect' && state.completionMode !== 'popup')
+            || (state.openerOrigin !== undefined && !isNonEmptyString(state.openerOrigin))
         ) {
             return null;
         }
@@ -32,7 +36,9 @@ function decodeGmailOAuthState(value: string): GmailOAuthState | null {
             nonce: state.nonce,
             requesterId: state.requesterId,
             companyId: state.companyId,
-            redirectPath: state.redirectPath
+            redirectPath: state.redirectPath,
+            ...(state.completionMode ? { completionMode: state.completionMode } : {}),
+            ...(state.openerOrigin ? { openerOrigin: state.openerOrigin } : {})
         };
     } catch {
         return null;

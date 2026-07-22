@@ -12,6 +12,7 @@ import {
 } from '@/lib/franchise-owner-portal';
 import type { OwnerSubmissionActivitySummary } from '@/lib/franchise-owner-automation';
 import type { FranchiseLocation } from './types';
+import { OwnerPortalPhase3Sections } from './OwnerPortalPhase3Sections';
 import {
     OwnerPortalAccountsSection,
     OwnerPortalChecklistSection,
@@ -33,7 +34,7 @@ type OwnerPortalPanelProps = {
     readonly selectedLocationId?: string;
     readonly selectedSubmissionId?: string;
     readonly selectedChecklistView?: 'status';
-    readonly selectedView?: Extract<OwnerPortalView, 'checklists' | 'submissions'>;
+    readonly selectedView?: OwnerPortalView;
 };
 
 type JsonRequestInit = {
@@ -136,6 +137,7 @@ export function OwnerPortalPanel({
     const [message, setMessage] = React.useState('');
     const [error, setError] = React.useState('');
     const [isBusy, setIsBusy] = React.useState(false);
+    const [phase3Counts, setPhase3Counts] = React.useState({ reminders: 0, content: 0, settlements: 0 });
     const companyId = locations.find(location => location.companyId)?.companyId || '';
     const ownerPortalLoginPath = React.useMemo(() => buildOwnerPortalLoginPath({
         companyId: companyId || null,
@@ -145,6 +147,9 @@ export function OwnerPortalPanel({
         !isOwnerChecklistCompletionSubmission(submission.submission_type)
     )).length;
     const issuedChecklistCount = countChecklistIssues(checklists);
+    const handlePhase3CountsChange = React.useCallback((counts: { readonly reminders: number; readonly content: number; readonly settlements: number }) => {
+        setPhase3Counts(counts);
+    }, []);
 
     const load = React.useCallback(async () => {
         if (!userId) return;
@@ -392,6 +397,9 @@ export function OwnerPortalPanel({
                 checklistsCount={issuedChecklistCount}
                 noticesCount={notices.length}
                 submissionsCount={generalSubmissionsCount}
+                remindersCount={phase3Counts.reminders}
+                contentCount={phase3Counts.content}
+                settlementsCount={phase3Counts.settlements}
                 onChange={setActiveView}
             />
             <OwnerPortalStatusMessages message={message} error={error} />
@@ -454,6 +462,17 @@ export function OwnerPortalPanel({
                     selectedSubmissionId={selectedSubmissionId}
                     isBusy={isBusy}
                     onReviewSubmission={(submissionId, action) => void reviewSubmission(submissionId, action)}
+                />
+            ) : null}
+            {activeView === 'reminders' || activeView === 'content' || activeView === 'settlements' ? (
+                <OwnerPortalPhase3Sections
+                    activeView={activeView}
+                    userId={userId}
+                    companyId={companyId}
+                    companyName={companyName}
+                    locations={locations}
+                    checklists={checklists}
+                    onCountsChange={handlePhase3CountsChange}
                 />
             ) : null}
         </div>

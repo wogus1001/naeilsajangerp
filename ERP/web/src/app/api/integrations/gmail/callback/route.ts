@@ -10,15 +10,20 @@ import {
     GmailIntegrationError
 } from '@/lib/gmail-integration';
 import {
+    buildGmailOAuthResultUrl,
+    type GmailOAuthCompletionMode
+} from '@/lib/gmail-oauth-flow';
+import {
+    GMAIL_OAUTH_NONCE_COOKIE,
+    GMAIL_OAUTH_STATE_COOKIE,
+    parseGmailOAuthCallbackState,
+    type GmailOAuthState
+} from '@/lib/gmail-oauth-state';
+import {
     exchangeGmailCode,
     fetchGmailUserEmail,
     getGmailRedirectUriFromRequest
 } from '@/lib/gmail-provider';
-import {
-    GMAIL_OAUTH_NONCE_COOKIE,
-    GMAIL_OAUTH_STATE_COOKIE,
-    parseGmailOAuthCallbackState
-} from '@/lib/gmail-oauth-state';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -31,11 +36,27 @@ function getAppUrl(request: Request) {
     return process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
 }
 
-function buildRedirectUrl(request: Request, path: string | undefined, params: Record<string, string>) {
-    const safePath = path?.startsWith('/') ? path : '/dashboard/franchise-leads';
-    const url = new URL(safePath, getAppUrl(request));
-    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-    return url;
+function getResultAppUrl(request: Request, state: GmailOAuthState | null): string {
+    if (state?.completionMode !== 'popup' || !state.openerOrigin) return getAppUrl(request);
+    try {
+        const openerUrl = new URL(state.openerOrigin);
+        if (openerUrl.protocol === 'https:' || openerUrl.hostname === 'localhost' || openerUrl.hostname === '127.0.0.1') {
+            return openerUrl.origin;
+        }
+    } catch {
+        return getAppUrl(request);
+    }
+    return getAppUrl(request);
+}
+
+function buildResultResponse(request: Request, state: GmailOAuthState | null, params: Record<string, string>) {
+    const completionMode: GmailOAuthCompletionMode = state?.completionMode === 'popup' ? 'popup' : 'redirect';
+    return NextResponse.redirect(buildGmailOAuthResultUrl({
+        appUrl: getResultAppUrl(request, state),
+        completionMode,
+        redirectPath: state?.redirectPath,
+        params
+    }));
 }
 
 export async function GET(request: Request) {
@@ -57,34 +78,34 @@ export async function GET(request: Request) {
 
     if (errorReason) {
         clearOAuthCookies();
-        return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'error',
             reason: errorReason
-        }));
+        });
     }
     if (!code || !state) {
         clearOAuthCookies();
-        return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'error',
             reason: 'invalid_state'
-        }));
+        });
     }
 
     try {
         const requesterProfile = await getActiveRequesterProfileById(supabaseAdmin, state.requesterId);
         if (!requesterProfile) {
             clearOAuthCookies();
-            return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
+            return buildResultResponse(request, state, {
                 gmail: 'error',
                 reason: 'auth_required'
-            }));
+            });
         }
         if (!isAdmin(requesterProfile) && !canAccessCompanyScope(requesterProfile, state.companyId)) {
             clearOAuthCookies();
-            return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
+            return buildResultResponse(request, state, {
                 gmail: 'error',
                 reason: 'company_scope'
-            }));
+            });
         }
 
         const token = await exchangeGmailCode(code, getGmailRedirectUriFromRequest(request));
@@ -116,19 +137,19 @@ export async function GET(request: Request) {
         if (error) throw error;
 
         clearOAuthCookies();
-        return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'connected',
             email: gmailEmail
-        }));
+        });
     } catch (error) {
         clearOAuthCookies();
         console.error('Gmail OAuth callback error:', error);
         const reason = error instanceof GmailIntegrationError || error instanceof Error
             ? error.message.slice(0, 80)
             : 'callback_failed';
-        return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
+        return buildResultResponse(request, state, {
             gmail: 'error',
             reason
-        }));
+        });
     }
 }

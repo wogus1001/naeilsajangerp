@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { buildOwnerSubmissionSourceSchedule } from './franchise-phase2-source-schedules';
+import { buildOwnerSettlementSourceSchedule, buildOwnerSubmissionSourceSchedule } from './franchise-phase2-source-schedules';
 import {
     buildFranchiseSourceSchedulePayload,
     enqueueFranchiseScheduleSync,
@@ -18,6 +18,17 @@ type OwnerSubmissionScheduleSyncInput = {
     readonly submittedAt: string | Date;
     readonly supabaseAdmin: SupabaseClient;
     readonly title: string;
+};
+
+type OwnerSettlementScheduleSyncInput = {
+    readonly companyId: string;
+    readonly dueAt: string;
+    readonly locationName: string;
+    readonly managerProfileId?: string | null;
+    readonly requestTitle: string;
+    readonly status: string;
+    readonly submissionId: string;
+    readonly supabaseAdmin: SupabaseClient;
 };
 
 export type FranchiseOperationalSchedulePersistedResult =
@@ -120,6 +131,23 @@ export async function safelySyncOwnerSubmissionSchedule(
         submittedAt: input.submittedAt,
         title: input.title
     });
+    if (!schedule) return { status: 'synced' };
+    return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
+}
+
+export async function safelySyncOwnerSettlementSchedule(
+    input: OwnerSettlementScheduleSyncInput
+): Promise<FranchiseOperationalScheduleSyncResult> {
+    let managerProfileId = input.managerProfileId || null;
+    try {
+        const fallbackManagerIds = await fetchWorkflowManagerProfileIds(input.supabaseAdmin, input.companyId);
+        const candidates = [...new Set([managerProfileId || '', ...fallbackManagerIds].filter(Boolean))];
+        const activeManagerIds = await fetchActiveCompanyManagerProfileIds(input.supabaseAdmin, input.companyId, candidates);
+        managerProfileId = candidates.find(profileId => activeManagerIds.has(profileId)) || null;
+    } catch (error) {
+        console.warn('Owner settlement manager fallback lookup failed:', error);
+    }
+    const schedule = buildOwnerSettlementSourceSchedule({ ...input, managerProfileId });
     if (!schedule) return { status: 'synced' };
     return trySyncFranchiseOperationalSchedule(input.supabaseAdmin, schedule);
 }
