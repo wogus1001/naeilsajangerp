@@ -184,7 +184,8 @@ export async function requestGmailAuthorizationUrl(input: RequestGmailAuthorizat
     const params = new URLSearchParams({
         requesterId: input.requesterId,
         redirect: input.redirectPath,
-        response: 'json'
+        response: 'json',
+        flow: 'popup'
     });
     if (input.companyName) params.set('company', input.companyName);
 
