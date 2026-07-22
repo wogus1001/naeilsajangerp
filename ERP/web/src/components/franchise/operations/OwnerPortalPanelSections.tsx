@@ -5,6 +5,7 @@ import { Copy, Download, KeyRound, Paperclip, Send, Trash2, UserRound, X } from 
 import { AlertModal } from '@/components/common/AlertModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { formatFranchiseFileSize } from '@/lib/franchise-file-attachments';
+import { buildOwnerSubmissionSla, type OwnerSubmissionActivitySummary } from '@/lib/franchise-owner-automation';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     DEFAULT_OWNER_PORTAL_CHECKLIST_TASKS,
@@ -42,6 +43,8 @@ export type OwnerSubmission = {
     readonly payload: unknown;
     readonly status: string;
     readonly review_note: string | null;
+    readonly reviewed_at: string | null;
+    readonly submitted_at: string | null;
     readonly created_at: string | null;
     readonly files?: readonly OwnerSubmissionFile[];
 };
@@ -167,7 +170,7 @@ function formatDate(value: string | null): string {
 
 function formatDateTime(value: string | null): string {
     if (!value) return '-';
-    return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+    return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' }).format(new Date(value));
 }
 
 function getLocationName(locations: readonly FranchiseLocation[], locationId: string): string {
@@ -1247,6 +1250,7 @@ export function OwnerPortalChecklistSection({ locations, checklists, submissions
     );
 }
 type SubmissionSectionProps = {
+    readonly activitySummary: OwnerSubmissionActivitySummary;
     readonly locations: readonly FranchiseLocation[];
     readonly submissions: readonly OwnerSubmission[];
     readonly selectedSubmissionId?: string;
@@ -1255,6 +1259,7 @@ type SubmissionSectionProps = {
 };
 
 export function OwnerPortalSubmissionsSection({
+    activitySummary,
     locations,
     submissions,
     selectedSubmissionId,
@@ -1324,6 +1329,24 @@ export function OwnerPortalSubmissionsSection({
                     <p>점주가 남긴 매장 정보, 시설 문의, 일반 문의 내역을 확인하고 처리합니다.</p>
                 </div>
             </div>
+            <div className={styles.ownerPortalSubmissionSummary}>
+                <div>
+                    <span>처리 필요</span>
+                    <strong>{activitySummary.pendingCount}건</strong>
+                </div>
+                <div>
+                    <span>24시간 초과</span>
+                    <strong>{activitySummary.overdueCount}건</strong>
+                </div>
+                <div>
+                    <span>최근 7일 처리</span>
+                    <strong>{activitySummary.completedLast7Days}건</strong>
+                </div>
+                <div>
+                    <span>평균 처리시간</span>
+                    <strong>{activitySummary.averageResolutionHours === null ? '-' : `${activitySummary.averageResolutionHours}시간`}</strong>
+                </div>
+            </div>
             <div className={styles.ownerPortalInlineTabs} role="tablist" aria-label="점주 제출 처리 상태">
                 <button
                     type="button"
@@ -1373,6 +1396,12 @@ export function OwnerPortalSubmissionsSection({
                 ) : null}
                 {visibleSubmissions.map(submission => {
                     const reviewMode = getOwnerSubmissionReviewMode(submission.submission_type, submission.status);
+                    const submissionSla = buildOwnerSubmissionSla({
+                        createdAt: submission.submitted_at || submission.created_at,
+                        reviewedAt: submission.reviewed_at,
+                        status: submission.status,
+                        submissionType: submission.submission_type
+                    });
                     const payloadTitle = getSubmissionPayloadTitle(submission);
                     const detailRows = getSubmissionDetailRows(submission);
                     return (
@@ -1384,6 +1413,11 @@ export function OwnerPortalSubmissionsSection({
                             <div className={styles.locationItemMain}>
                                 <strong>{submission.title}</strong>
                                 <span>{getLocationName(locations, submission.location_id)} · {getSubmissionTypeLabel(submission.submission_type)} · {getSubmissionStatusLabel(submission.status)} · {formatDate(submission.created_at)}</span>
+                                {submissionSla && reviewMode !== 'none' ? (
+                                    <small className={submissionSla.isOverdue ? styles.ownerPortalSubmissionSlaOverdue : styles.ownerPortalSubmissionSla}>
+                                        {submissionSla.isOverdue ? '처리 기한 초과' : `처리 기한 ${formatDateTime(submissionSla.dueAt)}`}
+                                    </small>
+                                ) : null}
                                 {payloadTitle ? <small>{payloadTitle}</small> : null}
                                 <details className={styles.ownerPortalSubmissionDetails} open={submission.id === selectedSubmissionId}>
                                     <summary>내용 확인</summary>
