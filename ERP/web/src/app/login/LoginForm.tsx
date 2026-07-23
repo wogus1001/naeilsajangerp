@@ -29,7 +29,7 @@ export function LoginForm({
                     <input
                         type="text"
                         id="companyName"
-                        placeholder="처음 한 번만 회사를 찾아주세요"
+                        placeholder="회사를 찾아주세요"
                         className={`${styles.input} ${styles.companyInput}`}
                         value={selectedCompany?.name || ''}
                         readOnly
