@@ -1,9 +1,10 @@
-import type { Company } from '../signup/CompanySearchModal';
-
 const SAVED_LOGIN_ID_KEY = 'saved_login_id';
 const SAVED_LOGIN_COMPANY_KEY = 'saved_login_company';
 
-export type LoginCompany = Pick<Company, 'id' | 'name'> & Partial<Pick<Company, 'manager_name' | 'created_at'>>;
+export type LoginCompany = {
+    readonly id: string;
+    readonly name: string;
+};
 
 type LoginCompanySource = {
     readonly companyId?: string | null;
@@ -22,14 +23,12 @@ export function parseSavedLoginCompany(raw: string | null): LoginCompany | null 
     if (!raw) return null;
 
     try {
-        const value = JSON.parse(raw) as unknown;
+        const value: unknown = JSON.parse(raw);
         if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') return null;
 
         return {
             id: value.id,
-            name: value.name,
-            manager_name: typeof value.manager_name === 'string' ? value.manager_name : '',
-            created_at: typeof value.created_at === 'string' ? value.created_at : ''
+            name: value.name
         };
     } catch {
         return null;
@@ -67,9 +66,7 @@ export function writeSavedLoginCompany(company: LoginCompany | null) {
 
     window.localStorage.setItem(SAVED_LOGIN_COMPANY_KEY, JSON.stringify({
         id: company.id,
-        name: company.name,
-        manager_name: company.manager_name || '',
-        created_at: company.created_at || ''
+        name: company.name
     }));
 }
 

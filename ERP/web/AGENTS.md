@@ -24,6 +24,7 @@ ERP/web/
 | Task | Location | Notes |
 |------|----------|-------|
 | Run/build/test commands | `README.md` | Source of truth for local verification commands. |
+| AI task/verification gates | `docs/harness-engineering-playbook.md` | Use for substantial UI/API/SQL/integration work and context handoff. |
 | Session/deploy state | `../../MAC_CONTEXT.md` | Read before changing active franchise work. |
 | Main app routes | `src/app/(main)` | Protected UI surfaces and dashboards. |
 | APIs | `src/app/api` | Route handlers; use API subtree notes. |

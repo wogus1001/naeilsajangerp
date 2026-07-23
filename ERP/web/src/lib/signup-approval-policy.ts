@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export type SignupApprovalRole = 'manager' | 'sub_manager' | 'staff' | 'partner_vendor';
 export type SignupApprovalStatus = 'pending_approval';
 export type SignupApprovalOwner = 'admin' | 'manager';
@@ -20,6 +22,75 @@ type SignupApprovalInput = {
     readonly companyHasManager?: boolean;
     readonly requestedRole: unknown;
 };
+
+export type CompanyManagerProfile = {
+    readonly id: string;
+    readonly companyId: string | null;
+    readonly role: string | null;
+    readonly status: string | null;
+};
+
+type CompanyManagerValidationInput = {
+    readonly companyId: string;
+    readonly managerId: string | null;
+    readonly profile: CompanyManagerProfile | null;
+};
+
+type CompanyManagerAssignmentInput = {
+    readonly companyId: string;
+    readonly currentManagerId: string | null;
+    readonly currentManagerProfile: CompanyManagerProfile | null;
+};
+
+type CompanyManagerProfileRow = {
+    readonly id: string;
+    readonly company_id: string | null;
+    readonly role: string | null;
+    readonly status: string | null;
+};
+
+export function isActiveCompanyManagerProfile(input: CompanyManagerValidationInput): boolean {
+    const { companyId, managerId, profile } = input;
+    return Boolean(
+        managerId
+        && profile
+        && profile.id === managerId
+        && profile.companyId === companyId
+        && profile.role === 'manager'
+        && profile.status === 'active'
+    );
+}
+
+export function shouldAssignCompanyManager(input: CompanyManagerAssignmentInput): boolean {
+    return !isActiveCompanyManagerProfile({
+        companyId: input.companyId,
+        managerId: input.currentManagerId,
+        profile: input.currentManagerProfile
+    });
+}
+
+export async function findCompanyManagerProfile(
+    supabaseAdmin: SupabaseClient,
+    managerId: string | null
+): Promise<CompanyManagerProfile | null> {
+    if (!managerId) return null;
+
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, company_id, role, status')
+        .eq('id', managerId)
+        .maybeSingle<CompanyManagerProfileRow>();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+        id: data.id,
+        companyId: data.company_id,
+        role: data.role,
+        status: data.status
+    };
+}
 
 export function normalizeSignupRole(value: unknown): SignupApprovalRole {
     if (value === 'partner_vendor') return 'partner_vendor';

@@ -3,8 +3,6 @@ import type { FormEvent } from 'react';
 export type Company = {
     readonly id: string;
     readonly name: string;
-    readonly manager_name: string;
-    readonly created_at: string;
 };
 
 type CompanySearchModalProps = {
@@ -126,10 +124,7 @@ export function CompanySearchModal({
                                             onMouseEnter={(event) => event.currentTarget.style.backgroundColor = '#f8f9fa'}
                                             onMouseLeave={(event) => event.currentTarget.style.backgroundColor = 'white'}
                                         >
-                                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>{company.name}</div>
-                                            <div style={{ fontSize: '12px', color: '#868e96' }}>
-                                                대표: {company.manager_name || '(미정)'}
-                                            </div>
+                                            <div style={{ fontWeight: '600' }}>{company.name}</div>
                                         </li>
                                     ))}
                                 </ul>

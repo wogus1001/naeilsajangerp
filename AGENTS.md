@@ -31,6 +31,7 @@ my_project/
 | Web app code | `ERP/web/src` | Next App Router, API routes, components, lib. |
 | Franchise roadmap | `ERP/web/docs/franchise-growth-roadmap.md` | Product priorities and provider policy. |
 | Franchise QA history | `ERP/web/docs/franchise-dev-qa-log.md` | Verification status and unresolved QA gaps. |
+| AI development workflow | `ERP/web/docs/harness-engineering-playbook.md` | Task contract, context loading, execution, verification, and improvement gates. |
 | External realty import status | `ERP/web/docs/franchise-growth-roadmap.md`, `ERP/web/docs/franchise-dev-qa-log.md` | Daangn MVP scope, current status, and remaining QA. |
 | OCR crawler | `ERP/crawler` | Windows-only pywinauto/PIL/win32 tooling. |
 
@@ -51,6 +52,7 @@ npm run build
 - For user-facing Korean text, preserve UTF-8 and inspect for mojibake before finishing.
 
 ## LAZYCODEX / OMO WORKFLOW
+- For substantial UI/API/SQL/integration work, follow `ERP/web/docs/harness-engineering-playbook.md`: define measurable completion criteria before editing, load only task-relevant context, and separate implementation from risk-based verification.
 - OMO skills are available in Codex Desktop and terminal Codex; prefer explicit skill names such as `omo:ulw-plan`, `omo:start-work`, `omo:ulw-loop`, `omo:review-work`, and `omo:init-deep`.
 - Prefer Codex Desktop for screenshot/image-heavy UI work, and terminal Codex for long CLI-oriented loops.
 - Small changes in 1-2 files can be implemented directly with focused verification.

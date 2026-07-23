@@ -122,7 +122,7 @@ export function LeadTableRow({
                     <span className={styles.tableSelectValue} aria-hidden="true">{lead.status}</span>
                 </span>
             </td>}
-            {visibleColumnSet.has('disclosure') && <td>
+            {visibleColumnSet.has('disclosure') && <td className={styles.centerColumnCell}>
                 <LeadDisclosureStatusCell summary={lead.disclosureSummary} />
             </td>}
             {visibleColumnSet.has('manager') && <td className={styles.selectCell}>
@@ -139,7 +139,7 @@ export function LeadTableRow({
                     <span className={styles.tableSelectValue} aria-hidden="true">{lead.managerId ? getManagerName(lead.managerId) : '담당자 선택'}</span>
                 </span>
             </td>}
-            {visibleColumnSet.has('source') && <td>
+            {visibleColumnSet.has('source') && <td className={styles.centerColumnCell}>
                 {lead.source ? (
                     <span
                         className={isMetaLeadSource(lead) ? `${styles.sourceBadge} ${styles.sourceBadgeMeta}` : styles.sourceBadge}
@@ -151,9 +151,11 @@ export function LeadTableRow({
                 ) : '-'}
             </td>}
             {visibleColumnSet.has('desiredRegion') && <td>{lead.desiredRegion || '-'}</td>}
-            {visibleColumnSet.has('budget') && <td>{formatBudget(lead.budgetMin, lead.budgetMax)}</td>}
+            {visibleColumnSet.has('budget') && <td className={styles.rightColumnCell}>
+                {formatBudget(lead.budgetMin, lead.budgetMax)}
+            </td>}
             {visibleColumnSet.has('interestedBrand') && <td>{lead.interestedBrand || '-'}</td>}
-            {visibleColumnSet.has('nextContactAt') && <td>
+            {visibleColumnSet.has('nextContactAt') && <td className={styles.centerColumnCell}>
                 <span className={isPastDue(lead.nextContactAt) ? styles.dueBadgeDanger : isDueToday(lead.nextContactAt) ? styles.dueBadge : undefined}>
                     {formatDateTime(lead.nextContactAt)}
                 </span>
@@ -166,7 +168,7 @@ export function LeadTableRow({
                     {!lead.linkedCustomerId && !lead.linkedBusinessCardId && <small>-</small>}
                 </div>
             </td>}
-            {visibleColumnSet.has('actions') && <td>
+            {visibleColumnSet.has('actions') && <td className={styles.centerColumnCell}>
                 <div className={styles.rowActions}>
                     {isRawIntakeLead(lead) && (
                         <button
@@ -227,6 +229,7 @@ export function LeadTableRow({
                     </button>
                 </div>
             </td>}
+            <td className={styles.tableFillerCell} aria-hidden="true" />
         </tr>
     );
 }

@@ -23,6 +23,19 @@
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
 - 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
+### 2026-07-23 로그인·가입·모객 DB QA 안정화
+
+- 회사 찾기는 현재 제품에 별도 대표자 지정 기능이 없으므로 대표자 이름이나 `(미정)`을 검색 결과에 표시하지 않는다. 아이디 로그인용 회사 선택값은 회사 ID와 회사명만 보관해 과거 검색 응답의 대표자 문자열이 다시 노출되지 않게 했다.
+- 가입 요청 도중 Supabase JWT key 인식이 일시적으로 실패해도 사용자가 같은 정보를 다시 입력하지 않도록 인증 사용자 조회를 제한적으로 재시도한다. 유효하지 않은 인증과 일반 DB 오류는 재시도 대상으로 넓히지 않는다.
+- 직원 관리의 승인 대기 요청에서는 내부 profile UUID를 숨기고 이름과 역할만 보여준다.
+- 모바일 로그인에서는 회사 입력과 `회사 찾기` 버튼이 카드 밖으로 잘리지 않도록 입력 영역을 축소 가능한 열로 두고 버튼 너비를 유지한다.
+- 모객 DB 표는 컬럼 폭을 한 설정에서 관리하고 8px 간격 리듬으로 정리했다. 희망지역과 예산은 각각 120px로 줄였고, 상태형 컬럼은 가운데, 예산은 오른쪽 정렬했다. 넓은 화면의 남는 공간은 마지막 빈 영역이 흡수해 희망지역·예산만 과도하게 늘어나지 않는다.
+- 컬럼 선택 메뉴는 표 카드의 overflow에 잘리지 않고 자체 세로 스크롤로 전체 항목을 확인할 수 있게 했다. 표의 가로 스크롤은 기존 표 스크롤 영역에서만 유지한다.
+- 자동 검증: 모객 DB와 로그인·가입·승인 관련 테스트 47건, TypeScript, 전체 ESLint, `git diff --check`를 통과했다.
+- 로컬 production build는 Turbopack이 최적화 단계에서 장시간 정체됐고, Webpack 경로는 이번 변경과 무관하게 route module에서 테스트 helper를 export하는 기존 API 파일들을 Next.js 타입 검증 오류로 보고했다. 깨끗한 원격 환경의 Vercel 필수 check를 최종 build gate로 사용하고, 실패하면 배포를 중단한다.
+- 화면 QA: 1652px에서 희망지역·예산 120px 고정과 우측 여백 흡수, 390px에서 표 내부 가로 스크롤, 390x500에서 컬럼 선택 메뉴의 카드 밖 표시와 내부 스크롤을 확인했다. 독립 기능·한국어 UI 게이트가 모두 `PASS`했다. 실행 환경의 보안 정책으로 에이전트가 사용자 `localhost:3000` DOM을 직접 읽지는 못해, 사용자 제공 실제 화면과 동일 DOM을 사용하는 격리 화면 검증을 함께 사용했다.
+- 공개 `/landing`·`/demo` 설명 흐름에는 영향이 없다. 신규 SQL 없음.
+
 ### 2026-07-21 진행현황 입점 요청 네이버 지도 전환
 
 - `/dashboard/franchise-leads/work-intake`의 입점 요청 상세 주소 지도를 Kakao 지도에서 Naver Maps Dynamic Map으로 교체했다. 주소 좌표 변환은 인증된 `/api/integrations/naver/maps/geocode`가 서버 전용 Client Secret으로 처리하고, 브라우저에는 Maps Client ID만 전달한다.
@@ -1513,3 +1526,14 @@
 - 보안: nonce만 비교할 때 남아 있던 state 내부 사용자·회사 ID 변경 가능성을 전체 state 일치 검증으로 차단했다. query의 사용자 ID만으로 callback 사용자를 신뢰하지 않는다.
 - 검증: 실패 테스트에서 state helper 부재를 확인한 뒤 state 원문 변경·nonce 누락/불일치·bearer 없는 활성 callback 사용자 조회를 포함한 Gmail/인증 테스트 15건, TypeScript, lint, production build, `git diff --check`를 통과했다. 로컬 브라우저 callback은 `auth_required`와 `invalid_state`를 지나 Google 토큰 교환 단계까지 도달했다.
 - 신규 SQL 없음. 운영 실계정의 최종 `연결됨` 표시는 dev/main 승격과 production 배포 후 다시 확인한다.
+## 2026-07-23 플랫폼 안정화 4단계 1차
+
+- 관리자 사이드바와 관리 홈에 `운영센터` 진입점을 추가했다.
+- `/api/admin/platform-operations`는 일정 동기화 큐, 점주 포털 파일 삭제 outbox, 알림톡 실패·차단 로그, 공통 감사 이력을 관리자 범위에서 조회한다.
+- 일정 동기화 실패와 파일 정리 실패는 확인창을 거쳐 처리 대기로 되돌리며, `platform_audit_events`에 request ID, 관리자, 작업 대상, 처리 전후 값을 저장한다.
+- 알림톡 로그는 재발송 payload가 완전하지 않아 확인 전용으로 유지했다.
+- 자동 검증: 전체 `src/lib/*.test.mts` 530건, TypeScript, lint, production build, `git diff --check`를 통과했다.
+- production mock 브라우저 QA: 1440px·390px에서 문서 가로 넘침 0, console error 0, 탭 방향키 이동과 실제 포커스 이전, 모바일 조작 영역 44px 이상, 작업별 전체 필드 표시를 확인했다. 재처리 버튼은 `작업 재처리` 확인창을 먼저 열고 취소 버튼에 초기 포커스를 두며, 취소 후 요청 없이 닫히는 흐름까지 검증했다.
+- SQL 상태: 사용자 확인 기준 `supabase_platform_operations_phase4_migration.sql`을 대상 DB에 적용했다. **SQL 등록 완료 확인**.
+- 남은 QA: 실패 작업 샘플 재처리, worker 완료, 감사 이력 생성을 적용 DB 실데이터로 확인한다.
+- 최종 UI 게이트: `DESIGN.md` 공용 토큰 정렬, 한국어 줄바꿈, 탭·확인창 포커스, 모바일 44px 조작 영역을 재검증했고 디자인 충실도 리뷰와 최종 게이트 리뷰가 모두 `PASS`했다.

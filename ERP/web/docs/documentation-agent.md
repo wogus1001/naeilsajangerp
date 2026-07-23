@@ -23,6 +23,7 @@ The agent keeps project documents current while product and engineering work mov
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-dev-qa-log.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/fdam-reference.md`
 - `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/documentation-agent.md`
+- `/Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/harness-engineering-playbook.md`
 
 ## Responsibilities
 
@@ -33,6 +34,7 @@ The agent keeps project documents current while product and engineering work mov
 - Keep the top resume section of `MAC_CONTEXT.md` concise enough for a new session to resume work.
 - Keep `README.md` focused on setup, env, SQL, and operational instructions.
 - Keep reference documents separate from live status documents.
+- Keep the Harness Engineering playbook limited to durable development methods, and move feature status or release history to the existing source-of-truth documents.
 - Keep external listing import scope, limits, source behavior, QA status, and promotion flow aligned between the roadmap and QA log.
 
 ## Separate Codex Thread
@@ -83,6 +85,7 @@ Doc Update Brief
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/franchise-dev-qa-log.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/fdam-reference.md
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/documentation-agent.md
+- /Users/kimjaehyun/Documents/project/erp_workspace/my_project/ERP/web/docs/harness-engineering-playbook.md
 
 작업 루트:
 - /Users/kimjaehyun/Documents/project/erp_workspace/my_project
