@@ -3,6 +3,24 @@ import type { LeadTableSortKey } from './leadTableTypes';
 import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 
 export const LEAD_TABLE_COLUMNS_STORAGE_KEY = 'franchiseLeadTableColumns';
+export const LEAD_TABLE_CHECKBOX_COLUMN_WIDTH = 40;
+
+export const LEAD_TABLE_COLUMN_WIDTHS = {
+    priority: 56,
+    name: 144,
+    mobile: 136,
+    status: 112,
+    disclosure: 120,
+    manager: 120,
+    source: 104,
+    desiredRegion: 120,
+    budget: 120,
+    interestedBrand: 120,
+    nextContactAt: 144,
+    memo: 224,
+    links: 88,
+    actions: 176
+} as const satisfies Readonly<Record<LeadTableColumnKey, number>>;
 
 type LeadTableColumnConfig = {
     readonly key: LeadTableColumnKey;

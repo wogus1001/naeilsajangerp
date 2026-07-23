@@ -4881,70 +4881,11 @@
 }
 
 .leadTable {
+    width: 100%;
     min-width: 1280px;
     border-collapse: separate;
     border-spacing: 0;
     table-layout: fixed;
-}
-
-.colCheck {
-    width: 44px;
-}
-
-.colPriority {
-    width: 64px;
-}
-
-.colCandidate {
-    width: 160px;
-}
-
-.colPhone {
-    width: 142px;
-}
-
-.colStatus {
-    width: 136px;
-}
-
-.colDisclosure {
-    width: 154px;
-}
-
-.colManager {
-    width: 152px;
-}
-
-.colSource {
-    width: 108px;
-}
-
-.colRegion {
-    width: 150px;
-}
-
-.colBudget {
-    width: 184px;
-}
-
-.colBrand {
-    width: 132px;
-}
-
-.colNextContact {
-    width: 142px;
-}
-
-.colMemo {
-    width: 250px;
-}
-
-.colLink {
-    width: 92px;
-}
-
-.colActions {
-    width: 168px;
 }
 
 .leadTable th {
@@ -6695,6 +6636,23 @@
 
 .centerColumnHeader {
     text-align: center !important;
+}
+
+.centerColumnCell {
+    text-align: center;
+}
+
+.rightColumnHeader {
+    text-align: right !important;
+}
+
+.rightColumnCell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tableFillerCell {
+    padding: 0 !important;
 }
 
 .tableSelectWrap {
@@ -11272,6 +11230,10 @@
     padding: 12px 14px;
 }
 
+.tablePanel {
+    overflow: visible;
+}
+
 .tableControlRow {
     justify-content: flex-start;
 }
@@ -11282,7 +11244,7 @@
 
 .leadTable th {
     height: 36px;
-    padding: 7px 10px;
+    padding: 7px 8px;
     background: #f9fafb;
     color: var(--fr-muted);
     font-size: 12px;
@@ -11290,7 +11252,7 @@
 }
 
 .leadTable td {
-    padding: 7px 10px;
+    padding: 7px 8px;
     color: var(--fr-text);
     font-size: 13px;
 }
@@ -11314,6 +11276,7 @@
 
 .rowActions {
     gap: 4px;
+    justify-content: center;
 }
 
 .iconButton,
