@@ -13,9 +13,7 @@ describe('loginStorage', () => {
 
         assert.deepEqual(company, {
             id: 'company-1',
-            name: '민티아',
-            manager_name: '김팀장',
-            created_at: '2026-06-22'
+            name: '민티아'
         });
     });
 
