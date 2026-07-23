@@ -11,6 +11,7 @@
 | Task | Location | Notes |
 |------|----------|-------|
 | Docs steward rules | `documentation-agent.md` | Authority, approved docs, required report format. |
+| AI development workflow | `harness-engineering-playbook.md` | Task contracts, context boundaries, verification, and improvement gates. |
 | Current franchise status | `franchise-current-status.md` | Latest implementation/deploy/SQL/sample/live QA summary. |
 | Product roadmap | `franchise-growth-roadmap.md` | Priorities, provider policies, next work. |
 | Product direction | `franchise-product-direction.md` | Macro product principles and long-term module structure. |
@@ -25,6 +26,7 @@
 - Every Docs Steward run should finish with the `Doc Update Brief` format from `documentation-agent.md`.
 - Keep the top resume section of `MAC_CONTEXT.md` concise; historical notes may remain, but they are not the source of truth for current status.
 - Cross-link docs by path when a status note depends on another document.
+- Keep `harness-engineering-playbook.md` focused on durable working methods; feature status and release history belong in their existing source-of-truth documents.
 
 ## ANTI-PATTERNS
 - Editing `ERP/web/handoff.md`.

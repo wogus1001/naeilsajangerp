@@ -36,6 +36,7 @@ npm run start -- -p 3000
 - `../../MAC_CONTEXT.md`: 맥북 worktree 운영, 배포 방식, 세션 시작 체크리스트.
 - `docs/franchise-current-status.md`: 프랜차이즈 최신 구현/배포/SQL/샘플/live QA 상태 요약.
 - `docs/release-management.md`: 브랜치, 커밋, dev/main 반영, 배포 이력 관리 규칙.
+- `docs/harness-engineering-playbook.md`: AI 개발 작업 계약, 점진적 맥락 로딩, 실행·검증·개선 게이트.
 - `docs/supabase-service-role-incident-response.md`: Git 이력에 노출된 Supabase 관리자 키의 폐기, 교체, 로그 조사, 이력 정화 절차.
 - `docs/franchise-growth-roadmap.md`: 프랜차이즈 고도화 우선순위, API 정책, 다음 작업 목록.
 - `docs/platform-sequential-development-roadmap.md`: 전자결재, 일정·알림, 점주 포털 자동화, 안정화를 순서대로 완료하기 위한 단계별 실행 계획과 전환 게이트.

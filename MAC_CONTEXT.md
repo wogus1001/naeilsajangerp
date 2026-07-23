@@ -16,6 +16,7 @@
 - 브랜치/커밋/배포 ledger: `ERP/web/docs/release-management.md`
 - 상세 QA 로그와 미검증 리스크: `ERP/web/docs/franchise-dev-qa-log.md`
 - 제품 방향과 다음 작업 목록: `ERP/web/docs/franchise-growth-roadmap.md`
+- AI 개발 작업 계약과 검증 게이트: `ERP/web/docs/harness-engineering-playbook.md`
 - 이 문서의 오래된 작업 메모는 역사적 참고용이다. 최신 배포 여부, SQL 적용 여부, 샘플 데이터 정리는 위 문서들을 우선한다.
 
 ## 맥북 권장 폴더 구조
@@ -39,6 +40,7 @@
 
 ## LazyCodex 운영 요약
 - 상세 작업 규칙은 루트 `AGENTS.md`를 따른다.
+- 여러 파일 또는 UI/API/SQL/외부 연동을 함께 다루는 작업은 `ERP/web/docs/harness-engineering-playbook.md`의 작업 계약과 변경 유형별 검증 게이트를 적용한다.
 - LazyCodex/OMO 스킬은 데스크탑 Codex와 터미널 Codex 모두에서 사용 가능하며, 필요 시 `omo:ulw-plan`처럼 네임스페이스를 명시한다.
 - 화면/이미지 피드백이 많은 작업은 데스크탑 Codex를 우선 사용하고, 긴 CLI 루프는 터미널 Codex를 보조로 사용한다.
 - 큰 작업은 `ulw-plan`으로 계획을 만든 뒤 사용자 승인 후 `start-work`로 실행한다.
