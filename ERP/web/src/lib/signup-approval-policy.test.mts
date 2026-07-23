@@ -2,9 +2,66 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     getPendingApprovalLoginMessage,
+    isActiveCompanyManagerProfile,
     normalizeSignupRole,
-    resolveSignupApprovalPolicy
+    resolveSignupApprovalPolicy,
+    shouldAssignCompanyManager
 } from './signup-approval-policy.js';
+
+test('Given a stale manager id When validating the company manager Then it is inactive', () => {
+    assert.equal(isActiveCompanyManagerProfile({
+        companyId: 'company-1',
+        managerId: 'deleted-manager',
+        profile: null
+    }), false);
+});
+
+test('Given an active team lead When validating the same company Then it is active', () => {
+    assert.equal(isActiveCompanyManagerProfile({
+        companyId: 'company-1',
+        managerId: 'manager-1',
+        profile: {
+            id: 'manager-1',
+            companyId: 'company-1',
+            role: 'manager',
+            status: 'active'
+        }
+    }), true);
+});
+
+test('Given a manager from another company When validating the company manager Then it is inactive', () => {
+    assert.equal(isActiveCompanyManagerProfile({
+        companyId: 'company-1',
+        managerId: 'manager-1',
+        profile: {
+            id: 'manager-1',
+            companyId: 'company-2',
+            role: 'manager',
+            status: 'active'
+        }
+    }), false);
+});
+
+test('Given a stale manager link When promoting a team lead Then the company manager is reassigned', () => {
+    assert.equal(shouldAssignCompanyManager({
+        companyId: 'company-1',
+        currentManagerId: 'deleted-manager',
+        currentManagerProfile: null
+    }), true);
+});
+
+test('Given a valid manager link When promoting another team lead Then the existing link is preserved', () => {
+    assert.equal(shouldAssignCompanyManager({
+        companyId: 'company-1',
+        currentManagerId: 'manager-1',
+        currentManagerProfile: {
+            id: 'manager-1',
+            companyId: 'company-1',
+            role: 'manager',
+            status: 'active'
+        }
+    }), false);
+});
 
 test('new company signup always becomes a manager request waiting for admin approval', () => {
     const policy = resolveSignupApprovalPolicy({

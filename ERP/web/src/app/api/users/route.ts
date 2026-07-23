@@ -3,6 +3,10 @@ import { notifyAlimtalkSignupApproved } from '@/lib/alimtalk-signup-notification
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeAdminAssignableUserRole } from '@/lib/user-role-policy';
 import {
+    findCompanyManagerProfile,
+    shouldAssignCompanyManager
+} from '@/lib/signup-approval-policy';
+import {
     buildUserUpdateLookup,
     getErrorMessage,
     getRequesterProfile,
@@ -246,7 +250,14 @@ export async function PUT(request: Request) {
                 .eq('id', targetProfile.company_id)
                 .single();
 
-            if (company && !company.manager_id) {
+            const currentManagerId = company?.manager_id ?? null;
+            const currentManagerProfile = await findCompanyManagerProfile(supabaseAdmin, currentManagerId);
+
+            if (shouldAssignCompanyManager({
+                companyId: targetProfile.company_id,
+                currentManagerId,
+                currentManagerProfile
+            })) {
                 await supabaseAdmin
                     .from('companies')
                     .update({ manager_id: targetUuid })

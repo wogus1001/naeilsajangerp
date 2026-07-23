@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
+    findCompanyManagerProfile,
+    isActiveCompanyManagerProfile,
     resolveSignupApprovalPolicy
 } from '@/lib/signup-approval-policy';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
@@ -183,9 +185,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '이미 사용 중인 아이디입니다.' }, { status: 409 });
         }
 
+        const companyManagerId = existingCompany?.manager_id ?? null;
+        const companyManagerProfile = await findCompanyManagerProfile(supabaseAdmin, companyManagerId);
         const approvalPolicy = resolveSignupApprovalPolicy({
             companyExists: !isNewCompany,
-            companyHasManager: Boolean(existingCompany?.manager_id),
+            companyHasManager: isActiveCompanyManagerProfile({
+                companyId,
+                managerId: companyManagerId,
+                profile: companyManagerProfile
+            }),
             requestedRole
         });
 
