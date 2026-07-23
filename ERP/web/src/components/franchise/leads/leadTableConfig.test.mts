@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     DEFAULT_LEAD_TABLE_COLUMN_KEYS,
+    LEAD_TABLE_CHECKBOX_COLUMN_WIDTH,
+    LEAD_TABLE_COLUMN_WIDTHS,
     normalizeLeadTableColumnKeys,
     toggleLeadTableColumn
 } from './leadTableConfig.js';
@@ -41,4 +43,23 @@ test('normalizeLeadTableColumnKeys removes hidden customer DB linking column for
 test('toggleLeadTableColumn prevents hiding the required name column', () => {
     assert.deepEqual(toggleLeadTableColumn(['name', 'mobile'], 'name'), ['name', 'mobile']);
     assert.deepEqual(toggleLeadTableColumn(['name', 'mobile'], 'memo'), ['name', 'mobile', 'memo']);
+});
+
+test('default lead table uses a compact desktop width without squeezing row actions', () => {
+    const defaultTableWidth = LEAD_TABLE_CHECKBOX_COLUMN_WIDTH
+        + DEFAULT_LEAD_TABLE_COLUMN_KEYS.reduce(
+            (sum, columnKey) => sum + LEAD_TABLE_COLUMN_WIDTHS[columnKey],
+            0
+        );
+
+    assert.ok(defaultTableWidth <= 1400);
+    assert.ok(LEAD_TABLE_COLUMN_WIDTHS.actions >= 176);
+});
+
+test('lead table columns follow the shared 8px spacing rhythm', () => {
+    assert.equal(LEAD_TABLE_CHECKBOX_COLUMN_WIDTH % 8, 0);
+
+    for (const columnWidth of Object.values(LEAD_TABLE_COLUMN_WIDTHS)) {
+        assert.equal(columnWidth % 8, 0);
+    }
 });

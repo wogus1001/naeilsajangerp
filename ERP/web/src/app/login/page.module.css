@@ -100,12 +100,13 @@
 }
 
 .companyPickerRow {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
 }
 
 .companyInput {
-    flex: 1;
+    min-width: 0;
     background-color: #f8f9fa;
     cursor: pointer;
 }

@@ -3,7 +3,11 @@
 import type { ReactNode } from 'react';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
-import { LEAD_TABLE_COLUMNS } from './leadTableConfig';
+import {
+    LEAD_TABLE_CHECKBOX_COLUMN_WIDTH,
+    LEAD_TABLE_COLUMNS,
+    LEAD_TABLE_COLUMN_WIDTHS
+} from './leadTableConfig';
 import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead, LeadDbLayer } from './types';
 import { LeadTableBulkActions } from './LeadTableBulkActions';
@@ -44,6 +48,16 @@ type LeadTableViewProps = {
     readonly onNextPage: () => void;
 };
 
+const CENTER_ALIGNED_COLUMN_KEYS: ReadonlySet<LeadTableColumnKey> = new Set([
+    'priority',
+    'status',
+    'disclosure',
+    'manager',
+    'source',
+    'nextContactAt',
+    'actions'
+]);
+
 export function LeadTableView({
     isLoading,
     leadDbLayer,
@@ -78,41 +92,10 @@ export function LeadTableView({
     onNextPage
 }: LeadTableViewProps) {
     const selectedLeadSet = new Set(selectedLeadIds);
-    const columnClassNames: Record<LeadTableColumnKey, string> = {
-        priority: styles.colPriority,
-        name: styles.colCandidate,
-        mobile: styles.colPhone,
-        status: styles.colStatus,
-        disclosure: styles.colDisclosure,
-        manager: styles.colManager,
-        source: styles.colSource,
-        desiredRegion: styles.colRegion,
-        budget: styles.colBudget,
-        interestedBrand: styles.colBrand,
-        nextContactAt: styles.colNextContact,
-        memo: styles.colMemo,
-        links: styles.colLink,
-        actions: styles.colActions
-    };
-    const columnWidths: Record<LeadTableColumnKey, number> = {
-        priority: 64,
-        name: 160,
-        mobile: 142,
-        status: 112,
-        disclosure: 154,
-        manager: 118,
-        source: 108,
-        desiredRegion: 150,
-        budget: 184,
-        interestedBrand: 132,
-        nextContactAt: 142,
-        memo: 250,
-        links: 92,
-        actions: 168
-    };
     const activeColumns = LEAD_TABLE_COLUMNS.filter(column => visibleColumns.includes(column.key));
-    const emptyColumnSpan = activeColumns.length + 1;
-    const tableWidth = `${44 + activeColumns.reduce((sum, column) => sum + columnWidths[column.key], 0)}px`;
+    const emptyColumnSpan = activeColumns.length + 2;
+    const tableMinWidth = LEAD_TABLE_CHECKBOX_COLUMN_WIDTH
+        + activeColumns.reduce((sum, column) => sum + LEAD_TABLE_COLUMN_WIDTHS[column.key], 0);
 
     return (
         <>
@@ -125,12 +108,13 @@ export function LeadTableView({
                 onClearSelected={onClearSelected}
             />
             <div className={styles.tableScroll}>
-                <table className={styles.leadTable} style={{ width: tableWidth, minWidth: tableWidth }}>
+                <table className={styles.leadTable} style={{ minWidth: `${tableMinWidth}px` }}>
                     <colgroup>
-                        <col className={styles.colCheck} />
+                        <col style={{ width: LEAD_TABLE_CHECKBOX_COLUMN_WIDTH }} />
                         {activeColumns.map(column => (
-                            <col key={column.key} className={columnClassNames[column.key]} />
+                            <col key={column.key} style={{ width: LEAD_TABLE_COLUMN_WIDTHS[column.key] }} />
                         ))}
+                        <col />
                     </colgroup>
                     <thead>
                         <tr>
@@ -146,11 +130,18 @@ export function LeadTableView({
                             {activeColumns.map(column => (
                                 <th
                                     key={column.key}
-                                    className={column.key === 'status' || column.key === 'manager' ? styles.centerColumnHeader : undefined}
+                                    className={
+                                        column.key === 'budget'
+                                            ? styles.rightColumnHeader
+                                            : CENTER_ALIGNED_COLUMN_KEYS.has(column.key)
+                                                ? styles.centerColumnHeader
+                                                : undefined
+                                    }
                                 >
                                     {column.key === 'actions' ? '' : column.label}
                                 </th>
                             ))}
+                            <th className={styles.tableFillerCell} aria-hidden="true" />
                         </tr>
                     </thead>
                     <tbody>

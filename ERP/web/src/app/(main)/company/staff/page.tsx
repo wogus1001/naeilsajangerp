@@ -181,8 +181,7 @@ export default function StaffManagementPage() {
                         {pendingStaff.map(staff => (
                             <div key={staff.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                                 <div>
-                                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{staff.name}</span>
-                                    <span style={{ color: '#868e96', fontSize: '14px' }}>({staff.id})</span>
+                                    <span style={{ fontWeight: 'bold' }}>{staff.name}</span>
                                     <span style={{ marginLeft: '8px', color: '#1971c2', fontSize: '12px', fontWeight: 700 }}>
                                         {getUserRoleLabel(staff.role)}
                                     </span>

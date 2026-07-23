@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import {
+    findCompanyManagerProfile,
+    isActiveCompanyManagerProfile,
     resolveSignupApprovalPolicy
 } from '@/lib/signup-approval-policy';
 import { isValidLoginId, LOGIN_ID_RULE_MESSAGE, normalizeLoginId } from '@/lib/login-id';
 import { notifyAlimtalkSignupRequest } from '@/lib/alimtalk-signup-notifications';
+import { createSignupAuthUserWithRetry } from '@/lib/signup-auth-user';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 function normalizePhone(value: unknown): string {
@@ -183,9 +186,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '이미 사용 중인 아이디입니다.' }, { status: 409 });
         }
 
+        const companyManagerId = existingCompany?.manager_id ?? null;
+        const companyManagerProfile = await findCompanyManagerProfile(supabaseAdmin, companyManagerId);
         const approvalPolicy = resolveSignupApprovalPolicy({
             companyExists: !isNewCompany,
-            companyHasManager: Boolean(existingCompany?.manager_id),
+            companyHasManager: isActiveCompanyManagerProfile({
+                companyId,
+                managerId: companyManagerId,
+                profile: companyManagerProfile
+            }),
             requestedRole
         });
 
@@ -194,32 +203,26 @@ export async function POST(request: Request) {
         }
 
         // 3. Create Auth User
-        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: email,
-            password: password,
-            email_confirm: true, // Auto confirm since we are using admin
-            user_metadata: { name: name, phone: String(phone).trim(), phone_normalized: phoneNormalized }
-        });
-
-        if (authError) {
-            console.error('Auth create error:', authError);
-            const msg = authError.message.toLowerCase();
-            if (msg.includes('unique constraint') ||
-                msg.includes('already registered') ||
-                msg.includes('a user with this email address has already been registered')) {
-                return NextResponse.json({ error: '이미 존재하는 이메일입니다.' }, { status: 409 });
-            }
-            if (msg.includes('password should be at least')) {
-                return NextResponse.json({ error: '비밀번호는 최소 6자 이상이어야 합니다.' }, { status: 400 });
-            }
-            return NextResponse.json({ error: authError.message }, { status: 500 });
+        const authResult = await createSignupAuthUserWithRetry(() =>
+            supabaseAdmin.auth.admin.createUser({
+                email,
+                password,
+                email_confirm: true,
+                user_metadata: { name, phone: String(phone).trim(), phone_normalized: phoneNormalized }
+            })
+        );
+        if (authResult.retried) {
+            console.warn('[Signup] Auth user creation required a retry after JWT verification failure');
+        }
+        if (authResult.error) {
+            console.error('Auth create error:', authResult.error.internalMessage);
+            return NextResponse.json(
+                { error: authResult.error.message },
+                { status: authResult.error.status }
+            );
         }
 
-        if (!authUser.user) {
-            return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-        }
-
-        const userId = authUser.user.id;
+        const userId = authResult.userId;
 
         // 4. Update Profile (created by trigger) with correct Role/Company/Status
         const { error: profileError } = await supabaseAdmin
