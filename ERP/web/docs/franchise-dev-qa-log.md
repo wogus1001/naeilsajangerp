@@ -1513,3 +1513,14 @@
 - 보안: nonce만 비교할 때 남아 있던 state 내부 사용자·회사 ID 변경 가능성을 전체 state 일치 검증으로 차단했다. query의 사용자 ID만으로 callback 사용자를 신뢰하지 않는다.
 - 검증: 실패 테스트에서 state helper 부재를 확인한 뒤 state 원문 변경·nonce 누락/불일치·bearer 없는 활성 callback 사용자 조회를 포함한 Gmail/인증 테스트 15건, TypeScript, lint, production build, `git diff --check`를 통과했다. 로컬 브라우저 callback은 `auth_required`와 `invalid_state`를 지나 Google 토큰 교환 단계까지 도달했다.
 - 신규 SQL 없음. 운영 실계정의 최종 `연결됨` 표시는 dev/main 승격과 production 배포 후 다시 확인한다.
+## 2026-07-23 플랫폼 안정화 4단계 1차
+
+- 관리자 사이드바와 관리 홈에 `운영센터` 진입점을 추가했다.
+- `/api/admin/platform-operations`는 일정 동기화 큐, 점주 포털 파일 삭제 outbox, 알림톡 실패·차단 로그, 공통 감사 이력을 관리자 범위에서 조회한다.
+- 일정 동기화 실패와 파일 정리 실패는 확인창을 거쳐 처리 대기로 되돌리며, `platform_audit_events`에 request ID, 관리자, 작업 대상, 처리 전후 값을 저장한다.
+- 알림톡 로그는 재발송 payload가 완전하지 않아 확인 전용으로 유지했다.
+- 자동 검증: 전체 `src/lib/*.test.mts` 530건, TypeScript, lint, production build, `git diff --check`를 통과했다.
+- production mock 브라우저 QA: 1440px·390px에서 문서 가로 넘침 0, console error 0, 탭 방향키 이동과 실제 포커스 이전, 모바일 조작 영역 44px 이상, 작업별 전체 필드 표시를 확인했다. 재처리 버튼은 `작업 재처리` 확인창을 먼저 열고 취소 버튼에 초기 포커스를 두며, 취소 후 요청 없이 닫히는 흐름까지 검증했다.
+- SQL 상태: 사용자 확인 기준 `supabase_platform_operations_phase4_migration.sql`을 대상 DB에 적용했다. **SQL 등록 완료 확인**.
+- 남은 QA: 실패 작업 샘플 재처리, worker 완료, 감사 이력 생성을 적용 DB 실데이터로 확인한다.
+- 최종 UI 게이트: `DESIGN.md` 공용 토큰 정렬, 한국어 줄바꿈, 탭·확인창 포커스, 모바일 44px 조작 영역을 재검증했고 디자인 충실도 리뷰와 최종 게이트 리뷰가 모두 `PASS`했다.

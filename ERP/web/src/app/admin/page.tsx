@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus, FileSignature, SlidersHorizontal, MessageSquareText } from 'lucide-react';
+import { Activity, Users, Building, ShieldCheck, Settings, ChevronRight, GitBranchPlus, FileSignature, SlidersHorizontal, MessageSquareText } from 'lucide-react';
 import Link from 'next/link';
 import { AlertModal } from '@/components/common/AlertModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
@@ -155,6 +155,19 @@ export default function AdminDashboardPage() {
             {/* Quick Menu */}
             <h2 style={styles.sectionTitle}>관리 메뉴</h2>
             <div style={styles.menuList}>
+                <Link href="/admin/operations" style={styles.menuItem}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ ...styles.menuIconBox, backgroundColor: 'var(--erp-action-soft)', color: 'var(--erp-action-strong)' }}>
+                            <Activity size={20} />
+                        </div>
+                        <div style={styles.menuTexts}>
+                            <span style={styles.menuTitle}>운영센터</span>
+                            <span style={styles.menuDesc}>실패 작업, 재처리 대기, 관리자 감사 이력 확인</span>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} color="#adb5bd" />
+                </Link>
+
                 <Link href="/admin/users" style={styles.menuItem}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <div style={styles.menuIconBox}>

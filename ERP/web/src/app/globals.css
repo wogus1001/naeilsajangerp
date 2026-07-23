@@ -13,6 +13,39 @@
     --bg-main: #f1f3f5;
     --bg-gray: #f8f9fa;
 
+    /* Shared ERP design tokens from DESIGN.md */
+    --erp-action: #3182f6;
+    --erp-action-strong: #2272eb;
+    --erp-action-soft: #e8f3ff;
+    --erp-surface: #ffffff;
+    --erp-surface-muted: #f2f4f6;
+    --erp-table-muted: #f9fafb;
+    --erp-text-secondary: #6b7684;
+    --erp-danger: #f04452;
+    --erp-danger-soft: #fff1f2;
+    --erp-success: #03b26c;
+    --erp-success-soft: #e8f8ef;
+    --erp-warning: #fe9800;
+    --erp-warning-soft: #fff9db;
+    --erp-warning-border: #ffd8a8;
+    --erp-focus: #3182f6;
+    --erp-space-1: 4px;
+    --erp-space-2: 8px;
+    --erp-space-3: 12px;
+    --erp-space-4: 16px;
+    --erp-space-5: 24px;
+    --erp-space-6: 32px;
+    --erp-radius-small: 6px;
+    --erp-radius-default: 8px;
+    --erp-font-caption: 12px;
+    --erp-font-label: 13px;
+    --erp-font-body: 14px;
+    --erp-font-page-title: 28px;
+    --erp-control-height: 40px;
+    --erp-control-height-compact: 40px;
+    --erp-control-height-mobile: 44px;
+    --erp-shadow-subtle: 0 1px 3px rgb(0 0 0 / 8%);
+
     /* Status Colors */
     --status-manage-bg: #e7f5ff;
     --status-manage-text: #228be6;
@@ -85,6 +118,7 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    --erp-focus: #93c5fd;
   }
 }
 
