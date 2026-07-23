@@ -238,6 +238,14 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-23 로그인·가입·모객 DB QA 안정화
+  - 작업 브랜치: `codex/qa-stabilization-20260723`
+  - 기능 커밋: `b7ab2e9 fix(auth): 회사 검색 대표자 정보 제거`, `9191a49 fix(auth): 가입 인증 오류 재시도`, `48ba4bf fix(company): 가입 승인 내부 ID 숨김`, `f5dc4e7 fix(auth): 모바일 회사 찾기 배치 보정`과 모객 DB 표 간격 보정.
+  - 주요 기능: 회사 검색의 미지원 대표자 표시 제거, 가입 JWT key 일시 오류 제한 재시도, 승인 요청 내부 UUID 숨김, 모바일 회사 찾기 배치, 모객 DB 컬럼 폭·정렬·컬럼 선택 메뉴 overflow를 정리했다.
+  - 검증: 모객 DB와 로그인·가입·승인 관련 테스트 47건, TypeScript, 전체 ESLint, `git diff --check` 통과. 1652px·390px 표와 390x500 컬럼 선택 메뉴 화면 QA 및 독립 기능·한국어 UI 게이트 `PASS`. 로컬 production build 제약은 상세 QA 로그에 기록했으며 Vercel 필수 check를 최종 build gate로 사용한다.
+  - SQL 및 데모: 신규 SQL 없음. 공개 `/landing`·`/demo` 흐름 영향 없음.
+  - dev/main/production: 이 릴리스 요청에서 Fast Release Runbook에 따라 순차 승격하고 최종 deployment ID는 배포 결과로 보고한다.
+
 - 2026-07-21 입점 요청 사진 업로드 긴급 보정
   - 작업 브랜치: `codex/work-intake-photo-upload-hotfix-20260721`
   - 주요 기능: 큰 사진이 Vercel `/api/upload` 본문 제한에 걸리지 않도록 Supabase Storage signed upload로 전환하고, 서버측 최종 바이트 검증과 10MB/50MB 중앙 커스텀 용량 알럿을 추가했다.
