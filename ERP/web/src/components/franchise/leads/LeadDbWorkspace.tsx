@@ -44,7 +44,7 @@ function getTableDescription(
     isContractOwnersWorkspace: boolean
 ) {
     if (isContractOwnersWorkspace) return '계약완료 점주의 계약 전 확인 항목만 빠르게 점검합니다.';
-    if (leadDbLayer === 'raw_intake') return 'Meta 광고, 엑셀 업로드 등 원천 유입을 먼저 모아두고 의사가 확인된 DB만 가맹 희망자로 승격합니다.';
+    if (leadDbLayer === 'raw_intake') return 'Meta 광고·엑셀 유입을 모읍니다. 가맹 의사를 확인한 DB만 승격합니다.';
     if (viewMode === 'pipeline') return '상태별 카드에서 상담 흐름을 빠르게 이동합니다.';
     if (viewMode === 'tasks') return '내 담당 연락 지연, 오늘 연락, 무응답 확인 대상을 우선 정리합니다.';
     return listPolicyText;
