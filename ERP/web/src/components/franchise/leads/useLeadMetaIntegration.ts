@@ -4,6 +4,7 @@ import React from 'react';
 import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { EMPTY_META_STATE } from './constants';
 import type { MetaConnection, MetaFieldMapping, MetaIntegrationState, MetaLeadForm } from './types';
+import { requestMetaAuthorizationUrl } from './metaIntegrationRequests';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 
@@ -66,19 +67,24 @@ export function useLeadMetaIntegration({
         void fetchMetaIntegration();
     }, [fetchMetaIntegration, userId]);
 
-    const startMetaConnect = () => {
+    const startMetaConnect = async () => {
         if (!userId) return;
         if (!metaState.configReady) {
             showAlertAction('Meta 환경변수가 아직 설정되지 않았습니다. META_APP_ID, META_APP_SECRET, META_VERIFY_TOKEN을 먼저 설정해주세요.', 'error', 'Meta 연동 설정 필요');
             return;
         }
 
-        const params = new URLSearchParams({
-            requesterId: userId,
-            redirect: '/dashboard/franchise-leads'
-        });
-        if (companyName) params.set('company', companyName);
-        window.location.href = `/api/integrations/meta/connect?${params.toString()}`;
+        try {
+            const authorizationUrl = await requestMetaAuthorizationUrl({
+                requesterId: userId,
+                companyName,
+                redirectPath: '/dashboard/franchise-leads'
+            });
+            window.location.href = authorizationUrl;
+        } catch (error) {
+            console.error(error);
+            showAlertAction(error instanceof Error ? error.message : 'Meta 계정 연결을 시작하지 못했습니다.', 'error', 'Meta 연결 실패');
+        }
     };
 
     const updateMetaFormState = (formId: string, updater: (form: MetaLeadForm) => MetaLeadForm) => {

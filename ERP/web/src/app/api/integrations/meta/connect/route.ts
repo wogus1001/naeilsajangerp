@@ -79,5 +79,8 @@ export async function GET(request: Request) {
         'leads_retrieval'
     ].join(','));
 
+    if (searchParams.get('response') === 'json') {
+        return NextResponse.json({ authorizationUrl: authUrl.toString() });
+    }
     return NextResponse.redirect(authUrl);
 }
