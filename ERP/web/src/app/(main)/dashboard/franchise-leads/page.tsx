@@ -47,6 +47,11 @@ import {
     LEAD_TABLE_COLUMNS_STORAGE_KEY,
     normalizeLeadTableColumnKeys
 } from '@/components/franchise/leads/leadTableConfig';
+import {
+    DEFAULT_LEAD_RANGE,
+    readLeadRangePreference,
+    writeLeadRangePreference
+} from '@/components/franchise/leads/leadRangePreference';
 import { filterLeadTableLeads, sortLeadTableLeads } from '@/components/franchise/leads/leadTableFilters';
 import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
 import {
@@ -123,14 +128,14 @@ export default function FranchiseLeadsPage() {
     const [statusFilter, setStatusFilter] = React.useState<LeadToolbarStatusFilter>('전체');
     const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
     const [managerFilter, setManagerFilter] = React.useState('전체');
-    const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('최근 30일');
+    const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>(DEFAULT_LEAD_RANGE);
     const [workspaceTab, setWorkspaceTab] = React.useState<LeadWorkspaceTab>('dashboard');
     const [leadDbLayer, setLeadDbLayer] = React.useState<LeadDbLayer>('raw_intake');
     const [viewMode, setViewMode] = React.useState<LeadViewMode>('table');
     const [taskQueueFilter, setTaskQueueFilter] = React.useState<LeadWorkQueueKey>('all');
     const [pageSize, setPageSize] = React.useState<typeof PAGE_SIZE_OPTIONS[number]>(50);
     const [currentPage, setCurrentPage] = React.useState(1);
-    const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('최근 30일'));
+    const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange(DEFAULT_LEAD_RANGE));
     const [createdTo, setCreatedTo] = React.useState('');
     const [tableFilters, setTableFilters] = React.useState<LeadTableFilters>(EMPTY_LEAD_TABLE_FILTERS);
     const [tableSort, setTableSort] = React.useState<LeadTableSortKey>('created_desc');
@@ -181,6 +186,7 @@ export default function FranchiseLeadsPage() {
 
     React.useEffect(() => {
         const storedUser = getStoredUser();
+        const storedRange = readLeadRangePreference(localStorage);
         const parsedUser: AuthUser = {
             id: storedUser?.id,
             uid: storedUser?.uid,
@@ -191,6 +197,9 @@ export default function FranchiseLeadsPage() {
         };
 
         const currentUserId = getRequesterId(storedUser) || localStorage.getItem('userId') || '';
+        setRange(storedRange);
+        setCreatedFrom(buildDateFromRange(storedRange));
+        setCreatedTo('');
         setUser(parsedUser);
         setUserId(currentUserId);
         setCompanyName(parsedUser.companyName || '');
@@ -745,6 +754,7 @@ export default function FranchiseLeadsPage() {
     };
 
     const handleRangeClick = (nextRange: typeof RANGE_OPTIONS[number]) => {
+        writeLeadRangePreference(localStorage, nextRange);
         setRange(nextRange);
         setCreatedFrom(buildDateFromRange(nextRange));
         setCreatedTo('');
