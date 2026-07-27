@@ -2,8 +2,21 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     discoverMetaBusinessPages,
+    META_ACCOUNT_PAGE_FIELDS,
+    META_TARGET_PAGE_FIELDS,
     readMetaBusinessPageTargetIds
 } from './meta-business-page-discovery.js';
+
+void test('direct Business Page lookup excludes the accounts-only tasks field', () => {
+    // Given / When
+    const accountFields = META_ACCOUNT_PAGE_FIELDS.split(',');
+    const targetFields = META_TARGET_PAGE_FIELDS.split(',');
+
+    // Then
+    assert.equal(accountFields.includes('tasks'), true);
+    assert.equal(targetFields.includes('tasks'), false);
+    assert.deepEqual(targetFields, ['id', 'name', 'access_token', 'category']);
+});
 
 void test('readMetaBusinessPageTargetIds returns unique Page targets and excludes ad account targets', () => {
     // Given

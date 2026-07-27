@@ -9,7 +9,11 @@ import {
     buildMetaPageDiscoveryDiagnostics,
     type MetaGraphPage
 } from '@/lib/meta-page-diagnostics';
-import { discoverMetaBusinessPages } from '@/lib/meta-business-page-discovery';
+import {
+    discoverMetaBusinessPages,
+    META_ACCOUNT_PAGE_FIELDS,
+    META_TARGET_PAGE_FIELDS
+} from '@/lib/meta-business-page-discovery';
 
 export const META_LEAD_SOURCE = 'Meta Lead Ads';
 export const META_LEAD_SOURCE_TYPE = 'meta-lead-ad';
@@ -344,7 +348,7 @@ export async function fetchMetaPages(userAccessToken: string) {
     return discoverMetaBusinessPages({
         fetchAccountPages: async () => {
             const pages = await graphFetch<{ data?: MetaGraphPage[] }>('/me/accounts', {
-                fields: 'id,name,access_token,tasks,category',
+                fields: META_ACCOUNT_PAGE_FIELDS,
                 access_token: userAccessToken
             });
             return pages.data || [];
@@ -361,7 +365,7 @@ export async function fetchMetaPages(userAccessToken: string) {
             });
         },
         fetchTargetPage: pageId => graphFetch<MetaGraphPage>(`/${pageId}`, {
-            fields: 'id,name,access_token,tasks,category',
+            fields: META_TARGET_PAGE_FIELDS,
             access_token: userAccessToken
         })
     });
