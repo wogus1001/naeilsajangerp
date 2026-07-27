@@ -23,6 +23,14 @@
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
 - 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
+### 2026-07-27 모객 DB 기간 선택 저장·표 여백 QA
+
+- `/dashboard/franchise-leads`의 빠른 기간 기본값을 `전체`로 변경했다. `franchiseLeadDateRange`에 마지막 빠른 기간 버튼 선택을 저장하고, 저장값이 없거나 유효하지 않으면 `전체`로 복원한다. 직접 날짜를 입력하는 흐름은 마지막 빠른 기간 선택을 변경하지 않는다.
+- 기간 선택 저장·복원 테스트 4건과 관련 회귀를 포함한 16건을 통과했다. TypeScript, 전체 ESLint, `git diff --check`, Next.js production build도 통과했다. build는 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 출력했다.
+- 인증된 로컬 브라우저에서 저장값이 없는 최초 접속의 `전체`, `최근 30일` 선택 후 새로고침 복원, 다시 `전체` 선택 후 새로고침 복원과 조회 API 날짜 조건을 확인했다.
+- 표 헤더·본문·체크박스 셀은 공통 12px 좌우 여백을 사용한다. 기존 컬럼 폭과 표 내부 가로 스크롤은 유지하며, 1600px·1280px·390px에서 컬럼 정렬, 모바일 `표시 50건`, 한국어 설명 줄바꿈을 확인했다. 독립 무결성·시각 검토는 모두 `PASS`였다.
+- 브라우저 console error와 Next.js 오류 오버레이는 0건이었다. 기존 Supabase GoTrueClient 다중 인스턴스 경고는 별도 이슈로 남긴다. 신규 SQL과 공개 `/landing`·`/demo` 영향은 없다.
+
 ### 2026-07-23 로그인·가입·모객 DB QA 안정화
 
 - 회사 찾기는 현재 제품에 별도 대표자 지정 기능이 없으므로 대표자 이름이나 `(미정)`을 검색 결과에 표시하지 않는다. 아이디 로그인용 회사 선택값은 회사 ID와 회사명만 보관해 과거 검색 응답의 대표자 문자열이 다시 노출되지 않게 했다.
