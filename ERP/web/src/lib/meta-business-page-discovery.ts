@@ -1,5 +1,8 @@
 import type { MetaGraphPage } from '@/lib/meta-page-diagnostics';
 
+export const META_ACCOUNT_PAGE_FIELDS = 'id,name,access_token,tasks,category';
+export const META_TARGET_PAGE_FIELDS = 'id,name,access_token,category';
+
 const META_PAGE_GRANULAR_SCOPES = new Set([
     'leads_retrieval',
     'pages_manage_ads',
