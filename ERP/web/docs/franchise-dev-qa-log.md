@@ -1571,3 +1571,15 @@
 - 수정: Meta OAuth scope에 `ads_management`, `pages_manage_ads`를 추가했다. 필수 Lead Ads/Webhook 권한 6개가 모두 포함되는지 정적 회귀 테스트로 고정했다.
 - 검증: 누락 권한 테스트가 `ads_management`, `pages_manage_ads`를 정확히 보고하며 실패하는 것을 먼저 확인했다. 수정 후 관련 테스트 6건과 전체 `npx tsx --test` 954건, `npx tsc --noEmit`, `npm run lint`, `npm run build`, `git diff --check`, TypeScript no-excuse 검사를 통과했다. 빌드는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
 - 남은 QA: dev 배포 후 Meta 계정을 다시 승인해 callback의 연결 Page/Form 수와 Page `leadgen` 구독 상태를 실계정으로 확인한다. 신규 SQL 없음.
+
+## 2026-07-27 Meta Business Login Page/Form 연결 완료 QA
+
+- 추가 재현: Lead Ads 필수 권한 6개와 `public_profile`이 모두 `granted`여도 표준 OAuth 토큰의 `/me/accounts`가 빈 배열을 반환해 `meta=connected&pages=0&forms=0`이 유지됐다. Facebook Business Login 동의 화면에서는 `내일사장` Page ID `600785779791577`가 선택 가능한 자산으로 확인됐다.
+- Business Login 적용: Vercel Preview에 서버 전용 `META_BUSINESS_LOGIN_CONFIG_ID`를 등록하고, 구성 ID가 있는 환경의 OAuth 요청은 `config_id`, `response_type=code`, `override_default_response_type=true`를 사용한다. 이 경로에서는 구성과 충돌할 수 있는 기존 `scope`, `auth_type`을 보내지 않으며, 환경변수가 없는 환경은 기존 scope 요청을 유지한다.
+- Page 발견 보정: `/me/accounts`가 비어 있을 때 같은 앱의 `/debug_token`에서 Page 관련 `granular_scopes.target_ids`만 추출해 Page를 직접 조회한다. `ads_management`의 광고 계정 대상은 제외하며 기존 `/me/accounts` 결과가 있는 환경은 fallback을 실행하지 않는다.
+- 런타임 원인: 최초 fallback 배포에서 `내일사장` target ID 발견 후 직접 Page 조회가 `(#100) Tried accessing nonexisting field (tasks)`로 두 번 동일하게 실패했다. `/me/accounts`에서만 요청할 `tasks`와 직접 Page 조회 필드를 분리해 직접 조회는 `id,name,access_token,category`만 사용하도록 보정했다.
+- 자동 검증: 실패 테스트를 먼저 확인한 뒤 Business Login URL, Page target 추출·fallback, 직접 조회 필드 회귀 테스트를 포함한 전체 `npx tsx --test` 962건, `npx tsc --noEmit --pretty false --incremental false`, 대상 ESLint, `npm run build`, `git diff --check`를 통과했다. 새 discovery 모듈과 테스트의 no-excuse 위반은 없고, 기존 `meta-leads.ts`의 편집 구간 밖 `any` 9건만 기존 부채로 남았다.
+- dev 실계정 QA: 최종 callback 로그에서 `discoveredPageCount=1`, `savedConnectionCount=1`, `savedFormCount=19`, Page `내일사장`, `hasAccessToken=true`를 확인했다. 모객 DB 상태 새로고침 후에도 연결 Page 1, 오류/주의 0이 유지되고 Page ID `600785779791577`가 표시됐다.
+- 오류 확인: 최종 dev 배포의 callback·화면 요청에서 Vercel error 로그와 Next.js 오류 오버레이는 없었다. 브라우저 제어 계층의 `fontoxpath` 주입 오류와 기존 Supabase 다중 GoTrueClient 경고는 관찰됐으나 Meta callback 또는 화면 기능 오류는 아니었다.
+- 운영 상태: 19개 Form은 저장됐지만 현재 활성 Form은 0개이므로 Webhook/백필 자동 수집은 시작되지 않았다. 실제 수집 대상 Form을 사용자가 선택해 `수집 활성화`한 뒤 동기화와 신규 리드 수신을 별도 QA한다.
+- SQL 상태: 신규 SQL 없음. **SQL 등록 불필요**.
