@@ -14,6 +14,12 @@ import {
     META_ACCOUNT_PAGE_FIELDS,
     META_TARGET_PAGE_FIELDS
 } from '@/lib/meta-business-page-discovery';
+import {
+    sanitizeMetaConnectionIssue,
+    sanitizeMetaFormIssue,
+    sanitizeMetaImportIssue,
+    sanitizeMetaSubscriptionIssue
+} from '@/lib/meta-lead-issues';
 
 export const META_LEAD_SOURCE = 'Meta Lead Ads';
 export const META_LEAD_SOURCE_TYPE = 'meta-lead-ad';
@@ -161,11 +167,11 @@ export function sanitizeMetaConnection(row: any) {
         tokenExpiresAt: row.token_expires_at,
         lastSyncAt: row.last_sync_at,
         lastWebhookAt: row.last_webhook_at,
-        lastError: row.last_error,
+        lastError: sanitizeMetaConnectionIssue(row.last_error),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         pageCategory: data.pageCategory || '',
-        subscribeError: data.subscribeError || ''
+        subscribeError: sanitizeMetaSubscriptionIssue(data.subscribeError)
     };
 }
 
@@ -181,7 +187,7 @@ export function sanitizeMetaForm(row: any) {
         defaultManagerId: row.default_manager_id,
         fieldMapping: normalizeFieldMapping(row.field_mapping),
         lastSyncedAt: row.last_synced_at,
-        lastError: row.last_error,
+        lastError: sanitizeMetaFormIssue(row.last_error),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         data: row.data || {}
@@ -198,7 +204,7 @@ export function sanitizeMetaImport(row: any) {
         metaLeadId: row.meta_lead_id,
         franchiseLeadId: row.franchise_lead_id,
         status: row.status,
-        errorMessage: row.error_message,
+        errorMessage: sanitizeMetaImportIssue(row.error_message),
         receivedAt: row.received_at,
         importedAt: row.imported_at,
         createdAt: row.created_at

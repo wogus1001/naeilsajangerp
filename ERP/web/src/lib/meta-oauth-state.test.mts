@@ -65,3 +65,17 @@ test('parseMetaOAuthCallbackState rejects a missing or mismatched nonce cookie',
     assert.equal(missingNonceState, null);
     assert.equal(mismatchedNonceState, null);
 });
+
+test('parseMetaOAuthCallbackState rejects a protocol-relative redirect path', () => {
+    // Given
+    const encodedState = encodeMetaOAuthState({
+        ...input,
+        redirectPath: '//attacker.example/collect'
+    });
+
+    // When
+    const state = parseMetaOAuthCallbackState(encodedState, encodedState, input.nonce);
+
+    // Then
+    assert.equal(state, null);
+});
