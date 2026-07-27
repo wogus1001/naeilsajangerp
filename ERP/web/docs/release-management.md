@@ -863,3 +863,11 @@ YYYY-MM-DD
 - 검증: Gmail 관련 테스트 10건, TypeScript, lint, production build, `git diff --check` 통과. 로컬 브라우저에서 결과 메시지 전달, 팝업 자동 종료, 원래 창 유지와 console error 0건을 확인했다.
 - SQL: Gmail 변경의 신규 SQL은 없다. 점주 포털 3단계 `supabase_franchise_owner_phase3_migration.sql`은 사용자 확인 기준 적용 완료다. **SQL 등록 완료 확인**.
 - 승격: 기능 브랜치 push 후 protected branch 절차에 따라 dev PR과 dev deployment를 확인하고, 검증된 범위를 main PR과 `naeilsajang` production으로 승격한다. 최종 deployment ID와 운영 실계정 Gmail 연결 확인은 배포 보고에 남긴다.
+## 2026-07-27 Meta Lead Ads 설정 UI·수집 경계 개발 배포 준비
+
+- 작업 브랜치: `codex/meta-business-page-targets-20260727`.
+- 기능 커밋: `fa7c611 fix(franchise): Meta 연동 설정과 수집 경계 보정`.
+- 범위: 중복 계정 연결 액션 제거, 설정 토글 상태 명시, 양식/수집 내역 접이식 UI, 업무용 매핑 설명, Meta dummy 표 표시 정리, OAuth redirect allowlist, provider 오류 코드 안정화, 회사 범위 수동 동기화 필터.
+- dev 실연동 근거: 회사 관리 페이지 1개, 신청 양식 19개 발견, 활성 양식 1개, Meta Testing Tool Webhook `Success`, 모객 DB raw-intake 테스트 저장을 확인했다. 실제 유료 광고 리드와 장시간 Webhook·백필은 known risk로 남는다. 광고 성과 Marketing API는 별도 HOLD다.
+- 검증: 관련 회귀 32건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 1280px·390px 브라우저 패널/터치/overflow QA, console error 0을 통과했다.
+- SQL: 신규 SQL 없음. 배포 대상은 이 기능 브랜치의 Preview/dev이며 `dev`, `main`, production에는 아직 반영하지 않는다. push 후 실제 deployment ID·READY 상태·dev URL smoke는 배포 보고에 남긴다.

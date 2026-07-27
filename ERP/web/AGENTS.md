@@ -58,7 +58,7 @@ npm run start -- -p 3000
 
 ## DATA AND INTEGRATION NOTES
 - Apply the relevant `supabase_*.sql` migration before real data QA; missing tables/columns often surface as PostgREST `PGRST204` or `PGRST205`.
-- Meta Lead Ads is on HOLD until account/app permissions and env are ready.
+- Meta Lead Ads Business Login, Page/Form discovery, test Webhook delivery, and raw-intake storage are verified in dev. Keep live-ad ingestion and long-running Webhook/backfill QA separate from the still-HOLD Marketing API performance scope.
 - Kakao Local address/competitor flows require server REST key; Kakao map rendering requires allowed Web platform domains for `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY`.
 - SearchAPI/SerpApi provider failures, quota exhaustion, and no-result states must stay distinct.
 - External realty import collects Daangn store listings into tracking tables; it does not automatically create ERP `properties`.
