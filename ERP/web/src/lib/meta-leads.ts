@@ -5,6 +5,10 @@ import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
+import {
+    buildMetaPageDiscoveryDiagnostics,
+    type MetaGraphPage
+} from '@/lib/meta-page-diagnostics';
 
 export const META_LEAD_SOURCE = 'Meta Lead Ads';
 export const META_LEAD_SOURCE_TYPE = 'meta-lead-ad';
@@ -24,14 +28,6 @@ export type MetaLeadImportResult = {
     status: 'created' | 'updated' | 'duplicate' | 'skipped' | 'error';
     leadId?: string | null;
     message?: string;
-};
-
-type MetaGraphPage = {
-    id: string;
-    name?: string;
-    access_token?: string;
-    tasks?: string[];
-    category?: string;
 };
 
 type MetaGraphForm = {
@@ -483,7 +479,11 @@ export async function upsertMetaPagesAndForms(
         }
     }
 
-    return { connections: savedConnections, forms: savedForms };
+    return {
+        connections: savedConnections,
+        forms: savedForms,
+        pageDiagnostics: buildMetaPageDiscoveryDiagnostics(pages)
+    };
 }
 
 async function recordMetaImport(

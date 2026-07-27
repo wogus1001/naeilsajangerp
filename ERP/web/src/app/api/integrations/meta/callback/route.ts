@@ -87,6 +87,14 @@ export async function GET(request: Request) {
             connectedBy: requesterProfile.id,
             userAccessToken: token.access_token
         });
+        console.info('Meta OAuth callback sync completed:', {
+            companyId: state.companyId,
+            requesterId: requesterProfile.id,
+            discoveredPageCount: result.pageDiagnostics.length,
+            pageDiagnostics: result.pageDiagnostics,
+            savedConnectionCount: result.connections.length,
+            savedFormCount: result.forms.length
+        });
 
         clearOAuthCookies();
         return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
