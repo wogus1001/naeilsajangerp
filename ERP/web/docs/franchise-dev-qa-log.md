@@ -1538,3 +1538,11 @@
 - SQL 상태: 사용자 확인 기준 `supabase_platform_operations_phase4_migration.sql`을 대상 DB에 적용했다. **SQL 등록 완료 확인**.
 - 남은 QA: 실패 작업 샘플 재처리, worker 완료, 감사 이력 생성을 적용 DB 실데이터로 확인한다.
 - 최종 UI 게이트: `DESIGN.md` 공용 토큰 정렬, 한국어 줄바꿈, 탭·확인창 포커스, 모바일 44px 조작 영역을 재검증했고 디자인 충실도 리뷰와 최종 게이트 리뷰가 모두 `PASS`했다.
+
+## 2026-07-27 Meta OAuth 연결 인증 handoff 보정
+
+- 재현: 로그인된 모객 DB에서 `Meta 계정 연결`을 누르면 `/api/integrations/meta/connect`가 401을 반환하고 Meta 승인 화면으로 이동하지 않았다.
+- 원인: 브라우저 전체 이동은 Supabase bearer 인증 헤더를 전달하지 못하지만, connect route는 보호 API와 동일하게 인증된 requester profile을 요구했다.
+- 수정: 화면이 `getApiAuthHeaders()`를 포함한 same-origin JSON 요청으로 Meta 승인 URL을 먼저 받고, 서버가 nonce 쿠키를 설정한 뒤 Meta OAuth 화면으로 이동한다. 기존 서버 redirect 응답은 호환 경로로 유지한다.
+- 검증: 실패 테스트를 먼저 확인한 뒤 Meta/Gmail OAuth·기간 설정·API 인증 관련 테스트 14건과 전체 `npx tsx --test` 949건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 실계정 브라우저에서 connect JSON 요청 200과 Facebook OAuth 로그인 화면 이동을 확인했다.
+- 남은 QA: 수정 코드를 dev에 반영한 뒤 Meta 계정 선택·권한 승인·callback 저장·Page/Form 표시를 실계정으로 확인한다. 신규 SQL 없음.
