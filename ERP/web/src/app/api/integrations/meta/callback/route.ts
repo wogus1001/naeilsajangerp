@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         const oauthDiagnostics = result.connections.length === 0
             ? await fetchMetaOAuthDiagnostics(token.access_token)
             : null;
-        console.info('Meta OAuth callback sync completed:', {
+        console.info('Meta OAuth callback sync completed:', JSON.stringify({
             companyId: state.companyId,
             requesterId: requesterProfile.id,
             discoveredPageCount: result.pageDiagnostics.length,
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
             savedConnectionCount: result.connections.length,
             savedFormCount: result.forms.length,
             oauthDiagnostics
-        });
+        }));
 
         clearOAuthCookies();
         return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
