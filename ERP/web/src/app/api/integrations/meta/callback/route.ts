@@ -11,6 +11,7 @@ import {
     exchangeMetaCode,
     upsertMetaPagesAndForms
 } from '@/lib/meta-leads';
+import { fetchMetaOAuthDiagnostics } from '@/lib/meta-oauth-diagnostics';
 import {
     META_OAUTH_NONCE_COOKIE,
     META_OAUTH_STATE_COOKIE,
@@ -87,13 +88,17 @@ export async function GET(request: Request) {
             connectedBy: requesterProfile.id,
             userAccessToken: token.access_token
         });
+        const oauthDiagnostics = result.connections.length === 0
+            ? await fetchMetaOAuthDiagnostics(token.access_token)
+            : null;
         console.info('Meta OAuth callback sync completed:', {
             companyId: state.companyId,
             requesterId: requesterProfile.id,
             discoveredPageCount: result.pageDiagnostics.length,
             pageDiagnostics: result.pageDiagnostics,
             savedConnectionCount: result.connections.length,
-            savedFormCount: result.forms.length
+            savedFormCount: result.forms.length,
+            oauthDiagnostics
         });
 
         clearOAuthCookies();
