@@ -1562,3 +1562,12 @@
 - 보안: nonce만 비교할 때 가능했던 state 내부 사용자·회사 ID 변경을 전체 state 원문 일치 검증으로 차단했다.
 - 검증: requester 변경 회귀 테스트가 실제 변경된 ID를 허용하며 실패하는 것을 먼저 확인했다. 수정 후 Meta/Gmail OAuth·API 인증 관련 테스트 15건과 전체 `npx tsx --test` 953건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 빌드는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
 - 남은 QA: dev 배포 후 실계정에서 Meta 승인 재시도, callback의 `meta=connected`, 연결 Page/Form 수, 콘솔·런타임 오류를 확인한다. 신규 SQL 없음.
+
+## 2026-07-27 Meta Lead Ads OAuth 권한 후속 보정
+
+- 재현: callback 세션 보정 배포 후 Meta 승인은 `meta=connected&pages=0&forms=0`으로 성공했지만 모객 DB는 연결 Page 0건을 표시해 다시 `Meta 계정 연결`을 안내했다.
+- 확인: Facebook 비즈니스 통합의 `fcerp`에는 `내일사장` Page가 `leads_retrieval`, `pages_manage_metadata`, `pages_read_engagement`, `pages_show_list` 대상으로 선택되어 있었고, Vercel callback 런타임 오류도 없었다. Meta 개발자 앱의 Lead Ads 이용 사례에는 `ads_management`와 `pages_manage_ads`가 모두 `테스트 준비 완료` 상태였다.
+- 원인: ERP의 OAuth scope는 Page 목록·읽기·Webhook·리드 권한 4개만 요청하고, Meta Lead Ads 검색 공식 요구 권한인 `ads_management`와 `pages_manage_ads`를 요청하지 않았다.
+- 수정: Meta OAuth scope에 `ads_management`, `pages_manage_ads`를 추가했다. 필수 Lead Ads/Webhook 권한 6개가 모두 포함되는지 정적 회귀 테스트로 고정했다.
+- 검증: 누락 권한 테스트가 `ads_management`, `pages_manage_ads`를 정확히 보고하며 실패하는 것을 먼저 확인했다. 수정 후 관련 테스트 6건과 전체 `npx tsx --test` 954건, `npx tsc --noEmit`, `npm run lint`, `npm run build`, `git diff --check`, TypeScript no-excuse 검사를 통과했다. 빌드는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 남은 QA: dev 배포 후 Meta 계정을 다시 승인해 callback의 연결 Page/Form 수와 Page `leadgen` 구독 상태를 실계정으로 확인한다. 신규 SQL 없음.
