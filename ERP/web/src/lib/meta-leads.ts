@@ -9,6 +9,7 @@ import {
     buildMetaPageDiscoveryDiagnostics,
     type MetaGraphPage
 } from '@/lib/meta-page-diagnostics';
+import { discoverMetaBusinessPages } from '@/lib/meta-business-page-discovery';
 
 export const META_LEAD_SOURCE = 'Meta Lead Ads';
 export const META_LEAD_SOURCE_TYPE = 'meta-lead-ad';
@@ -340,12 +341,30 @@ export async function exchangeMetaCode(code: string, redirectUri: string) {
 }
 
 export async function fetchMetaPages(userAccessToken: string) {
-    const pages = await graphFetch<{ data?: MetaGraphPage[] }>('/me/accounts', {
-        fields: 'id,name,access_token,tasks,category',
-        access_token: userAccessToken
+    return discoverMetaBusinessPages({
+        fetchAccountPages: async () => {
+            const pages = await graphFetch<{ data?: MetaGraphPage[] }>('/me/accounts', {
+                fields: 'id,name,access_token,tasks,category',
+                access_token: userAccessToken
+            });
+            return pages.data || [];
+        },
+        fetchTokenMetadata: async () => {
+            const appId = process.env.META_APP_ID;
+            const appSecret = process.env.META_APP_SECRET;
+            if (!appId || !appSecret) {
+                throw new Error('META_APP_ID and META_APP_SECRET are required');
+            }
+            return graphFetch<unknown>('/debug_token', {
+                input_token: userAccessToken,
+                access_token: `${appId}|${appSecret}`
+            });
+        },
+        fetchTargetPage: pageId => graphFetch<MetaGraphPage>(`/${pageId}`, {
+            fields: 'id,name,access_token,tasks,category',
+            access_token: userAccessToken
+        })
     });
-
-    return pages.data || [];
 }
 
 export async function fetchMetaForms(pageId: string, pageAccessToken: string) {
