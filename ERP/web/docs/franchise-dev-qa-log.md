@@ -1554,3 +1554,12 @@
 - 수정: 화면이 `getApiAuthHeaders()`를 포함한 same-origin JSON 요청으로 Meta 승인 URL을 먼저 받고, 서버가 nonce 쿠키를 설정한 뒤 Meta OAuth 화면으로 이동한다. 기존 서버 redirect 응답은 호환 경로로 유지한다.
 - 검증: 실패 테스트를 먼저 확인한 뒤 Meta/Gmail OAuth·기간 설정·API 인증 관련 테스트 14건과 전체 `npx tsx --test` 949건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 실계정 브라우저에서 connect JSON 요청 200과 Facebook OAuth 로그인 화면 이동을 확인했다.
 - 남은 QA: 수정 코드를 dev에 반영한 뒤 Meta 계정 선택·권한 승인·callback 저장·Page/Form 표시를 실계정으로 확인한다. 신규 SQL 없음.
+
+## 2026-07-27 Meta OAuth callback 세션 후속 보정
+
+- 재현: dev에서 Meta 권한 승인까지 완료했지만 callback이 307 응답 후 모객 DB의 `meta=error&reason=forbidden`으로 복귀하고 연결 Page/Form이 0건으로 유지됐다.
+- 원인: Meta callback은 ERP bearer 헤더가 없는 브라우저 이동인데, callback route가 일반 보호 API용 `getRequesterProfile()`을 다시 호출해 승인된 반환도 `forbidden`으로 판정했다.
+- 수정: 연결 시작 시 nonce와 함께 전체 Meta OAuth state를 HttpOnly 쿠키에 저장하고 callback query의 state와 정확히 일치하는지 검사한다. 검증된 state의 사용자 ID로 활성 profile을 서버에서 조회하고 Meta 관리 권한과 회사 범위를 다시 확인한 뒤 토큰 교환과 Page/Form 저장을 진행한다. 성공·거부·오류 시 임시 쿠키를 모두 정리한다.
+- 보안: nonce만 비교할 때 가능했던 state 내부 사용자·회사 ID 변경을 전체 state 원문 일치 검증으로 차단했다.
+- 검증: requester 변경 회귀 테스트가 실제 변경된 ID를 허용하며 실패하는 것을 먼저 확인했다. 수정 후 Meta/Gmail OAuth·API 인증 관련 테스트 15건과 전체 `npx tsx --test` 953건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 빌드는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 남은 QA: dev 배포 후 실계정에서 Meta 승인 재시도, callback의 `meta=connected`, 연결 Page/Form 수, 콘솔·런타임 오류를 확인한다. 신규 SQL 없음.
