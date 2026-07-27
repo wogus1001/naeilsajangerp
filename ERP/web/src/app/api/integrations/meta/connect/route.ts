@@ -13,6 +13,7 @@ import {
     META_OAUTH_NONCE_COOKIE,
     META_OAUTH_STATE_COOKIE
 } from '@/lib/meta-oauth-state';
+import { buildMetaOAuthAuthorizeUrl } from '@/lib/meta-oauth-authorize-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,20 +70,13 @@ export async function GET(request: Request) {
     cookieStore.set(META_OAUTH_NONCE_COOKIE, nonce, cookieOptions);
     cookieStore.set(META_OAUTH_STATE_COOKIE, state, cookieOptions);
 
-    const authUrl = new URL(`https://www.facebook.com/${process.env.META_GRAPH_API_VERSION || 'v25.0'}/dialog/oauth`);
-    authUrl.searchParams.set('client_id', appId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('auth_type', 'rerequest');
-    authUrl.searchParams.set('scope', [
-        'ads_management',
-        'leads_retrieval',
-        'pages_manage_ads',
-        'pages_manage_metadata',
-        'pages_read_engagement',
-        'pages_show_list',
-    ].join(','));
+    const authUrl = buildMetaOAuthAuthorizeUrl({
+        appId,
+        redirectUri,
+        state,
+        graphVersion: process.env.META_GRAPH_API_VERSION || 'v25.0',
+        businessLoginConfigId: process.env.META_BUSINESS_LOGIN_CONFIG_ID
+    });
 
     if (searchParams.get('response') === 'json') {
         return NextResponse.json({ authorizationUrl: authUrl.toString() });
