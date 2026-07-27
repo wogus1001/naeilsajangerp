@@ -3,6 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
+    ChevronDown,
+    ChevronUp,
     Download,
     Link2,
     Plus,
@@ -1190,16 +1192,16 @@ export default function FranchiseLeadsPage() {
                 description="가맹 희망자의 유입, 상담, 검토부터 계약까지 본사에서 한눈에 관리합니다."
                 actions={(
                     <>
-                    <button className={styles.secondaryButton} onClick={() => setIsMetaPanelOpen(prev => !prev)}>
+                    <button
+                        className={isMetaPanelOpen ? styles.metaToggleButtonActive : styles.metaToggleButton}
+                        onClick={() => setIsMetaPanelOpen(prev => !prev)}
+                        aria-expanded={isMetaPanelOpen}
+                        aria-controls="meta-integration-panel"
+                    >
                         <Link2 size={16} />
-                        Meta 연동
+                        {isMetaPanelOpen ? 'Meta 설정 닫기' : 'Meta 연동 설정'}
+                        {isMetaPanelOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
-                    {canManageMeta && (
-                        <button className={styles.secondaryButton} onClick={startMetaConnect} disabled={isMetaLoading}>
-                            <Link2 size={16} />
-                            Meta 계정 연결
-                        </button>
-                    )}
                     <button className={styles.secondaryButton} onClick={() => void downloadTemplate()}>
                         <Download size={16} />
                         샘플 양식

@@ -149,7 +149,8 @@ export function useLeadMetaIntegration({
                 headers,
                 body: JSON.stringify({
                     requesterId: userId,
-                    formId
+                    formId,
+                    companyName
                 })
             });
             const payload = await response.json();
@@ -157,11 +158,21 @@ export function useLeadMetaIntegration({
                 throw new Error(readApiError(payload));
             }
 
-            const result = unwrapApiData<{ stats: Record<string, number>; formCount: number; errors?: Array<{ reason: string }> }>(payload);
+            const result = unwrapApiData<{
+                stats: Record<string, number>;
+                formCount: number;
+                errors?: Array<{ code: 'CONNECTION_UNAVAILABLE' | 'LEAD_FETCH_FAILED' }>;
+            }>(payload);
             await Promise.all([fetchMetaIntegration(), onLeadsRefreshAction()]);
             const stats = result.stats || {};
+            const firstErrorCode = result.errors?.[0]?.code;
+            const errorGuidance = firstErrorCode === 'CONNECTION_UNAVAILABLE'
+                ? '\nMeta 계정 연결을 확인한 뒤 다시 시도해주세요.'
+                : firstErrorCode === 'LEAD_FETCH_FAILED'
+                    ? '\nMeta 양식 조회 권한을 확인한 뒤 다시 시도해주세요.'
+                    : '';
             showAlertAction(
-                `Meta 동기화 완료\n- 신규: ${stats.created || 0}건\n- 기존 업데이트: ${stats.updated || 0}건\n- 중복: ${stats.duplicate || 0}건\n- 제외/오류: ${(stats.skipped || 0) + (stats.error || 0)}건${result.errors?.length ? `\n첫 오류: ${result.errors[0].reason}` : ''}`,
+                `Meta 동기화 완료\n- 신규: ${stats.created || 0}건\n- 기존 업데이트: ${stats.updated || 0}건\n- 중복: ${stats.duplicate || 0}건\n- 제외/오류: ${(stats.skipped || 0) + (stats.error || 0)}건${errorGuidance}`,
                 result.errors?.length ? 'info' : 'success',
                 'Meta 동기화'
             );

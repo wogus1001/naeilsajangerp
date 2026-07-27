@@ -1,5 +1,6 @@
 export const META_OAUTH_NONCE_COOKIE = 'meta_oauth_nonce';
 export const META_OAUTH_STATE_COOKIE = 'meta_oauth_state';
+export const META_OAUTH_REDIRECT_PATH = '/dashboard/franchise-leads';
 
 export type MetaOAuthState = {
     readonly nonce: string;
@@ -10,6 +11,24 @@ export type MetaOAuthState = {
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.trim().length > 0;
+}
+
+export function isSafeMetaOAuthRedirectPath(value: unknown): value is string {
+    if (!isNonEmptyString(value) || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+        return false;
+    }
+
+    try {
+        const base = new URL('https://meta-oauth.local');
+        const candidate = new URL(value, base);
+        return candidate.origin === base.origin && candidate.pathname === META_OAUTH_REDIRECT_PATH;
+    } catch {
+        return false;
+    }
+}
+
+export function getSafeMetaOAuthRedirectPath(value: unknown): string {
+    return isSafeMetaOAuthRedirectPath(value) ? value : META_OAUTH_REDIRECT_PATH;
 }
 
 function decodeMetaOAuthState(value: string): MetaOAuthState | null {
@@ -25,8 +44,7 @@ function decodeMetaOAuthState(value: string): MetaOAuthState | null {
             || !isNonEmptyString(parsed.nonce)
             || !isNonEmptyString(parsed.requesterId)
             || !isNonEmptyString(parsed.companyId)
-            || !isNonEmptyString(parsed.redirectPath)
-            || !parsed.redirectPath.startsWith('/')
+            || !isSafeMetaOAuthRedirectPath(parsed.redirectPath)
         ) {
             return null;
         }

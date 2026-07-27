@@ -44,11 +44,11 @@ export const EMPTY_META_STATE: MetaIntegrationState = {
 export const META_FIELD_LABELS: ReadonlyArray<{ readonly key: keyof MetaFieldMapping; readonly label: string; readonly hint: string }> = [
     { key: 'name', label: '이름', hint: 'full_name, 이름, 성명' },
     { key: 'mobile', label: '연락처', hint: 'phone_number, 연락처, 휴대폰' },
-    { key: 'desiredRegion', label: '희망지역', hint: '희망지역, 지역, area' },
-    { key: 'budget', label: '예산 통합', hint: '예산, 창업예산' },
-    { key: 'budgetMin', label: '예산 최소', hint: 'budget_min, 예산최소' },
-    { key: 'budgetMax', label: '예산 최대', hint: 'budget_max, 예산최대' },
-    { key: 'interestedBrand', label: '관심브랜드', hint: 'brand, 관심브랜드' },
+    { key: 'desiredRegion', label: '희망 지역', hint: '희망지역, 지역, area' },
+    { key: 'budget', label: '전체 예산', hint: '예산, 창업예산' },
+    { key: 'budgetMin', label: '최소 예산', hint: 'budget_min, 예산최소' },
+    { key: 'budgetMax', label: '최대 예산', hint: 'budget_max, 예산최대' },
+    { key: 'interestedBrand', label: '관심 브랜드', hint: 'brand, 관심브랜드' },
     { key: 'memo', label: '메모', hint: 'memo, 문의내용, 비고' }
 ];
 

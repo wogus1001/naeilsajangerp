@@ -1,7 +1,9 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import {
     canAccessCompanyScope,
-    getRequesterProfile
+    getRequesterProfile,
+    isAdmin,
+    resolveCompanyIdByName
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
 import {
@@ -10,6 +12,10 @@ import {
     fetchMetaFormLeads,
     importMetaLeadWithLogging
 } from '@/lib/meta-leads';
+import {
+    applyMetaFormScopeFilters,
+    type MetaFormScopeFilters
+} from '@/lib/meta-sync-scope';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +26,8 @@ type SyncStats = {
     skipped: number;
     error: number;
 };
+
+type MetaSyncErrorCode = 'CONNECTION_UNAVAILABLE' | 'LEAD_FETCH_FAILED';
 
 function emptyStats(): SyncStats {
     return { created: 0, updated: 0, duplicate: 0, skipped: 0, error: 0 };
@@ -86,12 +94,12 @@ async function syncForm(supabaseAdmin: any, form: any, connection: any) {
 
 async function syncForms(supabaseAdmin: any, forms: any[]) {
     const total = emptyStats();
-    const errors: Array<{ formId: string; reason: string }> = [];
+    const errors: Array<{ formId: string; code: MetaSyncErrorCode }> = [];
 
     for (const form of forms) {
         const connection = form.connection;
         if (!connection || connection.status === 'disconnected') {
-            errors.push({ formId: form.id, reason: 'Connection is unavailable' });
+            errors.push({ formId: form.id, code: 'CONNECTION_UNAVAILABLE' });
             total.error += 1;
             continue;
         }
@@ -101,10 +109,10 @@ async function syncForms(supabaseAdmin: any, forms: any[]) {
             (Object.keys(total) as Array<keyof SyncStats>).forEach(key => {
                 total[key] += stats[key];
             });
-        } catch (error) {
+        } catch {
             errors.push({
                 formId: form.id,
-                reason: error instanceof Error ? error.message : 'Sync failed'
+                code: 'LEAD_FETCH_FAILED'
             });
             total.error += 1;
         }
@@ -113,15 +121,14 @@ async function syncForms(supabaseAdmin: any, forms: any[]) {
     return { stats: total, errors };
 }
 
-async function fetchEnabledForms(supabaseAdmin: any, filters: { formId?: string; companyId?: string }) {
+async function fetchEnabledForms(supabaseAdmin: any, filters: MetaFormScopeFilters) {
     let query = supabaseAdmin
         .from('meta_lead_forms')
         .select('*, connection:meta_lead_connections(*)')
         .eq('enabled', true)
         .order('updated_at', { ascending: false });
 
-    if (filters.formId) query = query.eq('id', filters.formId);
-    if (filters.companyId) query = query.eq('company_id', filters.companyId);
+    query = applyMetaFormScopeFilters(query, filters);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -145,7 +152,25 @@ export async function POST(request: Request) {
             return fail(403, 'FORBIDDEN', 'Only managers can sync Meta leads');
         }
 
-        const forms = await fetchEnabledForms(supabaseAdmin, { formId: body.formId });
+        const companyName = typeof body.companyName === 'string' ? body.companyName.trim() : '';
+        const requestedCompanyId = companyName
+            ? await resolveCompanyIdByName(supabaseAdmin, companyName)
+            : null;
+        if (companyName && !requestedCompanyId) {
+            return fail(404, 'NOT_FOUND', 'Company not found');
+        }
+
+        const targetCompanyId = isAdmin(requesterProfile)
+            ? requestedCompanyId || requesterProfile.company_id
+            : requesterProfile.company_id;
+        if (!targetCompanyId) {
+            return fail(400, 'VALIDATION_ERROR', 'Company scope is required');
+        }
+        if (requestedCompanyId && !canAccessCompanyScope(requesterProfile, requestedCompanyId) && !isAdmin(requesterProfile)) {
+            return fail(403, 'FORBIDDEN', 'Forbidden: cross-company sync denied');
+        }
+
+        const forms = await fetchEnabledForms(supabaseAdmin, { formId: body.formId, companyId: targetCompanyId });
         const forbidden = forms.some((form: any) => !canAccessCompanyScope(requesterProfile, form.company_id));
         if (forbidden) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company sync denied');

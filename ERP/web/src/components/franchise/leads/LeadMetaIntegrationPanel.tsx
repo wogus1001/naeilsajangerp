@@ -1,10 +1,11 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { Link2, RefreshCw } from 'lucide-react';
+import { ChevronDown, Link2, RefreshCw } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { formatDateTime } from './utils';
 import { META_FIELD_LABELS } from './constants';
+import { getMetaIssueGuidance, META_CONNECTION_STATUS_LABELS, META_IMPORT_STATUS_LABELS } from './metaIntegrationGuidance';
 import type { MetaConnection, MetaFieldMapping, MetaIntegrationState, MetaLeadForm } from './types';
 
 type MetaFormUpdate = Partial<Pick<MetaLeadForm, 'enabled' | 'defaultManagerId' | 'fieldMapping'>>;
@@ -45,22 +46,28 @@ export function LeadMetaIntegrationPanel({
     onUpdateFieldMappingAction
 }: LeadMetaIntegrationPanelProps) {
     return (
-        <section className={styles.metaPanel}>
+        <section id="meta-integration-panel" className={styles.metaPanel}>
             <div className={styles.metaPanelHeader}>
                 <div>
-                    <span className={styles.metaEyebrow}>Meta Lead Ads</span>
+                    <span className={styles.metaEyebrow}>Meta 잠재고객 광고</span>
                     <h2>Meta 연동 설정</h2>
-                    <p>각 회사의 Meta Page/Form에서 들어온 즉시양식 리드를 모객DB로 자동 등록합니다.</p>
+                    <p>Meta 계정을 연결하고 수집할 신청 양식을 켜면 새 신청 정보를 모객 DB에 자동 등록합니다.</p>
                 </div>
                 <div className={styles.metaPanelActions}>
+                    {canManageMeta && (
+                        <button className={styles.secondaryButton} onClick={onStartConnectAction} disabled={isMetaLoading}>
+                            <Link2 size={15} />
+                            Meta 계정 연결
+                        </button>
+                    )}
                     <button className={styles.secondaryButton} onClick={() => void onRefreshAction()} disabled={isMetaLoading}>
                         <RefreshCw size={15} />
-                        {isMetaLoading ? '확인 중' : '상태 새로고침'}
+                        {isMetaLoading ? '확인 중' : '연결 상태 확인'}
                     </button>
                     {canManageMeta && (
                         <button className={styles.primaryButton} onClick={() => void onSyncAction()} disabled={isMetaSyncing || enabledFormCount === 0}>
                             <RefreshCw size={15} />
-                            {isMetaSyncing ? '동기화 중' : '활성 Form 동기화'}
+                            {isMetaSyncing ? '가져오는 중' : '신청 내역 가져오기'}
                         </button>
                     )}
                 </div>
@@ -68,37 +75,33 @@ export function LeadMetaIntegrationPanel({
 
             <div className={styles.metaSummaryGrid}>
                 <article>
-                    <span>연결 Page</span>
+                    <span>연결된 페이지</span>
                     <strong>{metaState.connections.length.toLocaleString()}</strong>
-                    <small>{metaState.configReady ? 'Meta 환경변수 확인됨' : '환경변수 설정 필요'}</small>
+                    <small>{metaState.configReady ? 'Meta 연동 준비 완료' : 'Meta 연동 준비 필요'}</small>
                 </article>
                 <article>
-                    <span>활성 Form</span>
+                    <span>수집 중인 양식</span>
                     <strong>{enabledFormCount.toLocaleString()}</strong>
-                    <small>Webhook/백필 수집 대상</small>
+                    <small>새 신청 자동 등록</small>
                 </article>
                 <article>
-                    <span>마지막 동기화</span>
+                    <span>최근 수집</span>
                     <strong>{formatDateTime(lastSyncAt)}</strong>
-                    <small>Webhook 또는 백필 기준</small>
+                    <small>최근 수집 시각</small>
                 </article>
                 <article className={errorCount > 0 ? styles.metaSummaryError : undefined}>
-                    <span>오류/주의</span>
+                    <span>확인 필요</span>
                     <strong>{errorCount.toLocaleString()}</strong>
-                    <small>연결, Form, 최근 import 기준</small>
+                    <small>연결 및 최근 수집 상태</small>
                 </article>
             </div>
 
             {metaState.connections.length === 0 ? (
                 <div className={styles.metaEmptyBox}>
-                    <strong>연결된 Meta Page가 없습니다.</strong>
-                    <p>회사 Meta 관리자 계정으로 로그인하면 접근 가능한 Page와 Lead Form을 가져옵니다.</p>
-                    {canManageMeta && (
-                        <button className={styles.primaryButton} onClick={onStartConnectAction}>
-                            <Link2 size={15} />
-                            Meta 계정 연결
-                        </button>
-                    )}
+                    <div>
+                        <strong>연결된 Meta 페이지가 없습니다.</strong>
+                        <p>회사 Meta 관리자 계정을 연결한 뒤 수집할 신청 양식을 켜주세요.</p>
+                    </div>
                 </div>
             ) : (
                 <div className={styles.metaConnectionGrid}>
@@ -106,12 +109,14 @@ export function LeadMetaIntegrationPanel({
                         <article key={connection.id} className={styles.metaConnectionCard}>
                             <div>
                                 <span className={connection.status === 'connected' ? styles.metaStatusOk : styles.metaStatusWarn}>
-                                    {connection.status === 'connected' ? '연결됨' : connection.status}
+                                    {META_CONNECTION_STATUS_LABELS[connection.status] || '확인 필요'}
                                 </span>
                                 <h3>{connection.metaPageName || connection.metaPageId}</h3>
-                                <p>Page ID {connection.metaPageId}</p>
+                                <p>페이지 번호 {connection.metaPageId}</p>
                                 {(connection.lastError || connection.subscribeError) && (
-                                    <small className={styles.metaErrorText}>{connection.lastError || connection.subscribeError}</small>
+                                    <small className={styles.metaErrorText}>
+                                        {getMetaIssueGuidance(connection.subscribeError || connection.lastError, 'Meta 계정 연결 상태를 확인하고 다시 연결해주세요.')}
+                                    </small>
                                 )}
                             </div>
                             {canManageMeta && (
@@ -129,86 +134,123 @@ export function LeadMetaIntegrationPanel({
                     {metaState.forms.map(form => {
                         const connection = metaState.connections.find(item => item.id === form.connectionId);
                         return (
-                            <article key={form.id} className={styles.metaFormCard}>
-                                <div className={styles.metaFormTop}>
+                            <details key={form.id} className={styles.metaFormCard}>
+                                <summary className={styles.metaFormSummary}>
                                     <div>
                                         <h3>{form.metaFormName || form.metaFormId}</h3>
-                                        <p>{connection?.metaPageName || 'Meta Page'} · Form ID {form.metaFormId}</p>
-                                        {form.lastError && <small className={styles.metaErrorText}>{form.lastError}</small>}
+                                        <p>{connection?.metaPageName || 'Meta 페이지'} · 양식 번호 {form.metaFormId}</p>
                                     </div>
-                                    <label className={styles.switchLabel}>
-                                        <input
-                                            type="checkbox"
-                                            checked={form.enabled}
-                                            disabled={!canManageMeta || savingMetaFormId === form.id}
-                                            onChange={(event) => void onUpdateFormAction(form, { enabled: event.target.checked })}
-                                        />
-                                        수집 활성화
-                                    </label>
-                                </div>
-                                <div className={styles.metaFormControls}>
-                                    <label>
-                                        기본 담당자
-                                        <select
-                                            value={form.defaultManagerId || ''}
-                                            disabled={!canManageMeta || savingMetaFormId === form.id}
-                                            onChange={(event) => void onUpdateFormAction(form, { defaultManagerId: event.target.value })}
-                                        >
-                                            <option value="">담당자 선택</option>
-                                            {renderManagerOptionsAction(form.defaultManagerId || undefined)}
-                                        </select>
-                                    </label>
-                                    <button
-                                        className={styles.secondaryButton}
-                                        onClick={() => void onSyncAction(form.id)}
-                                        disabled={!form.enabled || !canManageMeta || isMetaSyncing}
-                                    >
-                                        <RefreshCw size={14} />
-                                        이 Form 동기화
-                                    </button>
-                                </div>
-                                <div className={styles.metaMappingGrid}>
-                                    {META_FIELD_LABELS.map(field => (
-                                        <label key={field.key}>
-                                            {field.label}
-                                            <input
-                                                value={(form.fieldMapping?.[field.key] || []).join(', ')}
-                                                disabled={!canManageMeta || savingMetaFormId === form.id}
-                                                placeholder={field.hint}
-                                                onChange={(event) => onUpdateFieldMappingAction(form.id, field.key, event.target.value)}
-                                            />
-                                        </label>
-                                    ))}
-                                </div>
-                                <div className={styles.metaFormFooter}>
-                                    <span>마지막 동기화: {formatDateTime(form.lastSyncedAt)}</span>
-                                    {canManageMeta && (
-                                        <button
-                                            className={styles.primaryButton}
-                                            onClick={() => void onUpdateFormAction(form, { fieldMapping: form.fieldMapping })}
-                                            disabled={savingMetaFormId === form.id}
-                                        >
-                                            {savingMetaFormId === form.id ? '저장 중' : '매핑 저장'}
-                                        </button>
+                                    <div className={styles.metaFormSummaryStatus}>
+                                        <span className={form.enabled ? styles.metaStatusOk : styles.metaStatusWarn}>
+                                            {form.enabled ? '자동 수집 중' : '자동 수집 꺼짐'}
+                                        </span>
+                                        <span className={styles.metaFormSummaryAction}>
+                                            설정 보기
+                                            <ChevronDown size={16} aria-hidden="true" />
+                                        </span>
+                                    </div>
+                                </summary>
+                                <div className={styles.metaFormBody}>
+                                    {form.lastError && (
+                                        <p className={styles.metaErrorText}>
+                                            {getMetaIssueGuidance(form.lastError, '신청 양식 설정을 확인한 뒤 다시 가져와주세요.')}
+                                        </p>
                                     )}
+                                    <div className={styles.metaFormTop}>
+                                        <label className={styles.switchLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={form.enabled}
+                                                disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                onChange={(event) => void onUpdateFormAction(form, { enabled: event.target.checked })}
+                                            />
+                                            <span>
+                                                자동 수집
+                                                <small>새 신청이 들어오면 모객 DB에 바로 등록합니다.</small>
+                                            </span>
+                                        </label>
+                                        <div className={styles.metaFormControls}>
+                                            <label>
+                                                기본 담당자
+                                                <select
+                                                    value={form.defaultManagerId || ''}
+                                                    disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                    onChange={(event) => void onUpdateFormAction(form, { defaultManagerId: event.target.value })}
+                                                >
+                                                    <option value="">담당자 선택</option>
+                                                    {renderManagerOptionsAction(form.defaultManagerId || undefined)}
+                                                </select>
+                                            </label>
+                                            <button
+                                                className={styles.secondaryButton}
+                                                onClick={() => void onSyncAction(form.id)}
+                                                disabled={!form.enabled || !canManageMeta || isMetaSyncing}
+                                            >
+                                                <RefreshCw size={14} />
+                                                신청 내역 가져오기
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className={styles.metaMappingSection}>
+                                        <div className={styles.metaMappingIntro}>
+                                            <strong>연동 항목</strong>
+                                            <p>아래 단어는 Meta 신청 양식의 질문 이름입니다. 같은 뜻의 이름을 쉼표로 구분해두면 해당 모객 DB 항목으로 자동 저장됩니다.</p>
+                                            <small>전체 예산은 예산 질문이 하나일 때, 최소·최대 예산은 범위 질문이 따로 있을 때 사용합니다. 보통은 자동 설정된 값을 수정하지 않아도 됩니다.</small>
+                                        </div>
+                                        <div className={styles.metaMappingGrid}>
+                                            {META_FIELD_LABELS.map(field => (
+                                                <label key={field.key}>
+                                                    {field.label} 항목으로 저장할 질문 이름
+                                                    <input
+                                                        value={(form.fieldMapping?.[field.key] || []).join(', ')}
+                                                        disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                        placeholder={field.hint}
+                                                        onChange={(event) => onUpdateFieldMappingAction(form.id, field.key, event.target.value)}
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className={styles.metaFormFooter}>
+                                        <span>마지막 가져오기: {formatDateTime(form.lastSyncedAt)}</span>
+                                        {canManageMeta && (
+                                            <button
+                                                className={styles.primaryButton}
+                                                onClick={() => void onUpdateFormAction(form, { fieldMapping: form.fieldMapping })}
+                                                disabled={savingMetaFormId === form.id}
+                                            >
+                                                {savingMetaFormId === form.id ? '저장 중' : '연동 항목 저장'}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </article>
+                            </details>
                         );
                     })}
                 </div>
             )}
 
             {metaState.imports.length > 0 && (
-                <div className={styles.metaImportLog}>
-                    <h3>최근 수집 로그</h3>
-                    {metaState.imports.slice(0, 6).map(item => (
-                        <div key={item.id}>
-                            <span>{item.status}</span>
-                            <strong>{item.metaLeadId}</strong>
-                            <small>{item.errorMessage || formatDateTime(item.importedAt || item.receivedAt)}</small>
-                        </div>
-                    ))}
-                </div>
+                <details className={styles.metaImportLog}>
+                    <summary>
+                        최근 수집 내역
+                        <span>{metaState.imports.length.toLocaleString()}건</span>
+                        <ChevronDown size={16} aria-hidden="true" />
+                    </summary>
+                    <div className={styles.metaImportLogBody}>
+                        {metaState.imports.slice(0, 6).map(item => (
+                            <div key={item.id}>
+                                <span>{META_IMPORT_STATUS_LABELS[item.status] || '확인 필요'}</span>
+                                <strong>신청 번호 {item.metaLeadId}</strong>
+                                <small>
+                                    {item.errorMessage
+                                        ? getMetaIssueGuidance(item.errorMessage, '신청 정보의 수집 상태를 확인해주세요.')
+                                        : formatDateTime(item.importedAt || item.receivedAt)}
+                                </small>
+                            </div>
+                        ))}
+                    </div>
+                </details>
             )}
         </section>
     );
