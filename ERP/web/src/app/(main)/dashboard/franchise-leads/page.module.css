@@ -6452,8 +6452,7 @@
 
 .checkboxCell {
     width: 42px;
-    padding-left: 10px !important;
-    padding-right: 6px !important;
+    padding-inline: var(--lead-table-cell-padding-inline) !important;
     text-align: center !important;
 }
 
@@ -10213,6 +10212,8 @@
     color: var(--fr-muted);
     font-size: 13px;
     line-height: 1.45;
+    text-wrap: balance;
+    word-break: keep-all;
 }
 
 .eyebrow,
@@ -10525,6 +10526,7 @@
 .leadLayerTab span,
 .leadLayerTabActive span {
     color: var(--fr-muted);
+    word-break: keep-all;
 }
 
 .leadLayerTab b,
@@ -11014,7 +11016,7 @@
 
 .rangeButton,
 .rangeButtonActive {
-    height: 38px;
+    height: 40px;
     min-width: 72px;
     padding: 0 14px;
     color: var(--fr-muted);
@@ -11024,8 +11026,8 @@
 }
 
 .rangeButtonActive {
-    background: var(--fr-blue);
-    color: #ffffff;
+    background: var(--fr-blue-soft);
+    color: var(--fr-blue);
 }
 
 .searchBox {
@@ -11185,6 +11187,11 @@
 .panelHeader p,
 .tableHeader p {
     color: var(--fr-muted);
+    word-break: keep-all;
+}
+
+.tableHeader p {
+    text-wrap: balance;
 }
 
 .stageStrip {
@@ -11223,6 +11230,7 @@
 }
 
 .leadTable {
+    --lead-table-cell-padding-inline: 12px;
     min-width: 1280px;
 }
 
@@ -11244,7 +11252,7 @@
 
 .leadTable th {
     height: 36px;
-    padding: 7px 8px;
+    padding: 7px var(--lead-table-cell-padding-inline);
     background: #f9fafb;
     color: var(--fr-muted);
     font-size: 12px;
@@ -11252,7 +11260,7 @@
 }
 
 .leadTable td {
-    padding: 7px 8px;
+    padding: 7px var(--lead-table-cell-padding-inline);
     color: var(--fr-text);
     font-size: 13px;
 }
@@ -11499,6 +11507,17 @@
         grid-template-columns: 1fr;
     }
 
+    .rangeGroup,
+    .rangeButton,
+    .rangeButtonActive,
+    .searchBox,
+    .filterGroup select,
+    .filterGroup input,
+    .quickFilterButton,
+    .quickFilterButtonActive {
+        height: 44px;
+    }
+
     .filterGroup {
         display: grid;
         grid-template-columns: 1fr;
@@ -11523,6 +11542,13 @@
     .filterResetButton {
         width: 100%;
         justify-content: center;
+    }
+
+    .pageSizeControl {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px;
+        white-space: nowrap;
     }
 
     .columnPickerPanel {

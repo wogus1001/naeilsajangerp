@@ -1187,7 +1187,7 @@ export default function FranchiseLeadsPage() {
         <div className={styles.pageShell}>
             <FranchiseWorkspaceHero
                 title="모객 DB"
-                description="가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다."
+                description="가맹 희망자의 유입, 상담, 검토부터 계약까지 본사에서 한눈에 관리합니다."
                 actions={(
                     <>
                     <button className={styles.secondaryButton} onClick={() => setIsMetaPanelOpen(prev => !prev)}>
