@@ -11,6 +11,14 @@
 - 긴 명령 출력, 브라우저 QA 상세, 코드 변경 이력은 이 문서에 누적하지 않고 관련 문서로 링크한다.
 - `ERP/web/handoff.md`는 단일 작성자 규칙 때문에 수정하지 않는다.
 
+## 2026-07-27 Meta Lead Ads 연결·수집 UI QA
+
+- Meta Business Login으로 회사 관리 페이지 1개와 신청 양식 19개를 발견하고, 수집 양식 1개를 활성화했다. Meta Lead Ads Testing Tool의 Page Webhook 전달은 `Success`를 확인했고 테스트 신청 정보가 모객 DB의 `1차 유입 DB`로 들어오는 것까지 확인했다.
+- 모객 DB 상단의 중복 `Meta 계정 연결`을 제거하고 `Meta 연동 설정` 안으로 이동했다. 설정 버튼은 열림/닫힘 상태를 명시하고, 양식 설정과 최근 수집 내역은 접이식으로 정리했다. 질문 이름 별칭과 예산 항목은 운영자가 이해할 수 있는 설명으로 바꿨다.
+- Meta 테스트 도구의 dummy 이름·연락처·지역·브랜드·메모는 저장값을 바꾸지 않고 표에서만 업무용 표시값으로 정리한다. 개인정보 셀의 native tooltip은 제거했다.
+- OAuth 복귀 경로 allowlist, 고정 오류 코드, 회사 범위 수동 동기화 필터를 추가했다. 관련 회귀 32건, TypeScript, 전체 ESLint, production build, `git diff --check`, 1280px·390px 브라우저 QA를 통과했다. console error와 페이지 수평 overflow는 0건이다.
+- 코드 커밋은 `fa7c611 fix(franchise): Meta 연동 설정과 수집 경계 보정`이다. 신규 SQL은 없다. 실제 유료 광고 리드와 장시간 Webhook·백필 안정성은 dev live QA로 남고, 광고 성과 Marketing API는 별도 HOLD다.
+
 ## 2026-07-27 모객 DB 기간 기본값·표 가독성 보정
 
 - `/dashboard/franchise-leads`의 최초 기간을 `최근 30일`에서 `전체`로 바꿨다. 빠른 기간 버튼의 마지막 선택은 브라우저에 저장해 새로고침과 재방문 때 복원하며, 직접 입력한 날짜는 저장된 빠른 기간 선택을 덮어쓰지 않는다.

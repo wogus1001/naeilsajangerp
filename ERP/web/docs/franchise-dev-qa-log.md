@@ -1583,3 +1583,12 @@
 - 오류 확인: 최종 dev 배포의 callback·화면 요청에서 Vercel error 로그와 Next.js 오류 오버레이는 없었다. 브라우저 제어 계층의 `fontoxpath` 주입 오류와 기존 Supabase 다중 GoTrueClient 경고는 관찰됐으나 Meta callback 또는 화면 기능 오류는 아니었다.
 - 운영 상태: 19개 Form은 저장됐지만 현재 활성 Form은 0개이므로 Webhook/백필 자동 수집은 시작되지 않았다. 실제 수집 대상 Form을 사용자가 선택해 `수집 활성화`한 뒤 동기화와 신규 리드 수신을 별도 QA한다.
 - SQL 상태: 신규 SQL 없음. **SQL 등록 불필요**.
+## 2026-07-27 Meta Lead Ads 설정 UI·보안 경계 QA
+
+- 코드 커밋: `fa7c611 fix(franchise): Meta 연동 설정과 수집 경계 보정`.
+- Meta Business Login에서 회사 관리 페이지 1개와 신청 양식 19개를 발견했고 수집 양식 1개를 활성화했다. Meta Lead Ads Testing Tool에서 Page Webhook 전달 `Success`를 확인했으며, 테스트 신청 정보가 모객 DB `1차 유입 DB`에 저장되는 것을 화면으로 확인했다. 실제 유료 광고 캠페인 리드와 장시간 Webhook·백필은 아직 확인하지 않았다.
+- 모객 DB 상단의 중복 `Meta 계정 연결`을 없애고 `Meta 연동 설정` 내부로 이동했다. 설정 열림/닫힘, 양식 자동 수집 상태, 질문 이름 별칭, 전체·최소·최대 예산의 차이를 운영 문구로 설명하고 여러 양식과 최근 수집 내역을 접이식으로 정리했다.
+- Meta 테스트 도구 dummy 값은 저장 원본을 바꾸지 않고 표에서만 `Meta 테스트 신청자` 또는 `-`로 표시한다. 전화번호·희망지역·관심브랜드·메모 셀에는 전체 개인정보를 복제하는 native tooltip을 두지 않는다.
+- 보안 리뷰에서 확인된 protocol-relative OAuth open redirect, provider 원문 오류 노출, 수동 동기화 회사 범위 누락을 각각 exact-path allowlist, 안정 오류 코드, `company_id` 선조회 필터로 보정했다.
+- 검증: Meta/기간 관련 회귀 32건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. production build는 113개 페이지를 생성했다. 1280px·390px 실브라우저에서 패널 열기/닫기, 내부 계정 연결 1개, 모바일 44px 버튼, 2×2 요약, 수평 overflow 0, console error 0을 확인했다. 기존 Supabase 다중 client warning은 이번 변경 범위 밖의 비차단 경고다.
+- 5개 관점 리뷰 결과 목표/제약, 보안, 프로젝트 맥락은 PASS, 수동 QA는 외부 OAuth 미실행 한계를 명시한 PASS, 최종 코드 품질 재검토는 PASS다. 신규 SQL과 공개 `/landing`·`/demo` 변경은 없다.

@@ -68,7 +68,7 @@ npm run build
 - When suggesting Hermes, give the user an exact paste-ready prompt and remind it not to edit code, SQL, env, package files, or `ERP/web/handoff.md`.
 
 ## CURRENT PRODUCT NOTES
-- Meta Lead Ads code exists but development and rollout are on HOLD until Meta account/app config, env, webhook URLs, and permissions are ready.
+- Meta Lead Ads Business Login, Page/Form discovery, Webhook test delivery, and 모객 DB raw-intake 저장은 dev에서 확인했다. 운영 광고 리드 수신과 장기 Webhook/백필 안정성은 별도 live QA로 남아 있으며, 광고 성과 Marketing API 범위는 계속 HOLD다.
 - SearchAPI quota exhaustion is not the same as "no Naver data"; preserve prior successful Naver review/ad values when provider limits or timeouts occur.
 - External realty import is Daangn store-listing MVP only. Naver Land is deferred to URL/CSV/JSON import, then local Chrome capture POC, then provider/proxy adapter.
 - Franchise location competitor scans must use `competitionKeyword` or `brand`; do not fall back to location names for competitor search.

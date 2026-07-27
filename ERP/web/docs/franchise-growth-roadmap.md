@@ -32,7 +32,7 @@
 5. 본사 운영관리
 6. 가맹 운영 외부 상가 매물 수집 MVP 유지보수
 7. 관리자 회사별 메뉴/조회 범위 운영
-8. Meta Lead Ads는 계정/앱 설정 문제가 풀릴 때까지 HOLD
+8. Meta Lead Ads 실광고 수신·Webhook/백필 안정성 QA, 광고 성과 Marketing API는 별도 권한 검수까지 HOLD
 
 ## 현재 완료/진행 상태
 
@@ -76,7 +76,7 @@
 - 랜딩은 Google OAuth 동의 화면 앱 이름과 맞춘 `프랜차이즈 본부 ERP` 브랜드로 표기하고, 본사 임직원이 구글시트로 관리하던 모객 DB를 ERP 흐름으로 옮기면 어떤 점이 좋아지는지 정면으로 설명한다.
 - 구글시트 대비 섹션은 `구글시트 관리`와 `프랜차이즈 본부 ERP`를 2열로 비교하고, 처리할 DB 확인, 중복·누락 감소, 계약 이후 인계 정리를 핵심 효과로 보여준다.
 - 기능 상세는 모객 DB, 출점 후보지, 정보공개서/계약, 오픈 준비, 가맹 운영의 업무 상황/주요 기능/본사 결과를 함께 보여준다.
-- 제품 프리뷰와 지표 섹션은 모객 파이프라인, 유입 경로, DB 유입 추이, 담당자별 모객 그래프를 HTML/CSS 목업으로 보여준다. Meta Lead Ads는 향후 연동 예정 기능으로 랜딩 기능 설명과 유입 경로 예시에 포함하되, 실제 운영 연동은 기존 HOLD 조건을 유지한다.
+- 제품 프리뷰와 지표 섹션은 모객 파이프라인, 유입 경로, DB 유입 추이, 담당자별 모객 그래프를 HTML/CSS 목업으로 보여준다. Meta Lead Ads는 dev에서 Business Login, Page/Form 발견, 테스트 Webhook, raw-intake 저장을 확인했다. 랜딩 기능 설명과 유입 경로 예시는 유지하되 실광고 수신과 광고 성과 Marketing API는 별도 검증 전까지 운영 완료로 표시하지 않는다.
 - 2026-06-15 랜딩 히어로, 제품 프리뷰, 지표 섹션에 `문의접수 -> 상담중 -> 입지검토 -> 계약예정` 상태별 파이프라인으로 모객 병목과 다음 액션을 한눈에 추적한다는 메시지를 보강했다.
 - 2026-06-15 공개 로그인/가입 및 공통 fallback 브랜드 문구는 `내일사장` 대신 `부동산 ERP`로 정리한다.
 - 2026-06-15 랜딩 기능 상세의 `정보공개서/계약`, `가맹 운영` 카드는 출시 완료 기능처럼 보이지 않도록 `개발 진행중` 상태 배지를 표시한다.
@@ -319,7 +319,7 @@
 - 2026-06-22 회사 업로드 템플릿 계약 작성은 ERP `필드명` 입력 단일 흐름으로 단순화했다. `작성 방식` 선택과 `템플릿에서 직접 작성` 임베딩 진입은 사용자 화면에서 제거하고, 임시저장/발송 payload는 항상 ERP 입력값과 서명자 정보를 기준으로 저장한다. UCanSign 공개 Postman 문서상 템플릿 렌더 preview endpoint는 확인되지 않아, 발송 전 검토는 입력값/서명자 확인 UX로 고도화한다.
 - 2026-06-11 안정화 QA에서 기존 단계값 없는 리드 유지, `연락 완료` 처리, 후보지 연결 상태/메모 reload 유지를 추가 확인했다.
 - 엑셀 업로드 파일 유입 QA runner(`scripts/franchise-p0-lead-ingress-qa.mjs`)는 2026-06-11 `admin` requester와 실제 `.xlsx` fixture로 통과했다. runner 생성 리드는 `raw_intake` 저장 후 `candidate` 승격과 cleanup까지 확인했다.
-- 남은 P0 회귀 QA는 실제 Meta 유입과 실운영 계정 role matrix 확인이다. Meta는 계정/앱/env가 없어 `BLOCKED_META_ENV`/HOLD 상태이며, 실운영 role matrix runner는 실제 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.
+- 남은 P0 회귀 QA는 실제 유료 광고 Meta 유입, 장시간 Webhook/백필 안정성, 실운영 계정 role matrix 확인이다. Meta dev 환경은 Business Login, Page 1개, 양식 19개 발견, 활성 양식 1개, Testing Tool Webhook `Success`, raw-intake 저장까지 확인했다. 광고 성과 Marketing API와 실운영 권한 검수는 별도 HOLD이며, 실운영 role matrix runner는 실제 회사 A/B/no-company 계정 env가 없어 `BLOCKED_REAL_ROLE_MATRIX`로 기록했다.
 - 본사별 정보공개서 저장/후보자 발송/발송 후 14일 계약 잠금 MVP는 2026-06-11 구현 및 SQL 적용 후 live QA까지 완료했다. 2026-06-16에는 회사별 문서관리 탭, Gmail OAuth 발송, 열람 추정/수령 확인, 문서 soft delete까지 연결했다. 다음 고도화는 카카오 알림톡 또는 발송 템플릿 관리로 분리한다.
 - 2026-07-02 알림톡 1차 운영 관리를 추가했다. `/admin/alimtalk`에서 1,2,3,4,5,8번 발송 시나리오의 템플릿 검수 상태, SOLAPI template/channel ID, 전역 시나리오 ON/OFF, 회사별 월간 발송량·한도·주의 기준, 최근 발송 로그를 관리한다. 시나리오 관리는 전체 발송 플로우 보드와 개별 시나리오 카드로 나눠 전체 체계와 개별 설정을 함께 확인한다. 적용 SQL은 `supabase_franchise_alimtalk_operations_migration.sql`이며, 실제 Kakao/SOLAPI 템플릿 신청은 provider 콘솔에서 진행하고 ERP에는 승인 상태와 ID를 기록한다. 같은 날 2차로 승인 템플릿의 실제 발송 훅을 연결했다. 회원가입 승인 요청/완료, 정보공개서 수령 확인 완료, 가맹계약 가능 상태, 업체 계약 만료 D-30/D-7은 `alimtalk_send_logs`에 성공/실패/차단 로그를 남긴다. 검수중인 정보공개서 확인 안내는 승인 후 연결한다.
 - 알림톡 2차는 승인된 템플릿 중 회원가입 승인 요청/완료, 정보공개서 수령 확인, 가맹계약 가능일 도래, 업체계약 만료 D-30/D-7을 실제 업무 이벤트에 연결했다. 정보공개서 이메일 발송 안내도 승인 후 Gmail 발송 성공 훅에 연결했다. 각 훅은 `alimtalk_scenarios.enabled`, 템플릿 `approved/enabled`, 회사별 발송 사용 여부와 월 한도, fallback SMS 설정을 모두 확인한 뒤 발송하고, 성공/실패/차단/provider 응답을 `alimtalk_send_logs`에 남긴다. 운영 env 또는 승인 템플릿 ID가 없으면 실제 발송 대신 skip/blocked 로그 또는 서버 로그만 남겨 본 업무 저장을 막지 않는다. 2차 완료 기준은 admin 실계정에서 템플릿 ID 저장, 시나리오 ON/OFF, 회사 한도 설정, 각 이벤트별 성공/실패 로그 조회, fallback SMS 동작을 live QA하는 것이다.
