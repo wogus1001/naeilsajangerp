@@ -3,10 +3,12 @@
 import type { ReactNode } from 'react';
 import { ChevronDown, Link2, RefreshCw } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { getMetaFormReadiness } from '@/lib/meta-lead-field-mapping';
+import type { MetaFieldKey } from '@/lib/meta-lead-field-mapping';
 import { formatDateTime } from './utils';
-import { META_FIELD_LABELS } from './constants';
 import { getMetaIssueGuidance, META_CONNECTION_STATUS_LABELS, META_IMPORT_STATUS_LABELS } from './metaIntegrationGuidance';
-import type { MetaConnection, MetaFieldMapping, MetaIntegrationState, MetaLeadForm } from './types';
+import { MetaFormFieldMapping } from './MetaFormFieldMapping';
+import type { MetaConnection, MetaFormOperation, MetaIntegrationState, MetaLeadForm } from './types';
 
 type MetaFormUpdate = Partial<Pick<MetaLeadForm, 'enabled' | 'defaultManagerId' | 'fieldMapping'>>;
 
@@ -19,13 +21,17 @@ type LeadMetaIntegrationPanelProps = {
     readonly isMetaLoading: boolean;
     readonly isMetaSyncing: boolean;
     readonly savingMetaFormId: string;
+    readonly savingMetaFormOperation: MetaFormOperation | null;
+    readonly dirtyMetaFormIds: ReadonlySet<string>;
     readonly renderManagerOptionsAction: (selectedManagerId?: string) => ReactNode;
     readonly onRefreshAction: () => void | Promise<void>;
     readonly onStartConnectAction: () => void;
     readonly onSyncAction: (formId?: string) => void | Promise<void>;
     readonly onDisconnectConnectionAction: (connection: MetaConnection) => void | Promise<void>;
+    readonly onRefreshFormQuestionsAction: (form: MetaLeadForm) => void | Promise<void>;
+    readonly onReplaceQuestionMappingAction: (formId: string, mapping: MetaLeadForm['fieldMapping']) => void;
     readonly onUpdateFormAction: (form: MetaLeadForm, updates: MetaFormUpdate) => void | Promise<void>;
-    readonly onUpdateFieldMappingAction: (formId: string, key: keyof MetaFieldMapping, value: string) => void;
+    readonly onUpdateQuestionMappingAction: (formId: string, sourceKey: string, target: MetaFieldKey | null) => void;
 };
 
 export function LeadMetaIntegrationPanel({
@@ -37,13 +43,17 @@ export function LeadMetaIntegrationPanel({
     isMetaLoading,
     isMetaSyncing,
     savingMetaFormId,
+    savingMetaFormOperation,
+    dirtyMetaFormIds,
     renderManagerOptionsAction,
     onRefreshAction,
     onStartConnectAction,
     onSyncAction,
     onDisconnectConnectionAction,
+    onRefreshFormQuestionsAction,
+    onReplaceQuestionMappingAction,
     onUpdateFormAction,
-    onUpdateFieldMappingAction
+    onUpdateQuestionMappingAction
 }: LeadMetaIntegrationPanelProps) {
     return (
         <section id="meta-integration-panel" className={styles.metaPanel}>
@@ -133,6 +143,13 @@ export function LeadMetaIntegrationPanel({
                 <div className={styles.metaFormsList}>
                     {metaState.forms.map(form => {
                         const connection = metaState.connections.find(item => item.id === form.connectionId);
+                        const readiness = getMetaFormReadiness({
+                            questions: form.questions,
+                            mapping: form.fieldMapping,
+                            defaultManagerId: form.defaultManagerId
+                        });
+                        const isSaving = savingMetaFormId === form.id;
+                        const isMappingDirty = dirtyMetaFormIds.has(form.id);
                         return (
                             <details key={form.id} className={styles.metaFormCard}>
                                 <summary className={styles.metaFormSummary}>
@@ -161,12 +178,24 @@ export function LeadMetaIntegrationPanel({
                                             <input
                                                 type="checkbox"
                                                 checked={form.enabled}
-                                                disabled={!canManageMeta || savingMetaFormId === form.id}
-                                                onChange={(event) => void onUpdateFormAction(form, { enabled: event.target.checked })}
+                                                disabled={
+                                                    !canManageMeta ||
+                                                    isSaving ||
+                                                    (!form.enabled && (isMappingDirty || !readiness.ready))
+                                                }
+                                                onChange={(event) => void onUpdateFormAction(form, {
+                                                    enabled: event.target.checked
+                                                })}
                                             />
                                             <span>
                                                 자동 수집
-                                                <small>새 신청이 들어오면 모객 DB에 바로 등록합니다.</small>
+                                                <small>
+                                                    {isMappingDirty && !form.enabled
+                                                        ? '신청 항목 연결을 저장한 뒤 자동 수집을 켜주세요.'
+                                                        : readiness.ready || form.enabled
+                                                            ? '새 신청이 들어오면 모객 DB에 바로 등록합니다.'
+                                                            : '이름, 연락처, 기본 담당자를 연결한 뒤 켤 수 있습니다.'}
+                                                </small>
                                             </span>
                                         </label>
                                         <div className={styles.metaFormControls}>
@@ -174,7 +203,7 @@ export function LeadMetaIntegrationPanel({
                                                 기본 담당자
                                                 <select
                                                     value={form.defaultManagerId || ''}
-                                                    disabled={!canManageMeta || savingMetaFormId === form.id}
+                                                    disabled={!canManageMeta || isSaving}
                                                     onChange={(event) => void onUpdateFormAction(form, { defaultManagerId: event.target.value })}
                                                 >
                                                     <option value="">담당자 선택</option>
@@ -191,37 +220,21 @@ export function LeadMetaIntegrationPanel({
                                             </button>
                                         </div>
                                     </div>
-                                    <div className={styles.metaMappingSection}>
-                                        <div className={styles.metaMappingIntro}>
-                                            <strong>연동 항목</strong>
-                                            <p>아래 단어는 Meta 신청 양식의 질문 이름입니다. 같은 뜻의 이름을 쉼표로 구분해두면 해당 모객 DB 항목으로 자동 저장됩니다.</p>
-                                            <small>전체 예산은 예산 질문이 하나일 때, 최소·최대 예산은 범위 질문이 따로 있을 때 사용합니다. 보통은 자동 설정된 값을 수정하지 않아도 됩니다.</small>
-                                        </div>
-                                        <div className={styles.metaMappingGrid}>
-                                            {META_FIELD_LABELS.map(field => (
-                                                <label key={field.key}>
-                                                    {field.label} 항목으로 저장할 질문 이름
-                                                    <input
-                                                        value={(form.fieldMapping?.[field.key] || []).join(', ')}
-                                                        disabled={!canManageMeta || savingMetaFormId === form.id}
-                                                        placeholder={field.hint}
-                                                        onChange={(event) => onUpdateFieldMappingAction(form.id, field.key, event.target.value)}
-                                                    />
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <MetaFormFieldMapping
+                                        form={form}
+                                        canManageMeta={canManageMeta}
+                                        isSaving={isSaving}
+                                        savingOperation={isSaving ? savingMetaFormOperation : null}
+                                        isDirty={isMappingDirty}
+                                        onRefreshQuestionsAction={onRefreshFormQuestionsAction}
+                                        onReplaceMappingAction={onReplaceQuestionMappingAction}
+                                        onUpdateQuestionAction={onUpdateQuestionMappingAction}
+                                        onSaveMappingAction={(targetForm, mapping) => (
+                                            onUpdateFormAction(targetForm, { fieldMapping: mapping })
+                                        )}
+                                    />
                                     <div className={styles.metaFormFooter}>
                                         <span>마지막 가져오기: {formatDateTime(form.lastSyncedAt)}</span>
-                                        {canManageMeta && (
-                                            <button
-                                                className={styles.primaryButton}
-                                                onClick={() => void onUpdateFormAction(form, { fieldMapping: form.fieldMapping })}
-                                                disabled={savingMetaFormId === form.id}
-                                            >
-                                                {savingMetaFormId === form.id ? '저장 중' : '연동 항목 저장'}
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                             </details>
