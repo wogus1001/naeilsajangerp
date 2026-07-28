@@ -3,8 +3,9 @@ import type { LeadLocationLink } from '@/lib/franchise-lead-location-links';
 import type { LeadDisclosureSummary } from '@/lib/franchise-lead-disclosure-summary';
 import type { FranchiseLeadStage, FranchiseLeadStatus } from '@/lib/franchise-leads';
 import type { LeadConsultationResult, LeadFitLevel, LeadNextAction } from '@/lib/franchise-lead-workflow';
+import type { MetaFieldMapping, MetaLeadQuestion } from '@/lib/meta-lead-field-mapping';
 
-export type { LeadLocationLink };
+export type { LeadLocationLink, MetaFieldMapping };
 
 export type FranchiseLead = {
     readonly id: string;
@@ -143,17 +144,6 @@ export type ManagerOption = {
     readonly role?: string;
 };
 
-export type MetaFieldMapping = {
-    readonly name: string[];
-    readonly mobile: string[];
-    readonly desiredRegion: string[];
-    readonly budget: string[];
-    readonly budgetMin: string[];
-    readonly budgetMax: string[];
-    readonly interestedBrand: string[];
-    readonly memo: string[];
-};
-
 export type MetaConnection = {
     readonly id: string;
     readonly companyId: string;
@@ -177,9 +167,12 @@ export type MetaLeadForm = {
     readonly enabled: boolean;
     readonly defaultManagerId?: string | null;
     readonly fieldMapping: MetaFieldMapping;
+    readonly questions: readonly MetaLeadQuestion[];
     readonly lastSyncedAt?: string | null;
     readonly lastError?: string | null;
 };
+
+export type MetaFormOperation = 'mapping' | 'questions' | 'settings';
 
 export type MetaLeadImportLog = {
     readonly id: string;

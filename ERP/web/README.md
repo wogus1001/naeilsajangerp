@@ -192,13 +192,14 @@ Required environment variables:
 META_APP_ID=
 META_APP_SECRET=
 META_VERIFY_TOKEN=
+META_BUSINESS_LOGIN_CONFIG_ID=
 META_GRAPH_API_VERSION=v25.0
 META_TOKEN_ENCRYPTION_KEY=
 CRON_SECRET=
 NEXT_PUBLIC_APP_URL=
 ```
 
-Use `/api/integrations/meta/webhook` as the Meta Webhook callback path. Vercel runs the scheduled backfill through `/api/integrations/meta/sync`; the endpoint requires `Authorization: Bearer $CRON_SECRET`.
+Use `/api/integrations/meta/callback` as the Meta Business Login OAuth callback and `/api/integrations/meta/webhook` as the Page Webhook callback path. `META_BUSINESS_LOGIN_CONFIG_ID` is the Meta Business Login configuration used to discover authorized business Pages without requesting legacy login scopes. Vercel runs the scheduled backfill through `/api/integrations/meta/sync`; the endpoint requires `Authorization: Bearer $CRON_SECRET`.
 
 ## Franchise Location Insights Setup
 
@@ -453,7 +454,7 @@ The official Naver API MVP is used for blog/news/local search and DataLab trends
 
 ## Current Franchise QA Notes
 
-- Meta Lead Ads is on HOLD until Meta account/app configuration and permissions are ready.
+- Meta Lead Ads Business Login, Page/Form discovery, Page Webhook test delivery, and 모객 DB raw-intake test storage are verified in dev. Real paid-ad lead delivery and long-running Webhook/backfill behavior still require live QA; Meta Marketing API performance reporting remains on HOLD until its separate access review is complete.
 - SearchAPI is the current preferred SERP provider for Naver place-style review/ad POC, but provider quota exhaustion must be treated separately from "no Naver data."
 - Current P0 is to prevent SearchAPI 429/monthly quota failures from overwriting previously successful Naver review/ad values and to split UI labels into quota exceeded, provider missing, and no result states.
 - Google Places enrichment intentionally uses Text Search rating/review counts only; Place Details review bodies are not requested by default.

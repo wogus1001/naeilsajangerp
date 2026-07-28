@@ -14,6 +14,8 @@ import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 import { LeadDisclosureStatusCell } from './LeadDisclosureStatusCell';
+import { LeadPrivateTableValue } from './LeadPrivateTableValue';
+import { formatLeadTableMobile, formatLeadTableName, formatLeadTableText } from './leadTableDisplay';
 import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead } from './types';
 import {
@@ -73,6 +75,11 @@ export function LeadTableRow({
 }: LeadTableRowProps) {
     const visibleColumnSet = new Set(visibleColumns);
     const isPriorityLead = lead.grade === 'HOT';
+    const leadDisplayName = formatLeadTableName(lead.name);
+    const leadDisplayMobile = formatLeadTableMobile(lead.mobile);
+    const leadDisplayRegion = formatLeadTableText(lead.desiredRegion);
+    const leadDisplayBrand = formatLeadTableText(lead.interestedBrand);
+    const leadDisplayMemo = formatLeadTableText(lead.memo);
 
     return (
         <tr>
@@ -81,7 +88,7 @@ export function LeadTableRow({
                     type="checkbox"
                     checked={isSelected}
                     onChange={(event) => onToggleSelectLead(lead.id, event.target.checked)}
-                    aria-label={`${lead.name} 선택`}
+                    aria-label={`${leadDisplayName} 선택`}
                 />
             </td>
             {visibleColumnSet.has('priority') && <td className={styles.priorityCell}>
@@ -89,7 +96,7 @@ export function LeadTableRow({
                     type="button"
                     className={isPriorityLead ? styles.priorityButtonActive : styles.priorityButton}
                     onClick={() => onTogglePriority(lead)}
-                    aria-label={isPriorityLead ? `${lead.name} 중요 표시 해제` : `${lead.name} 중요 표시`}
+                    aria-label={isPriorityLead ? `${leadDisplayName} 중요 표시 해제` : `${leadDisplayName} 중요 표시`}
                     title={isPriorityLead ? '중요 표시 해제' : '중요 표시'}
                 >
                     <Star size={16} fill={isPriorityLead ? 'currentColor' : 'none'} aria-hidden="true" />
@@ -97,19 +104,19 @@ export function LeadTableRow({
             </td>}
             {visibleColumnSet.has('name') && <td>
                 <button type="button" className={styles.nameButton} onClick={() => onSelectLead(lead.id)}>
-                    <strong>{lead.name}</strong>
+                    <strong>{leadDisplayName}</strong>
                     <span>{formatDate(lead.createdAt)} 등록</span>
                 </button>
             </td>}
             {visibleColumnSet.has('mobile') && <td>
-                <span className={styles.phone}>{lead.mobile || '-'}</span>
+                <LeadPrivateTableValue className={styles.phone} value={leadDisplayMobile} />
             </td>}
             {visibleColumnSet.has('status') && <td className={styles.selectCell}>
                 <span className={styles.tableSelectWrap}>
                     <select
                         className={styles.statusSelect}
                         value={lead.status}
-                        aria-label={`${lead.name} 상태 변경`}
+                        aria-label={`${leadDisplayName} 상태 변경`}
                         onChange={(event) => {
                             const nextStatus = parseStatus(event.target.value, statusOptions);
                             if (nextStatus) onStatusChange(lead, nextStatus);
@@ -130,7 +137,7 @@ export function LeadTableRow({
                     <select
                         className={styles.managerSelect}
                         value={lead.managerId || ''}
-                        aria-label={`${lead.name} 담당자 변경`}
+                        aria-label={`${leadDisplayName} 담당자 변경`}
                         onChange={(event) => onManagerChange(lead, event.target.value)}
                     >
                         <option value="">담당자 선택</option>
@@ -150,17 +157,23 @@ export function LeadTableRow({
                     </span>
                 ) : '-'}
             </td>}
-            {visibleColumnSet.has('desiredRegion') && <td>{lead.desiredRegion || '-'}</td>}
+            {visibleColumnSet.has('desiredRegion') && <td className={styles.tableTextCell}>
+                <LeadPrivateTableValue value={leadDisplayRegion} />
+            </td>}
             {visibleColumnSet.has('budget') && <td className={styles.rightColumnCell}>
                 {formatBudget(lead.budgetMin, lead.budgetMax)}
             </td>}
-            {visibleColumnSet.has('interestedBrand') && <td>{lead.interestedBrand || '-'}</td>}
+            {visibleColumnSet.has('interestedBrand') && <td className={styles.tableTextCell}>
+                <LeadPrivateTableValue value={leadDisplayBrand} />
+            </td>}
             {visibleColumnSet.has('nextContactAt') && <td className={styles.centerColumnCell}>
                 <span className={isPastDue(lead.nextContactAt) ? styles.dueBadgeDanger : isDueToday(lead.nextContactAt) ? styles.dueBadge : undefined}>
                     {formatDateTime(lead.nextContactAt)}
                 </span>
             </td>}
-            {visibleColumnSet.has('memo') && <td className={styles.memoCell}>{lead.memo || '-'}</td>}
+            {visibleColumnSet.has('memo') && <td className={styles.memoCell}>
+                <LeadPrivateTableValue value={leadDisplayMemo} />
+            </td>}
             {ENABLE_LEAD_CUSTOMER_DB_LINKING && visibleColumnSet.has('links') && <td>
                 <div className={styles.linkBadges}>
                     {lead.linkedCustomerId && <span>고객</span>}
@@ -175,7 +188,7 @@ export function LeadTableRow({
                             type="button"
                             className={styles.promoteButton}
                             onClick={() => onPromoteLeadToCandidate(lead)}
-                            aria-label={`${lead.name} 가맹 희망자 승격`}
+                            aria-label={`${leadDisplayName} 가맹 희망자 승격`}
                             data-tooltip="가맹 희망자 목록으로 승격"
                         >
                             승격
@@ -193,7 +206,7 @@ export function LeadTableRow({
                                 className={styles.iconButton}
                                 onClick={() => onConvertLead(lead)}
                                 disabled={convertingLeadId === lead.id}
-                                aria-label={`${lead.name} 고객 전환`}
+                                aria-label={`${leadDisplayName} 고객 전환`}
                                 data-tooltip="고객전환"
                             >
                                 <UserCheck size={15} />
@@ -204,7 +217,7 @@ export function LeadTableRow({
                         type="button"
                         className={styles.iconButton}
                         onClick={() => onOpenQuickActivityModal(lead)}
-                        aria-label={`${lead.name} 상담 이력 추가`}
+                        aria-label={`${leadDisplayName} 상담 이력 추가`}
                         data-tooltip="이력추가"
                     >
                         <MessageSquare size={15} />
@@ -213,7 +226,7 @@ export function LeadTableRow({
                         type="button"
                         className={styles.iconButton}
                         onClick={() => onOpenEditModal(lead)}
-                        aria-label={`${lead.name} 수정`}
+                        aria-label={`${leadDisplayName} 수정`}
                         data-tooltip="수정"
                     >
                         <Pencil size={15} />
@@ -222,7 +235,7 @@ export function LeadTableRow({
                         type="button"
                         className={styles.iconButtonDanger}
                         onClick={() => onRequestDelete(lead)}
-                        aria-label={`${lead.name} 삭제`}
+                        aria-label={`${leadDisplayName} 삭제`}
                         data-tooltip="삭제"
                     >
                         <Trash2 size={15} />

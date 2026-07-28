@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { fail, ok } from '@/lib/api-response';
 import {
@@ -6,6 +7,7 @@ import {
     importMetaLeadWithLogging,
     verifyMetaWebhookSignature
 } from '@/lib/meta-leads';
+import { resolveMetaWebhookTarget } from '@/lib/meta-webhook-routing';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
     return fail(403, 'FORBIDDEN', 'Invalid Meta webhook verification token');
 }
 
-async function processLeadgenChange(supabaseAdmin: any, change: MetaWebhookChange) {
+async function processLeadgenChange(supabaseAdmin: SupabaseClient, change: MetaWebhookChange) {
     const value = change.value || {};
     const leadgenId = String(value.leadgen_id || '');
     const pageId = String(value.page_id || '');
@@ -52,40 +54,38 @@ async function processLeadgenChange(supabaseAdmin: any, change: MetaWebhookChang
         return { status: 'skipped', reason: 'Missing leadgen_id/page_id/form_id' };
     }
 
-    const { data: connection, error: connectionError } = await supabaseAdmin
+    const { data: connections, error: connectionError } = await supabaseAdmin
         .from('meta_lead_connections')
         .select('*')
         .eq('meta_page_id', pageId)
-        .neq('status', 'disconnected')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq('status', 'connected');
 
     if (connectionError) throw connectionError;
-    if (!connection) {
+    if (!connections || connections.length === 0) {
         return { status: 'skipped', reason: 'No matching connection' };
     }
 
-    const { data: form, error: formError } = await supabaseAdmin
+    const connectionIds = connections.map(connection => connection.id);
+    const { data: forms, error: formError } = await supabaseAdmin
         .from('meta_lead_forms')
         .select('*')
-        .eq('connection_id', connection.id)
+        .in('connection_id', connectionIds)
         .eq('meta_form_id', formId)
-        .eq('enabled', true)
-        .maybeSingle();
+        .eq('enabled', true);
 
     if (formError) throw formError;
-    if (!form) {
-        await supabaseAdmin
-            .from('meta_lead_connections')
-            .update({
-                last_error: `Webhook received for disabled or unknown form ${formId}`,
-                last_webhook_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', connection.id);
-
+    const target = resolveMetaWebhookTarget(connections, forms || []);
+    if (target.status === 'ambiguous') {
+        console.error('Meta webhook target is ambiguous for Page/Form pair');
+        return { status: 'error', reason: 'Ambiguous Page/Form ownership' };
+    }
+    if (target.status === 'missing') {
         return { status: 'skipped', reason: 'Form is disabled or unknown' };
+    }
+    const connection = connections.find(item => item.id === target.connection.id);
+    const form = (forms || []).find(item => item.id === target.form.id);
+    if (!connection || !form) {
+        return { status: 'error', reason: 'Resolved Page/Form target is unavailable' };
     }
 
     const pageAccessToken = decryptMetaToken(connection.access_token_encrypted);
@@ -129,17 +129,19 @@ export async function POST(request: Request) {
             try {
                 results.push(await processLeadgenChange(supabaseAdmin, change));
             } catch (error) {
-                console.error('Meta webhook change error:', error);
+                const message = error instanceof Error ? error.message : 'Unknown webhook change error';
+                console.error('Meta webhook change error:', message);
                 results.push({
                     status: 'error',
-                    reason: error instanceof Error ? error.message : 'Webhook change failed'
+                    reason: 'Webhook change failed'
                 });
             }
         }
 
         return ok({ received: true, processed: results.length, results });
     } catch (error) {
-        console.error('Meta webhook POST error:', error);
-        return fail(500, 'INTERNAL_ERROR', 'Failed to process Meta webhook');
+        const message = error instanceof Error ? error.message : 'Unknown Meta webhook error';
+        console.error('Meta webhook POST error:', message);
+        return fail(500, 'INTERNAL_ERROR', 'Meta 신청 정보를 처리하지 못했습니다.');
     }
 }

@@ -10,6 +10,7 @@ import {
 import { canManageMetaIntegration } from '@/lib/meta-leads';
 import {
     encodeMetaOAuthState,
+    getSafeMetaOAuthRedirectPath,
     META_OAUTH_NONCE_COOKIE,
     META_OAUTH_STATE_COOKIE
 } from '@/lib/meta-oauth-state';
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
     }
 
     const nonce = crypto.randomUUID();
-    const redirectPath = searchParams.get('redirect') || '/dashboard/franchise-leads';
+    const redirectPath = getSafeMetaOAuthRedirectPath(searchParams.get('redirect'));
     const redirectUri = `${getAppUrl(request)}/api/integrations/meta/callback`;
     const state = encodeMetaOAuthState({
         nonce,

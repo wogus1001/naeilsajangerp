@@ -14,20 +14,47 @@ import {
     META_ACCOUNT_PAGE_FIELDS,
     META_TARGET_PAGE_FIELDS
 } from '@/lib/meta-business-page-discovery';
+import {
+    sanitizeMetaConnectionIssue,
+    sanitizeMetaFormIssue,
+    sanitizeMetaImportIssue,
+    sanitizeMetaSubscriptionIssue
+} from '@/lib/meta-lead-issues';
+import {
+    DEFAULT_META_FIELD_MAPPING,
+    normalizeFieldMapping,
+    normalizeMetaLeadQuestions,
+    type MetaFieldMapping
+} from '@/lib/meta-lead-field-mapping';
+import {
+    planMetaFormDiscoveryWrite,
+    type MetaDiscoveredForm
+} from '@/lib/meta-lead-form-discovery';
+
+export {
+    areMetaFieldMappingsEqual,
+    assignMetaQuestion,
+    DEFAULT_META_FIELD_MAPPING,
+    findMetaFieldMappingConflicts,
+    findMetaQuestionTarget,
+    getMetaFormReadiness,
+    isEligibleMetaFormManager,
+    normalizeFieldMapping,
+    normalizeMetaLeadQuestions,
+    suggestMetaFieldMapping
+} from '@/lib/meta-lead-field-mapping';
+export { planMetaFormDiscoveryWrite } from '@/lib/meta-lead-form-discovery';
+export type {
+    MetaFieldKey,
+    MetaFieldMapping,
+    MetaFormReadinessMissing,
+    MetaLeadQuestion,
+    MetaLeadQuestionOption
+} from '@/lib/meta-lead-field-mapping';
+export type { MetaDiscoveredForm } from '@/lib/meta-lead-form-discovery';
 
 export const META_LEAD_SOURCE = 'Meta Lead Ads';
 export const META_LEAD_SOURCE_TYPE = 'meta-lead-ad';
-
-export type MetaFieldMapping = {
-    name: string[];
-    mobile: string[];
-    desiredRegion: string[];
-    budget: string[];
-    budgetMin: string[];
-    budgetMax: string[];
-    interestedBrand: string[];
-    memo: string[];
-};
 
 export type MetaLeadImportResult = {
     status: 'created' | 'updated' | 'duplicate' | 'skipped' | 'error';
@@ -35,12 +62,7 @@ export type MetaLeadImportResult = {
     message?: string;
 };
 
-type MetaGraphForm = {
-    id: string;
-    name?: string;
-    status?: string;
-    created_time?: string;
-};
+type MetaGraphForm = MetaDiscoveredForm;
 
 type MetaLeadField = {
     name: string;
@@ -62,15 +84,67 @@ export type MetaLeadPayload = {
     [key: string]: unknown;
 };
 
-export const DEFAULT_META_FIELD_MAPPING: MetaFieldMapping = {
-    name: ['full_name', 'name', 'first_name', 'last_name', '이름', '성명', '후보자명'],
-    mobile: ['phone_number', 'phone', 'mobile', '연락처', '휴대폰', '전화번호', '핸드폰'],
-    desiredRegion: ['desired_region', 'region', 'area', 'location', '희망지역', '관심지역', '지역'],
-    budget: ['budget', 'startup_budget', '예산', '창업예산', '창업예산(만원)'],
-    budgetMin: ['budget_min', 'min_budget', '예산최소', '예산최소(만원)', '최소예산'],
-    budgetMax: ['budget_max', 'max_budget', '예산최대', '예산최대(만원)', '최대예산'],
-    interestedBrand: ['brand', 'interested_brand', '관심브랜드', '브랜드'],
-    memo: ['memo', 'message', 'comment', '문의내용', '메모', '비고']
+type MetaConnectionSanitizeRow = {
+    readonly id?: unknown;
+    readonly company_id?: unknown;
+    readonly connected_by?: unknown;
+    readonly meta_user_id?: unknown;
+    readonly meta_page_id?: unknown;
+    readonly meta_page_name?: unknown;
+    readonly status?: unknown;
+    readonly token_expires_at?: unknown;
+    readonly last_sync_at?: unknown;
+    readonly last_webhook_at?: unknown;
+    readonly last_error?: unknown;
+    readonly created_at?: unknown;
+    readonly updated_at?: unknown;
+    readonly data?: Record<string, unknown> | null;
+};
+
+type MetaFormSanitizeRow = {
+    readonly id?: unknown;
+    readonly company_id?: unknown;
+    readonly connection_id?: unknown;
+    readonly meta_form_id?: unknown;
+    readonly meta_form_name?: unknown;
+    readonly enabled?: unknown;
+    readonly default_manager_id?: unknown;
+    readonly field_mapping?: unknown;
+    readonly last_synced_at?: unknown;
+    readonly last_error?: unknown;
+    readonly created_at?: unknown;
+    readonly updated_at?: unknown;
+    readonly data?: Record<string, unknown> | null;
+};
+
+type MetaImportSanitizeRow = {
+    readonly id?: unknown;
+    readonly company_id?: unknown;
+    readonly connection_id?: unknown;
+    readonly form_id?: unknown;
+    readonly meta_lead_id?: unknown;
+    readonly franchise_lead_id?: unknown;
+    readonly status?: unknown;
+    readonly error_message?: unknown;
+    readonly received_at?: unknown;
+    readonly imported_at?: unknown;
+    readonly created_at?: unknown;
+};
+
+type MetaConnectionImportContext = {
+    readonly id: string;
+    readonly company_id: string;
+    readonly connected_by: string | null;
+    readonly meta_page_id: string;
+    readonly meta_page_name: string | null;
+};
+
+type MetaFormImportContext = {
+    readonly id: string;
+    readonly default_manager_id: string | null;
+    readonly meta_form_id: string;
+    readonly meta_form_name: string | null;
+    readonly field_mapping: unknown;
 };
 
 const GRAPH_FIELDS = [
@@ -147,7 +221,7 @@ export function canManageMetaIntegration(profile: { role: string | null; company
     return profile?.role === 'admin' || profile?.role === 'manager';
 }
 
-export function sanitizeMetaConnection(row: any) {
+export function sanitizeMetaConnection(row: MetaConnectionSanitizeRow | null | undefined) {
     if (!row) return null;
     const data = row.data || {};
     return {
@@ -161,16 +235,17 @@ export function sanitizeMetaConnection(row: any) {
         tokenExpiresAt: row.token_expires_at,
         lastSyncAt: row.last_sync_at,
         lastWebhookAt: row.last_webhook_at,
-        lastError: row.last_error,
+        lastError: sanitizeMetaConnectionIssue(row.last_error),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         pageCategory: data.pageCategory || '',
-        subscribeError: data.subscribeError || ''
+        subscribeError: sanitizeMetaSubscriptionIssue(data.subscribeError)
     };
 }
 
-export function sanitizeMetaForm(row: any) {
+export function sanitizeMetaForm(row: MetaFormSanitizeRow | null | undefined) {
     if (!row) return null;
+    const data = row.data || {};
     return {
         id: row.id,
         companyId: row.company_id,
@@ -180,15 +255,15 @@ export function sanitizeMetaForm(row: any) {
         enabled: Boolean(row.enabled),
         defaultManagerId: row.default_manager_id,
         fieldMapping: normalizeFieldMapping(row.field_mapping),
+        questions: normalizeMetaLeadQuestions(data.questions),
         lastSyncedAt: row.last_synced_at,
-        lastError: row.last_error,
+        lastError: sanitizeMetaFormIssue(row.last_error),
         createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        data: row.data || {}
+        updatedAt: row.updated_at
     };
 }
 
-export function sanitizeMetaImport(row: any) {
+export function sanitizeMetaImport(row: MetaImportSanitizeRow | null | undefined) {
     if (!row) return null;
     return {
         id: row.id,
@@ -198,29 +273,11 @@ export function sanitizeMetaImport(row: any) {
         metaLeadId: row.meta_lead_id,
         franchiseLeadId: row.franchise_lead_id,
         status: row.status,
-        errorMessage: row.error_message,
+        errorMessage: sanitizeMetaImportIssue(row.error_message),
         receivedAt: row.received_at,
         importedAt: row.imported_at,
         createdAt: row.created_at
     };
-}
-
-export function normalizeFieldMapping(value: unknown): MetaFieldMapping {
-    const raw = (value && typeof value === 'object' ? value : {}) as Partial<Record<keyof MetaFieldMapping, unknown>>;
-    const next = { ...DEFAULT_META_FIELD_MAPPING };
-
-    (Object.keys(next) as Array<keyof MetaFieldMapping>).forEach(key => {
-        const candidate = raw[key];
-        if (Array.isArray(candidate)) {
-            const normalized = candidate.map(item => String(item).trim()).filter(Boolean);
-            if (normalized.length > 0) next[key] = normalized;
-        } else if (typeof candidate === 'string') {
-            const normalized = candidate.split(',').map(item => item.trim()).filter(Boolean);
-            if (normalized.length > 0) next[key] = normalized;
-        }
-    });
-
-    return next;
 }
 
 function cleanString(value: unknown) {
@@ -274,7 +331,7 @@ function getFieldMap(fieldData: MetaLeadField[] | undefined) {
     return map;
 }
 
-function pickMappedValue(fieldMap: Map<string, string>, keys: string[]) {
+function pickMappedValue(fieldMap: Map<string, string>, keys: readonly string[]) {
     for (const key of keys) {
         const value = fieldMap.get(normalizeKey(key));
         if (value) return value;
@@ -290,7 +347,11 @@ export function mapMetaLeadToFranchiseLead(lead: MetaLeadPayload, mappingValue: 
     const mappedBudget = parseBudgetRange(pickMappedValue(fieldMap, mapping.budget));
     const budgetMin = parseNullableNumber(pickMappedValue(fieldMap, mapping.budgetMin)) ?? mappedBudget.min;
     const budgetMax = parseNullableNumber(pickMappedValue(fieldMap, mapping.budgetMax)) ?? mappedBudget.max;
-    const name = pickMappedValue(fieldMap, mapping.name) || [firstName, lastName].filter(Boolean).join(' ');
+    const nameKeys = new Set(mapping.name.map(normalizeKey));
+    const splitName = [firstName, lastName].filter(Boolean).join(' ');
+    const name = firstName && lastName && nameKeys.has('first_name') && nameKeys.has('last_name')
+        ? splitName
+        : pickMappedValue(fieldMap, mapping.name) || splitName;
 
     return {
         name,
@@ -306,11 +367,20 @@ export function mapMetaLeadToFranchiseLead(lead: MetaLeadPayload, mappingValue: 
 
 async function graphFetch<T>(path: string, params: Record<string, string | undefined>, init?: RequestInit): Promise<T> {
     const url = new URL(`${getGraphBaseUrl()}${path}`);
-    Object.entries(params).forEach(([key, value]) => {
+    const { access_token: accessToken, ...queryParams } = params;
+    Object.entries(queryParams).forEach(([key, value]) => {
         if (value) url.searchParams.set(key, value);
     });
 
-    const response = await fetch(url, init);
+    const headers = new Headers(init?.headers);
+    if (accessToken) {
+        headers.set('Authorization', `Bearer ${accessToken}`);
+    }
+    const response = await fetch(url, {
+        ...init,
+        headers,
+        signal: init?.signal || AbortSignal.timeout(10_000)
+    });
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok || payload?.error) {
@@ -372,26 +442,37 @@ export async function fetchMetaPages(userAccessToken: string) {
 }
 
 export async function fetchMetaForms(pageId: string, pageAccessToken: string) {
-    const forms = await graphFetch<{ data?: MetaGraphForm[] }>(`/${pageId}/leadgen_forms`, {
-        fields: 'id,name,status,created_time',
-        access_token: pageAccessToken
-    });
+    const discoveredForms: MetaGraphForm[] = [];
+    let after: string | undefined;
+    const visitedCursors = new Set<string>();
 
-    return forms.data || [];
+    for (let page = 0; page < 50; page += 1) {
+        const response = await graphFetch<{
+            data?: MetaGraphForm[];
+            paging?: { cursors?: { after?: string } };
+        }>(`/${pageId}/leadgen_forms`, {
+            fields: 'id,name,status,created_time,questions{id,key,label,type,options{key,value}}',
+            limit: '100',
+            after,
+            access_token: pageAccessToken
+        });
+        discoveredForms.push(...(response.data || []));
+        const nextAfter = response.paging?.cursors?.after;
+        if (!nextAfter || visitedCursors.has(nextAfter)) break;
+        visitedCursors.add(nextAfter);
+        after = nextAfter;
+    }
+
+    return discoveredForms.filter((form, index) => (
+        discoveredForms.findIndex(candidate => candidate.id === form.id) === index
+    ));
 }
 
 export async function subscribeMetaPageToLeadgen(pageId: string, pageAccessToken: string) {
-    const url = new URL(`${getGraphBaseUrl()}/${pageId}/subscribed_apps`);
-    url.searchParams.set('subscribed_fields', 'leadgen');
-    url.searchParams.set('access_token', pageAccessToken);
-
-    const response = await fetch(url, { method: 'POST' });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload?.error) {
-        throw new Error(payload?.error?.message || 'Failed to subscribe Meta page to leadgen');
-    }
-
-    return payload;
+    return graphFetch<unknown>(`/${pageId}/subscribed_apps`, {
+        subscribed_fields: 'leadgen',
+        access_token: pageAccessToken
+    }, { method: 'POST' });
 }
 
 export async function fetchMetaLeadById(leadgenId: string, pageAccessToken: string) {
@@ -412,6 +493,10 @@ export async function fetchMetaFormLeads(formId: string, pageAccessToken: string
     return graphFetch<{ data?: MetaLeadPayload[]; paging?: { cursors?: { after?: string }; next?: string } }>(`/${formId}/leads`, params);
 }
 
+export function isMetaRequestTimeout(error: unknown): boolean {
+    return error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+}
+
 export async function upsertMetaPagesAndForms(
     supabaseAdmin: SupabaseClient,
     options: {
@@ -422,8 +507,8 @@ export async function upsertMetaPagesAndForms(
     }
 ) {
     const pages = await fetchMetaPages(options.userAccessToken);
-    const savedConnections: any[] = [];
-    const savedForms: any[] = [];
+    const savedConnections: unknown[] = [];
+    const savedForms: unknown[] = [];
 
     for (const page of pages) {
         if (!page.id || !page.access_token) continue;
@@ -479,25 +564,55 @@ export async function upsertMetaPagesAndForms(
 
         for (const form of forms) {
             if (!form.id) continue;
-            const { data: savedForm, error: formError } = await supabaseAdmin
+            const insertWrite = planMetaFormDiscoveryWrite({
+                companyId: options.companyId,
+                connectionId: connection.id,
+                connectedBy: options.connectedBy,
+                discoveredForm: form,
+                existingForm: null
+            });
+            const { data: insertedForm, error: insertError } = await supabaseAdmin
                 .from('meta_lead_forms')
                 .upsert({
-                    company_id: options.companyId,
-                    connection_id: connection.id,
-                    meta_form_id: form.id,
-                    meta_form_name: form.name || form.id,
-                    default_manager_id: options.connectedBy,
-                    field_mapping: DEFAULT_META_FIELD_MAPPING,
-                    updated_at: new Date().toISOString(),
-                    data: {
-                        metaStatus: form.status || '',
-                        metaCreatedTime: form.created_time || ''
-                    }
-                }, { onConflict: 'company_id,meta_form_id' })
+                    ...insertWrite.values,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'company_id,meta_form_id',
+                    ignoreDuplicates: true
+                })
+                .select()
+                .maybeSingle();
+            if (insertError) throw insertError;
+            if (insertedForm) {
+                savedForms.push(insertedForm);
+                continue;
+            }
+
+            const { data: existingForm, error: existingFormError } = await supabaseAdmin
+                .from('meta_lead_forms')
+                .select('id, data')
+                .eq('company_id', options.companyId)
+                .eq('meta_form_id', form.id)
+                .single();
+            if (existingFormError) throw existingFormError;
+
+            const updateWrite = planMetaFormDiscoveryWrite({
+                companyId: options.companyId,
+                connectionId: connection.id,
+                connectedBy: options.connectedBy,
+                discoveredForm: form,
+                existingForm
+            });
+            const { data: savedForm, error: updateError } = await supabaseAdmin
+                .from('meta_lead_forms')
+                .update({
+                    ...updateWrite.values,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingForm.id)
                 .select()
                 .single();
-
-            if (formError) throw formError;
+            if (updateError) throw updateError;
             savedForms.push(savedForm);
         }
     }
@@ -541,7 +656,12 @@ async function recordMetaImport(
     if (error) throw error;
 }
 
-function buildMetaData(lead: MetaLeadPayload, mapped: ReturnType<typeof mapMetaLeadToFranchiseLead>, connection: any, form: any) {
+function buildMetaData(
+    lead: MetaLeadPayload,
+    mapped: ReturnType<typeof mapMetaLeadToFranchiseLead>,
+    connection: MetaConnectionImportContext,
+    form: MetaFormImportContext
+) {
     const leadgenId = String(lead.id || lead.leadgen_id || '');
     return {
         sourceType: META_LEAD_SOURCE_TYPE,
@@ -566,8 +686,8 @@ function buildMetaData(lead: MetaLeadPayload, mapped: ReturnType<typeof mapMetaL
 
 export async function importMetaLead(
     supabaseAdmin: SupabaseClient,
-    connection: any,
-    form: any,
+    connection: MetaConnectionImportContext,
+    form: MetaFormImportContext,
     lead: MetaLeadPayload
 ): Promise<MetaLeadImportResult> {
     const metaLeadId = String(lead.id || lead.leadgen_id || '');
@@ -722,8 +842,8 @@ export async function importMetaLead(
 
 export async function importMetaLeadWithLogging(
     supabaseAdmin: SupabaseClient,
-    connection: any,
-    form: any,
+    connection: MetaConnectionImportContext,
+    form: MetaFormImportContext,
     lead: MetaLeadPayload
 ) {
     const metaLeadId = String(lead.id || lead.leadgen_id || '');

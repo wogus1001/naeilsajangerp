@@ -13,6 +13,11 @@ import {
 } from '@/lib/meta-leads';
 import { fetchMetaOAuthDiagnostics } from '@/lib/meta-oauth-diagnostics';
 import {
+    getMetaCallbackFailureReason,
+    getMetaProviderDenialReason
+} from '@/lib/meta-callback-result';
+import {
+    getSafeMetaOAuthRedirectPath,
     META_OAUTH_NONCE_COOKIE,
     META_OAUTH_STATE_COOKIE,
     parseMetaOAuthCallbackState,
@@ -26,7 +31,7 @@ function getAppUrl(request: Request) {
 }
 
 function buildRedirectUrl(request: Request, path: MetaOAuthState['redirectPath'] | undefined, params: Record<string, string>) {
-    const safePath = path?.startsWith('/') ? path : '/dashboard/franchise-leads';
+    const safePath = getSafeMetaOAuthRedirectPath(path);
     const url = new URL(safePath, getAppUrl(request));
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
     return url;
@@ -52,7 +57,7 @@ export async function GET(request: Request) {
         clearOAuthCookies();
         return NextResponse.redirect(buildRedirectUrl(request, state?.redirectPath, {
             meta: 'error',
-            reason: errorReason
+            reason: getMetaProviderDenialReason(errorReason) || 'provider_denied'
         }));
     }
     if (!code || !state) {
@@ -112,7 +117,7 @@ export async function GET(request: Request) {
         console.error('Meta OAuth callback error:', error);
         return NextResponse.redirect(buildRedirectUrl(request, state.redirectPath, {
             meta: 'error',
-            reason: error instanceof Error ? error.message.slice(0, 80) : 'callback_failed'
+            reason: getMetaCallbackFailureReason(error)
         }));
     }
 }
