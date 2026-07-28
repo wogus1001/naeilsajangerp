@@ -635,7 +635,7 @@
 }
 
 .metaFormTop {
-    align-items: flex-end;
+    align-items: flex-start;
     margin-bottom: 14px;
 }
 
@@ -706,7 +706,7 @@
 
 .metaMappingHeader {
     display: flex;
-    align-items: flex-start;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 12px;
@@ -10087,6 +10087,7 @@
     }
 
     .metaMappingHeader {
+        align-items: stretch;
         flex-direction: column;
     }
 
@@ -10230,6 +10231,10 @@
     .metaFormSummaryStatus {
         justify-content: space-between;
         width: 100%;
+    }
+
+    .switchLabel {
+        white-space: normal;
     }
 
     .metaFormControls {
