@@ -700,24 +700,43 @@
 }
 
 .metaMappingSection {
-    padding: 14px;
-    border: 1px solid var(--fr-line);
-    border-radius: var(--fr-radius-sm);
-    background: var(--fr-bg);
+    padding-top: 16px;
+    border-top: 1px solid var(--fr-line);
 }
 
-.metaMappingIntro {
+.metaMappingHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
     margin-bottom: 12px;
 }
 
-.metaMappingIntro strong,
+.metaMappingActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.metaMappingActions .secondaryButton,
+.metaMappingFooter .primaryButton {
+    min-height: 40px;
+}
+
+.metaMappingIntro {
+    min-width: 0;
+}
+
+.metaMappingIntro h4,
 .metaMappingIntro p,
 .metaMappingIntro small {
     display: block;
     margin: 0;
 }
 
-.metaMappingIntro strong {
+.metaMappingIntro h4 {
     color: var(--fr-text);
     font-size: 14px;
     font-weight: 700;
@@ -737,6 +756,169 @@
     font-size: 12px;
     line-height: 1.5;
     word-break: keep-all;
+}
+
+.metaMappingSaveStatus {
+    color: var(--fr-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.metaMappingEmpty {
+    padding: 16px;
+    border: 1px dashed var(--fr-line-strong);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+}
+
+.metaMappingEmpty strong,
+.metaMappingEmpty p {
+    display: block;
+    margin: 0;
+}
+
+.metaMappingEmpty strong {
+    color: var(--fr-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.metaMappingEmpty p {
+    margin-top: 4px;
+    color: var(--fr-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: keep-all;
+}
+
+.metaMappingTable {
+    overflow: hidden;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+}
+
+.metaMappingTableHead,
+.metaMappingRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(180px, 1fr);
+    gap: 16px;
+    align-items: center;
+}
+
+.metaMappingTableHead {
+    min-height: 36px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--fr-line);
+    background: var(--fr-bg-soft);
+    color: var(--fr-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.metaMappingRow {
+    min-height: 56px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--fr-line);
+}
+
+.metaMappingRow:last-child {
+    border-bottom: none;
+}
+
+.metaMappingRow>span {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.metaMappingRow strong {
+    color: var(--fr-text);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.metaMappingRow small {
+    color: var(--fr-faint);
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.metaMappingRow select {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+    color: var(--fr-text);
+    font-size: 13px;
+}
+
+.metaMappingRow select:focus-visible {
+    border-color: var(--fr-blue);
+    outline: 2px solid var(--fr-blue);
+    outline-offset: 2px;
+}
+
+.metaMappingPreview {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    margin-top: 12px;
+    padding: 12px;
+    border-top: 1px solid var(--fr-line);
+}
+
+.metaMappingPreview>strong {
+    color: var(--fr-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.metaMappingPreview>div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.metaMappingPreview span {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 28px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--fr-blue-soft);
+    color: var(--fr-muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.metaMappingPreview b {
+    color: var(--fr-blue);
+    font-weight: 700;
+}
+
+.metaMappingPreview p {
+    margin: 0;
+    color: var(--fr-muted);
+    font-size: 12px;
+}
+
+.metaMappingFooter {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
 }
 
 .metaMappingGrid {
@@ -9904,6 +10086,15 @@
         width: 100%;
     }
 
+    .metaMappingHeader {
+        flex-direction: column;
+    }
+
+    .metaMappingActions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
     .metaSummaryGrid,
     .metaMappingGrid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -10055,6 +10246,30 @@
 
     .metaMappingGrid {
         grid-template-columns: 1fr;
+    }
+
+    .metaMappingTableHead {
+        display: none;
+    }
+
+    .metaMappingRow {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .metaMappingRow select,
+    .metaMappingActions .secondaryButton,
+    .metaMappingFooter .primaryButton {
+        min-height: 44px;
+    }
+
+    .metaMappingPreview {
+        grid-template-columns: 1fr;
+    }
+
+    .metaMappingFooter .primaryButton {
+        width: 100%;
     }
 
     .metaImportLogBody>div {

@@ -534,10 +534,14 @@ export default function FranchiseLeadsPage() {
         isMetaLoading,
         isMetaSyncing,
         metaState,
+        dirtyMetaFormIds,
+        refreshMetaFormQuestions,
+        replaceMetaQuestionMapping,
         savingMetaFormId,
+        savingMetaFormOperation,
         startMetaConnect,
         syncMetaLeads,
-        updateMetaFieldMapping,
+        updateMetaQuestionMapping,
         updateMetaForm
     } = useLeadMetaIntegration({
         userId,
@@ -1276,13 +1280,17 @@ export default function FranchiseLeadsPage() {
                     isMetaLoading={isMetaLoading}
                     isMetaSyncing={isMetaSyncing}
                     savingMetaFormId={savingMetaFormId}
+                    savingMetaFormOperation={savingMetaFormOperation}
+                    dirtyMetaFormIds={dirtyMetaFormIds}
                     renderManagerOptionsAction={renderManagerOptions}
                     onRefreshAction={fetchMetaIntegration}
                     onStartConnectAction={startMetaConnect}
                     onSyncAction={syncMetaLeads}
                     onDisconnectConnectionAction={disconnectMetaConnection}
+                    onRefreshFormQuestionsAction={refreshMetaFormQuestions}
+                    onReplaceQuestionMappingAction={replaceMetaQuestionMapping}
                     onUpdateFormAction={updateMetaForm}
-                    onUpdateFieldMappingAction={updateMetaFieldMapping}
+                    onUpdateQuestionMappingAction={updateMetaQuestionMapping}
                 />
             )}
 

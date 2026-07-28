@@ -74,3 +74,29 @@ test('Meta integration API keeps form and subscription empty-state semantics', (
         'META_PAGE_SUBSCRIPTION_FAILED'
     );
 });
+
+test('Meta integration API exposes normalized Form questions without provider-only fields', () => {
+    const safeForm = sanitizeMetaForm({
+        data: {
+            questions: [
+                {
+                    id: 'question-1',
+                    key: 'contact_phone',
+                    label: '연락처',
+                    type: 'PHONE',
+                    options: [{ key: 'mobile', value: '휴대폰' }],
+                    providerInternalValue: 'hidden'
+                }
+            ]
+        }
+    });
+
+    assert.deepEqual(safeForm?.questions, [{
+        id: 'question-1',
+        key: 'contact_phone',
+        label: '연락처',
+        type: 'PHONE',
+        options: [{ key: 'mobile', label: '휴대폰' }]
+    }]);
+    assert.equal(Object.hasOwn(safeForm || {}, 'data'), false);
+});
