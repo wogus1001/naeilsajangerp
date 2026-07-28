@@ -23,6 +23,15 @@
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
 - 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
+### 2026-07-28 회사별 Meta 신청 항목 매핑 개발·QA
+
+- Meta 양식에서 발견한 실제 질문을 이름, 연락처, 희망 지역, 예산 통합·최소·최대, 관심 브랜드, 메모에 연결하는 UI/API를 구현했다. 자동 추천과 `연결 안 함`을 제공하고, 저장 전 변경은 다른 설정 저장이나 상태 조회 실패에도 유지한다. 자동 수집은 저장된 이름·연락처 매핑과 같은 회사의 재직 중 담당자를 서버에서 다시 확인한 뒤에만 켠다.
+- 재연결과 동시 양식 발견은 충돌 시 기존 운영 설정을 보존한다. Webhook은 Page+Form의 회사 소유권이 하나로 확정될 때만 수집하고 모호한 다중 회사 후보는 fail-closed 처리한다. Meta Page token은 Bearer header로 전달하고 10초 timeout을 적용했으며, 질문·옵션·매핑의 길이와 개수를 제한하고 공급자 원본 `data`는 클라이언트 응답에서 제거했다.
+- 기능 커밋: `36fd18c feat(franchise): Meta 신청 항목 매핑 보강`.
+- 검증: Meta 관련 `npx tsx --test` 43건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, 변경 TS/MTS/TSX 16개 no-excuse 검사, `npm run build` 113개 페이지, `git diff --check` 통과. build는 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 출력했다. 독립 코드·보안·목표·CJK/접근성·디자인 코드 리뷰는 모두 PASS/APPROVE였다.
+- 로컬 `http://localhost:3000/dashboard/franchise-leads`는 HTTP 200, 3000 포트 listener 1개, 비인증 `/api/integrations/meta/forms` POST는 401을 확인했다. Codex 자체 브라우저는 localhost URL 정책에 차단돼 이번 변경의 새 1280px·768px·375px 렌더, 콘솔 오류, Next.js overlay, 실계정 매핑 저장·새로고침을 직접 확인하지 못했다.
+- 남은 dev QA: 실제 회사 Meta 양식에서 질문 연결 저장 후 재방문 복원, 저장 전 담당자 변경/상태 새로고침 보존, `연결 안 함`, 이름·연락처·담당자 누락 시 활성화 차단, Webhook과 백필의 동일 변환 결과, 서로 다른 회사 연결의 격리를 확인한다. 신규 SQL과 공개 `/landing`·`/demo` 영향은 없다.
+
 ### 2026-07-27 모객 DB 기간 선택 저장·표 여백 QA
 
 - `/dashboard/franchise-leads`의 빠른 기간 기본값을 `전체`로 변경했다. `franchiseLeadDateRange`에 마지막 빠른 기간 버튼 선택을 저장하고, 저장값이 없거나 유효하지 않으면 `전체`로 복원한다. 직접 날짜를 입력하는 흐름은 마지막 빠른 기간 선택을 변경하지 않는다.

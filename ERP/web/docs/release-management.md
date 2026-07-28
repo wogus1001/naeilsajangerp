@@ -862,3 +862,12 @@ YYYY-MM-DD
 - dev 실연동 근거: 회사 관리 페이지 1개, 신청 양식 19개 발견, 활성 양식 1개, Meta Testing Tool Webhook `Success`, 모객 DB raw-intake 테스트 저장을 확인했다. 실제 유료 광고 리드와 장시간 Webhook·백필은 known risk로 남는다. 광고 성과 Marketing API는 별도 HOLD다.
 - 검증: 관련 회귀 32건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 1280px·390px 브라우저 패널/터치/overflow QA, console error 0을 통과했다.
 - SQL: 신규 SQL 없음. 배포 대상은 이 기능 브랜치의 Preview/dev이며 `dev`, `main`, production에는 아직 반영하지 않는다. push 후 실제 deployment ID·READY 상태·dev URL smoke는 배포 보고에 남긴다.
+
+## 2026-07-28 Meta 신청 항목 매핑 개발 커밋
+
+- 작업 브랜치: `codex/meta-business-page-targets-20260727`.
+- 기능 커밋: `36fd18c feat(franchise): Meta 신청 항목 매핑 보강`.
+- 범위: 회사별 Meta 양식의 실제 질문→모객 DB 고정 항목 연결, 자동 추천·명시적 저장·변경 보존, 준비성 검사, 재연결 시 운영 설정 보존, Page+Form 다중 회사 Webhook fail-closed, Bearer token·timeout·응답 sanitization 보강.
+- 검증: Meta 관련 회귀 43건, TypeScript, 전체 ESLint, 변경 파일 no-excuse 검사, production build 113개 페이지, `git diff --check` 통과. 로컬 화면 HTTP 200, listener 1개, 비인증 양식 갱신 401을 확인했다. 코드·보안·목표·CJK/접근성·디자인 리뷰는 모두 통과했다.
+- QA 제한: Codex 자체 브라우저의 localhost URL 정책 차단으로 이번 커밋의 새 반응형 렌더·콘솔·overlay와 실계정 질문 매핑 persistence는 직접 확인하지 못했다. dev 배포 후 실제 연결 회사에서 매핑 저장·복원, Webhook/백필 변환, 회사 격리를 확인한다.
+- SQL/배포: 신규 SQL 없음. 현재 기능 브랜치 로컬 커밋이며 아직 push하지 않았고 `dev`, `main`, Preview/dev deployment, production에는 반영하지 않았다. 배포는 별도 사용자 요청에서 진행한다.
