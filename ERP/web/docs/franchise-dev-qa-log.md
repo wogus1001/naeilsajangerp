@@ -1602,3 +1602,23 @@
 - 보안 리뷰에서 확인된 protocol-relative OAuth open redirect, provider 원문 오류 노출, 수동 동기화 회사 범위 누락을 각각 exact-path allowlist, 안정 오류 코드, `company_id` 선조회 필터로 보정했다.
 - 검증: Meta/기간 관련 회귀 32건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. production build는 113개 페이지를 생성했다. 1280px·390px 실브라우저에서 패널 열기/닫기, 내부 계정 연결 1개, 모바일 44px 버튼, 2×2 요약, 수평 overflow 0, console error 0을 확인했다. 기존 Supabase 다중 client warning은 이번 변경 범위 밖의 비차단 경고다.
 - 5개 관점 리뷰 결과 목표/제약, 보안, 프로젝트 맥락은 PASS, 수동 QA는 외부 OAuth 미실행 한계를 명시한 PASS, 최종 코드 품질 재검토는 PASS다. 신규 SQL과 공개 `/landing`·`/demo` 변경은 없다.
+## 2026-07-28 Meta 신청 항목 연결·작업 버튼 후속 QA
+
+- 화면 보정: 자동 수집 설명과 기본 담당자 영역의 시작선을 맞추고, 신청 항목 연결 제목·설명과 우측 작업 영역은 하단 기준으로 정렬했다. 1180px 이하에서는 제목과 작업을 위아래로 늘려 배치하고 720px 이하에서는 긴 한국어 도움말이 줄바꿈되도록 했다.
+- 작업 정리: Form마다 반복되던 `신청 내역 가져오기`를 제거하고 패널 상단의 `전체 신청 가져오기` 한 곳으로 통합했다. `연결 상태 확인`은 `연결 확인`, `항목 새로고침`은 `질문 다시 불러오기`로 바꾸고 상태 확인·다운로드 아이콘을 구분했다.
+- 자동 검증: Meta Graph 요청, 질문 매핑, API 응답 정규화, Webhook 회사 경계를 포함한 집중 테스트 22건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. production build는 113개 페이지를 생성했고 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 브라우저 QA: 로컬 Codex 브라우저 1280px에서 `Meta 계정 연결`, `연결 확인`, `전체 신청 가져오기`가 역할별로 구분되고 연결된 Form이 없을 때 전체 가져오기가 비활성화되는 것을 확인했다. Next.js 오류 오버레이와 console error는 없었다. 반응형 CSS 게이트에서 1180px 이하 제목·작업 적층과 720px 이하 한국어 도움말 줄바꿈을 확인했다.
+- 신청 항목 매칭 검증 절차: 연결을 저장한 뒤 Meta Lead Ads Testing Tool에서 같은 Page/Form의 기존 테스트 신청을 삭제하고 새 테스트 신청을 만든다. ERP에서 `전체 신청 가져오기`를 실행한 뒤 새 이름을 검색해 이름·연락처·희망 지역·예산·관심 브랜드·메모를 확인한다. 이미 가져온 신청은 매핑 변경만으로 다시 변환되지 않으므로 반드시 새 신청으로 검증한다.
+- 기능 커밋: `ed3240a fix(franchise): Meta 연동 작업 버튼 정리`. 신규 SQL과 `/landing`·`/demo` 변경은 없다. Dev 배포 후 실제 연결 회사에서 질문 매핑 저장·복원과 새 테스트 신청의 컬럼별 저장 결과를 최종 확인한다.
+
+## 2026-07-30 모객 DB 유입경로 항목 관리·필터 QA
+
+- 기능 범위: 회사별 유입경로 표시 이름·사용 여부 관리, 자동 수집/DB 승격 고정 항목 보호, 비활성 기존값 보존, 필터·대시보드·엑셀·고객 전환 표시 이름 연동, `정보공개서 필요순` 제거, 예산 필터 단위 명시.
+- 권한·데이터 경계: GET/POST/PATCH API가 활성 로그인 profile과 회사 범위를 다시 확인한다. 관리자·부관리자만 변경 가능하고, API와 DB trigger가 고정 항목 변경과 실제 삭제를 차단한다. 수정 가능한 항목은 회사별 안정 코드를 유지하고 삭제 대신 사용 중지한다.
+- SQL 정적 검증: 기본 항목 seed, 기존 리드 source backfill, 신규 source 자동 등록, 회사별 RLS, 고정 항목 insert/update/delete 보호를 migration 테스트로 확인했다. 실제 Supabase 적용 및 저장 API live QA는 사용자 SQL 적용 후 진행한다. **SQL 등록 필요**.
+- 자동 검증: `npx tsx --test` 관련 35건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. production build는 113개 페이지를 생성했고 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 리뷰: 독립 디자인 리뷰와 한국어 UI/접근성 리뷰가 최종 `PASS`했다. 버튼 40px/모바일 44px, 키보드 포커스, 로딩·오류·SQL 미적용 상태 분리, select label 연결을 소스 기준으로 확인했다.
+- 브라우저 제한: Codex Browser가 localhost URL 보안 정책으로 동일 리비전 화면을 열지 못해 최종 렌더 캡처는 남기지 못했다. dev/운영 배포 후 가맹 희망자 수정의 `유입경로 > 항목 관리`, 이름 변경·사용 중지·재사용, 필터 표시, console error와 수평 overflow를 smoke로 확인한다.
+- 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`. 공개 `/landing`·`/demo` 영향 없음.
+- SQL 적용: 사용자 확인 기준 2026-07-30 `supabase_franchise_lead_source_options_migration.sql`을 대상 DB에 적용했다. 코드 변경 없이 문서의 적용 상태를 갱신하고 Supabase CLI가 생성하는 `supabase/.temp/` 로컬 연결 정보는 버전 관리에서 제외한다. **SQL 등록 완료 확인**.
+- 적용 후 남은 live QA: 관리자·부관리자의 항목 추가·이름 변경·사용 중지·재사용, 새로고침 후 복원, 일반 직원 변경 차단, 다른 회사 설정 격리, 기존 비활성 유입경로의 표시 보존을 확인한다.
