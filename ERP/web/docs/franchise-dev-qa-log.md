@@ -1620,3 +1620,5 @@
 - 리뷰: 독립 디자인 리뷰와 한국어 UI/접근성 리뷰가 최종 `PASS`했다. 버튼 40px/모바일 44px, 키보드 포커스, 로딩·오류·SQL 미적용 상태 분리, select label 연결을 소스 기준으로 확인했다.
 - 브라우저 제한: Codex Browser가 localhost URL 보안 정책으로 동일 리비전 화면을 열지 못해 최종 렌더 캡처는 남기지 못했다. dev/운영 배포 후 가맹 희망자 수정의 `유입경로 > 항목 관리`, 이름 변경·사용 중지·재사용, 필터 표시, console error와 수평 overflow를 smoke로 확인한다.
 - 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`. 공개 `/landing`·`/demo` 영향 없음.
+- SQL 적용: 사용자 확인 기준 2026-07-30 `supabase_franchise_lead_source_options_migration.sql`을 대상 DB에 적용했다. 코드 변경 없이 문서의 적용 상태를 갱신하고 Supabase CLI가 생성하는 `supabase/.temp/` 로컬 연결 정보는 버전 관리에서 제외한다. **SQL 등록 완료 확인**.
+- 적용 후 남은 live QA: 관리자·부관리자의 항목 추가·이름 변경·사용 중지·재사용, 새로고침 후 복원, 일반 직원 변경 차단, 다른 회사 설정 격리, 기존 비활성 유입경로의 표시 보존을 확인한다.

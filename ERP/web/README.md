@@ -186,7 +186,7 @@ Use different values per Vercel environment when needed. `DEMO_ACCESS_COOKIE_SEC
 ## Meta Lead Ads Setup
 
 Run `supabase_meta_lead_ads_migration.sql` before enabling the Meta integration.
-Run `supabase_franchise_lead_source_options_migration.sql` before enabling company-specific lead source names and availability settings. Until this migration is applied, the lead form keeps the default source list and disables source-item changes instead of failing the screen.
+Run `supabase_franchise_lead_source_options_migration.sql` before enabling company-specific lead source names and availability settings. Until this migration is applied, the lead form keeps the default source list and disables source-item changes instead of failing the screen. User confirmation records the target database migration as applied on 2026-07-30. **SQL 등록 완료 확인**.
 
 Required environment variables:
 

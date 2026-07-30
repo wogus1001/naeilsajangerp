@@ -18,7 +18,7 @@
 - 항목 관리는 관리자·부관리자에게만 허용하고 회사 범위를 서버에서 다시 검증한다. 삭제 대신 사용 중지로 과거 리드의 유입경로를 보존하며, 설정 조회 실패·로딩·SQL 미적용 상태를 화면에서 구분한다.
 - 모객 DB 정렬에서 `정보공개서 필요순`을 제거하고 예산 필터를 `예산 최소 (만원)`, `예산 최대 (만원)`으로 명확히 표시했다.
 - 기능 커밋은 `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`다. 관련 테스트 35건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`와 독립 디자인·한국어 UI 리뷰를 통과했다. Codex Browser의 localhost URL 정책으로 최종 동일 리비전 화면 캡처는 제한되어 dev/운영 화면 smoke를 배포 후 확인한다.
-- `supabase_franchise_lead_source_options_migration.sql`은 회사별 항목, 기본값 seed, 기존 source backfill, 자동 등록 trigger, RLS를 추가한다. 사용자가 Supabase SQL Editor에 직접 적용해야 하며 적용 전에는 기본 목록 조회만 유지하고 항목 변경을 비활성화한다. **SQL 등록 필요**.
+- `supabase_franchise_lead_source_options_migration.sql`은 회사별 항목, 기본값 seed, 기존 source backfill, 자동 등록 trigger, RLS를 추가한다. 사용자 확인 기준 2026-07-30 대상 DB 적용을 완료했으며, 회사별 항목 저장·복원과 회사 간 격리는 실계정 회귀로 계속 확인한다. **SQL 등록 완료 확인**.
 - 공개 `/landing`·`/demo` 흐름에는 영향이 없다.
 
 ## 2026-07-28 회사별 Meta 신청 항목 매핑 보강
