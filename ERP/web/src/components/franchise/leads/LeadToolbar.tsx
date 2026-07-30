@@ -14,6 +14,7 @@ type LeadToolbarProps = {
     readonly statusOptions: readonly FranchiseLeadStatus[];
     readonly sourceFilter: string;
     readonly sourceOptions: readonly string[];
+    readonly sourceLabelMap?: Readonly<Record<string, string>>;
     readonly managerFilter: string;
     readonly managerOptions: ReactNode;
     readonly createdFrom: string;
@@ -40,6 +41,7 @@ export function LeadToolbar({
     statusOptions,
     sourceFilter,
     sourceOptions,
+    sourceLabelMap = {},
     managerFilter,
     managerOptions,
     createdFrom,
@@ -98,7 +100,9 @@ export function LeadToolbar({
                     onChange={(event) => onSourceFilterChangeAction(event.target.value)}
                 >
                     {sourceOptions.map(source => (
-                        <option key={source} value={source}>{source === '전체' ? '전체 유입' : getFranchiseLeadSourceLabel(source)}</option>
+                        <option key={source} value={source}>
+                            {source === '전체' ? '전체 유입' : sourceLabelMap[source] || getFranchiseLeadSourceLabel(source)}
+                        </option>
                     ))}
                 </select>
                 <select

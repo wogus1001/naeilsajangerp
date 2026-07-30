@@ -95,7 +95,7 @@ function getLeadCellValue(lead: LeadExportItem, columnKey: LeadTableColumnKey, g
         case 'manager':
             return lead.managerId ? getManagerName(lead.managerId) : '담당자 선택';
         case 'source':
-            return lead.source || '-';
+            return lead.sourceLabel || lead.source || '-';
         case 'desiredRegion':
             return lead.desiredRegion || '-';
         case 'budget':

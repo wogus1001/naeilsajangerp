@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { ChevronDown, Link2, RefreshCw } from 'lucide-react';
+import { CircleCheck, ChevronDown, Download, Link2 } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { getMetaFormReadiness } from '@/lib/meta-lead-field-mapping';
 import type { MetaFieldKey } from '@/lib/meta-lead-field-mapping';
@@ -71,13 +71,13 @@ export function LeadMetaIntegrationPanel({
                         </button>
                     )}
                     <button className={styles.secondaryButton} onClick={() => void onRefreshAction()} disabled={isMetaLoading}>
-                        <RefreshCw size={15} />
-                        {isMetaLoading ? '확인 중' : '연결 상태 확인'}
+                        <CircleCheck size={15} />
+                        {isMetaLoading ? '확인 중' : '연결 확인'}
                     </button>
                     {canManageMeta && (
                         <button className={styles.primaryButton} onClick={() => void onSyncAction()} disabled={isMetaSyncing || enabledFormCount === 0}>
-                            <RefreshCw size={15} />
-                            {isMetaSyncing ? '가져오는 중' : '신청 내역 가져오기'}
+                            <Download size={15} />
+                            {isMetaSyncing ? '가져오는 중' : '전체 신청 가져오기'}
                         </button>
                     )}
                 </div>
@@ -210,14 +210,6 @@ export function LeadMetaIntegrationPanel({
                                                     {renderManagerOptionsAction(form.defaultManagerId || undefined)}
                                                 </select>
                                             </label>
-                                            <button
-                                                className={styles.secondaryButton}
-                                                onClick={() => void onSyncAction(form.id)}
-                                                disabled={!form.enabled || !canManageMeta || isMetaSyncing}
-                                            >
-                                                <RefreshCw size={14} />
-                                                신청 내역 가져오기
-                                            </button>
                                         </div>
                                     </div>
                                     <MetaFormFieldMapping

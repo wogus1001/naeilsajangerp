@@ -238,6 +238,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-30 모객 DB 유입경로 관리·필터 정리
+  - 작업 브랜치: `codex/meta-business-page-targets-20260727`
+  - 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`
+  - 주요 기능: 모객 DB의 불필요한 정보공개서 정렬을 제거하고 예산 필터 단위를 명확히 했다. 회사별 유입경로는 자동 수집·DB 승격 고정 항목과 직접 수정 가능한 항목으로 분리해 이름 변경·사용 중지·재사용을 지원하며, 안정 코드를 유지해 기존 리드·필터·내보내기 호환성을 보존한다.
+  - 검증: 관련 테스트 35건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 독립 디자인·한국어 UI 리뷰를 통과했다. localhost Browser 정책 제한으로 배포 후 dev/운영 smoke를 남은 QA로 둔다.
+  - SQL: `supabase_franchise_lead_source_options_migration.sql` 사용자 직접 적용 필요. 미적용 상태에서는 기본 목록 조회를 유지하고 항목 변경을 비활성화한다. **SQL 등록 필요**.
+  - dev/main/production: Fast Release Runbook의 PR·Vercel check·dev smoke 후 검증된 커밋만 main과 production으로 승격한다. 최종 deployment ID는 배포 결과로 보고한다.
+  - 공개 `/landing`·`/demo` 영향 없음.
+
 - 2026-07-23 로그인·가입·모객 DB QA 안정화
   - 작업 브랜치: `codex/qa-stabilization-20260723`
   - 기능 커밋: `b7ab2e9 fix(auth): 회사 검색 대표자 정보 제거`, `9191a49 fix(auth): 가입 인증 오류 재시도`, `48ba4bf fix(company): 가입 승인 내부 ID 숨김`, `f5dc4e7 fix(auth): 모바일 회사 찾기 배치 보정`과 모객 DB 표 간격 보정.
@@ -871,3 +880,13 @@ YYYY-MM-DD
 - 검증: Meta 관련 회귀 43건, TypeScript, 전체 ESLint, 변경 파일 no-excuse 검사, production build 113개 페이지, `git diff --check` 통과. 로컬 화면 HTTP 200, listener 1개, 비인증 양식 갱신 401을 확인했다. 코드·보안·목표·CJK/접근성·디자인 리뷰는 모두 통과했다.
 - QA 제한: Codex 자체 브라우저의 localhost URL 정책 차단으로 이번 커밋의 새 반응형 렌더·콘솔·overlay와 실계정 질문 매핑 persistence는 직접 확인하지 못했다. dev 배포 후 실제 연결 회사에서 매핑 저장·복원, Webhook/백필 변환, 회사 격리를 확인한다.
 - SQL/배포: 신규 SQL 없음. 현재 기능 브랜치 로컬 커밋이며 아직 push하지 않았고 `dev`, `main`, Preview/dev deployment, production에는 반영하지 않았다. 배포는 별도 사용자 요청에서 진행한다.
+
+## 2026-07-28 Meta 연동 설정 작업 정리 Dev 배포
+
+- 작업 브랜치: `codex/meta-business-page-targets-20260727`.
+- 기능 커밋: `36fd18c feat(franchise): Meta 신청 항목 매핑 보강`, `ed3240a fix(franchise): Meta 연동 작업 버튼 정리`.
+- 범위: Form별 중복 수동 가져오기를 상단 `전체 신청 가져오기`로 통합하고 연결 확인·질문 다시 불러오기의 문구와 아이콘을 분리했다. 자동 수집·기본 담당자와 신청 항목 연결 헤더 정렬, 태블릿 적층, 모바일 한국어 줄바꿈을 보정했다.
+- dev 반영: 기능 브랜치를 push하고 Vercel Dev 환경에 직접 배포해 `https://naeilsajang-dev.vercel.app`에서 확인한다. `dev`와 `main` 브랜치는 이번 요청에서 직접 변경하지 않는다.
+- 배포 URL: `https://naeilsajang-dev.vercel.app`. 실제 deployment ID와 READY 상태는 배포 완료 보고에 남긴다.
+- 검증: Meta 집중 회귀 22건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 로컬 1280px 브라우저 렌더와 console error 0건을 통과했다. 1180px·720px 반응형 CSS 게이트도 통과했다.
+- 남은 이슈: Dev 실계정에서 질문 연결 저장·새로고침·복원과 새 Meta 테스트 신청의 이름·연락처·희망 지역·예산·관심 브랜드·메모 저장 결과를 확인한다. 기존 가져온 신청은 매핑 변경만으로 재변환되지 않는다. 신규 SQL과 env 변경은 없다.

@@ -121,7 +121,7 @@ export function useLeadCustomerConversion({
                 '[모객DB 전환]',
                 `전환일시: ${formatFullDateTime(new Date().toISOString())}`,
                 `모객상태: ${lead.status}`,
-                `유입경로: ${lead.source || '-'}`,
+                `유입경로: ${lead.sourceLabel || lead.source || '-'}`,
                 `관심브랜드: ${lead.interestedBrand || '-'}`,
                 `희망지역: ${lead.desiredRegion || '-'}`,
                 `예산: ${formatBudget(lead.budgetMin, lead.budgetMax)}`,
