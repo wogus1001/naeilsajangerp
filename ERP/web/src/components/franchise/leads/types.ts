@@ -16,6 +16,7 @@ export type FranchiseLead = {
     readonly mobile: string;
     readonly mobileNormalized?: string;
     readonly source: string;
+    readonly sourceLabel?: string;
     readonly status: FranchiseLeadStatus;
     readonly grade: string;
     readonly leadStage?: FranchiseLeadStage;

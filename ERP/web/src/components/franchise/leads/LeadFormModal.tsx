@@ -1,19 +1,22 @@
 "use client";
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { Settings2, X } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { LeadRegionMultiSelect } from './LeadRegionMultiSelect';
+import { LeadSourceOptionManager } from './LeadSourceOptionManager';
 import { formatLeadPhoneInput } from './leadFormFormatters';
 import type { LeadFormState } from './types';
 import {
     FRANCHISE_LEAD_GRADES,
-    FRANCHISE_LEAD_SOURCES,
     FRANCHISE_LEAD_STATUSES,
-    getFranchiseLeadGradeLabel,
-    getFranchiseLeadSourceLabel
+    getFranchiseLeadGradeLabel
 } from '@/lib/franchise-leads';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
+import {
+    getSelectableFranchiseLeadSourceOptions,
+    type FranchiseLeadSourceOption
+} from '@/lib/franchise-lead-source-options';
 
 type LeadFormModalProps = {
     readonly form: LeadFormState;
@@ -22,6 +25,18 @@ type LeadFormModalProps = {
     readonly onCloseAction: () => void;
     readonly onSubmitAction: React.FormEventHandler<HTMLFormElement>;
     readonly renderManagerOptionsAction: (selectedManagerId?: string) => React.ReactNode;
+    readonly sourceOptions: readonly FranchiseLeadSourceOption[];
+    readonly canManageSourceOptions: boolean;
+    readonly isSourceOptionStorageReady: boolean;
+    readonly isSourceOptionLoading: boolean;
+    readonly isSourceOptionSaving: boolean;
+    readonly sourceOptionError: string;
+    readonly onRefreshSourceOptionsAction: () => Promise<void>;
+    readonly onCreateSourceOptionAction: (label: string) => Promise<void>;
+    readonly onUpdateSourceOptionAction: (
+        optionId: string,
+        updates: { readonly label?: string; readonly isActive?: boolean }
+    ) => Promise<void>;
 };
 
 export function LeadFormModal({
@@ -30,9 +45,20 @@ export function LeadFormModal({
     onFormChangeAction,
     onCloseAction,
     onSubmitAction,
-    renderManagerOptionsAction
+    renderManagerOptionsAction,
+    sourceOptions,
+    canManageSourceOptions,
+    isSourceOptionStorageReady,
+    isSourceOptionLoading,
+    isSourceOptionSaving,
+    sourceOptionError,
+    onRefreshSourceOptionsAction,
+    onCreateSourceOptionAction,
+    onUpdateSourceOptionAction
 }: LeadFormModalProps) {
+    const [isSourceManagerOpen, setIsSourceManagerOpen] = React.useState(false);
     const title = form.id ? '가맹 희망자 수정' : '가맹 희망자 등록';
+    const selectableSourceOptions = getSelectableFranchiseLeadSourceOptions(sourceOptions, form.source);
 
     return (
         <div className={styles.modalBackdrop}>
@@ -79,15 +105,31 @@ export function LeadFormModal({
                             ))}
                         </select>
                     </label>
-                    <label>
-                        유입경로
-                        <select value={form.source} onChange={(event) => onFormChangeAction(prev => ({ ...prev, source: event.target.value }))}>
+                    <div className={styles.formField}>
+                        <div className={styles.formFieldLabelRow}>
+                            <span id="lead-source-label">유입경로</span>
+                            <button
+                                type="button"
+                                onClick={() => setIsSourceManagerOpen(current => !current)}
+                                aria-expanded={isSourceManagerOpen}
+                            >
+                                <Settings2 size={14} />
+                                항목 관리
+                            </button>
+                        </div>
+                        <select
+                            value={form.source}
+                            aria-labelledby="lead-source-label"
+                            onChange={(event) => onFormChangeAction(prev => ({ ...prev, source: event.target.value }))}
+                        >
                             <option value="">미지정</option>
-                            {FRANCHISE_LEAD_SOURCES.map(source => (
-                                <option key={source} value={source}>{getFranchiseLeadSourceLabel(source)}</option>
+                            {selectableSourceOptions.map(option => (
+                                <option key={option.code} value={option.code}>
+                                    {option.label}{option.isActive ? '' : ' (사용 중지)'}
+                                </option>
                             ))}
                         </select>
-                    </label>
+                    </div>
                     <div className={styles.formField}>
                         <span>희망지역</span>
                         <LeadRegionMultiSelect
@@ -118,6 +160,20 @@ export function LeadFormModal({
                         <input type="datetime-local" value={form.nextContactAt} onChange={(event) => onFormChangeAction(prev => ({ ...prev, nextContactAt: event.target.value }))} />
                     </label>
                 </div>
+
+                {isSourceManagerOpen && (
+                    <LeadSourceOptionManager
+                        options={sourceOptions}
+                        canManage={canManageSourceOptions}
+                        storageReady={isSourceOptionStorageReady}
+                        isLoading={isSourceOptionLoading}
+                        isSaving={isSourceOptionSaving}
+                        loadError={sourceOptionError}
+                        onRefreshAction={onRefreshSourceOptionsAction}
+                        onCreateAction={onCreateSourceOptionAction}
+                        onUpdateAction={onUpdateSourceOptionAction}
+                    />
+                )}
 
                 <label className={styles.memoLabel}>
                     메모
