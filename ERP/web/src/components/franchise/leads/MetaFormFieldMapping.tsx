@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, WandSparkles } from 'lucide-react';
+import { Download, WandSparkles } from 'lucide-react';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
     findMetaQuestionTarget,
@@ -106,8 +106,8 @@ export function MetaFormFieldMapping({
                                 onClick={() => void onRefreshQuestionsAction(form)}
                                 disabled={isSaving}
                             >
-                                <RefreshCw size={14} />
-                                항목 새로고침
+                                <Download size={14} />
+                                질문 다시 불러오기
                             </button>
                             {form.questions.length > 0 && (
                                 <button

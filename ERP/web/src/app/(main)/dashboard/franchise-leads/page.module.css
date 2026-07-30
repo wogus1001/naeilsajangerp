@@ -635,7 +635,7 @@
 }
 
 .metaFormTop {
-    align-items: flex-end;
+    align-items: flex-start;
     margin-bottom: 14px;
 }
 
@@ -706,7 +706,7 @@
 
 .metaMappingHeader {
     display: flex;
-    align-items: flex-start;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 12px;
@@ -7734,6 +7734,40 @@
     font-weight: 850;
 }
 
+.formFieldLabelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 24px;
+}
+
+.formFieldLabelRow>span {
+    color: var(--fr-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.formFieldLabelRow>button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+    color: var(--fr-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.formFieldLabelRow>button:hover {
+    border-color: var(--fr-line-strong);
+    color: var(--fr-text);
+}
+
 .formGrid input,
 .formGrid select,
 .memoLabel textarea {
@@ -7835,6 +7869,294 @@
     min-height: 110px;
     resize: vertical;
     padding: 12px;
+}
+
+.sourceManager {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-bg-soft);
+}
+
+.sourceManagerHeader,
+.sourceManagerGroupTitle,
+.sourceOptionRow,
+.sourceAddRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sourceManagerHeader {
+    justify-content: space-between;
+}
+
+.sourceManagerHeader strong,
+.sourceManagerGroupTitle strong {
+    color: var(--fr-text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.sourceManagerHeader p,
+.sourceManagerHelp,
+.sourceManagerMessage,
+.sourceManagerNotice {
+    margin: 4px 0 0;
+    color: var(--fr-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sourcePermissionBadge,
+.sourceActiveBadge,
+.sourceInactiveBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sourcePermissionBadge,
+.sourceInactiveBadge {
+    background: var(--fr-surface);
+    color: var(--fr-muted);
+}
+
+.sourceActiveBadge {
+    background: var(--fr-green-soft);
+    color: var(--fr-green);
+}
+
+.sourceManagerNotice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--fr-orange);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-orange-soft);
+    color: var(--fr-text);
+}
+
+.sourceManagerNotice button {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--fr-orange);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+    color: var(--fr-text);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sourceManagerNotice button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sourceAddRow input,
+.sourceOptionRow input {
+    min-width: 0;
+    height: 40px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+    color: var(--fr-text);
+    font-size: 13px;
+    outline: none;
+}
+
+.sourceAddRow input {
+    flex: 1 1 auto;
+    padding: 0 12px;
+}
+
+.sourceAddRow button,
+.sourceOptionActions button {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+    color: var(--fr-text);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sourceAddRow button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-color: var(--fr-blue);
+    background: var(--fr-blue);
+    color: var(--fr-surface);
+}
+
+.sourceAddRow button:disabled,
+.sourceOptionActions button:disabled,
+.sourceOptionRow input:disabled,
+.sourceAddRow input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sourceManagerGroup {
+    display: grid;
+    gap: 8px;
+}
+
+.sourceManagerGroupTitle {
+    justify-content: space-between;
+}
+
+.sourceManagerGroupTitle span {
+    color: var(--fr-muted);
+    font-size: 12px;
+}
+
+.sourceOptionList {
+    display: grid;
+    gap: 8px;
+}
+
+.sourceOptionRow {
+    padding: 8px;
+    border: 1px solid var(--fr-line);
+    border-radius: var(--fr-radius-sm);
+    background: var(--fr-surface);
+}
+
+.sourceOptionRow input {
+    flex: 1 1 220px;
+    padding: 0 12px;
+}
+
+.sourceOptionActions {
+    display: flex;
+    gap: 8px;
+}
+
+.sourceOptionActions button {
+    min-height: 40px;
+    padding: 0 12px;
+}
+
+.sourceSystemList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sourceSystemList span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--fr-line);
+    border-radius: 999px;
+    background: var(--fr-surface);
+    color: var(--fr-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sourceManagerMessage {
+    margin: 0;
+    color: var(--fr-blue);
+    font-weight: 600;
+}
+
+.sourceAddRow button:hover {
+    opacity: 0.9;
+}
+
+.sourceOptionActions button:hover,
+.sourceManagerNotice button:hover {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue-soft);
+    color: var(--fr-blue);
+}
+
+.formFieldLabelRow>button:focus-visible,
+.sourceAddRow input:focus,
+.sourceOptionRow input:focus,
+.sourceAddRow button:focus-visible,
+.sourceOptionActions button:focus-visible,
+.sourceManagerNotice button:focus-visible {
+    border-color: var(--fr-blue);
+    outline: 2px solid var(--fr-blue);
+    outline-offset: 2px;
+}
+
+.formFieldLabelRow>button:active,
+.sourceOptionActions button:active,
+.sourceManagerNotice button:active {
+    border-color: var(--fr-blue);
+    background: var(--fr-blue-soft);
+    color: var(--fr-blue);
+}
+
+.sourceAddRow button:active {
+    opacity: 0.85;
+}
+
+@media (max-width: 720px) {
+    .sourceManagerHeader,
+    .sourceOptionRow {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sourcePermissionBadge {
+        align-self: flex-start;
+    }
+
+    .sourceOptionRow input {
+        flex-basis: auto;
+        width: 100%;
+    }
+
+    .sourceOptionActions {
+        width: 100%;
+    }
+
+    .sourceOptionActions button {
+        flex: 1 1 0;
+        min-height: 44px;
+    }
+
+    .sourceAddRow {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sourceManagerNotice {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sourceAddRow input,
+    .sourceAddRow button,
+    .sourceManagerNotice button {
+        min-height: 44px;
+    }
+
+    .formFieldLabelRow>button {
+        min-height: 44px;
+    }
 }
 
 .quickActivityBody {
@@ -10087,6 +10409,7 @@
     }
 
     .metaMappingHeader {
+        align-items: stretch;
         flex-direction: column;
     }
 
@@ -10230,6 +10553,10 @@
     .metaFormSummaryStatus {
         justify-content: space-between;
         width: 100%;
+    }
+
+    .switchLabel {
+        white-space: normal;
     }
 
     .metaFormControls {

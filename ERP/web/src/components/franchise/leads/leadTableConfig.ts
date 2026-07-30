@@ -41,7 +41,6 @@ export const LEAD_TABLE_SORT_OPTIONS: ReadonlyArray<{ readonly key: LeadTableSor
     { key: 'budget_asc', label: '예산 낮은순' },
     { key: 'budget_desc', label: '예산 높은순' },
     { key: 'priority_only', label: '중요 희망자만 보기' },
-    { key: 'disclosure_action', label: '정보공개서 필요순' },
     { key: 'disclosure_recent', label: '정보공개서 최근 발송순' },
     { key: 'disclosure_eligible', label: '계약 가능일 빠른순' }
 ] as const;

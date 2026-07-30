@@ -103,21 +103,21 @@ export function LeadTableControls({
                     />
                 </label>
                 <label>
-                    예산 최소
+                    예산 최소 (만원)
                     <input
                         value={filters.budgetMin}
                         onChange={(event) => onFiltersChangeAction(prev => ({ ...prev, budgetMin: event.target.value }))}
                         inputMode="numeric"
-                        placeholder="만원"
+                        placeholder="예: 10,000"
                     />
                 </label>
                 <label>
-                    예산 최대
+                    예산 최대 (만원)
                     <input
                         value={filters.budgetMax}
                         onChange={(event) => onFiltersChangeAction(prev => ({ ...prev, budgetMax: event.target.value }))}
                         inputMode="numeric"
-                        placeholder="만원"
+                        placeholder="예: 20,000"
                     />
                 </label>
                 <button

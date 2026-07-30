@@ -238,6 +238,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-07-30 모객 DB 유입경로 관리·필터 정리
+  - 작업 브랜치: `codex/meta-business-page-targets-20260727`
+  - 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`
+  - 주요 기능: 모객 DB의 불필요한 정보공개서 정렬을 제거하고 예산 필터 단위를 명확히 했다. 회사별 유입경로는 자동 수집·DB 승격 고정 항목과 직접 수정 가능한 항목으로 분리해 이름 변경·사용 중지·재사용을 지원하며, 안정 코드를 유지해 기존 리드·필터·내보내기 호환성을 보존한다.
+  - 검증: 관련 테스트 35건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 독립 디자인·한국어 UI 리뷰를 통과했다. localhost Browser 정책 제한으로 배포 후 dev/운영 smoke를 남은 QA로 둔다.
+  - SQL: `supabase_franchise_lead_source_options_migration.sql` 사용자 직접 적용 필요. 미적용 상태에서는 기본 목록 조회를 유지하고 항목 변경을 비활성화한다. **SQL 등록 필요**.
+  - dev/main/production: Fast Release Runbook의 PR·Vercel check·dev smoke 후 검증된 커밋만 main과 production으로 승격한다. 최종 deployment ID는 배포 결과로 보고한다.
+  - 공개 `/landing`·`/demo` 영향 없음.
+
 - 2026-07-23 로그인·가입·모객 DB QA 안정화
   - 작업 브랜치: `codex/qa-stabilization-20260723`
   - 기능 커밋: `b7ab2e9 fix(auth): 회사 검색 대표자 정보 제거`, `9191a49 fix(auth): 가입 인증 오류 재시도`, `48ba4bf fix(company): 가입 승인 내부 ID 숨김`, `f5dc4e7 fix(auth): 모바일 회사 찾기 배치 보정`과 모객 DB 표 간격 보정.
