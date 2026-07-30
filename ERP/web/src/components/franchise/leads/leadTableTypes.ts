@@ -26,6 +26,5 @@ export type LeadTableSortKey =
     | 'budget_asc'
     | 'budget_desc'
     | 'priority_only'
-    | 'disclosure_action'
     | 'disclosure_recent'
     | 'disclosure_eligible';

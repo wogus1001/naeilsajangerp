@@ -103,6 +103,7 @@ supabase_franchise_owner_company_login_scope.sql
 supabase_franchise_owner_notice_attachments_migration.sql
 supabase_franchise_owner_portal_alimtalk_templates_migration.sql
 supabase_meta_lead_ads_migration.sql
+supabase_franchise_lead_source_options_migration.sql
 supabase_realty_import_migration.sql
 ```
 
@@ -185,6 +186,7 @@ Use different values per Vercel environment when needed. `DEMO_ACCESS_COOKIE_SEC
 ## Meta Lead Ads Setup
 
 Run `supabase_meta_lead_ads_migration.sql` before enabling the Meta integration.
+Run `supabase_franchise_lead_source_options_migration.sql` before enabling company-specific lead source names and availability settings. Until this migration is applied, the lead form keeps the default source list and disables source-item changes instead of failing the screen.
 
 Required environment variables:
 
@@ -192,13 +194,14 @@ Required environment variables:
 META_APP_ID=
 META_APP_SECRET=
 META_VERIFY_TOKEN=
+META_BUSINESS_LOGIN_CONFIG_ID=
 META_GRAPH_API_VERSION=v25.0
 META_TOKEN_ENCRYPTION_KEY=
 CRON_SECRET=
 NEXT_PUBLIC_APP_URL=
 ```
 
-Use `/api/integrations/meta/webhook` as the Meta Webhook callback path. Vercel runs the scheduled backfill through `/api/integrations/meta/sync`; the endpoint requires `Authorization: Bearer $CRON_SECRET`.
+Use `/api/integrations/meta/callback` as the Meta Business Login OAuth callback and `/api/integrations/meta/webhook` as the Page Webhook callback path. `META_BUSINESS_LOGIN_CONFIG_ID` is the Meta Business Login configuration used to discover authorized business Pages without requesting legacy login scopes. Vercel runs the scheduled backfill through `/api/integrations/meta/sync`; the endpoint requires `Authorization: Bearer $CRON_SECRET`.
 
 ## Franchise Location Insights Setup
 
@@ -366,7 +369,7 @@ Run `supabase_franchise_notifications_migration.sql` before enabling in-app fran
 
 The header bell uses `/api/franchise-notifications` to create and read 담당자 alerts. V1 alerts are in-app only and are derived from franchise lead data: disclosure not sent, Gmail send failure, disclosure D-3/D-1, contract eligibility, overdue contact, today's contact, and HOT lead follow-up scheduling. Stale automatic alerts are dismissed during sync when their source condition no longer applies. Read alerts keep their `read_at` audit record in the database but are hidden from the header popover so the list only shows items that still require 담당자 확인. Future Kakao 알림톡 delivery can reuse `franchise_notifications.delivery_channel`, `kakao_template_key`, and `data`.
 
-The 모객 DB list also shows a `정보공개서` column and sort options for disclosure action priority, recent send, and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
+The 모객 DB list also shows a `정보공개서` column and sort options for recent send and earliest contract eligibility. The main summary dashboard defaults to company-level `A 타입`, focused on lead DB and opening-candidate counts. Admins can switch each company to `B 타입`, the existing schedule/contract/store/customer summary, from company menu management.
 
 ## Franchise AlimTalk Operations Setup
 
@@ -453,7 +456,7 @@ The official Naver API MVP is used for blog/news/local search and DataLab trends
 
 ## Current Franchise QA Notes
 
-- Meta Lead Ads is on HOLD until Meta account/app configuration and permissions are ready.
+- Meta Lead Ads Business Login, Page/Form discovery, Page Webhook test delivery, and 모객 DB raw-intake test storage are verified in dev. Real paid-ad lead delivery and long-running Webhook/backfill behavior still require live QA; Meta Marketing API performance reporting remains on HOLD until its separate access review is complete.
 - SearchAPI is the current preferred SERP provider for Naver place-style review/ad POC, but provider quota exhaustion must be treated separately from "no Naver data."
 - Current P0 is to prevent SearchAPI 429/monthly quota failures from overwriting previously successful Naver review/ad values and to split UI labels into quota exceeded, provider missing, and no result states.
 - Google Places enrichment intentionally uses Text Search rating/review counts only; Place Details review bodies are not requested by default.

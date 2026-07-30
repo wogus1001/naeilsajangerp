@@ -8,15 +8,18 @@ import {
     resolveCompanyIdByName
 } from '@/lib/api-auth';
 import { canManageMetaIntegration } from '@/lib/meta-leads';
+import {
+    encodeMetaOAuthState,
+    getSafeMetaOAuthRedirectPath,
+    META_OAUTH_NONCE_COOKIE,
+    META_OAUTH_STATE_COOKIE
+} from '@/lib/meta-oauth-state';
+import { buildMetaOAuthAuthorizeUrl } from '@/lib/meta-oauth-authorize-url';
 
 export const dynamic = 'force-dynamic';
 
 function getAppUrl(request: Request) {
     return process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-}
-
-function encodeState(value: Record<string, unknown>) {
-    return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
 }
 
 export async function GET(request: Request) {
@@ -48,9 +51,9 @@ export async function GET(request: Request) {
     }
 
     const nonce = crypto.randomUUID();
-    const redirectPath = searchParams.get('redirect') || '/dashboard/franchise-leads';
+    const redirectPath = getSafeMetaOAuthRedirectPath(searchParams.get('redirect'));
     const redirectUri = `${getAppUrl(request)}/api/integrations/meta/callback`;
-    const state = encodeState({
+    const state = encodeMetaOAuthState({
         nonce,
         requesterId: requesterProfile.id,
         companyId,
@@ -58,26 +61,26 @@ export async function GET(request: Request) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set('meta_oauth_nonce', nonce, {
+    const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 10
+    } as const;
+    cookieStore.set(META_OAUTH_NONCE_COOKIE, nonce, cookieOptions);
+    cookieStore.set(META_OAUTH_STATE_COOKIE, state, cookieOptions);
+
+    const authUrl = buildMetaOAuthAuthorizeUrl({
+        appId,
+        redirectUri,
+        state,
+        graphVersion: process.env.META_GRAPH_API_VERSION || 'v25.0',
+        businessLoginConfigId: process.env.META_BUSINESS_LOGIN_CONFIG_ID
     });
 
-    const authUrl = new URL(`https://www.facebook.com/${process.env.META_GRAPH_API_VERSION || 'v25.0'}/dialog/oauth`);
-    authUrl.searchParams.set('client_id', appId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('auth_type', 'rerequest');
-    authUrl.searchParams.set('scope', [
-        'pages_show_list',
-        'pages_read_engagement',
-        'pages_manage_metadata',
-        'leads_retrieval'
-    ].join(','));
-
+    if (searchParams.get('response') === 'json') {
+        return NextResponse.json({ authorizationUrl: authUrl.toString() });
+    }
     return NextResponse.redirect(authUrl);
 }

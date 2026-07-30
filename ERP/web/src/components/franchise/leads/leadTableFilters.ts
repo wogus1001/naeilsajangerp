@@ -79,27 +79,10 @@ function getDisclosureTime(value?: string | null): number {
     return Number.isNaN(time) ? 0 : time;
 }
 
-function getDisclosureActionRank(lead: LeadTableFilterableLead): number {
-    const summary = lead.disclosureSummary;
-    if (!summary || summary.state === 'none') return 0;
-    if (summary.state === 'failed') return 1;
-    if (summary.state === 'pending') return 2;
-    if (summary.remainingDays === 1) return 3;
-    if (summary.remainingDays === 3) return 4;
-    if (summary.remainingDays === 0) return 8;
-    return 6;
-}
-
 function getDisclosureEligibleSortValue(lead: LeadTableFilterableLead): number {
     const summary = lead.disclosureSummary;
     if (!summary?.contractEligibleAt) return Number.POSITIVE_INFINITY;
     return getDisclosureTime(summary.contractEligibleAt);
-}
-
-function sortByDisclosureAction<T extends LeadTableFilterableLead>(a: T, b: T): number {
-    const rankDiff = getDisclosureActionRank(a) - getDisclosureActionRank(b);
-    if (rankDiff !== 0) return rankDiff;
-    return getCreatedTime(b) - getCreatedTime(a);
 }
 
 export function sortLeadTableLeads<T extends LeadTableFilterableLead>(
@@ -111,7 +94,6 @@ export function sortLeadTableLeads<T extends LeadTableFilterableLead>(
         : leads;
 
     return [...sortableLeads].sort((a, b) => {
-        if (sortKey === 'disclosure_action') return sortByDisclosureAction(a, b);
         if (sortKey === 'disclosure_recent') return getDisclosureTime(b.disclosureSummary?.latestSentAt) - getDisclosureTime(a.disclosureSummary?.latestSentAt);
         if (sortKey === 'disclosure_eligible') return getDisclosureEligibleSortValue(a) - getDisclosureEligibleSortValue(b);
         if (sortKey === 'created_asc') return getCreatedTime(a) - getCreatedTime(b);

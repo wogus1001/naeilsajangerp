@@ -23,6 +23,23 @@
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
 - 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
+### 2026-07-28 회사별 Meta 신청 항목 매핑 개발·QA
+
+- Meta 양식에서 발견한 실제 질문을 이름, 연락처, 희망 지역, 예산 통합·최소·최대, 관심 브랜드, 메모에 연결하는 UI/API를 구현했다. 자동 추천과 `연결 안 함`을 제공하고, 저장 전 변경은 다른 설정 저장이나 상태 조회 실패에도 유지한다. 자동 수집은 저장된 이름·연락처 매핑과 같은 회사의 재직 중 담당자를 서버에서 다시 확인한 뒤에만 켠다.
+- 재연결과 동시 양식 발견은 충돌 시 기존 운영 설정을 보존한다. Webhook은 Page+Form의 회사 소유권이 하나로 확정될 때만 수집하고 모호한 다중 회사 후보는 fail-closed 처리한다. Meta Page token은 Bearer header로 전달하고 10초 timeout을 적용했으며, 질문·옵션·매핑의 길이와 개수를 제한하고 공급자 원본 `data`는 클라이언트 응답에서 제거했다.
+- 기능 커밋: `36fd18c feat(franchise): Meta 신청 항목 매핑 보강`.
+- 검증: Meta 관련 `npx tsx --test` 43건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, 변경 TS/MTS/TSX 16개 no-excuse 검사, `npm run build` 113개 페이지, `git diff --check` 통과. build는 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 출력했다. 독립 코드·보안·목표·CJK/접근성·디자인 코드 리뷰는 모두 PASS/APPROVE였다.
+- 로컬 `http://localhost:3000/dashboard/franchise-leads`는 HTTP 200, 3000 포트 listener 1개, 비인증 `/api/integrations/meta/forms` POST는 401을 확인했다. Codex 자체 브라우저는 localhost URL 정책에 차단돼 이번 변경의 새 1280px·768px·375px 렌더, 콘솔 오류, Next.js overlay, 실계정 매핑 저장·새로고침을 직접 확인하지 못했다.
+- 남은 dev QA: 실제 회사 Meta 양식에서 질문 연결 저장 후 재방문 복원, 저장 전 담당자 변경/상태 새로고침 보존, `연결 안 함`, 이름·연락처·담당자 누락 시 활성화 차단, Webhook과 백필의 동일 변환 결과, 서로 다른 회사 연결의 격리를 확인한다. 신규 SQL과 공개 `/landing`·`/demo` 영향은 없다.
+
+### 2026-07-27 모객 DB 기간 선택 저장·표 여백 QA
+
+- `/dashboard/franchise-leads`의 빠른 기간 기본값을 `전체`로 변경했다. `franchiseLeadDateRange`에 마지막 빠른 기간 버튼 선택을 저장하고, 저장값이 없거나 유효하지 않으면 `전체`로 복원한다. 직접 날짜를 입력하는 흐름은 마지막 빠른 기간 선택을 변경하지 않는다.
+- 기간 선택 저장·복원 테스트 4건과 관련 회귀를 포함한 16건을 통과했다. TypeScript, 전체 ESLint, `git diff --check`, Next.js production build도 통과했다. build는 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 출력했다.
+- 인증된 로컬 브라우저에서 저장값이 없는 최초 접속의 `전체`, `최근 30일` 선택 후 새로고침 복원, 다시 `전체` 선택 후 새로고침 복원과 조회 API 날짜 조건을 확인했다.
+- 표 헤더·본문·체크박스 셀은 공통 12px 좌우 여백을 사용한다. 기존 컬럼 폭과 표 내부 가로 스크롤은 유지하며, 1600px·1280px·390px에서 컬럼 정렬, 모바일 `표시 50건`, 한국어 설명 줄바꿈을 확인했다. 독립 무결성·시각 검토는 모두 `PASS`였다.
+- 브라우저 console error와 Next.js 오류 오버레이는 0건이었다. 기존 Supabase GoTrueClient 다중 인스턴스 경고는 별도 이슈로 남긴다. 신규 SQL과 공개 `/landing`·`/demo` 영향은 없다.
+
 ### 2026-07-23 로그인·가입·모객 DB QA 안정화
 
 - 회사 찾기는 현재 제품에 별도 대표자 지정 기능이 없으므로 대표자 이름이나 `(미정)`을 검색 결과에 표시하지 않는다. 아이디 로그인용 회사 선택값은 회사 ID와 회사명만 보관해 과거 검색 응답의 대표자 문자열이 다시 노출되지 않게 했다.
@@ -1538,3 +1555,50 @@
 - SQL 상태: 사용자 확인 기준 `supabase_platform_operations_phase4_migration.sql`을 대상 DB에 적용했다. **SQL 등록 완료 확인**.
 - 남은 QA: 실패 작업 샘플 재처리, worker 완료, 감사 이력 생성을 적용 DB 실데이터로 확인한다.
 - 최종 UI 게이트: `DESIGN.md` 공용 토큰 정렬, 한국어 줄바꿈, 탭·확인창 포커스, 모바일 44px 조작 영역을 재검증했고 디자인 충실도 리뷰와 최종 게이트 리뷰가 모두 `PASS`했다.
+
+## 2026-07-27 Meta OAuth 연결 인증 handoff 보정
+
+- 재현: 로그인된 모객 DB에서 `Meta 계정 연결`을 누르면 `/api/integrations/meta/connect`가 401을 반환하고 Meta 승인 화면으로 이동하지 않았다.
+- 원인: 브라우저 전체 이동은 Supabase bearer 인증 헤더를 전달하지 못하지만, connect route는 보호 API와 동일하게 인증된 requester profile을 요구했다.
+- 수정: 화면이 `getApiAuthHeaders()`를 포함한 same-origin JSON 요청으로 Meta 승인 URL을 먼저 받고, 서버가 nonce 쿠키를 설정한 뒤 Meta OAuth 화면으로 이동한다. 기존 서버 redirect 응답은 호환 경로로 유지한다.
+- 검증: 실패 테스트를 먼저 확인한 뒤 Meta/Gmail OAuth·기간 설정·API 인증 관련 테스트 14건과 전체 `npx tsx --test` 949건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 로컬 실계정 브라우저에서 connect JSON 요청 200과 Facebook OAuth 로그인 화면 이동을 확인했다.
+- 남은 QA: 수정 코드를 dev에 반영한 뒤 Meta 계정 선택·권한 승인·callback 저장·Page/Form 표시를 실계정으로 확인한다. 신규 SQL 없음.
+
+## 2026-07-27 Meta OAuth callback 세션 후속 보정
+
+- 재현: dev에서 Meta 권한 승인까지 완료했지만 callback이 307 응답 후 모객 DB의 `meta=error&reason=forbidden`으로 복귀하고 연결 Page/Form이 0건으로 유지됐다.
+- 원인: Meta callback은 ERP bearer 헤더가 없는 브라우저 이동인데, callback route가 일반 보호 API용 `getRequesterProfile()`을 다시 호출해 승인된 반환도 `forbidden`으로 판정했다.
+- 수정: 연결 시작 시 nonce와 함께 전체 Meta OAuth state를 HttpOnly 쿠키에 저장하고 callback query의 state와 정확히 일치하는지 검사한다. 검증된 state의 사용자 ID로 활성 profile을 서버에서 조회하고 Meta 관리 권한과 회사 범위를 다시 확인한 뒤 토큰 교환과 Page/Form 저장을 진행한다. 성공·거부·오류 시 임시 쿠키를 모두 정리한다.
+- 보안: nonce만 비교할 때 가능했던 state 내부 사용자·회사 ID 변경을 전체 state 원문 일치 검증으로 차단했다.
+- 검증: requester 변경 회귀 테스트가 실제 변경된 ID를 허용하며 실패하는 것을 먼저 확인했다. 수정 후 Meta/Gmail OAuth·API 인증 관련 테스트 15건과 전체 `npx tsx --test` 953건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. 빌드는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 남은 QA: dev 배포 후 실계정에서 Meta 승인 재시도, callback의 `meta=connected`, 연결 Page/Form 수, 콘솔·런타임 오류를 확인한다. 신규 SQL 없음.
+
+## 2026-07-27 Meta Lead Ads OAuth 권한 후속 보정
+
+- 재현: callback 세션 보정 배포 후 Meta 승인은 `meta=connected&pages=0&forms=0`으로 성공했지만 모객 DB는 연결 Page 0건을 표시해 다시 `Meta 계정 연결`을 안내했다.
+- 확인: Facebook 비즈니스 통합의 `fcerp`에는 `내일사장` Page가 `leads_retrieval`, `pages_manage_metadata`, `pages_read_engagement`, `pages_show_list` 대상으로 선택되어 있었고, Vercel callback 런타임 오류도 없었다. Meta 개발자 앱의 Lead Ads 이용 사례에는 `ads_management`와 `pages_manage_ads`가 모두 `테스트 준비 완료` 상태였다.
+- 원인: ERP의 OAuth scope는 Page 목록·읽기·Webhook·리드 권한 4개만 요청하고, Meta Lead Ads 검색 공식 요구 권한인 `ads_management`와 `pages_manage_ads`를 요청하지 않았다.
+- 수정: Meta OAuth scope에 `ads_management`, `pages_manage_ads`를 추가했다. 필수 Lead Ads/Webhook 권한 6개가 모두 포함되는지 정적 회귀 테스트로 고정했다.
+- 검증: 누락 권한 테스트가 `ads_management`, `pages_manage_ads`를 정확히 보고하며 실패하는 것을 먼저 확인했다. 수정 후 관련 테스트 6건과 전체 `npx tsx --test` 954건, `npx tsc --noEmit`, `npm run lint`, `npm run build`, `git diff --check`, TypeScript no-excuse 검사를 통과했다. 빌드는 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 남은 QA: dev 배포 후 Meta 계정을 다시 승인해 callback의 연결 Page/Form 수와 Page `leadgen` 구독 상태를 실계정으로 확인한다. 신규 SQL 없음.
+
+## 2026-07-27 Meta Business Login Page/Form 연결 완료 QA
+
+- 추가 재현: Lead Ads 필수 권한 6개와 `public_profile`이 모두 `granted`여도 표준 OAuth 토큰의 `/me/accounts`가 빈 배열을 반환해 `meta=connected&pages=0&forms=0`이 유지됐다. Facebook Business Login 동의 화면에서는 `내일사장` Page ID `600785779791577`가 선택 가능한 자산으로 확인됐다.
+- Business Login 적용: Vercel Preview에 서버 전용 `META_BUSINESS_LOGIN_CONFIG_ID`를 등록하고, 구성 ID가 있는 환경의 OAuth 요청은 `config_id`, `response_type=code`, `override_default_response_type=true`를 사용한다. 이 경로에서는 구성과 충돌할 수 있는 기존 `scope`, `auth_type`을 보내지 않으며, 환경변수가 없는 환경은 기존 scope 요청을 유지한다.
+- Page 발견 보정: `/me/accounts`가 비어 있을 때 같은 앱의 `/debug_token`에서 Page 관련 `granular_scopes.target_ids`만 추출해 Page를 직접 조회한다. `ads_management`의 광고 계정 대상은 제외하며 기존 `/me/accounts` 결과가 있는 환경은 fallback을 실행하지 않는다.
+- 런타임 원인: 최초 fallback 배포에서 `내일사장` target ID 발견 후 직접 Page 조회가 `(#100) Tried accessing nonexisting field (tasks)`로 두 번 동일하게 실패했다. `/me/accounts`에서만 요청할 `tasks`와 직접 Page 조회 필드를 분리해 직접 조회는 `id,name,access_token,category`만 사용하도록 보정했다.
+- 자동 검증: 실패 테스트를 먼저 확인한 뒤 Business Login URL, Page target 추출·fallback, 직접 조회 필드 회귀 테스트를 포함한 전체 `npx tsx --test` 962건, `npx tsc --noEmit --pretty false --incremental false`, 대상 ESLint, `npm run build`, `git diff --check`를 통과했다. 새 discovery 모듈과 테스트의 no-excuse 위반은 없고, 기존 `meta-leads.ts`의 편집 구간 밖 `any` 9건만 기존 부채로 남았다.
+- dev 실계정 QA: 최종 callback 로그에서 `discoveredPageCount=1`, `savedConnectionCount=1`, `savedFormCount=19`, Page `내일사장`, `hasAccessToken=true`를 확인했다. 모객 DB 상태 새로고침 후에도 연결 Page 1, 오류/주의 0이 유지되고 Page ID `600785779791577`가 표시됐다.
+- 오류 확인: 최종 dev 배포의 callback·화면 요청에서 Vercel error 로그와 Next.js 오류 오버레이는 없었다. 브라우저 제어 계층의 `fontoxpath` 주입 오류와 기존 Supabase 다중 GoTrueClient 경고는 관찰됐으나 Meta callback 또는 화면 기능 오류는 아니었다.
+- 운영 상태: 19개 Form은 저장됐지만 현재 활성 Form은 0개이므로 Webhook/백필 자동 수집은 시작되지 않았다. 실제 수집 대상 Form을 사용자가 선택해 `수집 활성화`한 뒤 동기화와 신규 리드 수신을 별도 QA한다.
+- SQL 상태: 신규 SQL 없음. **SQL 등록 불필요**.
+## 2026-07-27 Meta Lead Ads 설정 UI·보안 경계 QA
+
+- 코드 커밋: `fa7c611 fix(franchise): Meta 연동 설정과 수집 경계 보정`.
+- Meta Business Login에서 회사 관리 페이지 1개와 신청 양식 19개를 발견했고 수집 양식 1개를 활성화했다. Meta Lead Ads Testing Tool에서 Page Webhook 전달 `Success`를 확인했으며, 테스트 신청 정보가 모객 DB `1차 유입 DB`에 저장되는 것을 화면으로 확인했다. 실제 유료 광고 캠페인 리드와 장시간 Webhook·백필은 아직 확인하지 않았다.
+- 모객 DB 상단의 중복 `Meta 계정 연결`을 없애고 `Meta 연동 설정` 내부로 이동했다. 설정 열림/닫힘, 양식 자동 수집 상태, 질문 이름 별칭, 전체·최소·최대 예산의 차이를 운영 문구로 설명하고 여러 양식과 최근 수집 내역을 접이식으로 정리했다.
+- Meta 테스트 도구 dummy 값은 저장 원본을 바꾸지 않고 표에서만 `Meta 테스트 신청자` 또는 `-`로 표시한다. 전화번호·희망지역·관심브랜드·메모 셀에는 전체 개인정보를 복제하는 native tooltip을 두지 않는다.
+- 보안 리뷰에서 확인된 protocol-relative OAuth open redirect, provider 원문 오류 노출, 수동 동기화 회사 범위 누락을 각각 exact-path allowlist, 안정 오류 코드, `company_id` 선조회 필터로 보정했다.
+- 검증: Meta/기간 관련 회귀 32건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. production build는 113개 페이지를 생성했다. 1280px·390px 실브라우저에서 패널 열기/닫기, 내부 계정 연결 1개, 모바일 44px 버튼, 2×2 요약, 수평 overflow 0, console error 0을 확인했다. 기존 Supabase 다중 client warning은 이번 변경 범위 밖의 비차단 경고다.
+- 5개 관점 리뷰 결과 목표/제약, 보안, 프로젝트 맥락은 PASS, 수동 QA는 외부 OAuth 미실행 한계를 명시한 PASS, 최종 코드 품질 재검토는 PASS다. 신규 SQL과 공개 `/landing`·`/demo` 변경은 없다.

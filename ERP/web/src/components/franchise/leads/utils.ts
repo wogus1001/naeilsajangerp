@@ -319,7 +319,7 @@ export function isMetaLeadSource(lead: FranchiseLead) {
 }
 
 export function getLeadSourceTitle(lead: FranchiseLead) {
-    return isMetaLeadSource(lead) ? 'Meta Lead Ads' : getFranchiseLeadSourceLabel(lead.source);
+    return isMetaLeadSource(lead) ? 'Meta Lead Ads' : lead.sourceLabel || getFranchiseLeadSourceLabel(lead.source);
 }
 
 export function getLeadSourceBadgeLabel(lead: FranchiseLead) {

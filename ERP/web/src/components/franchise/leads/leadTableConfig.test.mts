@@ -4,6 +4,7 @@ import {
     DEFAULT_LEAD_TABLE_COLUMN_KEYS,
     LEAD_TABLE_CHECKBOX_COLUMN_WIDTH,
     LEAD_TABLE_COLUMN_WIDTHS,
+    LEAD_TABLE_SORT_OPTIONS,
     normalizeLeadTableColumnKeys,
     toggleLeadTableColumn
 } from './leadTableConfig.js';
@@ -62,4 +63,19 @@ test('lead table columns follow the shared 8px spacing rhythm', () => {
     for (const columnWidth of Object.values(LEAD_TABLE_COLUMN_WIDTHS)) {
         assert.equal(columnWidth % 8, 0);
     }
+});
+
+test('lead table exposes only the supported sort workflow in display order', () => {
+    assert.deepEqual(
+        LEAD_TABLE_SORT_OPTIONS.map(option => option.key),
+        [
+            'created_desc',
+            'created_asc',
+            'budget_asc',
+            'budget_desc',
+            'priority_only',
+            'disclosure_recent',
+            'disclosure_eligible'
+        ]
+    );
 });

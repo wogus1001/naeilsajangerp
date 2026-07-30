@@ -3,6 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
+    ChevronDown,
+    ChevronUp,
     Download,
     Link2,
     Plus,
@@ -26,20 +28,25 @@ import { useLeadDetailDeepLink } from '@/components/franchise/leads/useLeadDetai
 import { useLeadExcelImport } from '@/components/franchise/leads/useLeadExcelImport';
 import { useLeadLocationLinks } from '@/components/franchise/leads/useLeadLocationLinks';
 import { useLeadMetaIntegration } from '@/components/franchise/leads/useLeadMetaIntegration';
+import { useLeadSourceOptions } from '@/components/franchise/leads/useLeadSourceOptions';
 import { useLeadActivityLog } from '@/components/franchise/leads/useLeadActivityLog';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadPhone
 } from '@/lib/franchise-leads';
+import {
+    canManageFranchiseLeadSourceOptions,
+    getFranchiseLeadSourceOptionLabel,
+    getLabeledFranchiseLeadSourceCounts
+} from '@/lib/franchise-lead-source-options';
 import { formatManagerDisplayName, formatManagerOptionLabel } from '@/lib/franchise-manager-display';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     EMPTY_FORM, ENABLE_LEAD_CUSTOMER_DB_LINKING,
     PAGE_SIZE_OPTIONS,
-    RANGE_OPTIONS,
-    SOURCE_FILTER_OPTIONS
+    RANGE_OPTIONS
 } from '@/components/franchise/leads/constants';
 import {
     DEFAULT_LEAD_TABLE_COLUMN_KEYS,
@@ -47,6 +54,11 @@ import {
     LEAD_TABLE_COLUMNS_STORAGE_KEY,
     normalizeLeadTableColumnKeys
 } from '@/components/franchise/leads/leadTableConfig';
+import {
+    DEFAULT_LEAD_RANGE,
+    readLeadRangePreference,
+    writeLeadRangePreference
+} from '@/components/franchise/leads/leadRangePreference';
 import { filterLeadTableLeads, sortLeadTableLeads } from '@/components/franchise/leads/leadTableFilters';
 import type { LeadTableColumnKey, LeadTableFilters, LeadTableSortKey } from '@/components/franchise/leads/leadTableTypes';
 import {
@@ -78,8 +90,7 @@ import {
     isRawIntakeLead,
     parseBudgetInputToWon,
     toDatetimeLocalValue,
-    toRangeOption,
-    toSourceFilterOption
+    toRangeOption
 } from '@/components/franchise/leads/utils';
 import {
     formatLeadPhoneInput,
@@ -121,16 +132,16 @@ export default function FranchiseLeadsPage() {
     const [isSaving, setIsSaving] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<LeadToolbarStatusFilter>('전체');
-    const [sourceFilter, setSourceFilter] = React.useState<typeof SOURCE_FILTER_OPTIONS[number]>('전체');
+    const [sourceFilter, setSourceFilter] = React.useState('전체');
     const [managerFilter, setManagerFilter] = React.useState('전체');
-    const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>('최근 30일');
+    const [range, setRange] = React.useState<typeof RANGE_OPTIONS[number]>(DEFAULT_LEAD_RANGE);
     const [workspaceTab, setWorkspaceTab] = React.useState<LeadWorkspaceTab>('dashboard');
     const [leadDbLayer, setLeadDbLayer] = React.useState<LeadDbLayer>('raw_intake');
     const [viewMode, setViewMode] = React.useState<LeadViewMode>('table');
     const [taskQueueFilter, setTaskQueueFilter] = React.useState<LeadWorkQueueKey>('all');
     const [pageSize, setPageSize] = React.useState<typeof PAGE_SIZE_OPTIONS[number]>(50);
     const [currentPage, setCurrentPage] = React.useState(1);
-    const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange('최근 30일'));
+    const [createdFrom, setCreatedFrom] = React.useState(() => buildDateFromRange(DEFAULT_LEAD_RANGE));
     const [createdTo, setCreatedTo] = React.useState('');
     const [tableFilters, setTableFilters] = React.useState<LeadTableFilters>(EMPTY_LEAD_TABLE_FILTERS);
     const [tableSort, setTableSort] = React.useState<LeadTableSortKey>('created_desc');
@@ -153,6 +164,24 @@ export default function FranchiseLeadsPage() {
     const [isMetaPanelOpen, setIsMetaPanelOpen] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [form, setForm] = React.useState<LeadFormState>(EMPTY_FORM);
+    const {
+        options: sourceOptions,
+        isLoading: isSourceOptionLoading,
+        isSaving: isSourceOptionSaving,
+        storageReady: isSourceOptionStorageReady,
+        error: sourceOptionError,
+        refresh: refreshSourceOptions,
+        createOption: createSourceOption,
+        updateOption: updateSourceOption
+    } = useLeadSourceOptions({ userId, companyName });
+    const sourceFilterOptions = React.useMemo(
+        () => ['전체', ...sourceOptions.map(option => option.code)],
+        [sourceOptions]
+    );
+    const sourceLabelMap = React.useMemo(
+        () => Object.fromEntries(sourceOptions.map(option => [option.code, option.label])),
+        [sourceOptions]
+    );
     const [alertConfig, setAlertConfig] = React.useState({
         isOpen: false,
         title: '',
@@ -181,6 +210,7 @@ export default function FranchiseLeadsPage() {
 
     React.useEffect(() => {
         const storedUser = getStoredUser();
+        const storedRange = readLeadRangePreference(localStorage);
         const parsedUser: AuthUser = {
             id: storedUser?.id,
             uid: storedUser?.uid,
@@ -191,6 +221,9 @@ export default function FranchiseLeadsPage() {
         };
 
         const currentUserId = getRequesterId(storedUser) || localStorage.getItem('userId') || '';
+        setRange(storedRange);
+        setCreatedFrom(buildDateFromRange(storedRange));
+        setCreatedTo('');
         setUser(parsedUser);
         setUserId(currentUserId);
         setCompanyName(parsedUser.companyName || '');
@@ -257,9 +290,16 @@ export default function FranchiseLeadsPage() {
             }
 
             const data = unwrapApiData<LeadListResponse>(payload);
-            const nextLeads = data.leads || [];
+            const nextLeads = (data.leads || []).map(lead => ({
+                ...lead,
+                sourceLabel: getFranchiseLeadSourceOptionLabel(lead.source, sourceOptions)
+            }));
             setLeads(nextLeads);
-            setSummary(data.summary || createEmptySummary());
+            const nextSummary = data.summary || createEmptySummary();
+            setSummary({
+                ...nextSummary,
+                bySource: getLabeledFranchiseLeadSourceCounts(nextSummary.bySource, sourceOptions)
+            });
             setTotal(data.total || 0);
 
             if (statusFilter === '전체') {
@@ -278,7 +318,10 @@ export default function FranchiseLeadsPage() {
                 }
 
                 const stageData = unwrapApiData<LeadListResponse>(stagePayload);
-                setPipelineStageLeads(stageData.leads || []);
+                setPipelineStageLeads((stageData.leads || []).map(lead => ({
+                    ...lead,
+                    sourceLabel: getFranchiseLeadSourceOptionLabel(lead.source, sourceOptions)
+                })));
             }
         } catch (error) {
             console.error(error);
@@ -295,7 +338,7 @@ export default function FranchiseLeadsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [companyName, createdFrom, createdTo, managerFilter, searchTerm, sourceFilter, statusFilter, userId]);
+    }, [companyName, createdFrom, createdTo, managerFilter, searchTerm, sourceFilter, sourceOptions, statusFilter, userId]);
 
     const fetchLeadExportRows = React.useCallback(async (): Promise<readonly FranchiseLead[]> => {
         if (!userId) return [];
@@ -325,9 +368,13 @@ export default function FranchiseLeadsPage() {
         }
 
         const data = unwrapApiData<LeadListResponse>(payload);
+        const labeledLeads = (data.leads || []).map(lead => ({
+            ...lead,
+            sourceLabel: getFranchiseLeadSourceOptionLabel(lead.source, sourceOptions)
+        }));
         const sourceLeads = leadDbLayer === 'raw_intake'
-            ? (data.leads || []).filter(isRawIntakeLead)
-            : (data.leads || []).filter(lead => !isRawIntakeLead(lead));
+            ? labeledLeads.filter(isRawIntakeLead)
+            : labeledLeads.filter(lead => !isRawIntakeLead(lead));
         return sortLeadTableLeads(filterLeadTableLeads(sourceLeads, tableFilters), tableSort);
     }, [
         companyName,
@@ -337,6 +384,7 @@ export default function FranchiseLeadsPage() {
         managerFilter,
         searchTerm,
         sourceFilter,
+        sourceOptions,
         statusFilter,
         tableFilters,
         tableSort,
@@ -523,10 +571,14 @@ export default function FranchiseLeadsPage() {
         isMetaLoading,
         isMetaSyncing,
         metaState,
+        dirtyMetaFormIds,
+        refreshMetaFormQuestions,
+        replaceMetaQuestionMapping,
         savingMetaFormId,
+        savingMetaFormOperation,
         startMetaConnect,
         syncMetaLeads,
-        updateMetaFieldMapping,
+        updateMetaQuestionMapping,
         updateMetaForm
     } = useLeadMetaIntegration({
         userId,
@@ -745,6 +797,7 @@ export default function FranchiseLeadsPage() {
     };
 
     const handleRangeClick = (nextRange: typeof RANGE_OPTIONS[number]) => {
+        writeLeadRangePreference(localStorage, nextRange);
         setRange(nextRange);
         setCreatedFrom(buildDateFromRange(nextRange));
         setCreatedTo('');
@@ -1177,19 +1230,19 @@ export default function FranchiseLeadsPage() {
         <div className={styles.pageShell}>
             <FranchiseWorkspaceHero
                 title="모객 DB"
-                description="가맹 희망자 유입부터 상담, 검토, 계약 전환까지 본사에서 한눈에 관리합니다."
+                description="가맹 희망자의 유입, 상담, 검토부터 계약까지 본사에서 한눈에 관리합니다."
                 actions={(
                     <>
-                    <button className={styles.secondaryButton} onClick={() => setIsMetaPanelOpen(prev => !prev)}>
+                    <button
+                        className={isMetaPanelOpen ? styles.metaToggleButtonActive : styles.metaToggleButton}
+                        onClick={() => setIsMetaPanelOpen(prev => !prev)}
+                        aria-expanded={isMetaPanelOpen}
+                        aria-controls="meta-integration-panel"
+                    >
                         <Link2 size={16} />
-                        Meta 연동
+                        {isMetaPanelOpen ? 'Meta 설정 닫기' : 'Meta 연동 설정'}
+                        {isMetaPanelOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
-                    {canManageMeta && (
-                        <button className={styles.secondaryButton} onClick={startMetaConnect} disabled={isMetaLoading}>
-                            <Link2 size={16} />
-                            Meta 계정 연결
-                        </button>
-                    )}
                     <button className={styles.secondaryButton} onClick={() => void downloadTemplate()}>
                         <Download size={16} />
                         샘플 양식
@@ -1229,7 +1282,8 @@ export default function FranchiseLeadsPage() {
                 statusFilter={statusFilter}
                 statusOptions={FRANCHISE_LEAD_STATUSES}
                 sourceFilter={sourceFilter}
-                sourceOptions={SOURCE_FILTER_OPTIONS}
+                sourceOptions={sourceFilterOptions}
+                sourceLabelMap={sourceLabelMap}
                 managerFilter={managerFilter}
                 managerOptions={renderManagerOptions()}
                 createdFrom={createdFrom}
@@ -1237,7 +1291,7 @@ export default function FranchiseLeadsPage() {
                 onRangeClickAction={(nextRange) => handleRangeClick(toRangeOption(nextRange))}
                 onSearchTermChangeAction={setSearchTerm}
                 onStatusFilterChangeAction={handleStatusFilterChange}
-                onSourceFilterChangeAction={(source) => setSourceFilter(toSourceFilterOption(source))}
+                onSourceFilterChangeAction={setSourceFilter}
                 onManagerFilterChangeAction={setManagerFilter}
                 onCreatedFromChangeAction={(date) => {
                     setRange('전체');
@@ -1264,13 +1318,17 @@ export default function FranchiseLeadsPage() {
                     isMetaLoading={isMetaLoading}
                     isMetaSyncing={isMetaSyncing}
                     savingMetaFormId={savingMetaFormId}
+                    savingMetaFormOperation={savingMetaFormOperation}
+                    dirtyMetaFormIds={dirtyMetaFormIds}
                     renderManagerOptionsAction={renderManagerOptions}
                     onRefreshAction={fetchMetaIntegration}
                     onStartConnectAction={startMetaConnect}
                     onSyncAction={syncMetaLeads}
                     onDisconnectConnectionAction={disconnectMetaConnection}
+                    onRefreshFormQuestionsAction={refreshMetaFormQuestions}
+                    onReplaceQuestionMappingAction={replaceMetaQuestionMapping}
                     onUpdateFormAction={updateMetaForm}
-                    onUpdateFieldMappingAction={updateMetaFieldMapping}
+                    onUpdateQuestionMappingAction={updateMetaQuestionMapping}
                 />
             )}
 
@@ -1355,10 +1413,19 @@ export default function FranchiseLeadsPage() {
                 <LeadFormModal
                     form={form}
                     isSaving={isSaving}
+                    sourceOptions={sourceOptions}
+                    canManageSourceOptions={canManageFranchiseLeadSourceOptions(user?.role)}
+                    isSourceOptionStorageReady={isSourceOptionStorageReady}
+                    isSourceOptionLoading={isSourceOptionLoading}
+                    isSourceOptionSaving={isSourceOptionSaving}
+                    sourceOptionError={sourceOptionError}
                     onFormChangeAction={setForm}
                     onCloseAction={closeModal}
                     onSubmitAction={submitLead}
                     renderManagerOptionsAction={renderManagerOptions}
+                    onRefreshSourceOptionsAction={refreshSourceOptions}
+                    onCreateSourceOptionAction={createSourceOption}
+                    onUpdateSourceOptionAction={updateSourceOption}
                 />
             )}
 
