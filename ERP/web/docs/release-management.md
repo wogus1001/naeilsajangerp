@@ -243,7 +243,7 @@ YYYY-MM-DD
   - 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`
   - 주요 기능: 모객 DB의 불필요한 정보공개서 정렬을 제거하고 예산 필터 단위를 명확히 했다. 회사별 유입경로는 자동 수집·DB 승격 고정 항목과 직접 수정 가능한 항목으로 분리해 이름 변경·사용 중지·재사용을 지원하며, 안정 코드를 유지해 기존 리드·필터·내보내기 호환성을 보존한다.
   - 검증: 관련 테스트 35건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 독립 디자인·한국어 UI 리뷰를 통과했다. localhost Browser 정책 제한으로 배포 후 dev/운영 smoke를 남은 QA로 둔다.
-  - SQL: `supabase_franchise_lead_source_options_migration.sql` 사용자 직접 적용 필요. 미적용 상태에서는 기본 목록 조회를 유지하고 항목 변경을 비활성화한다. **SQL 등록 필요**.
+  - SQL: 사용자 확인 기준 2026-07-30 `supabase_franchise_lead_source_options_migration.sql` 대상 DB 적용을 완료했다. 적용 전 fallback은 기본 목록 조회와 항목 변경 비활성화로 유지하며, 적용 후 회사별 저장·복원과 격리는 실계정 회귀로 확인한다. **SQL 등록 완료 확인**.
   - dev/main/production: Fast Release Runbook의 PR·Vercel check·dev smoke 후 검증된 커밋만 main과 production으로 승격한다. 최종 deployment ID는 배포 결과로 보고한다.
   - 공개 `/landing`·`/demo` 영향 없음.
 
