@@ -1610,3 +1610,13 @@
 - 브라우저 QA: 로컬 Codex 브라우저 1280px에서 `Meta 계정 연결`, `연결 확인`, `전체 신청 가져오기`가 역할별로 구분되고 연결된 Form이 없을 때 전체 가져오기가 비활성화되는 것을 확인했다. Next.js 오류 오버레이와 console error는 없었다. 반응형 CSS 게이트에서 1180px 이하 제목·작업 적층과 720px 이하 한국어 도움말 줄바꿈을 확인했다.
 - 신청 항목 매칭 검증 절차: 연결을 저장한 뒤 Meta Lead Ads Testing Tool에서 같은 Page/Form의 기존 테스트 신청을 삭제하고 새 테스트 신청을 만든다. ERP에서 `전체 신청 가져오기`를 실행한 뒤 새 이름을 검색해 이름·연락처·희망 지역·예산·관심 브랜드·메모를 확인한다. 이미 가져온 신청은 매핑 변경만으로 다시 변환되지 않으므로 반드시 새 신청으로 검증한다.
 - 기능 커밋: `ed3240a fix(franchise): Meta 연동 작업 버튼 정리`. 신규 SQL과 `/landing`·`/demo` 변경은 없다. Dev 배포 후 실제 연결 회사에서 질문 매핑 저장·복원과 새 테스트 신청의 컬럼별 저장 결과를 최종 확인한다.
+
+## 2026-07-30 모객 DB 유입경로 항목 관리·필터 QA
+
+- 기능 범위: 회사별 유입경로 표시 이름·사용 여부 관리, 자동 수집/DB 승격 고정 항목 보호, 비활성 기존값 보존, 필터·대시보드·엑셀·고객 전환 표시 이름 연동, `정보공개서 필요순` 제거, 예산 필터 단위 명시.
+- 권한·데이터 경계: GET/POST/PATCH API가 활성 로그인 profile과 회사 범위를 다시 확인한다. 관리자·부관리자만 변경 가능하고, API와 DB trigger가 고정 항목 변경과 실제 삭제를 차단한다. 수정 가능한 항목은 회사별 안정 코드를 유지하고 삭제 대신 사용 중지한다.
+- SQL 정적 검증: 기본 항목 seed, 기존 리드 source backfill, 신규 source 자동 등록, 회사별 RLS, 고정 항목 insert/update/delete 보호를 migration 테스트로 확인했다. 실제 Supabase 적용 및 저장 API live QA는 사용자 SQL 적용 후 진행한다. **SQL 등록 필요**.
+- 자동 검증: `npx tsx --test` 관련 35건, `npx tsc --noEmit --pretty false`, `npm run lint -- --quiet`, `git diff --check`, `npm run build`를 통과했다. production build는 113개 페이지를 생성했고 기존 workspace root, baseline-browser-mapping, Browserslist 경고만 남았다.
+- 리뷰: 독립 디자인 리뷰와 한국어 UI/접근성 리뷰가 최종 `PASS`했다. 버튼 40px/모바일 44px, 키보드 포커스, 로딩·오류·SQL 미적용 상태 분리, select label 연결을 소스 기준으로 확인했다.
+- 브라우저 제한: Codex Browser가 localhost URL 보안 정책으로 동일 리비전 화면을 열지 못해 최종 렌더 캡처는 남기지 못했다. dev/운영 배포 후 가맹 희망자 수정의 `유입경로 > 항목 관리`, 이름 변경·사용 중지·재사용, 필터 표시, console error와 수평 overflow를 smoke로 확인한다.
+- 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`. 공개 `/landing`·`/demo` 영향 없음.
