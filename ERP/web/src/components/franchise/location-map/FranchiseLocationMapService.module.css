@@ -205,6 +205,72 @@
     cursor: crosshair;
 }
 
+.offlineMap {
+    overflow: hidden;
+    background:
+        linear-gradient(135deg, transparent 0 44%, rgb(255 255 255 / 78%) 44% 49%, transparent 49% 100%),
+        linear-gradient(32deg, transparent 0 35%, rgb(255 255 255 / 82%) 35% 40%, transparent 40% 100%),
+        #edf4ed;
+}
+
+.offlineMap::before,
+.offlineMap::after {
+    position: absolute;
+    content: '';
+    pointer-events: none;
+}
+
+.offlineMap::before {
+    inset: 0;
+    background-image:
+        linear-gradient(rgb(133 164 135 / 13%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(133 164 135 / 13%) 1px, transparent 1px);
+    background-size: 36px 36px;
+}
+
+.offlineMap::after {
+    right: 7%;
+    bottom: 8%;
+    width: 30%;
+    height: 24%;
+    border-radius: 48% 52% 34% 66%;
+    background: #d7ecf7;
+}
+
+.offlineMapRoadHorizontal,
+.offlineMapRoadVertical {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    border: 1px solid #c7cdd3;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgb(255 255 255 / 50%);
+    pointer-events: none;
+}
+
+.offlineMapRoadHorizontal {
+    top: 47%;
+    left: -8%;
+    width: 116%;
+    height: 18px;
+    transform: rotate(-7deg);
+}
+
+.offlineMapRoadVertical {
+    top: -8%;
+    left: 51%;
+    width: 16px;
+    height: 116%;
+    transform: rotate(9deg);
+}
+
+.offlineMapMarker {
+    position: absolute;
+    z-index: 3;
+    width: max-content;
+    transform: translate(-50%, -50%);
+}
+
 .mapFallback {
     display: flex;
     min-height: 100%;

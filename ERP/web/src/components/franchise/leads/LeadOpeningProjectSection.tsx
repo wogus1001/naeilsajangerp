@@ -11,13 +11,11 @@ import { OpeningProjectTaskList } from '../operations/OpeningProjectTaskList';
 import type { FranchiseOpeningProject, OpeningProjectDraft } from '../operations/types';
 import type { FranchiseLead, FranchiseLocation } from './types';
 import {
-    fetchContractStoreLocation,
-    fetchOpeningProject,
     patchOpeningProjectTask,
     readOpeningProjectStatus,
-    saveOpeningProjectDraft,
     toOpeningProjectDraft
 } from './LeadOpeningProjectSection.utils';
+import { useLeadDetailRuntime } from './LeadDetailRuntimeProvider';
 import styles from './LeadOpeningProjectSection.module.css';
 
 type LeadOpeningProjectSectionProps = {
@@ -33,6 +31,7 @@ export function LeadOpeningProjectSection({
     companyName,
     onOpenStoreTabAction
 }: LeadOpeningProjectSectionProps) {
+    const { opening } = useLeadDetailRuntime();
     const [storeLocation, setStoreLocation] = React.useState<FranchiseLocation | null>(null);
     const [project, setProject] = React.useState<FranchiseOpeningProject | null>(null);
     const [draft, setDraft] = React.useState<OpeningProjectDraft | null>(null);
@@ -47,17 +46,16 @@ export function LeadOpeningProjectSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const nextLocation = await fetchContractStoreLocation({ leadId: lead.id, userId, companyName });
-            setStoreLocation(nextLocation);
-            if (!nextLocation) {
+            const result = await opening.load({ leadId: lead.id, userId, companyName });
+            setStoreLocation(result.storeLocation);
+            if (!result.storeLocation) {
                 setProject(null);
                 setDraft(null);
                 return;
             }
-            const nextProject = await fetchOpeningProject({ locationId: nextLocation.id, userId, companyName });
-            setProject(nextProject);
-            setDraft(nextProject || nextLocation.status === '오픈준비'
-                ? toOpeningProjectDraft(nextLocation, nextProject || undefined)
+            setProject(result.project);
+            setDraft(result.project || result.storeLocation.status === '오픈준비'
+                ? toOpeningProjectDraft(result.storeLocation, result.project || undefined)
                 : null);
         } catch (error) {
             setStoreLocation(null);
@@ -67,7 +65,7 @@ export function LeadOpeningProjectSection({
         } finally {
             setIsLoading(false);
         }
-    }, [companyName, lead.id, userId]);
+    }, [companyName, lead.id, opening, userId]);
 
     React.useEffect(() => {
         void loadOpeningProject();
@@ -88,7 +86,7 @@ export function LeadOpeningProjectSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const savedProject = await saveOpeningProjectDraft({ draft, leadId: lead.id, userId, companyName });
+            const savedProject = await opening.save({ draft, leadId: lead.id, userId, companyName });
             setProject(savedProject);
             setDraft(toOpeningProjectDraft(storeLocation, savedProject));
             setMessage(project ? '오픈 준비 프로젝트를 저장했습니다.' : '오픈 준비 프로젝트를 시작했습니다.');

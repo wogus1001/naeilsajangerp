@@ -39,7 +39,7 @@ type LocationListResponse = {
     readonly locations?: readonly DashboardLocation[];
 };
 
-type KpiMetrics = {
+export type KpiMetrics = {
     readonly leadTotal: number;
     readonly eligible: number;
     readonly candidateLocations: number;
@@ -49,6 +49,7 @@ type KpiMetrics = {
 type MainDashboardTypeAStatsProps = {
     readonly requesterId: string;
     readonly companyName: string;
+    readonly metrics?: KpiMetrics;
     readonly onNavigate: (href: string) => void;
 };
 
@@ -62,8 +63,33 @@ const EMPTY_METRICS: KpiMetrics = {
 export function MainDashboardTypeAStats({
     requesterId,
     companyName,
+    metrics,
     onNavigate
 }: MainDashboardTypeAStatsProps) {
+    if (metrics !== undefined) {
+        return (
+            <KpiCards
+                metrics={metrics}
+                loading={false}
+                onNavigate={onNavigate}
+            />
+        );
+    }
+
+    return (
+        <LiveMainDashboardTypeAStats
+            requesterId={requesterId}
+            companyName={companyName}
+            onNavigate={onNavigate}
+        />
+    );
+}
+
+function LiveMainDashboardTypeAStats({
+    requesterId,
+    companyName,
+    onNavigate
+}: Omit<MainDashboardTypeAStatsProps, 'metrics'>) {
     const [metrics, setMetrics] = React.useState<KpiMetrics>(EMPTY_METRICS);
     const [status, setStatus] = React.useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
 
@@ -87,7 +113,31 @@ export function MainDashboardTypeAStats({
         return () => controller.abort();
     }, [companyName, requesterId]);
 
-    const loading = status === 'idle' || status === 'loading';
+    return <KpiCards metrics={metrics} loading={status === 'idle' || status === 'loading'} status={status} onNavigate={onNavigate} />;
+}
+
+type KpiCard = {
+    readonly label: string;
+    readonly value: string;
+    readonly unit: string;
+    readonly caption: string;
+    readonly icon: LucideIcon;
+    readonly iconClassName: string;
+    readonly href: string;
+    readonly onClick: () => void;
+};
+
+function KpiCards({
+    metrics,
+    loading,
+    status,
+    onNavigate
+}: {
+    readonly metrics: KpiMetrics;
+    readonly loading: boolean;
+    readonly status?: 'idle' | 'loading' | 'ready' | 'error';
+    readonly onNavigate: (href: string) => void;
+}) {
     const cards = buildKpiCards(metrics, loading, onNavigate);
 
     return (
@@ -172,7 +222,7 @@ function isCandidateLocation(location: DashboardLocation) {
     return location.locationType === '예정점' || location.status === '검토중' || location.status === '오픈준비';
 }
 
-function buildKpiCards(metrics: KpiMetrics, loading: boolean, onNavigate: (href: string) => void) {
+export function buildKpiCards(metrics: KpiMetrics, loading: boolean, onNavigate: (href: string) => void): readonly KpiCard[] {
     const displayValue = (value: number) => loading ? '-' : value.toLocaleString();
     return [
         {
@@ -182,6 +232,7 @@ function buildKpiCards(metrics: KpiMetrics, loading: boolean, onNavigate: (href:
             caption: '전체 가맹 희망자',
             icon: Users,
             iconClassName: 'bg-[#f8f7ff] text-[#6d5dfc]',
+            href: '/dashboard/franchise-leads',
             onClick: () => onNavigate('/dashboard/franchise-leads')
         },
         {
@@ -191,6 +242,7 @@ function buildKpiCards(metrics: KpiMetrics, loading: boolean, onNavigate: (href:
             caption: '14일 기준 충족',
             icon: FileCheck2,
             iconClassName: 'bg-[#fff9db] text-[#f59f00]',
+            href: '/dashboard/franchise-leads?sort=disclosure_eligible',
             onClick: () => onNavigate('/dashboard/franchise-leads?sort=disclosure_eligible')
         },
         {
@@ -200,6 +252,7 @@ function buildKpiCards(metrics: KpiMetrics, loading: boolean, onNavigate: (href:
             caption: '검토중·오픈준비',
             icon: MapPinned,
             iconClassName: 'bg-[#e6fcf5] text-[#0ca678]',
+            href: '/dashboard/franchise-leads/market-insights?view=location-list',
             onClick: () => onNavigate('/dashboard/franchise-leads/market-insights?view=location-list')
         },
         {
@@ -209,15 +262,8 @@ function buildKpiCards(metrics: KpiMetrics, loading: boolean, onNavigate: (href:
             caption: '후보지 매칭 전',
             icon: Link2,
             iconClassName: 'bg-[#fff4e6] text-[#fe9800]',
+            href: '/dashboard/franchise-leads/market-insights?view=region-insight',
             onClick: () => onNavigate('/dashboard/franchise-leads/market-insights?view=region-insight')
         }
-    ] as const satisfies readonly {
-        readonly label: string;
-        readonly value: string;
-        readonly unit: string;
-        readonly caption: string;
-        readonly icon: LucideIcon;
-        readonly iconClassName: string;
-        readonly onClick: () => void;
-    }[];
+    ] as const satisfies readonly KpiCard[];
 }

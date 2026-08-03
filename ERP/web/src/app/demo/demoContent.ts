@@ -63,9 +63,9 @@ export const DEMO_SCENARIOS = {
             { label: '매칭 필요', value: '11건', helper: '후보지 연결 전' }
         ],
         tourSteps: [
-            { id: 'manager-1', targetId: 'dashboard-kpis', title: '오늘의 핵심 숫자', description: '1차 유입, 가맹 희망자, 상담 진행, 전환율을 먼저 보고 오늘 점검할 흐름을 잡습니다.' },
-            { id: 'manager-2', targetId: 'dashboard-pipeline', title: '상태별 병목 확인', description: '문의접수부터 계약완료까지 어느 단계에 고객이 몰려 있는지 보고 다음 액션을 정합니다.' },
-            { id: 'manager-3', targetId: 'dashboard-source', title: '유입 경로 비교', description: 'Meta 광고, 랜딩페이지, 박람회, 소개 등 채널별 모객 볼륨을 비교합니다.' },
+            { id: 'manager-1', targetId: 'dashboard-home-kpis', title: '오늘의 핵심 숫자', description: '1차 유입, 가맹 희망자, 상담 진행, 전환율을 먼저 보고 오늘 점검할 흐름을 잡습니다.' },
+            { id: 'manager-2', targetId: 'dashboard-home-schedule', title: '오늘 일정 확인', description: '오늘 확인할 현장 방문과 오픈 준비 일정을 보고 다음 액션을 정합니다.' },
+            { id: 'manager-3', targetId: 'dashboard-home-memo', title: '업무 메모 확인', description: '팀에서 바로 이어서 처리할 업무와 고객 후속 조치를 확인합니다.' },
             { id: 'manager-4', targetId: 'dashboard-guide', title: '화면별 사용 가이드', description: '처음 보는 사용자도 각 화면에서 확인 순서와 다음 이동 화면을 바로 볼 수 있습니다.' },
             { id: 'manager-5', targetId: 'dashboard-home-notices', title: '공지사항 확인', description: '팀 공지와 전체 안내를 확인하고 필요한 안내는 바로 열어봅니다.' }
         ]
@@ -90,9 +90,9 @@ export const DEMO_SCENARIOS = {
             { label: '매칭 필요', value: '6건', helper: '후보지 연결 전' }
         ],
         tourSteps: [
-            { id: 'admin-1', targetId: 'dashboard-kpis', title: '회사 전체 핵심 숫자', description: '관리자는 회사 기준의 모객, 상담, 계약 전환 흐름을 먼저 확인합니다.' },
-            { id: 'admin-2', targetId: 'dashboard-pipeline', title: '파이프라인 점검', description: '단계별 병목을 보고 담당자나 캠페인 조정이 필요한 구간을 찾습니다.' },
-            { id: 'admin-3', targetId: 'dashboard-source', title: '채널별 유입 확인', description: '광고와 소개 등 유입 채널별 볼륨을 비교해 운영 판단에 활용합니다.' },
+            { id: 'admin-1', targetId: 'dashboard-home-kpis', title: '회사 전체 핵심 숫자', description: '관리자는 회사 기준의 모객, 상담, 계약 전환 흐름을 먼저 확인합니다.' },
+            { id: 'admin-2', targetId: 'dashboard-home-schedule', title: '오늘 일정 점검', description: '팀의 현장 방문과 오픈 준비 일정을 보고 조정이 필요한 업무를 찾습니다.' },
+            { id: 'admin-3', targetId: 'dashboard-home-memo', title: '업무 메모 확인', description: '담당자별 후속 조치와 공유가 필요한 업무를 확인합니다.' },
             { id: 'admin-4', targetId: 'dashboard-guide', title: '사용 설명서', description: '오른쪽 패널에서 대시보드 확인 순서와 다음 이동 화면을 바로 볼 수 있습니다.' },
             { id: 'admin-5', targetId: 'dashboard-home-notices', title: '공지사항 확인', description: '회사 전체 안내와 팀 공지를 확인하고 필요한 공지는 바로 열어봅니다.' }
         ]
@@ -116,8 +116,8 @@ export const DEMO_SCENARIOS = {
             { label: '숨김 처리', value: '안전', helper: '타 협력업체 건 제외' }
         ],
         tourSteps: [
-            { id: 'partner-1', targetId: 'dashboard-kpis', title: '공유 범위 핵심 숫자', description: '협력업체는 본인에게 공유된 프랜차이즈 흐름만 샘플로 확인합니다.' },
-            { id: 'partner-2', targetId: 'dashboard-pipeline', title: '공유 파이프라인', description: '본사와 공유된 건의 단계 흐름만 확인하고 타 협력업체 건은 보이지 않습니다.' },
+            { id: 'partner-1', targetId: 'dashboard-home-kpis', title: '공유 범위 핵심 숫자', description: '협력업체는 본인에게 공유된 프랜차이즈 흐름만 샘플로 확인합니다.' },
+            { id: 'partner-2', targetId: 'dashboard-home-schedule', title: '공유 일정', description: '본사와 공유된 현장 일정과 후속 업무만 확인합니다.' },
             { id: 'partner-3', targetId: 'dashboard-guide', title: '사용 설명서', description: '오른쪽 패널에서 무엇을 먼저 확인해야 하는지 바로 볼 수 있습니다.' },
             { id: 'partner-4', targetId: 'nav-locationMap', title: '물건지 지도', description: '지도에서는 본인이 작성했거나 본사가 공유한 물건지만 확인합니다.' }
         ]
@@ -169,9 +169,9 @@ export const DEMO_SCREEN_GUIDES: Record<DemoScreenId, DemoScreenGuide> = {
             },
             {
                 targetId: 'lead-db-promote-action',
-                targetSelector: '[data-demo-id="lead-db-drawer-primary-action"]',
+                targetSelector: '[aria-label$="가맹 희망자 승격"]',
                 title: '승격 처리',
-                description: '상담 가능성이 확인된 1차 유입 DB는 상세 드로어에서 가맹 희망자로 승격합니다.'
+                description: '상담 가능성이 확인된 1차 유입 DB는 목록의 승격 버튼으로 가맹 희망자 단계로 이동합니다.'
             },
             {
                 targetId: 'lead-db-candidate-tab',
@@ -218,9 +218,9 @@ export const DEMO_SCREEN_GUIDES: Record<DemoScreenId, DemoScreenGuide> = {
         title: '물건지 지도는 운영점과 후보지를 한 지도에서 봅니다.',
         description: 'Kakao 지도 기반 화면의 구조를 샘플로 재현했습니다. 데모에서는 정적 좌표와 로컬 상태만 사용합니다.',
         steps: [
-            { targetId: 'location-map-filters', title: '대상 전환', description: '전체, 가맹 운영점, 출점 후보지를 탭으로 나눠 현재 보고 싶은 물건지만 봅니다.' },
-            { targetId: 'location-map-canvas', title: '마커 선택', description: '지도 마커를 누르면 우측 상세 카드와 반경분석 기준이 함께 바뀝니다.' },
-            { targetId: 'location-map-panel', title: '지도 분석', description: '우측 패널에서 반경분석, 거리재기, 면적재기 흐름을 같은 용어로 확인합니다.' }
+            { targetId: 'location-map-page', title: '대상 전환', description: '전체, 가맹 운영점, 출점 후보지를 탭으로 나눠 현재 보고 싶은 물건지만 봅니다.' },
+            { targetId: 'location-map-page', title: '마커 선택', description: '지도 마커를 누르면 우측 상세 카드와 반경분석 기준이 함께 바뀝니다.' },
+            { targetId: 'location-map-page', title: '지도 분석', description: '우측 패널에서 반경분석, 거리재기, 면적재기 흐름을 같은 용어로 확인합니다.' }
         ],
         actions: [
             { label: '출점 후보지 보기', screen: 'location' },

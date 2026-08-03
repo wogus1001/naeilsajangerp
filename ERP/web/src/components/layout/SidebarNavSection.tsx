@@ -31,6 +31,8 @@ type SidebarNavSectionProps = {
     readonly isFeatureEnabled: (key: CompanyMenuFeatureKey) => boolean;
     readonly activeItems: readonly SidebarMenuItem[];
     readonly onToggle: () => void;
+    readonly onNavigate?: (href: string) => void;
+    readonly getItemTestId?: (href: string) => string | undefined;
 };
 
 function renderSectionIcon(key: SidebarSectionKey) {
@@ -97,7 +99,9 @@ export function SidebarNavSection({
     isVisible = true,
     isFeatureEnabled,
     activeItems,
-    onToggle
+    onToggle,
+    onNavigate,
+    getItemTestId
 }: SidebarNavSectionProps) {
     if (!isVisible) return null;
 
@@ -118,6 +122,12 @@ export function SidebarNavSection({
                     href={item.url}
                     className={`${styles.navGroupTitle} ${isSidebarItemActive(item, pathname, activeItems) ? styles.active : ''}`}
                     title={!isSidebarOpen ? section.collapsedTitle : undefined}
+                    data-demo-id={getItemTestId?.(item.url)}
+                    onClick={event => {
+                        if (!onNavigate) return;
+                        event.preventDefault();
+                        onNavigate(item.url!);
+                    }}
                 >
                     <div className={styles.navGroupLabel}>
                         {renderSectionIcon(section.key)}
@@ -167,6 +177,12 @@ export function SidebarNavSection({
                                 key={item.url}
                                 href={item.url}
                                 className={`${styles.navSubLink} ${item.depth === 1 ? styles.navSubLinkChild : ''} ${isSidebarItemActive(item, pathname, activeItems) ? styles.active : ''}`}
+                                data-demo-id={getItemTestId?.(item.url)}
+                                onClick={event => {
+                                    if (!onNavigate) return;
+                                    event.preventDefault();
+                                    onNavigate(item.url!);
+                                }}
                             >
                                 {icon ? (
                                     <span className={styles.navSubLinkContent}>

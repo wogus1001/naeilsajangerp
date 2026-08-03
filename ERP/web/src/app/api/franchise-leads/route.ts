@@ -21,6 +21,7 @@ import {
     canAccessFranchiseLead,
     shouldRestrictFranchiseLeadListToCreator
 } from '@/lib/franchise-lead-access';
+import { resolveUpdatedLeadStage } from '@/lib/franchise-lead-stage-transition';
 import { canManageWorkIntakeRecord } from '@/lib/work-intake-access';
 import {
     canEnterContractStatus,
@@ -116,7 +117,8 @@ const CONTROL_FIELDS = new Set([
     'nextContactAt',
     'next_contact_at',
     'lastContactedAt',
-    'last_contacted_at'
+    'last_contacted_at',
+    'leadStageTransition'
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -431,12 +433,12 @@ function buildInsertPayload(body: Record<string, unknown>, companyId: string, ma
 function buildUpdatePayload(body: Record<string, unknown>, existingData: Record<string, unknown> = {}) {
     const existingStage = normalizeLeadStage(existingData.leadStage);
     const incomingStage = hasAny(body, ['leadStage']) ? normalizeLeadStage(body.leadStage) : null;
-    const preserveCandidateStage = existingStage === 'candidate' && incomingStage === 'raw_intake';
+    const nextStage = resolveUpdatedLeadStage(existingStage, incomingStage, body.leadStageTransition);
     const updates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
         data: {
             ...buildDataPayload(body, existingData),
-            ...(preserveCandidateStage ? { leadStage: 'candidate' } : {})
+            ...(nextStage ? { leadStage: nextStage } : {})
         }
     };
 

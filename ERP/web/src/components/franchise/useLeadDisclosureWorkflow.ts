@@ -4,12 +4,7 @@ import {
     buildInitialDraft,
     type DocumentDraft
 } from './leadDisclosureFormUtils';
-import {
-    deleteDisclosureDocumentRequest,
-    fetchLeadDisclosureWorkflowState,
-    saveDisclosureDocumentRequest,
-    uploadDisclosureFileRequest
-} from './leadDisclosureWorkflowRequests';
+import { useLeadDetailRuntime } from './leads/LeadDetailRuntimeProvider';
 import { useLeadDisclosureGmail } from './useLeadDisclosureGmail';
 
 type UseLeadDisclosureWorkflowInput = {
@@ -33,6 +28,7 @@ export function useLeadDisclosureWorkflow({
     interestedBrand,
     onEligibilityChange
 }: UseLeadDisclosureWorkflowInput) {
+    const { disclosure } = useLeadDetailRuntime();
     const [documents, setDocuments] = React.useState<readonly FranchiseDisclosureDocument[]>([]);
     const [deliveries, setDeliveries] = React.useState<readonly FranchiseLeadDisclosureDelivery[]>([]);
     const [eligibility, setEligibility] = React.useState<DisclosureEligibility | null>(null);
@@ -51,7 +47,7 @@ export function useLeadDisclosureWorkflow({
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const disclosureState = await fetchLeadDisclosureWorkflowState({
+            const disclosureState = await disclosure.load({
                 userId,
                 leadId,
                 companyId,
@@ -74,7 +70,7 @@ export function useLeadDisclosureWorkflow({
         } finally {
             setIsLoading(false);
         }
-    }, [companyId, companyName, interestedBrand, leadId, leadName, onEligibilityChange, userId]);
+    }, [companyId, companyName, disclosure, interestedBrand, leadId, leadName, onEligibilityChange, userId]);
 
     React.useEffect(() => {
         setDraft(buildInitialDraft(leadName, interestedBrand));
@@ -119,7 +115,7 @@ export function useLeadDisclosureWorkflow({
         setMessage('');
         setErrorMessage('');
         try {
-            const upload = await uploadDisclosureFileRequest({
+            const upload = await disclosure.upload({
                 companyId,
                 companyName,
                 file,
@@ -147,7 +143,7 @@ export function useLeadDisclosureWorkflow({
         setMessage('');
         setErrorMessage('');
         try {
-            const document = await saveDisclosureDocumentRequest({
+            const document = await disclosure.saveDocument({
                 requesterId: userId,
                 companyId,
                 companyName,
@@ -170,7 +166,7 @@ export function useLeadDisclosureWorkflow({
         setMessage('');
         setErrorMessage('');
         try {
-            await deleteDisclosureDocumentRequest({
+            await disclosure.deleteDocument({
                 requesterId: userId,
                 documentId
             });

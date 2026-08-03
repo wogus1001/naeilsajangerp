@@ -9,7 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "qa:demo-ui": "node scripts/demo-ui-parity-qa.mjs"
   },
   "dependencies": {
     "@pdfme/common": "^6.1.11",

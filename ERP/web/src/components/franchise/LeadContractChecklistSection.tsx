@@ -19,9 +19,8 @@ import type {
     LeadContractChecklistStep,
     LeadContractRequirementType
 } from '@/lib/franchise-lead-contract-checklist';
-import { buildLeadDocumentStoragePrefix } from '@/lib/franchise-lead-document-storage';
-import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
-import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
+import { useLeadDetailRuntime } from './leads/LeadDetailRuntimeProvider';
 import { useLeadContractChecklist } from './useLeadContractChecklist';
 import styles from './LeadContractChecklistSection.module.css';
 
@@ -45,25 +44,11 @@ type QuickDocumentDraft = {
     readonly file: File | null;
 };
 
-type UploadResponse = {
-    readonly path?: string;
-};
-
-type OpenDocumentResponse = {
-    readonly url?: string;
-};
-
 type ElectronicContractOption = {
     readonly id: string;
     readonly name: string;
     readonly status: string;
 };
-
-type ElectronicContractsResponse = {
-    readonly contracts?: readonly ElectronicContractOption[];
-};
-
-const UPLOAD_BUCKET = 'property-documents';
 
 const CHECKLIST_GROUPS = [
     {
@@ -104,14 +89,6 @@ function formatChecklistDate(value: string): string {
     const hour = String(parsed.getHours()).padStart(2, '0');
     const minute = String(parsed.getMinutes()).padStart(2, '0');
     return `${month}.${day} ${hour}:${minute}`;
-}
-
-function sanitizePathPart(value: string): string {
-    return value
-        .trim()
-        .replace(/[^a-zA-Z0-9._-]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        || 'document';
 }
 
 function summaryCardClass(requirementType: LeadContractRequirementType): string {
@@ -182,6 +159,7 @@ export function LeadContractChecklistSection({
     refreshKey,
     userId
 }: Props) {
+    const { documents: documentRuntime } = useLeadDetailRuntime();
     const {
         errorMessage,
         fetchChecklist,
@@ -197,26 +175,40 @@ export function LeadContractChecklistSection({
     const [quickSavingStepKey, setQuickSavingStepKey] = React.useState('');
     const [documentMessage, setDocumentMessage] = React.useState('');
     const [documentErrorMessage, setDocumentErrorMessage] = React.useState('');
+    const sectionRef = React.useRef<HTMLElement | null>(null);
+    const quickDialogRef = React.useRef<HTMLElement | null>(null);
     const activeDocumentStep = quickDraft
         ? steps.find(step => step.stepKey === quickDraft.stepKey) || null
         : null;
+    useModalFocusTrap({
+        dialogRef: quickDialogRef,
+        isOpen: Boolean(quickDraft && activeDocumentStep),
+        onClose: () => setQuickDraft(null)
+    });
+
+    React.useEffect(() => {
+        if (!quickDraft) return;
+        const parentDialog = sectionRef.current?.closest<HTMLElement>('[role="dialog"]');
+        if (!parentDialog) return;
+        const previousAriaModal = parentDialog.getAttribute('aria-modal');
+        parentDialog.setAttribute('aria-modal', 'false');
+        return () => {
+            if (previousAriaModal === null) {
+                parentDialog.removeAttribute('aria-modal');
+                return;
+            }
+            parentDialog.setAttribute('aria-modal', previousAriaModal);
+        };
+    }, [quickDraft]);
 
     const fetchElectronicContracts = React.useCallback(async () => {
         if (!leadId) return;
         try {
-            const params = new URLSearchParams({ scope: 'company', leadId });
-            const response = await fetch(`/api/electronic-contracts?${params.toString()}`, {
-                cache: 'no-store',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<ElectronicContractsResponse>(payload);
-            setElectronicContracts((data.contracts || []).filter(contract => contract.status === 'completed'));
+            setElectronicContracts(await documentRuntime.loadElectronicContracts({ leadId }));
         } catch {
             setElectronicContracts([]);
         }
-    }, [leadId]);
+    }, [documentRuntime, leadId]);
 
     React.useEffect(() => {
         const timeoutId = window.setTimeout(() => void fetchElectronicContracts(), 0);
@@ -244,29 +236,7 @@ export function LeadContractChecklistSection({
 
     const uploadFile = async (file: File) => {
         if (!companyId) throw new Error('회사 정보를 확인할 수 없습니다.');
-        const formData = new FormData();
-        const suffix = Math.random().toString(36).slice(2, 10) || 'upload';
-        const fileName = sanitizePathPart(file.name);
-        const storagePrefix = buildLeadDocumentStoragePrefix({ companyId, leadId });
-        formData.append('file', file);
-        formData.append('bucket', UPLOAD_BUCKET);
-        formData.append('companyId', companyId);
-        formData.append('leadId', leadId);
-        formData.append(
-            'path',
-            `${storagePrefix}${Date.now()}-${suffix}-${fileName}`
-        );
-
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-            headers: await getApiAuthHeaders()
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(readApiError(payload));
-        const data = unwrapApiData<UploadResponse>(payload);
-        if (!data.path) throw new Error('업로드 경로를 확인할 수 없습니다.');
-        return data;
+        return documentRuntime.upload({ companyId, leadId, file });
     };
 
     const openUploadedDocument = async (documentId: string) => {
@@ -274,16 +244,8 @@ export function LeadContractChecklistSection({
         setDocumentMessage('');
         setDocumentErrorMessage('');
         try {
-            const params = new URLSearchParams({ action: 'open', documentId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
-                cache: 'no-store',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<OpenDocumentResponse>(payload);
-            if (!data.url) throw new Error('문서 열람 URL을 확인하지 못했습니다.');
-            window.open(data.url, '_blank', 'noopener,noreferrer');
+            const url = await documentRuntime.open({ documentId });
+            window.open(url, '_blank', 'noopener,noreferrer');
         } catch (error) {
             setDocumentErrorMessage(error instanceof Error ? error.message : '문서를 열지 못했습니다.');
         }
@@ -313,24 +275,18 @@ export function LeadContractChecklistSection({
                 ? await uploadFile(quickDraft.file)
                 : null;
             const selectedContract = electronicContracts.find(contract => contract.id === quickDraft.electronicContractId);
-            const response = await fetch('/api/franchise-lead-documents', {
-                method: 'POST',
-                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({
-                    leadId,
-                    title: quickDraft.mode === 'electronic_contract' ? selectedContract?.name || title : title,
-                    sourceType: quickDraft.mode,
-                    sourceId: quickDraft.mode === 'electronic_contract' ? quickDraft.electronicContractId : '',
-                    documentStatus: 'stored',
-                    fileName: quickDraft.file?.name || '',
-                    storageBucket: uploadResult ? UPLOAD_BUCKET : '',
-                    storagePath: uploadResult?.path || '',
-                    memo: quickDraft.memo,
-                    checklistStepKey: quickDraft.stepKey
-                })
+            await documentRuntime.create({
+                leadId,
+                title: quickDraft.mode === 'electronic_contract' ? selectedContract?.name || title : title,
+                sourceType: quickDraft.mode,
+                sourceId: quickDraft.mode === 'electronic_contract' ? quickDraft.electronicContractId : '',
+                documentStatus: 'stored',
+                fileName: uploadResult?.fileName || '',
+                storageBucket: uploadResult?.storageBucket || '',
+                storagePath: uploadResult?.storagePath || '',
+                memo: quickDraft.memo,
+                checklistStepKey: quickDraft.stepKey
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
             setQuickDraft(null);
             setDocumentMessage('연결 문서를 등록했습니다.');
             await fetchChecklist();
@@ -348,13 +304,7 @@ export function LeadContractChecklistSection({
         setDocumentMessage('');
         setDocumentErrorMessage('');
         try {
-            const params = new URLSearchParams({ id: documentId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
-                method: 'DELETE',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
+            await documentRuntime.remove({ documentId });
             setDocumentMessage('문서를 삭제했습니다.');
             await fetchChecklist();
             onDocumentChanged?.();
@@ -366,7 +316,7 @@ export function LeadContractChecklistSection({
     };
 
     return (
-        <section className={styles.section}>
+        <section ref={sectionRef} className={styles.section}>
             <div className={styles.header}>
                 <div>
                     <h3><ListChecks size={16} /> 구비서류</h3>
@@ -501,10 +451,12 @@ export function LeadContractChecklistSection({
             {quickDraft && activeDocumentStep && (
                 <div className={styles.documentModalBackdrop} onClick={() => setQuickDraft(null)}>
                     <section
+                        ref={quickDialogRef}
                         className={styles.documentModal}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="lead-checklist-document-modal-title"
+                        tabIndex={-1}
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className={styles.documentModalHeader}>

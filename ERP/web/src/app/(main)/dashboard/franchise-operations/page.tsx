@@ -1,125 +1,39 @@
 "use client";
 
-import React from 'react';
-import { BarChart3, List, PencilLine } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
-import { FranchiseOperationDashboard } from '@/components/franchise/operations/FranchiseOperationDashboard';
-import { FranchiseLocationForm } from '@/components/franchise/operations/FranchiseLocationForm';
-import { FranchiseLocationList } from '@/components/franchise/operations/FranchiseLocationList';
-import { OperationsSummary } from '@/components/franchise/operations/OperationsSummary';
-import type { FranchiseLocation } from '@/components/franchise/operations/types';
+import { FranchiseOperationsWorkspace } from '@/components/franchise/operations/FranchiseOperationsWorkspace';
 import { useFranchiseOperationsController } from '@/components/franchise/operations/useFranchiseOperationsController';
-import styles from '../franchise-leads/page.module.css';
-
-type MasterView = 'dashboard' | 'list' | 'form';
-
-const MASTER_VIEWS: readonly {
-    readonly key: MasterView;
-    readonly label: string;
-    readonly icon: React.ComponentType<{ readonly size?: number }>;
-}[] = [
-    { key: 'dashboard', label: '대시보드', icon: BarChart3 },
-    { key: 'list', label: '가맹점 목록', icon: List },
-    { key: 'form', label: '가맹점 등록', icon: PencilLine }
-];
 
 export default function FranchiseOperationsPage() {
     const router = useRouter();
     const controller = useFranchiseOperationsController();
-    const [masterView, setMasterView] = React.useState<MasterView>('dashboard');
-
-    React.useEffect(() => {
-        if (controller.locationForm.id) {
-            setMasterView('form');
-        }
-    }, [controller.locationForm.id]);
-
-    const editLocation = (location: FranchiseLocation) => {
-        controller.editLocation(location);
-        setMasterView('form');
-    };
 
     return (
-        <div className={styles.pageShell}>
-            <FranchiseWorkspaceHero
-                title="가맹 운영"
-                description="운영중인 직영점과 가맹점의 상태, 주소, 담당 메모를 본사용 운영 관점에서 관리합니다."
-            />
-
-            <section className={styles.operationWorkspace}>
-                <div className={styles.locationMasterToolbar}>
-                    <div className={styles.locationModeTabs} role="tablist" aria-label="가맹 운영 보기">
-                        {MASTER_VIEWS.map(view => {
-                            const Icon = view.icon;
-                            const isActive = masterView === view.key;
-                            return (
-                                <button
-                                    key={view.key}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={isActive}
-                                    className={isActive ? styles.locationModeTabActive : styles.locationModeTab}
-                                    onClick={() => setMasterView(view.key)}
-                                >
-                                    <Icon size={13} />
-                                    {view.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-                <div className={styles.operationWorkspaceBody}>
-                    {masterView === 'dashboard' ? (
-                        <>
-                            <OperationsSummary
-                                activeCount={controller.counts.activeCount}
-                                openingCount={controller.counts.openingCount}
-                                pausedCount={controller.counts.pausedCount}
-                                totalCount={controller.operationalLocations.length}
-                            />
-                            <FranchiseOperationDashboard locations={controller.operationalLocations} />
-                        </>
-                    ) : null}
-
-                    {masterView === 'list' ? (
-                        <FranchiseLocationList
-                            locations={controller.operationalLocations}
-                            updatingStatusId={controller.updatingStatusId}
-                            deletingLocationId={controller.deletingLocationId}
-                            onEdit={editLocation}
-                            onOpenOwnerPortal={(location) => {
-                                router.push(`/dashboard/franchise-operations/owner-portal?locationId=${encodeURIComponent(location.id)}`);
-                            }}
-                            onDelete={(location) => void controller.deleteLocation(location)}
-                            onStatusChange={(location, status) => void controller.updateLocationStatus(location, status)}
-                        />
-                    ) : null}
-
-                    {masterView === 'form' ? (
-                        <div className={styles.locationMasterFormPane}>
-                            <FranchiseLocationForm
-                                userId={controller.userId}
-                                companyName={controller.companyName}
-                                form={controller.locationForm}
-                                isSaving={controller.isSaving}
-                                onChange={controller.updateLocationForm}
-                                onReset={controller.resetLocationForm}
-                                onSave={() => void controller.saveLocation()}
-                                onSelectAddress={controller.selectKakaoAddress}
-                                onSelectBrand={controller.selectBrand}
-                            />
-                        </div>
-                    ) : null}
-                </div>
-                <div className={styles.marketRoadmap}>
-                    <strong>운영 확장</strong>
-                    <span>SV 방문/점검</span>
-                    <span>계약완료 인계</span>
-                    <span>CS/이슈 티켓</span>
-                    <span>공지/매뉴얼 배포</span>
-                </div>
-            </section>
-        </div>
+        <FranchiseOperationsWorkspace
+            model={{
+                userId: controller.userId,
+                companyName: controller.companyName,
+                locationForm: controller.locationForm,
+                isSaving: controller.isSaving,
+                deletingLocationId: controller.deletingLocationId,
+                updatingStatusId: controller.updatingStatusId,
+                locations: controller.operationalLocations,
+                counts: controller.counts
+            }}
+            actions={{
+                updateLocationForm: controller.updateLocationForm,
+                resetLocationForm: controller.resetLocationForm,
+                saveLocation: controller.saveLocation,
+                editLocation: controller.editLocation,
+                selectAddress: controller.selectKakaoAddress,
+                selectBrand: controller.selectBrand,
+                confirmDeleteLocation: controller.confirmDeleteLocation,
+                deleteLocation: controller.deleteLocation,
+                updateLocationStatus: controller.updateLocationStatus,
+                openOwnerPortal: (location) => {
+                    router.push(`/dashboard/franchise-operations/owner-portal?locationId=${encodeURIComponent(location.id)}`);
+                }
+            }}
+        />
     );
 }
