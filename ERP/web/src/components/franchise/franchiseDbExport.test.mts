@@ -41,6 +41,40 @@ test('Given visible lead columns include actions When building export columns Th
     assert.equal('actions' in (rows[0] || {}), false);
 });
 
+test('Given a lead has consultation history When exporting recent activity columns Then the latest contact is included', () => {
+    const columns = buildLeadExportColumns(['name', 'lastContactedAt', 'latestActivity']);
+    const rows = buildLeadExportRows([
+        {
+            id: 'lead-activity',
+            name: '이희망',
+            mobile: '010-1111-2222',
+            source: 'Meta',
+            status: '상담중',
+            grade: '',
+            desiredRegion: '서울 송파구',
+            budgetMin: null,
+            budgetMax: null,
+            interestedBrand: '',
+            memo: '',
+            nextContactAt: null,
+            lastContactedAt: '2026-08-03T06:28:00.000Z',
+            createdAt: '2026-08-03T00:00:00.000Z',
+            updatedAt: '2026-08-03T06:28:00.000Z',
+            activityLog: [{
+                id: 'activity-absence',
+                type: '부재',
+                content: '연락이 닿지 않아 오후에 다시 연락 예정',
+                createdAt: '2026-08-03T06:28:00.000Z',
+                createdBy: '관리자'
+            }]
+        } satisfies FranchiseLead
+    ], columns, () => '-');
+
+    assert.deepEqual(columns.map(column => column.label), ['가맹 희망자', '최근 연락 일자', '최근 이력 내용']);
+    assert.equal(rows[0]?.lastContactedAt, '08. 03. 오후 03:28');
+    assert.equal(rows[0]?.latestActivity, '부재 · 연락이 닿지 않아 오후에 다시 연락 예정');
+});
+
 test('Given candidate locations When building export rows Then matched columns use candidate data and full memo text', () => {
     const columns = buildLocationExportColumns(['name', 'deposit', 'premium', 'monthlyRent', 'memo', 'actions']);
     const location = {

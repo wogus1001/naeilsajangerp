@@ -5,18 +5,22 @@ import { Bell, Check } from 'lucide-react';
 import type { StoredUser } from '@/utils/userUtils';
 import {
     fetchHeaderNotifications,
-    getSafeHeaderNotificationActionUrl,
     markAllHeaderNotificationsRead,
     markHeaderNotificationRead,
     type HeaderNotification,
     type HeaderNotificationCategory
 } from './notificationRequests';
+import {
+    getHeaderNotificationPollingInterval,
+    navigateToSafeHeaderNotificationAction,
+    type HeaderNotificationDataSource
+} from './headerNotificationDataSource';
 import styles from './NotificationBell.module.css';
-
-type NotificationBellProps = {
+export type NotificationBellProps = {
     readonly user: StoredUser;
+    readonly dataSource?: HeaderNotificationDataSource;
 };
-
+export type { HeaderNotificationDataSource } from './headerNotificationDataSource';
 function formatNotificationTime(value: string | null): string {
     if (!value) return '';
     const date = new Date(value);
@@ -54,7 +58,7 @@ function getCategoryLabel(category: HeaderNotificationCategory): string {
     }
 }
 
-export function NotificationBell({ user }: NotificationBellProps) {
+export function NotificationBell({ user, dataSource }: NotificationBellProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const [schemaReady, setSchemaReady] = React.useState(true);
     const [categoryFilter, setCategoryFilter] = React.useState<'all' | HeaderNotificationCategory>('all');
@@ -62,6 +66,8 @@ export function NotificationBell({ user }: NotificationBellProps) {
     const [notifications, setNotifications] = React.useState<readonly HeaderNotification[]>([]);
     const [markingNotificationId, setMarkingNotificationId] = React.useState<string | null>(null);
     const panelRef = React.useRef<HTMLDivElement>(null);
+    const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const panelId = React.useId();
     const visibleNotifications = React.useMemo(() => (
         categoryFilter === 'all'
             ? notifications
@@ -70,22 +76,26 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
     const refreshNotifications = React.useCallback(async () => {
         try {
-            const result = await fetchHeaderNotifications(user, categoryFilter);
+            const result = dataSource
+                ? await dataSource.load(categoryFilter)
+                : await fetchHeaderNotifications(user, categoryFilter);
             setNotifications(result.notifications);
             setUnreadCount(result.unreadCount);
             setSchemaReady(result.schemaReady);
         } catch (error) {
             console.error('Failed to load notifications:', error);
         }
-    }, [categoryFilter, user]);
+    }, [categoryFilter, dataSource, user]);
 
     React.useEffect(() => {
         void refreshNotifications();
+        const pollingInterval = getHeaderNotificationPollingInterval(dataSource);
+        if (pollingInterval === null) return;
         const intervalId = window.setInterval(() => {
             void refreshNotifications();
-        }, 60_000);
+        }, pollingInterval);
         return () => window.clearInterval(intervalId);
-    }, [refreshNotifications]);
+    }, [dataSource, refreshNotifications]);
 
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -97,26 +107,55 @@ export function NotificationBell({ user }: NotificationBellProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const focusFrame = window.requestAnimationFrame(() => {
+            panelRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+        });
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            setIsOpen(false);
+            triggerRef.current?.focus();
+        };
+        document.addEventListener('keydown', handleKeyDown, true);
+        return () => {
+            window.cancelAnimationFrame(focusFrame);
+            document.removeEventListener('keydown', handleKeyDown, true);
+        };
+    }, [isOpen]);
+
+    const markNotificationRead = async (notificationId: string): Promise<void> => {
+        if (dataSource) {
+            await dataSource.markOneRead(notificationId);
+            return;
+        }
+        await markHeaderNotificationRead(user, notificationId);
+    };
+
     const openNotification = async (notification: HeaderNotification) => {
         if (!notification.readAt) {
             try {
-                await markHeaderNotificationRead(user, notification.id);
+                await markNotificationRead(notification.id);
                 await refreshNotifications();
             } catch (error) {
                 console.error('Failed to mark notification as read:', error);
             }
         }
-        const safeActionUrl = getSafeHeaderNotificationActionUrl(notification.actionUrl);
-        if (safeActionUrl) {
+        navigateToSafeHeaderNotificationAction(notification.actionUrl, safeActionUrl => {
+            if (dataSource) {
+                dataSource.navigate(safeActionUrl);
+                return;
+            }
             window.location.href = safeActionUrl;
-        }
+        });
     };
 
     const markOneRead = async (notification: HeaderNotification) => {
         if (notification.readAt) return;
         setMarkingNotificationId(notification.id);
         try {
-            await markHeaderNotificationRead(user, notification.id);
+            await markNotificationRead(notification.id);
             await refreshNotifications();
         } catch (error) {
             console.error('Failed to mark notification as read:', error);
@@ -127,7 +166,11 @@ export function NotificationBell({ user }: NotificationBellProps) {
 
     const markAllRead = async () => {
         try {
-            await markAllHeaderNotificationsRead(user);
+            if (dataSource) {
+                await dataSource.markAllRead();
+            } else {
+                await markAllHeaderNotificationsRead(user);
+            }
             await refreshNotifications();
         } catch (error) {
             console.error('Failed to mark all notifications as read:', error);
@@ -137,9 +180,13 @@ export function NotificationBell({ user }: NotificationBellProps) {
     return (
         <div className={styles.notificationWrap} ref={panelRef}>
             <button
+                ref={triggerRef}
                 type="button"
                 className={styles.notificationBtn}
                 aria-label={`알림 ${unreadCount}건`}
+                aria-expanded={isOpen}
+                aria-controls={panelId}
+                aria-haspopup="dialog"
                 onClick={() => setIsOpen(prev => !prev)}
             >
                 <Bell size={18} aria-hidden="true" />
@@ -147,7 +194,14 @@ export function NotificationBell({ user }: NotificationBellProps) {
             </button>
 
             {isOpen && (
-                <div className={styles.notificationPanel}>
+                <div
+                    id={panelId}
+                    className={styles.notificationPanel}
+                    role="dialog"
+                    aria-modal="false"
+                    aria-label="알림 목록"
+                    tabIndex={-1}
+                >
                     <div className={styles.notificationPanelHeader}>
                         <div>
                             <strong>알림</strong>

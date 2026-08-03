@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Calculator, X } from 'lucide-react';
 import { useAppDialog } from '@/components/common/AppDialogProvider';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
+import type { LocationMapRuntime } from '@/components/franchise/location-map/types';
 import {
     addMeetingToolCustomCostRow,
     calculateMeetingToolSummary,
@@ -35,7 +37,10 @@ import {
     removeRatioInputValue
 } from './locationMeetingToolDialogUtils';
 import type { ReportMapPosition } from './locationMeetingToolReportMap';
-import { saveLocationMeetingToolRequest } from './locationMasterRequests';
+import {
+    resolveLocationInteractionRuntime,
+    type LocationInteractionRuntime
+} from './locationInteractionRuntime';
 import { useLocationMeetingToolPresets } from './useLocationMeetingToolPresets';
 import { useLocationMeetingToolVersions } from './useLocationMeetingToolVersions';
 
@@ -43,6 +48,8 @@ type LocationMeetingToolDialogProps = {
     readonly open: boolean;
     readonly location: FranchiseLocation | null;
     readonly managerName: string;
+    readonly runtime?: LocationInteractionRuntime | undefined;
+    readonly mapRuntime?: LocationMapRuntime | undefined;
     readonly onOpenChange: (open: boolean) => void;
     readonly onSaved: (locationId: string, draft: MeetingToolDraft) => void;
 };
@@ -51,16 +58,27 @@ export function LocationMeetingToolDialog({
     open,
     location,
     managerName,
+    runtime,
+    mapRuntime,
     onOpenChange,
     onSaved
 }: LocationMeetingToolDialogProps) {
-    const { showAlert } = useAppDialog();
+    const { isDialogOpen, showAlert } = useAppDialog();
+    const interactions = resolveLocationInteractionRuntime(runtime);
     const [draft, setDraft] = React.useState<MeetingToolDraft>(() => normalizeMeetingToolDraft(null));
     const [customCostLabel, setCustomCostLabel] = React.useState('');
     const [ratioInputValues, setRatioInputValues] = React.useState<Record<MeetingToolCostKey, string>>({});
     const [reportMapPosition, setReportMapPosition] = React.useState<ReportMapPosition | null>(null);
     const [saving, setSaving] = React.useState(false);
     const [message, setMessage] = React.useState('');
+    const dialogRef = React.useRef<HTMLDivElement | null>(null);
+    const updateReportMapPosition = React.useCallback((position: ReportMapPosition | null) => {
+        setReportMapPosition(prev => {
+            if (!position) return prev === null ? prev : null;
+            if (prev && prev.lat === position.lat && prev.lng === position.lng) return prev;
+            return position;
+        });
+    }, []);
     const locationId = location?.id || '';
     const companyId = location?.companyId || '';
     const initializedLocationIdRef = React.useRef('');
@@ -68,6 +86,7 @@ export function LocationMeetingToolDialog({
         open,
         companyId,
         locationId,
+        runtime: interactions,
         draft,
         setDraft,
         setRatioInputValues,
@@ -77,10 +96,16 @@ export function LocationMeetingToolDialog({
         open,
         locationId,
         location,
+        runtime: interactions,
         draft,
         setDraft,
         setRatioInputValues,
         setMessage
+    });
+    useModalFocusTrap({
+        dialogRef,
+        isOpen: open && Boolean(location),
+        onClose: () => onOpenChange(false)
     });
 
     React.useEffect(() => {
@@ -129,7 +154,7 @@ export function LocationMeetingToolDialog({
         setSaving(true);
         setMessage('');
         try {
-            const saved = await saveLocationMeetingToolRequest({ locationId, meetingTool: draft });
+            const saved = await interactions.saveMeetingTool({ locationId, meetingTool: draft });
             setDraft(saved);
             onSaved(locationId, saved);
             setMessage('출점 검토 리포트를 저장했습니다.');
@@ -176,16 +201,16 @@ export function LocationMeetingToolDialog({
         }));
     };
 
-    const updateReportMapPosition = React.useCallback((position: ReportMapPosition | null) => {
-        setReportMapPosition(prev => {
-            if (!position) return prev === null ? prev : null;
-            if (prev && prev.lat === position.lat && prev.lng === position.lng) return prev;
-            return position;
-        });
-    }, []);
-
     return (
-        <div className={styles.meetingToolBackdrop} role="dialog" aria-modal="true" aria-label="출점 검토 리포트">
+        <div
+            ref={dialogRef}
+            className={styles.meetingToolBackdrop}
+            role="dialog"
+            aria-hidden={isDialogOpen || undefined}
+            aria-modal={isDialogOpen ? undefined : 'true'}
+            aria-label="출점 검토 리포트"
+            tabIndex={-1}
+        >
             <section className={styles.meetingToolPanel}>
                 <header className={styles.meetingToolHeader}>
                     <div>
@@ -248,6 +273,7 @@ export function LocationMeetingToolDialog({
                     <LocationMeetingToolMarketMapSection
                         location={location}
                         marketMap={draft.marketMap}
+                        mapRuntime={mapRuntime}
                         onMapPositionChange={updateReportMapPosition}
                         onMarketMapChange={(marketMap) => setDraft(prev => ({ ...prev, marketMap }))}
                     />

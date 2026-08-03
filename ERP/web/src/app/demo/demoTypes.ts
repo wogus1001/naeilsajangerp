@@ -89,6 +89,7 @@ export type DemoActionHandler = (label: string) => void;
 
 export type DemoWorkspaceProps = {
     readonly activeScreen: DemoScreenId;
+    readonly dashboardUserName?: string;
     readonly onSimulate: DemoActionHandler;
     readonly onScreenChange: (screen: DemoScreenId) => void;
 };

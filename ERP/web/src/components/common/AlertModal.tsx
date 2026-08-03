@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { useModalFocusTrap } from './useModalFocusTrap';
 
 interface AlertModalProps {
     isOpen: boolean;
@@ -22,50 +23,14 @@ export function AlertModal({
 }: AlertModalProps) {
     const dialogRef = React.useRef<HTMLDivElement>(null);
     const closeButtonRef = React.useRef<HTMLButtonElement>(null);
-    const onCloseRef = React.useRef(onClose);
     const titleId = React.useId();
     const descriptionId = React.useId();
-
-    React.useEffect(() => {
-        onCloseRef.current = onClose;
-    }, [onClose]);
-
-    React.useEffect(() => {
-        if (!isOpen) return;
-
-        const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                onCloseRef.current();
-                return;
-            }
-            if (event.key !== 'Tab') return;
-
-            const focusableElements = dialogRef.current?.querySelectorAll<HTMLElement>(
-                'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-            );
-            if (!focusableElements?.length) return;
-
-            const first = focusableElements[0];
-            const last = focusableElements[focusableElements.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
-                event.preventDefault();
-                last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault();
-                first.focus();
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.cancelAnimationFrame(focusFrame);
-            document.removeEventListener('keydown', handleKeyDown);
-            previouslyFocused?.focus();
-        };
-    }, [isOpen]);
+    useModalFocusTrap({
+        dialogRef,
+        initialFocusRef: closeButtonRef,
+        isOpen,
+        onClose
+    });
 
     if (!isOpen) return null;
 

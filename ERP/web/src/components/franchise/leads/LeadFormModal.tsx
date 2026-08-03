@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Settings2, X } from 'lucide-react';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { LeadRegionMultiSelect } from './LeadRegionMultiSelect';
 import { LeadSourceOptionManager } from './LeadSourceOptionManager';
@@ -57,12 +58,42 @@ export function LeadFormModal({
     onUpdateSourceOptionAction
 }: LeadFormModalProps) {
     const [isSourceManagerOpen, setIsSourceManagerOpen] = React.useState(false);
+    const formRef = React.useRef<HTMLFormElement | null>(null);
     const title = form.id ? '가맹 희망자 수정' : '가맹 희망자 등록';
     const selectableSourceOptions = getSelectableFranchiseLeadSourceOptions(sourceOptions, form.source);
+    useModalFocusTrap({
+        dialogRef: formRef,
+        isOpen: true,
+        onClose: onCloseAction
+    });
+
+    React.useEffect(() => {
+        const parentDialog = Array.from(
+            document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+        ).filter(dialog => dialog !== formRef.current).at(-1);
+        if (!parentDialog) return;
+        const previousAriaModal = parentDialog.getAttribute('aria-modal');
+        parentDialog.setAttribute('aria-modal', 'false');
+        return () => {
+            if (previousAriaModal === null) {
+                parentDialog.removeAttribute('aria-modal');
+                return;
+            }
+            parentDialog.setAttribute('aria-modal', previousAriaModal);
+        };
+    }, []);
 
     return (
         <div className={styles.modalBackdrop}>
-            <form className={styles.modalCard} onSubmit={onSubmitAction} role="dialog" aria-modal="true" aria-labelledby="franchise-lead-modal-title">
+            <form
+                ref={formRef}
+                className={styles.modalCard}
+                onSubmit={onSubmitAction}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="franchise-lead-modal-title"
+                tabIndex={-1}
+            >
                 <div className={styles.modalHeader}>
                     <div>
                         <h2 id="franchise-lead-modal-title">{title}</h2>

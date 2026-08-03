@@ -3,6 +3,7 @@
 import React from 'react';
 import { CheckCircle2, MessageSquare, Send, X } from 'lucide-react';
 import { useAppDialog } from '@/components/common/AppDialogProvider';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { normalizeFranchiseLocationMasterData } from '@/lib/franchise-location-master';
 import type { FranchiseLocation } from './locationMasterTypes';
@@ -13,16 +14,16 @@ import type {
     LocationRequestStatus
 } from './locationMessageTypes';
 import {
-    createLocationMessage,
-    fetchLocationMessages,
-    updateLocationRequestStatus
-} from './locationMessageRequests';
+    resolveLocationInteractionRuntime,
+    type LocationInteractionRuntime
+} from './locationInteractionRuntime';
 
 type LocationMessagePanelProps = {
     readonly open: boolean;
     readonly userId: string;
     readonly location: FranchiseLocation | null;
     readonly managerName: string;
+    readonly runtime?: LocationInteractionRuntime | undefined;
     readonly onOpenChange: (open: boolean) => void;
     readonly onSummaryChange: (summary: FranchiseLocationMessageSummary) => void;
 };
@@ -52,31 +53,27 @@ export function LocationMessagePanel({
     userId,
     location,
     managerName,
+    runtime,
     onOpenChange,
     onSummaryChange
 }: LocationMessagePanelProps) {
     const { showAlert } = useAppDialog();
+    const interactions = resolveLocationInteractionRuntime(runtime);
     const [messages, setMessages] = React.useState<readonly FranchiseLocationMessage[]>([]);
     const [draft, setDraft] = React.useState('');
     const [kind, setKind] = React.useState<LocationMessageKind>('note');
     const [isLoading, setIsLoading] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
     const [updatingMessageId, setUpdatingMessageId] = React.useState('');
-
-    React.useEffect(() => {
-        if (!open) return undefined;
-        const closeOnEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onOpenChange(false);
-        };
-        window.addEventListener('keydown', closeOnEscape);
-        return () => window.removeEventListener('keydown', closeOnEscape);
-    }, [onOpenChange, open]);
+    const panelRef = React.useRef<HTMLElement | null>(null);
+    const closePanel = React.useCallback(() => onOpenChange(false), [onOpenChange]);
+    useModalFocusTrap({ isOpen: open, onClose: closePanel, dialogRef: panelRef });
 
     React.useEffect(() => {
         if (!open || !location || !userId) return undefined;
         let isActive = true;
         setIsLoading(true);
-        void fetchLocationMessages({ userId, locationId: location.id })
+        void interactions.fetchMessages({ userId, locationId: location.id })
             .then(result => {
                 if (!isActive) return;
                 setMessages(result.messages);
@@ -91,7 +88,7 @@ export function LocationMessagePanel({
         return () => {
             isActive = false;
         };
-    }, [location, onSummaryChange, open, showAlert, userId]);
+    }, [interactions, location, onSummaryChange, open, showAlert, userId]);
 
     if (!open || !location) return null;
 
@@ -102,7 +99,7 @@ export function LocationMessagePanel({
         if (!canSubmit) return;
         setIsSaving(true);
         try {
-            const result = await createLocationMessage({
+            const result = await interactions.createMessage({
                 userId,
                 locationId: location.id,
                 body: draft,
@@ -123,7 +120,7 @@ export function LocationMessagePanel({
     const updateRequest = async (message: FranchiseLocationMessage, requestStatus: LocationRequestStatus) => {
         setUpdatingMessageId(message.id);
         try {
-            const result = await updateLocationRequestStatus({ userId, messageId: message.id, requestStatus });
+            const result = await interactions.updateRequestStatus({ userId, messageId: message.id, requestStatus });
             setMessages(result.messages);
             onSummaryChange(result.summary);
         } catch (error) {
@@ -142,7 +139,7 @@ export function LocationMessagePanel({
                 if (event.target === event.currentTarget) onOpenChange(false);
             }}
         >
-            <section className={styles.locationMessagePanel} role="dialog" aria-modal="true" aria-label="물건 기록">
+            <section ref={panelRef} className={styles.locationMessagePanel} role="dialog" aria-modal="true" aria-label="물건 기록" tabIndex={-1}>
                 <header className={styles.locationMessageHeader}>
                     <div>
                         <span className={styles.locationMessageEyebrow}><MessageSquare size={14} /> 물건 기록</span>

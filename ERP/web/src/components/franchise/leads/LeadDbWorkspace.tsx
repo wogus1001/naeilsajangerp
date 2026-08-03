@@ -89,6 +89,7 @@ export function LeadDbWorkspace({
     onVisibleTableColumnsChangeAction,
     onBulkNextContactAtChangeAction,
     onApplyBulkNextContactAction,
+    onReturnSelectedToRawIntakeAction,
     onClearSelectedAction,
     onToggleSelectAllVisibleAction,
     onToggleSelectLeadAction,
@@ -252,6 +253,7 @@ export function LeadDbWorkspace({
                         getManagerName={getManagerName}
                         onBulkNextContactAtChange={onBulkNextContactAtChangeAction}
                         onApplyBulkNextContact={onApplyBulkNextContactAction}
+                        onReturnSelectedToRawIntake={onReturnSelectedToRawIntakeAction}
                         onClearSelected={onClearSelectedAction}
                         onToggleSelectAllVisible={onToggleSelectAllVisibleAction}
                         onToggleSelectLead={onToggleSelectLeadAction}

@@ -7,16 +7,13 @@ import {
     type MeetingToolPreset
 } from '@/lib/franchise-location-meeting-tool';
 import { isDemoApiBlockedError } from './locationMeetingToolDialogUtils';
-import {
-    deleteLocationMeetingToolPresetRequest,
-    fetchLocationMeetingToolPresetsRequest,
-    saveLocationMeetingToolPresetRequest
-} from './locationMasterRequests';
+import type { LocationInteractionRuntime } from './locationInteractionRuntime';
 
 type UseLocationMeetingToolPresetsParams = {
     readonly open: boolean;
     readonly companyId: string;
     readonly locationId: string;
+    readonly runtime: LocationInteractionRuntime;
     readonly draft: MeetingToolDraft;
     readonly setDraft: React.Dispatch<React.SetStateAction<MeetingToolDraft>>;
     readonly setRatioInputValues: React.Dispatch<React.SetStateAction<Record<MeetingToolCostKey, string>>>;
@@ -27,6 +24,7 @@ export function useLocationMeetingToolPresets({
     open,
     companyId,
     locationId,
+    runtime,
     draft,
     setDraft,
     setRatioInputValues,
@@ -52,7 +50,7 @@ export function useLocationMeetingToolPresets({
         setSelectedPresetId('');
         setPresetName('');
         setPresetLoading(true);
-        fetchLocationMeetingToolPresetsRequest({ companyId })
+        runtime.fetchPresets({ companyId })
             .then(nextPresets => {
                 if (alive) setPresets(nextPresets);
             })
@@ -71,7 +69,7 @@ export function useLocationMeetingToolPresets({
         return () => {
             alive = false;
         };
-    }, [companyId, locationId, open, setMessage]);
+    }, [companyId, locationId, open, runtime, setMessage]);
 
     const selectedPreset = presets.find(preset => preset.id === selectedPresetId) || null;
 
@@ -98,7 +96,7 @@ export function useLocationMeetingToolPresets({
         setPresetSaving(true);
         setMessage('');
         try {
-            const savedPreset = await saveLocationMeetingToolPresetRequest({ companyId, name, meetingTool: draft });
+            const savedPreset = await runtime.savePreset({ companyId, name, meetingTool: draft });
             setPresets(prev => {
                 const withoutSame = prev.filter(preset => preset.id !== savedPreset.id && preset.name !== savedPreset.name);
                 return [savedPreset, ...withoutSame];
@@ -129,7 +127,7 @@ export function useLocationMeetingToolPresets({
         setPresetSaving(true);
         setMessage('');
         try {
-            await deleteLocationMeetingToolPresetRequest({ presetId: selectedPresetId });
+            await runtime.deletePreset({ presetId: selectedPresetId });
             setPresets(prev => prev.filter(preset => preset.id !== selectedPresetId));
             setSelectedPresetId('');
             setPresetName('');

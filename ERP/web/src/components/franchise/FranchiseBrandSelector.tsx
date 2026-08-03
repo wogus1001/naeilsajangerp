@@ -2,41 +2,52 @@
 
 import React from 'react';
 import { Search, X } from 'lucide-react';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { inferBrandKeywords } from '@/lib/franchise-brands';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 
 type ClassNames = {
-    field?: string;
-    row?: string;
-    input?: string;
-    button?: string;
-    results?: string;
-    resultItem?: string;
-    resultMeta?: string;
-    badge?: string;
-    empty?: string;
+    readonly field?: string;
+    readonly row?: string;
+    readonly input?: string;
+    readonly button?: string;
+    readonly results?: string;
+    readonly resultItem?: string;
+    readonly resultMeta?: string;
+    readonly badge?: string;
+    readonly empty?: string;
+};
+
+export type FranchiseBrandSearchSource = {
+    readonly search: (params: {
+        readonly requesterId: string;
+        readonly companyName: string;
+        readonly query: string;
+        readonly includeDisclosure: boolean;
+    }) => Promise<readonly FranchiseBrand[]>;
 };
 
 type FranchiseBrandSelectorProps = {
-    requesterId: string;
-    companyName?: string;
-    value: string;
-    disabled?: boolean;
-    classNames?: ClassNames;
-    onBrandChange: (value: string) => void;
-    onSelectBrand: (brand: FranchiseBrand) => void;
+    readonly requesterId: string;
+    readonly companyName?: string;
+    readonly value: string;
+    readonly disabled?: boolean;
+    readonly classNames?: ClassNames;
+    readonly searchSource?: FranchiseBrandSearchSource;
+    readonly onBrandChange: (value: string) => void;
+    readonly onSelectBrand: (brand: FranchiseBrand) => void;
 };
 
 type BrandListResponse = {
-    brands: FranchiseBrand[];
+    readonly brands: readonly FranchiseBrand[];
 };
 
 type FranchiseCacheBrand = {
-    brandNm?: string;
-    indutyLclasNm?: string;
-    indutyMlsfcNm?: string;
+    readonly brandNm?: string;
+    readonly indutyLclasNm?: string;
+    readonly indutyMlsfcNm?: string;
 };
 
 const OFFICIAL_SEARCH_WAIT_MS = 3500;
@@ -76,7 +87,14 @@ function mapFranchiseCacheBrand(brand: FranchiseCacheBrand, index: number): Fran
     };
 }
 
-function mergeBrands(primary: FranchiseBrand[], secondary: FranchiseBrand[]) {
+function isFranchiseBrand(value: FranchiseBrand | null): value is FranchiseBrand {
+    return value !== null;
+}
+
+function mergeBrands(
+    primary: readonly FranchiseBrand[],
+    secondary: readonly FranchiseBrand[]
+): readonly FranchiseBrand[] {
     const seen = new Set<string>();
     return [...primary, ...secondary].filter(brand => {
         const key = brand.brandName.trim().toLowerCase();
@@ -104,16 +122,26 @@ export default function FranchiseBrandSelector({
     value,
     disabled = false,
     classNames = {},
+    searchSource,
     onBrandChange,
     onSelectBrand
 }: FranchiseBrandSelectorProps) {
     const [query, setQuery] = React.useState(value);
     const [modalQuery, setModalQuery] = React.useState(value);
-    const [brands, setBrands] = React.useState<FranchiseBrand[]>([]);
+    const [brands, setBrands] = React.useState<readonly FranchiseBrand[]>([]);
     const [isSearching, setIsSearching] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [hasSearched, setHasSearched] = React.useState(false);
     const searchRunRef = React.useRef(0);
+    const dialogRef = React.useRef<HTMLDivElement | null>(null);
+    const modalInputRef = React.useRef<HTMLInputElement | null>(null);
+    const closeModal = React.useCallback(() => setIsModalOpen(false), []);
+    useModalFocusTrap({
+        isOpen: isModalOpen,
+        onClose: closeModal,
+        dialogRef,
+        initialFocusRef: modalInputRef
+    });
 
     React.useEffect(() => {
         setQuery(value);
@@ -126,14 +154,23 @@ export default function FranchiseBrandSelector({
         const normalizedQuery = nextQuery.trim();
         const shouldFetchDisclosure = Boolean(options.includeDisclosure && normalizedQuery && requesterId);
         const shouldFetchCache = Boolean(options.includeDisclosure && normalizedQuery);
-        const applyBrands = (nextBrands: FranchiseBrand[]) => {
+        const applyBrands = (nextBrands: readonly FranchiseBrand[]) => {
             if (searchRunRef.current === searchRunId) setBrands(nextBrands);
         };
 
         setIsSearching(true);
         try {
+            if (searchSource) {
+                applyBrands(await searchSource.search({
+                    requesterId,
+                    companyName,
+                    query: normalizedQuery,
+                    includeDisclosure: Boolean(options.includeDisclosure)
+                }));
+                return;
+            }
             const authHeaders = requesterId ? await getApiAuthHeaders() : undefined;
-            let savedBrands: FranchiseBrand[] = [];
+            let savedBrands: readonly FranchiseBrand[] = [];
             if (requesterId) {
                 const params = new URLSearchParams({
                     requesterId,
@@ -154,14 +191,14 @@ export default function FranchiseBrandSelector({
                 savedBrands = data.brands || [];
             }
 
-            let cacheBrands: FranchiseBrand[] = [];
+            let cacheBrands: readonly FranchiseBrand[] = [];
             if (shouldFetchCache) {
                 const cacheResponse = await fetch(`/api/franchise?query=${encodeURIComponent(normalizedQuery)}`, { cache: 'no-store' });
                 const cachePayload = await cacheResponse.json().catch(() => []);
                 if (cacheResponse.ok && Array.isArray(cachePayload)) {
                     cacheBrands = cachePayload
                         .map(mapFranchiseCacheBrand)
-                        .filter(Boolean) as FranchiseBrand[];
+                        .filter(isFranchiseBrand);
                 }
             }
 
@@ -199,17 +236,18 @@ export default function FranchiseBrandSelector({
                 }
             }
         } catch (error) {
+            if (!(error instanceof Error)) throw error;
             applyBrands([]);
             console.error('Failed to fetch franchise brands:', error);
         } finally {
             if (searchRunRef.current === searchRunId) setIsSearching(false);
         }
-    }, [companyName, requesterId]);
+    }, [companyName, requesterId, searchSource]);
 
     React.useEffect(() => {
-        if (!requesterId) return;
+        if (!requesterId && !searchSource) return;
         void fetchBrands('');
-    }, [fetchBrands, requesterId]);
+    }, [fetchBrands, requesterId, searchSource]);
 
     const openModal = () => {
         if (disabled) return;
@@ -270,6 +308,11 @@ export default function FranchiseBrandSelector({
                     }}
                 >
                     <div
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="프랜차이즈 브랜드 검색"
+                        tabIndex={-1}
                         style={{
                             width: 'min(500px, 100%)',
                             maxHeight: '90vh',
@@ -291,7 +334,7 @@ export default function FranchiseBrandSelector({
                             <strong style={{ color: '#111827', fontSize: 16 }}>프랜차이즈 브랜드 검색</strong>
                             <button
                                 type="button"
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={closeModal}
                                 aria-label="브랜드 검색 닫기"
                                 style={{
                                     display: 'grid',
@@ -311,7 +354,7 @@ export default function FranchiseBrandSelector({
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <input
-                                    autoFocus
+                                    ref={modalInputRef}
                                     value={modalQuery}
                                     onChange={(event) => setModalQuery(event.target.value)}
                                     onKeyDown={(event) => {

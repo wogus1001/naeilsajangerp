@@ -1,8 +1,9 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { isElementInVisibleTree } from '@/components/common/useModalFocusTrap';
 import type { DemoGuideAction, DemoTourStep } from '../demoTypes';
 import styles from '../demo.module.css';
 
@@ -30,12 +31,17 @@ type DemoTourOverlayProps = {
 };
 
 export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalAction, onStepAdvanceAction }: DemoTourOverlayProps) {
-    const maskId = useId().replaceAll(':', '');
+    const cardRef = useRef<HTMLElement | null>(null);
+    const previouslyFocusedRef = useRef<HTMLElement | null>(null);
     const [active, setActive] = useState(true);
+    const [isSuspended, setIsSuspended] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
     const [targetRects, setTargetRects] = useState<readonly TargetRect[]>([]);
     const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 0, height: 0 });
     const step = steps[stepIndex] ?? null;
+    const stableStepId = (step?.id || 'step').replace(/[^a-zA-Z0-9_-]/g, '-');
+    const maskId = `demo-tour-mask-${stableStepId}`;
+    const titleId = `demo-tour-title-${stableStepId}`;
     const primaryTargetRect = targetRects[0] ?? null;
 
     const refreshTarget = useCallback(() => {
@@ -57,19 +63,106 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
     }, [step]);
 
     useEffect(() => {
-        if (!active) {
+        if (!active || isSuspended) {
             return;
         }
 
-        refreshTarget();
+        const initialFrame = window.requestAnimationFrame(refreshTarget);
         window.addEventListener('resize', refreshTarget);
         window.addEventListener('scroll', refreshTarget, true);
 
         return () => {
+            window.cancelAnimationFrame(initialFrame);
             window.removeEventListener('resize', refreshTarget);
             window.removeEventListener('scroll', refreshTarget, true);
         };
-    }, [active, refreshTarget]);
+    }, [active, isSuspended, refreshTarget]);
+
+    useEffect(() => {
+        if (!active || isSuspended) {
+            return;
+        }
+
+        previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        const tourCard = cardRef.current;
+        const focusFrame = window.requestAnimationFrame(() => {
+            cardRef.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
+        });
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                setActive(false);
+                onCloseAction?.();
+                return;
+            }
+
+            if (event.key !== 'Tab' || !cardRef.current) {
+                return;
+            }
+
+            const focusable = Array.from(
+                cardRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])')
+            );
+            if (focusable.length === 0) {
+                event.preventDefault();
+                cardRef.current.focus();
+                return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.cancelAnimationFrame(focusFrame);
+            document.removeEventListener('keydown', handleKeyDown);
+            const hasProductionDialog = Array.from(
+                document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+            ).some(dialog => (
+                dialog !== tourCard
+                && dialog.getAttribute('aria-hidden') !== 'true'
+                && isElementInVisibleTree(dialog)
+            ));
+            if (!hasProductionDialog) previouslyFocusedRef.current?.focus({ preventScroll: true });
+        };
+    }, [active, isSuspended, onCloseAction]);
+
+    useEffect(() => {
+        if (!active) return;
+
+        const updateSuspendedState = () => {
+            const hasProductionDialog = Array.from(
+                document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+            ).some(dialog => (
+                dialog !== cardRef.current
+                && dialog.getAttribute('aria-hidden') !== 'true'
+                && isElementInVisibleTree(dialog)
+            ));
+            setIsSuspended(hasProductionDialog);
+        };
+        const observer = new MutationObserver(updateSuspendedState);
+        updateSuspendedState();
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['aria-hidden', 'aria-modal'],
+            childList: true,
+            subtree: true
+        });
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [active]);
 
     const cardStyle = useMemo<CSSProperties>(() => {
         if (!primaryTargetRect) {
@@ -183,7 +276,7 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
     };
 
     return (
-        <div className={styles.tourLayer} aria-live="polite">
+        <div className={styles.tourLayer} aria-live="polite" hidden={isSuspended} aria-hidden={isSuspended}>
             <svg
                 className={styles.tourScrim}
                 viewBox={`0 0 ${viewportSize.width} ${viewportSize.height}`}
@@ -226,12 +319,21 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
                     }}
                 />
             ))}
-            <section className={styles.tourCard} style={cardStyle} role="dialog" aria-label="데모 기능 설명" data-demo-id="demo-tour-card">
+            <section
+                ref={cardRef}
+                className={styles.tourCard}
+                style={cardStyle}
+                role="dialog"
+                aria-modal={isSuspended ? undefined : 'true'}
+                aria-labelledby={titleId}
+                data-demo-id="demo-tour-card"
+                tabIndex={-1}
+            >
                 <button type="button" className={styles.tourClose} onClick={closeTour} aria-label="데모 설명 닫기">
                     <X size={16} aria-hidden="true" />
                 </button>
                 <span className={styles.tourCount}>{stepIndex + 1} / {steps.length}</span>
-                <h2>{step.title}</h2>
+                <h2 id={titleId}>{step.title}</h2>
                 <p>{step.description}</p>
                 <div className={styles.tourActions}>
                     <button type="button" onClick={closeTour} className={styles.secondaryButton}>둘러보기</button>
@@ -252,8 +354,10 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
 }
 
 function findTourTarget(selector: string): HTMLElement | null {
-    const element = document.querySelector(selector);
-    return element instanceof HTMLElement ? element : null;
+    const elements = Array.from(document.querySelectorAll(selector));
+    return elements.find((element): element is HTMLElement => (
+        element instanceof HTMLElement && element.closest('[hidden]') === null
+    )) ?? null;
 }
 
 function getTourTargetElements(step: DemoTourStep, primaryElement: HTMLElement): readonly HTMLElement[] {

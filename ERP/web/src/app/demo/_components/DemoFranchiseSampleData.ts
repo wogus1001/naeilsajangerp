@@ -3,6 +3,7 @@ import type {
     LocationManagerOption
 } from '@/components/franchise/market-insights/locationMasterTypes';
 import type { FranchiseLocation as OperationLocation } from '@/components/franchise/operations/types';
+import type { DemoRole } from '../demoTypes';
 
 export const DEMO_LOCATION_MANAGERS = [
     { id: 'manager-kim', displayId: 'manager-kim', name: '김담당', role: 'manager' },
@@ -510,6 +511,18 @@ export const DEMO_OPERATION_LOCATIONS = [
         categoryMiddle: '치킨'
     })
 ] satisfies readonly OperationLocation[];
+
+export function selectDemoLocationMasterItems(role: DemoRole): readonly LocationMasterItem[] {
+    if (role === 'admin') return DEMO_LOCATION_MASTER_ITEMS;
+    const managerId = role === 'partner' ? 'partner-kim' : 'manager-kim';
+    return DEMO_LOCATION_MASTER_ITEMS.filter(location => location.managerId === managerId);
+}
+
+export function selectDemoOperationLocations(role: DemoRole): readonly OperationLocation[] {
+    if (role === 'admin') return DEMO_OPERATION_LOCATIONS;
+    const managerId = role === 'partner' ? 'partner-kim' : 'manager-kim';
+    return DEMO_OPERATION_LOCATIONS.filter(location => location.managerId === managerId);
+}
 
 function createDemoLocation(seed: DemoLocationSeed): LocationMasterItem {
     return {

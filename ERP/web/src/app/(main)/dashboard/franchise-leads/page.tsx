@@ -42,6 +42,7 @@ import {
 } from '@/lib/franchise-lead-source-options';
 import { formatManagerDisplayName, formatManagerOptionLabel } from '@/lib/franchise-manager-display';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
+import { RETURN_TO_RAW_INTAKE_TRANSITION } from '@/lib/franchise-lead-stage-transition';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import {
     EMPTY_FORM, ENABLE_LEAD_CUSTOMER_DB_LINKING,
@@ -65,6 +66,7 @@ import {
     resolveLeadWorkspaceTransition,
     type LeadToolbarStatusFilter
 } from '@/components/franchise/leads/leadWorkspaceState';
+import { buildLeadSubmitPayload } from '@/components/franchise/leads/leadSubmitPayload';
 import type {
     AuthUser,
     FranchiseLead,
@@ -88,7 +90,6 @@ import {
     formatDate,
     isContactActionDue,
     isRawIntakeLead,
-    parseBudgetInputToWon,
     toDatetimeLocalValue,
     toRangeOption
 } from '@/components/franchise/leads/utils';
@@ -814,18 +815,12 @@ export default function FranchiseLeadsPage() {
 
         setIsSaving(true);
         try {
-            const body = {
-                ...form,
+            const body = buildLeadSubmitPayload({
+                form,
                 requesterId: userId,
                 companyName,
-                leadStage: 'candidate',
-                mobile: formatLeadPhoneInput(form.mobile),
-                desiredRegion: normalizeLeadDesiredRegionValue(form.desiredRegion),
-                managerId: form.managerId || userId,
-                budgetMin: parseBudgetInputToWon(form.budgetMin),
-                budgetMax: parseBudgetInputToWon(form.budgetMax),
-                nextContactAt: form.nextContactAt ? new Date(form.nextContactAt).toISOString() : null
-            };
+                leadDbLayer
+            });
 
             const response = await fetch('/api/franchise-leads', {
                 method: form.id ? 'PUT' : 'POST',
@@ -1073,6 +1068,55 @@ export default function FranchiseLeadsPage() {
         } catch (error) {
             console.error(error);
             showAlert(error instanceof Error ? error.message : '다음 연락일 일괄 변경에 실패했습니다.', 'error', '일괄 변경 실패');
+        } finally {
+            setIsBulkUpdating(false);
+        }
+    };
+
+    const returnSelectedLeadsToRawIntake = async () => {
+        if (selectedLeads.length === 0) {
+            showAlert('이동할 가맹 희망자를 선택해주세요.', 'error', '이동 실패');
+            return;
+        }
+
+        setIsBulkUpdating(true);
+        try {
+            const now = new Date().toISOString();
+            const results = await Promise.allSettled(selectedLeads.map(lead => {
+                const nextActivity: LeadActivity = {
+                    id: createActivityId(),
+                    type: '메모',
+                    content: '가맹 희망자 목록에서 1차 유입 DB로 이동',
+                    createdAt: now,
+                    createdBy: user?.name || userId
+                };
+                return putLeadPatch(lead, {
+                    leadStage: 'raw_intake',
+                    leadStageTransition: RETURN_TO_RAW_INTAKE_TRANSITION,
+                    activityLog: [nextActivity, ...(lead.activityLog || [])]
+                });
+            }));
+            const successCount = results.filter(result => result.status === 'fulfilled').length;
+            const failCount = results.length - successCount;
+            await fetchLeads();
+            if (successCount > 0) {
+                setSelectedLeadIds([]);
+                setLeadDbLayer('raw_intake');
+            }
+            showAlert(
+                failCount > 0
+                    ? `${successCount}건 이동, ${failCount}건 실패했습니다.`
+                    : `${successCount}건을 1차 유입 DB로 이동했습니다.`,
+                failCount > 0 ? 'info' : 'success',
+                '이동 완료'
+            );
+        } catch (error) {
+            console.error(error);
+            showAlert(
+                error instanceof Error ? error.message : '1차 유입 DB 이동에 실패했습니다.',
+                'error',
+                '이동 실패'
+            );
         } finally {
             setIsBulkUpdating(false);
         }
@@ -1390,6 +1434,7 @@ export default function FranchiseLeadsPage() {
                     onVisibleTableColumnsChangeAction={setVisibleTableColumns}
                     onBulkNextContactAtChangeAction={setBulkNextContactAt}
                     onApplyBulkNextContactAction={() => void applyBulkNextContact()}
+                    onReturnSelectedToRawIntakeAction={() => void returnSelectedLeadsToRawIntake()}
                     onClearSelectedAction={() => setSelectedLeadIds([])}
                     onToggleSelectAllVisibleAction={toggleSelectAllVisible}
                     onToggleSelectLeadAction={toggleSelectLead}

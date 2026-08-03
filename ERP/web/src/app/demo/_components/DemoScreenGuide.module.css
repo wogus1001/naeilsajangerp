@@ -1,0 +1,256 @@
+.dashboardGuideLayout {
+    position: relative;
+    min-width: 0;
+}
+
+.dashboardGuideMain,
+.guideTarget {
+    min-width: 0;
+}
+
+.guideTarget {
+    position: relative;
+}
+
+.guideMarker {
+    position: absolute;
+    z-index: 8;
+    top: -16px;
+    left: -2px;
+    display: inline-grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+    background: #3182f6;
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgb(49 130 246 / 28%);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.guideCollapsedButton {
+    position: fixed;
+    z-index: 70;
+    top: 82px;
+    right: 20px;
+}
+
+.guidePanel {
+    display: grid;
+    width: 100%;
+    max-height: calc(100dvh - 102px);
+    gap: 16px;
+    overflow-y: auto;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px;
+    box-shadow: 0 16px 40px rgb(25 31 40 / 16%);
+}
+
+.guideOverlay {
+    display: contents;
+}
+
+.guideBackdrop {
+    display: none;
+}
+
+.guideCollapsedButton,
+.guideCloseButton,
+.guideActionButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #e5e8eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e5968;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.guideCollapsedButton {
+    min-height: 38px;
+    padding: 0 12px;
+    box-shadow: 0 8px 24px rgb(25 31 40 / 12%);
+}
+
+.guidePanelTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.guidePanelTop span {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 24px;
+    align-items: center;
+    border-radius: 999px;
+    background: #e8f3ff;
+    color: #2272eb;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.guideCloseButton {
+    min-height: 30px;
+    padding: 0 9px;
+}
+
+.guideHeader {
+    display: grid;
+    gap: 8px;
+}
+
+.guideHeader h2 {
+    margin: 0;
+    color: #191f28;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.guideHeader p,
+.guideStep p {
+    margin: 0;
+    color: #6b7684;
+    font-size: 13px;
+    line-height: 1.54;
+    word-break: keep-all;
+}
+
+.guideSteps {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guideStep {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    border-top: 1px solid #f2f4f6;
+    padding-top: 10px;
+}
+
+.guideStep:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.guideStepIcon {
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 999px;
+    background: #3182f6;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.guideStep strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #333d4b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.guideActions {
+    display: grid;
+    gap: 8px;
+}
+
+.guideActionButton {
+    min-height: 38px;
+    justify-content: space-between;
+    padding: 0 12px;
+    color: #333d4b;
+    font-size: 13px;
+}
+
+.guideCloseButton:hover,
+.guideCollapsedButton:hover,
+.guideActionButton:hover,
+.guideCloseButton:focus-visible,
+.guideCollapsedButton:focus-visible,
+.guideActionButton:focus-visible {
+    border-color: #3182f6;
+    color: #2272eb;
+}
+
+.guideCloseButton:focus-visible,
+.guideCollapsedButton:focus-visible,
+.guideActionButton:focus-visible {
+    outline: 2px solid #3182f6;
+    outline-offset: 2px;
+}
+
+@media (min-width: 1201px) {
+    .dashboardGuideLayout:has(.guidePanel) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 304px;
+        align-items: start;
+        gap: 16px;
+    }
+
+    .guidePanel {
+        position: sticky;
+        z-index: 20;
+        top: 82px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .guideOverlay {
+        position: fixed;
+        z-index: 1000;
+        inset: 0;
+        display: block;
+    }
+
+    .guideBackdrop {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: rgb(25 31 40 / 42%);
+        cursor: pointer;
+    }
+
+    .guidePanel {
+        position: absolute;
+        z-index: 1;
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        width: min(360px, calc(100vw - 24px));
+        max-height: min(70dvh, 560px);
+    }
+}
+
+@media (max-width: 600px) {
+    .guidePanel {
+        top: 12px;
+        left: 12px;
+        width: auto;
+        max-height: none;
+    }
+}

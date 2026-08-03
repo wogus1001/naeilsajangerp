@@ -1,6 +1,8 @@
 "use client";
 
+import React from 'react';
 import { X } from 'lucide-react';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { ACTIVITY_TYPES } from './constants';
 import type { FranchiseLead, LeadActivityType } from './types';
@@ -28,9 +30,26 @@ export function LeadQuickActivityModal({
     onCloseAction,
     onSubmitAction
 }: LeadQuickActivityModalProps) {
+    const dialogRef = React.useRef<HTMLFormElement | null>(null);
+    const contentRef = React.useRef<HTMLTextAreaElement | null>(null);
+    useModalFocusTrap({
+        isOpen: true,
+        onClose: onCloseAction,
+        dialogRef,
+        initialFocusRef: contentRef
+    });
+
     return (
         <div className={styles.modalBackdrop}>
-            <form className={`${styles.modalCard} ${styles.quickModalCard}`} onSubmit={onSubmitAction}>
+            <form
+                ref={dialogRef}
+                className={`${styles.modalCard} ${styles.quickModalCard}`}
+                onSubmit={onSubmitAction}
+                role="dialog"
+                aria-modal="true"
+                aria-label="상담 이력 빠른 추가"
+                tabIndex={-1}
+            >
                 <div className={styles.modalHeader}>
                     <div>
                         <h2>상담 이력 빠른 추가</h2>
@@ -52,10 +71,10 @@ export function LeadQuickActivityModal({
                     <label>
                         상담 내용
                         <textarea
+                            ref={contentRef}
                             value={activityContent}
                             onChange={(event) => onActivityContentChangeAction(event.target.value)}
                             placeholder="통화 결과, 고객 반응, 다음 액션을 짧게 기록하세요."
-                            autoFocus
                         />
                     </label>
                 </div>
