@@ -74,6 +74,11 @@
     align-items: center;
     min-width: 0;
     gap: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: inherit;
     cursor: pointer;
 }
 

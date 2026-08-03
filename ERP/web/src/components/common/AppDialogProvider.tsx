@@ -21,6 +21,7 @@ export type AppConfirmOptions = {
 };
 
 type AppDialogContextValue = {
+    readonly isDialogOpen: boolean;
     readonly showAlert: (options: string | AppAlertOptions) => Promise<void>;
     readonly showConfirm: (options: string | AppConfirmOptions) => Promise<boolean>;
 };
@@ -77,7 +78,10 @@ export function AppDialogProvider({ children }: { readonly children: React.React
         dialogQueueRef.current?.dispose();
     }, []);
 
-    const contextValue = React.useMemo(() => ({ showAlert, showConfirm }), [showAlert, showConfirm]);
+    const contextValue = React.useMemo(
+        () => ({ isDialogOpen: activeDialog !== null, showAlert, showConfirm }),
+        [activeDialog, showAlert, showConfirm]
+    );
 
     return (
         <AppDialogContext.Provider value={contextValue}>

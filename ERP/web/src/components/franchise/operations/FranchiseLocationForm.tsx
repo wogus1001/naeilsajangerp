@@ -1,5 +1,10 @@
-import KakaoAddressSearch, { type KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
-import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
+import KakaoAddressSearch, {
+    type KakaoAddressLookupSource,
+    type KakaoAddressResult
+} from '@/components/franchise/KakaoAddressSearch';
+import FranchiseBrandSelector, {
+    type FranchiseBrandSearchSource
+} from '@/components/franchise/FranchiseBrandSelector';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import {
@@ -15,6 +20,8 @@ type FranchiseLocationFormProps = {
     readonly companyName: string;
     readonly form: LocationFormState;
     readonly isSaving: boolean;
+    readonly addressLookupSource?: KakaoAddressLookupSource | undefined;
+    readonly brandSearchSource?: FranchiseBrandSearchSource | undefined;
     readonly onChange: (patch: Partial<LocationFormState>) => void;
     readonly onReset: () => void;
     readonly onSave: () => void;
@@ -27,6 +34,8 @@ export function FranchiseLocationForm({
     companyName,
     form,
     isSaving,
+    addressLookupSource,
+    brandSearchSource,
     onChange,
     onReset,
     onSave,
@@ -55,6 +64,7 @@ export function FranchiseLocationForm({
                 requesterId={userId}
                 companyName={companyName}
                 value={form.brand}
+                searchSource={brandSearchSource}
                 onBrandChange={(brand) => onChange({ brand, brandId: '' })}
                 onSelectBrand={onSelectBrand}
                 classNames={{
@@ -74,6 +84,7 @@ export function FranchiseLocationForm({
             <KakaoAddressSearch
                 requesterId={userId}
                 value={form.address}
+                lookupSource={addressLookupSource}
                 onAddressChange={(address) => onChange({ address, latitude: null, longitude: null })}
                 onSelect={onSelectAddress}
                 classNames={{

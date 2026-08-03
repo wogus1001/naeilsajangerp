@@ -12,6 +12,7 @@ export type LocationMapMode = typeof LOCATION_MAP_MODES[number];
 export type LocationMapRadiusMeters = typeof LOCATION_MAP_RADIUS_OPTIONS[number];
 export type LocationMapRadiusBaseMode = typeof LOCATION_MAP_RADIUS_BASE_MODES[number];
 export type LocationMapMeasurementMode = typeof LOCATION_MAP_MEASUREMENT_MODES[number];
+export type LocationMapRuntime = 'live' | 'offline';
 
 export type LocationMapKind = 'operation' | 'candidate';
 
@@ -53,4 +54,44 @@ export type LocationRadiusAnalysis = {
     readonly operationCount: number;
     readonly candidateCount: number;
     readonly statusCounts: Readonly<Record<FranchiseLocationStatus, number>>;
+};
+
+export type FranchiseLocationMapWorkspaceProps = {
+    readonly companyName: string;
+    readonly counts: LocationMapCounts;
+    readonly filters: LocationMapFilters;
+    readonly center: LocationMapPosition;
+    readonly activePoint: LocationMapPoint | null;
+    readonly activeLocationId: string;
+    readonly comparisonRadiusPoints: readonly LocationMapPoint[];
+    readonly focusRequestId: number;
+    readonly focusedPoint: LocationMapPoint | null;
+    readonly errorMessage: string;
+    readonly isBusy: boolean;
+    readonly isManualRadius: boolean;
+    readonly isRadiusPicking: boolean;
+    readonly measurementMode: LocationMapMeasurementMode;
+    readonly measurementPoints: readonly LocationMapPosition[];
+    readonly mapRuntime?: LocationMapRuntime;
+    readonly points: readonly LocationMapPoint[];
+    readonly radiusAnalysis: LocationRadiusAnalysis;
+    readonly radiusBaseMode: LocationMapRadiusBaseMode;
+    readonly radiusCenter: LocationMapPosition | null;
+    readonly radiusMeters: LocationMapRadiusMeters;
+    readonly measurementDistanceMeters: number;
+    readonly measurementAreaSquareMeters: number;
+    readonly onKakaoReadyChange: (ready: boolean) => void;
+    readonly onMeasurementPointAdd: (position: LocationMapPosition) => void;
+    readonly onMeasurementClear: () => void;
+    readonly onMeasurementModeChange: (mode: LocationMapMeasurementMode) => void;
+    readonly onMeasurementUndo: () => void;
+    readonly onModeChange: (mode: LocationMapMode) => void;
+    readonly onQueryChange: (query: string) => void;
+    readonly onRadiusCenterPick: (position: LocationMapPosition) => void;
+    readonly onRadiusChange: (radiusMeters: LocationMapRadiusMeters) => void;
+    readonly onSelectAllStatuses: () => void;
+    readonly onSelectPoint: (locationId: string) => void;
+    readonly onStartRadiusPicking: () => void;
+    readonly onToggleStatus: (status: FranchiseLocationStatus) => void;
+    readonly onUseSelectedRadius: () => void;
 };

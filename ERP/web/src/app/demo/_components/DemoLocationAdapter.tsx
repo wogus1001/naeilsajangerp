@@ -2,11 +2,10 @@
 
 import React from 'react';
 import pageStyles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
+import { useAppDialog } from '@/components/common/AppDialogProvider';
 import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { LocationMasterSection } from '@/components/franchise/market-insights/LocationMasterSection';
-import { MarketInsightViewTabs } from '@/components/franchise/market-insights/MarketInsightViewTabs';
-import { MarketInsightWorkspaceTabs } from '@/components/franchise/market-insights/MarketInsightWorkspaceTabs';
 import type { FranchiseLocation, LocationFormState } from '@/components/franchise/market-insights/locationMasterTypes';
 import {
     EMPTY_LOCATION_FILTERS,
@@ -15,21 +14,31 @@ import {
     toLocationFormState
 } from '@/components/franchise/market-insights/locationMasterUtils';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
-import type { DemoActionHandler, DemoScreenId } from '../demoTypes';
+import type { DemoActionHandler, DemoRole, DemoScreenId } from '../demoTypes';
 import {
     DEMO_LOCATION_MANAGERS,
-    DEMO_LOCATION_MASTER_ITEMS
+    selectDemoLocationMasterItems
 } from './DemoFranchiseSampleData';
-import { DemoRecordDrawer } from './DemoRecordDrawer';
+import {
+    createDemoLocationRuntime,
+    DEMO_ADDRESS_LOOKUP_SOURCE,
+    DEMO_BRAND_SEARCH_SOURCE
+} from './DemoLocationRuntime';
 import { DemoGuideTarget, DemoGuidedLayout } from './DemoScreenGuide';
 
 type DemoLocationAdapterProps = {
+    readonly role: DemoRole;
     readonly onScreenChange: (screen: DemoScreenId) => void;
     readonly onSimulate: DemoActionHandler;
 };
 
-function toLocationItem(form: LocationFormState, fallbackId: string): FranchiseLocation {
+function toLocationItem(
+    form: LocationFormState,
+    fallbackId: string,
+    existing?: FranchiseLocation
+): FranchiseLocation {
     return {
+        ...existing,
         id: form.id || fallbackId,
         companyId: 'demo-company',
         managerId: form.managerId || null,
@@ -45,10 +54,11 @@ function toLocationItem(form: LocationFormState, fallbackId: string): FranchiseL
         longitude: form.longitude,
         openedAt: form.openedAt || null,
         memo: form.memo,
-        createdAt: '2026-06-19T01:00:00.000Z',
-        updatedAt: '2026-06-19T01:00:00.000Z',
-        sourcePropertyId: null,
+        createdAt: existing?.createdAt || '2026-07-30T01:00:00.000Z',
+        updatedAt: '2026-07-30T01:00:00.000Z',
+        sourcePropertyId: existing?.sourcePropertyId || null,
         competitionKeyword: form.competitionKeyword,
+        meetingTool: form.meetingTool,
         brandId: form.brandId,
         industry: form.industry,
         businessType: form.businessType,
@@ -66,42 +76,55 @@ function toLocationItem(form: LocationFormState, fallbackId: string): FranchiseL
     };
 }
 
-export function DemoLocationAdapter({ onScreenChange, onSimulate }: DemoLocationAdapterProps) {
-    const [locations, setLocations] = React.useState<readonly FranchiseLocation[]>(DEMO_LOCATION_MASTER_ITEMS);
+export function DemoLocationAdapter({ role, onScreenChange, onSimulate }: DemoLocationAdapterProps) {
+    const { showAlert, showConfirm } = useAppDialog();
+    const defaultManagerId = role === 'partner' ? 'partner-kim' : 'manager-kim';
+    const managerOptions = role === 'partner'
+        ? DEMO_LOCATION_MANAGERS.filter(manager => manager.id === 'partner-kim')
+        : DEMO_LOCATION_MANAGERS;
+    const [locations, setLocations] = React.useState<readonly FranchiseLocation[]>(() => selectDemoLocationMasterItems(role));
     const [filters, setFilters] = React.useState(EMPTY_LOCATION_FILTERS);
     const [form, setForm] = React.useState<LocationFormState>(() => ({
         ...EMPTY_LOCATION_FORM,
         brand: '미카도',
-        managerId: 'manager-kim'
+        managerId: defaultManagerId
     }));
-    const [selectedLocationId, setSelectedLocationId] = React.useState<string | null>(null);
+    const [deletingLocationId, setDeletingLocationId] = React.useState('');
+    const [interactionRuntime] = React.useState(createDemoLocationRuntime);
     const filteredLocations = React.useMemo(
         () => filterLocationMasterItems(locations, filters),
         [filters, locations]
     );
-    const selectedLocation = selectedLocationId ? locations.find(location => location.id === selectedLocationId) || null : null;
 
     const resetForm = () => setForm({
         ...EMPTY_LOCATION_FORM,
         brand: '미카도',
-        managerId: 'manager-kim'
+        managerId: defaultManagerId
     });
     const resetFilters = () => setFilters(EMPTY_LOCATION_FILTERS);
     const updateForm = (patch: Partial<LocationFormState>) => setForm(current => ({ ...current, ...patch }));
     const saveLocation = () => {
-        const nextLocation = toLocationItem(form, `demo-location-${locations.length + 1}`);
+        if (!form.name.trim()) {
+            void showAlert({ title: '후보지 저장', message: '후보지명을 입력해주세요.', type: 'error' });
+            return;
+        }
+        if (!form.region.trim() && !form.address.trim()) {
+            void showAlert({ title: '후보지 저장', message: '지역 또는 주소를 입력해주세요.', type: 'error' });
+            return;
+        }
+        const existing = form.id ? locations.find(location => location.id === form.id) : undefined;
+        const nextLocation = toLocationItem(form, `demo-location-${locations.length + 1}`, existing);
+        const isEditing = Boolean(form.id);
         setLocations(current => {
-            const exists = current.some(location => location.id === nextLocation.id);
-            if (exists) return current.map(location => location.id === nextLocation.id ? nextLocation : location);
+            if (isEditing) return current.map(location => location.id === nextLocation.id ? nextLocation : location);
             return [nextLocation, ...current];
         });
-        setSelectedLocationId(nextLocation.id);
-        onSimulate(form.id ? '샘플 후보지 수정' : '샘플 후보지 반영');
+        resetForm();
+        onSimulate(isEditing ? '샘플 후보지 수정 완료' : '샘플 후보지 등록 완료');
     };
     const openLocation = (location: FranchiseLocation) => {
         setForm(toLocationFormState(location));
-        setSelectedLocationId(location.id);
-        onSimulate(`${location.name} 샘플 후보지 상세 열기`);
+        onSimulate(`${location.name} 수정 양식을 열었습니다.`);
     };
     const selectAddress = (result: KakaoAddressResult) => {
         updateForm({
@@ -123,6 +146,20 @@ export function DemoLocationAdapter({ onScreenChange, onSimulate }: DemoLocation
             competitionKeyword: brand.recommendedKeywords?.[0] || brand.brandName
         });
     };
+    const deleteLocation = async (location: FranchiseLocation) => {
+        const confirmed = await showConfirm({
+            title: '출점 후보지 삭제',
+            message: `${location.name} 후보지를 삭제할까요? 데모의 로컬 목록에서만 삭제됩니다.`,
+            confirmText: '삭제',
+            isDanger: true
+        });
+        if (!confirmed) return;
+        setDeletingLocationId(location.id);
+        setLocations(current => current.filter(item => item.id !== location.id));
+        if (form.id === location.id) resetForm();
+        setDeletingLocationId('');
+        onSimulate(`${location.name} 샘플 후보지를 삭제했습니다.`);
+    };
 
     return (
         <div className={pageStyles.pageShell} data-demo-id="location-panel">
@@ -130,73 +167,37 @@ export function DemoLocationAdapter({ onScreenChange, onSimulate }: DemoLocation
                 title="출점 후보지"
                 description="후보지 목록을 따로 관리하고, 필요한 지역 인사이트를 함께 확인합니다."
             />
-            <DemoGuideTarget marker={1} targetId="location-tabs" label="후보지 탭">
-                <MarketInsightWorkspaceTabs activeTab="market-insights" onTabChange={() => onSimulate('샘플 출점 후보지 탭')} />
-            </DemoGuideTarget>
             <DemoGuidedLayout screen="location" onScreenChange={onScreenChange}>
-                <DemoGuideTarget marker={2} targetId="location-master" label="후보지 관리">
-                    <div className={pageStyles.marketInsightPanel}>
-                        <MarketInsightViewTabs
-                            activeView="location-list"
-                            filteredLocationCount={filteredLocations.length}
-                            locationCount={locations.length}
-                            insightCount={4}
-                            onViewChange={() => onSimulate('샘플 지역 인사이트 보기')}
+                <DemoGuideTarget marker={1} targetId="location-tabs" label="후보지 목록과 등록">
+                    <div className={pageStyles.marketWorkspace} data-demo-id="location-master">
+                        <LocationMasterSection
+                            userId={role === 'partner' ? 'demo-partner' : 'demo-manager'}
+                            companyName="민티아"
+                            form={form}
+                            filters={filters}
+                            managerOptions={managerOptions}
+                            locations={locations}
+                            filteredLocations={filteredLocations}
+                            isManagerLoading={false}
+                            isSaving={false}
+                            deletingLocationId={deletingLocationId}
+                            addressLookupSource={DEMO_ADDRESS_LOOKUP_SOURCE}
+                            brandSearchSource={DEMO_BRAND_SEARCH_SOURCE}
+                            interactionRuntime={interactionRuntime}
+                            mapRuntime="offline"
+                            onFormChange={updateForm}
+                            onFiltersChange={patch => setFilters(current => ({ ...current, ...patch }))}
+                            onResetForm={resetForm}
+                            onResetFilters={resetFilters}
+                            onSave={saveLocation}
+                            onSelectAddress={selectAddress}
+                            onSelectBrand={selectBrand}
+                            onEdit={openLocation}
+                            onDelete={location => void deleteLocation(location)}
                         />
-                        <div className={pageStyles.marketInsightBody}>
-                            <LocationMasterSection
-                                userId=""
-                                companyName="민티아"
-                                form={form}
-                                filters={filters}
-                                managerOptions={DEMO_LOCATION_MANAGERS}
-                                locations={locations}
-                                filteredLocations={filteredLocations}
-                                isManagerLoading={false}
-                                isSaving={false}
-                                deletingLocationId=""
-                                onFormChange={updateForm}
-                                onFiltersChange={patch => setFilters(current => ({ ...current, ...patch }))}
-                                onResetForm={resetForm}
-                                onResetFilters={resetFilters}
-                                onSave={saveLocation}
-                                onSelectAddress={selectAddress}
-                                onSelectBrand={selectBrand}
-                                onEdit={openLocation}
-                                onDelete={location => {
-                                    setLocations(current => current.filter(item => item.id !== location.id));
-                                    onSimulate(`${location.name} 샘플 삭제`);
-                                }}
-                            />
-                        </div>
                     </div>
                 </DemoGuideTarget>
             </DemoGuidedLayout>
-            {selectedLocation ? (
-                <DemoRecordDrawer
-                    badge="출점 후보지"
-                    title={selectedLocation.name}
-                    description={selectedLocation.memo || '후보지 검토 메모가 없습니다.'}
-                    fields={[
-                        { label: '브랜드', value: selectedLocation.brand },
-                        { label: '상태', value: selectedLocation.status },
-                        { label: '지역', value: selectedLocation.region },
-                        { label: '주소', value: `${selectedLocation.address} ${selectedLocation.addressDetail || ''}`.trim() },
-                        { label: '담당자', value: selectedLocation.managerName || '담당자 미정' },
-                        { label: '보증금', value: formatMoney(selectedLocation.cost?.deposit) },
-                        { label: '권리금', value: formatMoney(selectedLocation.cost?.premium) },
-                        { label: '월세', value: formatMoney(selectedLocation.lease?.monthlyRent) }
-                    ]}
-                    primaryActionLabel="물건지 지도에서 보기"
-                    onPrimaryAction={() => onScreenChange('locationMap')}
-                    onCloseAction={() => setSelectedLocationId(null)}
-                />
-            ) : null}
         </div>
     );
-}
-
-function formatMoney(value: number | null | undefined) {
-    if (value === null || value === undefined) return '미입력';
-    return `${value.toLocaleString()}만원`;
 }

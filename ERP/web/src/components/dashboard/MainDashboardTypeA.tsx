@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
-import { MainDashboardTypeAStats } from './MainDashboardTypeAStats';
+import { MainDashboardTypeAStats, type KpiMetrics } from './MainDashboardTypeAStats';
 
 type DashboardSchedule = { readonly id?: string | number; readonly time?: string; readonly title?: string; readonly location?: string; };
 
@@ -11,6 +11,7 @@ type DashboardNotice = { readonly id?: string | number; readonly title?: string;
 type MainDashboardTypeAProps = {
     readonly requesterId: string;
     readonly companyName: string;
+    readonly metrics?: KpiMetrics;
     readonly schedules: readonly DashboardSchedule[];
     readonly notices: readonly DashboardNotice[];
     readonly memo: string;
@@ -22,6 +23,7 @@ type MainDashboardTypeAProps = {
 export function MainDashboardTypeA({
     requesterId,
     companyName,
+    metrics,
     schedules,
     notices,
     memo,
@@ -37,6 +39,7 @@ export function MainDashboardTypeA({
             <MainDashboardTypeAStats
                 requesterId={requesterId}
                 companyName={companyName}
+                metrics={metrics}
                 onNavigate={onNavigate}
             />
 

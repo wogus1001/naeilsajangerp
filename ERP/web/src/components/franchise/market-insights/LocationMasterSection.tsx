@@ -1,6 +1,11 @@
 import React from 'react';
-import type { KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
+import type {
+    KakaoAddressLookupSource,
+    KakaoAddressResult
+} from '@/components/franchise/KakaoAddressSearch';
+import type { FranchiseBrandSearchSource } from '@/components/franchise/FranchiseBrandSelector';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
+import type { LocationMapRuntime } from '@/components/franchise/location-map/types';
 import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import type {
     FranchiseLocation,
@@ -11,6 +16,7 @@ import type {
 import { LocationMasterFilters as LocationMasterFiltersView } from './LocationMasterFilters';
 import { LocationMasterForm } from './LocationMasterForm';
 import { LocationMasterList } from './LocationMasterList';
+import type { LocationInteractionRuntime } from './locationInteractionRuntime';
 
 type LocationMasterSectionProps = {
     readonly userId: string;
@@ -23,6 +29,10 @@ type LocationMasterSectionProps = {
     readonly isManagerLoading: boolean;
     readonly isSaving: boolean;
     readonly deletingLocationId: string;
+    readonly addressLookupSource?: KakaoAddressLookupSource | undefined;
+    readonly brandSearchSource?: FranchiseBrandSearchSource | undefined;
+    readonly interactionRuntime?: LocationInteractionRuntime | undefined;
+    readonly mapRuntime?: LocationMapRuntime | undefined;
     readonly onFormChange: (patch: Partial<LocationFormState>) => void;
     readonly onFiltersChange: (patch: Partial<LocationMasterFilters>) => void;
     readonly onResetForm: () => void;
@@ -47,6 +57,10 @@ export function LocationMasterSection({
     isManagerLoading,
     isSaving,
     deletingLocationId,
+    addressLookupSource,
+    brandSearchSource,
+    interactionRuntime,
+    mapRuntime,
     onFormChange,
     onFiltersChange,
     onResetForm,
@@ -108,6 +122,8 @@ export function LocationMasterSection({
                             locations={filteredLocations}
                             managerOptions={managerOptions}
                             deletingLocationId={deletingLocationId}
+                            interactionRuntime={interactionRuntime}
+                            mapRuntime={mapRuntime}
                             onEdit={editLocation}
                             onDelete={onDelete}
                         />
@@ -121,6 +137,8 @@ export function LocationMasterSection({
                             managerOptions={managerOptions}
                             isManagerLoading={isManagerLoading}
                             isSaving={isSaving}
+                            addressLookupSource={addressLookupSource}
+                            brandSearchSource={brandSearchSource}
                             onChangeAction={onFormChange}
                             onResetAction={onResetForm}
                             onSaveAction={onSave}

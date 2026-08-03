@@ -183,6 +183,14 @@ DEMO_ACCESS_COOKIE_SECRET=
 
 Use different values per Vercel environment when needed. `DEMO_ACCESS_COOKIE_SECRET` signs the short-lived httpOnly `/demo` cookie and must not be committed to source control.
 
+After starting the app, the production-UI parity smoke can be run with demo credentials supplied only to the current shell:
+
+```bash
+DEMO_ACCESS_ID="<demo-id>" DEMO_ACCESS_PASSWORD="<demo-password>" npm run qa:demo-ui
+```
+
+The smoke checks the public demo shell, lead DB, location map, franchise operations, shared dialogs, and demo-only API/navigation guard. Never write the credential values into this repository.
+
 ## Meta Lead Ads Setup
 
 Run `supabase_meta_lead_ads_migration.sql` before enabling the Meta integration.

@@ -5,6 +5,7 @@ import {
     removeLeadActivityLogEntry,
     updateLeadActivityLogEntry
 } from './leadActivityLog.js';
+import { ACTIVITY_TYPES } from './constants.js';
 import type { LeadActivity } from './types.js';
 
 const existingActivity: LeadActivity = {
@@ -51,4 +52,8 @@ test('removeLeadActivityLogEntry removes only the matching activity', () => {
     };
 
     assert.deepEqual(removeLeadActivityLogEntry([otherActivity, existingActivity], 'activity-existing'), [otherActivity]);
+});
+
+test('consultation activity types include absence', () => {
+    assert.ok(ACTIVITY_TYPES.includes('부재'));
 });

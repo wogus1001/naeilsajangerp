@@ -1,4 +1,6 @@
 import type { DemoWorkspaceProps } from '../demoTypes';
+import type { DemoRole } from '../demoTypes';
+import type { KpiMetrics } from '@/components/dashboard/MainDashboardTypeAStats';
 import { DemoContractOwnersAdapter } from './DemoContractOwnersAdapter';
 import { DemoFranchiseDashboardAdapter } from './DemoFranchiseDashboardAdapter';
 import { DemoLeadDbAdapter } from './DemoLeadDbAdapter';
@@ -6,19 +8,48 @@ import { DemoLocationAdapter } from './DemoLocationAdapter';
 import { DemoLocationMapAdapter } from './DemoLocationMapAdapter';
 import { DemoOperationsAdapter } from './DemoOperationsAdapter';
 
-export function ManagerDemoWorkspace({ activeScreen, onScreenChange, onSimulate }: DemoWorkspaceProps) {
-    switch (activeScreen) {
-        case 'dashboard':
-            return <DemoFranchiseDashboardAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
-        case 'leadDb':
-            return <DemoLeadDbAdapter activeTab="db" onScreenChange={onScreenChange} onSimulate={onSimulate} />;
-        case 'contractOwners':
-            return <DemoContractOwnersAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
-        case 'location':
-            return <DemoLocationAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
-        case 'locationMap':
-            return <DemoLocationMapAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
-        case 'operations':
-            return <DemoOperationsAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />;
-    }
+type ManagerDemoWorkspaceProps = DemoWorkspaceProps & {
+    readonly canCreateSystemNotice: boolean;
+    readonly dashboardMetrics: KpiMetrics;
+    readonly fixtureRole: Extract<DemoRole, 'admin' | 'manager'>;
+};
+
+export function ManagerDemoWorkspace({ activeScreen, dashboardUserName, dashboardMetrics, canCreateSystemNotice, fixtureRole, onScreenChange, onSimulate }: ManagerDemoWorkspaceProps) {
+    const surfaces = [
+        {
+            id: 'dashboard',
+            content: <DemoFranchiseDashboardAdapter role={fixtureRole} userName={dashboardUserName} metrics={dashboardMetrics} canCreateSystemNotice={canCreateSystemNotice} onScreenChange={onScreenChange} onSimulate={onSimulate} />
+        },
+        {
+            id: 'leadDb',
+            content: <DemoLeadDbAdapter activeTab="db" onScreenChange={onScreenChange} onSimulate={onSimulate} />
+        },
+        {
+            id: 'contractOwners',
+            content: <DemoContractOwnersAdapter role={fixtureRole} onScreenChange={onScreenChange} onSimulate={onSimulate} />
+        },
+        {
+            id: 'location',
+            content: <DemoLocationAdapter role={fixtureRole} onScreenChange={onScreenChange} onSimulate={onSimulate} />
+        },
+        {
+            id: 'locationMap',
+            content: <DemoLocationMapAdapter role={fixtureRole} onScreenChange={onScreenChange} onSimulate={onSimulate} />
+        },
+        {
+            id: 'operations',
+            content: <DemoOperationsAdapter role={fixtureRole} onScreenChange={onScreenChange} onSimulate={onSimulate} />
+        }
+    ] as const;
+
+    return surfaces.map(surface => (
+        <section
+            key={surface.id}
+            hidden={activeScreen !== surface.id}
+            aria-hidden={activeScreen !== surface.id}
+            data-demo-surface={surface.id}
+        >
+            {surface.content}
+        </section>
+    ));
 }

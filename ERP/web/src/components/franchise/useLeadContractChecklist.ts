@@ -4,19 +4,13 @@ import type {
     LeadContractChecklistStep,
     LeadContractChecklistSummary
 } from '@/lib/franchise-lead-contract-checklist';
-import { readApiError, unwrapApiData } from '@/utils/apiResponse';
-import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
+import { useLeadDetailRuntime } from './leads/LeadDetailRuntimeProvider';
+import { EMPTY_LEAD_CHECKLIST_SUMMARY } from './leads/leadDetailRuntime';
 
 type UseLeadContractChecklistInput = {
     readonly leadId: string;
     readonly onSaved?: () => void;
     readonly userId: string;
-};
-
-type ChecklistResponse = {
-    readonly step?: LeadContractChecklistStep;
-    readonly steps?: readonly LeadContractChecklistStep[];
-    readonly summary?: LeadContractChecklistSummary;
 };
 
 type SaveStepPatch = {
@@ -25,23 +19,10 @@ type SaveStepPatch = {
     readonly applicability?: LeadContractApplicability;
 };
 
-const EMPTY_SUMMARY: LeadContractChecklistSummary = {
-    total: 0,
-    completed: 0,
-    resolved: 0,
-    remaining: 0,
-    progressPercent: 0,
-    missingRequiredCount: 0,
-    groups: {
-        required: { total: 0, completed: 0, resolved: 0, remaining: 0, progressPercent: 0, missingDocumentCount: 0 },
-        report: { total: 0, completed: 0, resolved: 0, remaining: 0, progressPercent: 0, missingDocumentCount: 0 },
-        optional: { total: 0, completed: 0, resolved: 0, remaining: 0, progressPercent: 0, missingDocumentCount: 0 }
-    }
-};
-
 export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadContractChecklistInput) {
+    const { checklist } = useLeadDetailRuntime();
     const [steps, setSteps] = React.useState<readonly LeadContractChecklistStep[]>([]);
-    const [summary, setSummary] = React.useState<LeadContractChecklistSummary>(EMPTY_SUMMARY);
+    const [summary, setSummary] = React.useState<LeadContractChecklistSummary>(EMPTY_LEAD_CHECKLIST_SUMMARY);
     const [isLoading, setIsLoading] = React.useState(false);
     const [savingStepKey, setSavingStepKey] = React.useState('');
     const [message, setMessage] = React.useState('');
@@ -52,28 +33,21 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ requesterId: userId, leadId });
-            const response = await fetch(`/api/franchise-lead-contract-checklist?${params.toString()}`, {
-                cache: 'no-store',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<ChecklistResponse>(payload);
-            setSteps(data.steps || []);
-            setSummary(data.summary || EMPTY_SUMMARY);
+            const data = await checklist.load({ userId, leadId });
+            setSteps(data.steps);
+            setSummary(data.summary);
         } catch (error) {
             setSteps([]);
-            setSummary(EMPTY_SUMMARY);
+            setSummary(EMPTY_LEAD_CHECKLIST_SUMMARY);
             setErrorMessage(error instanceof Error ? error.message : '구비서류를 불러오지 못했습니다.');
         } finally {
             setIsLoading(false);
         }
-    }, [leadId, userId]);
+    }, [checklist, leadId, userId]);
 
     React.useEffect(() => {
         setSteps([]);
-        setSummary(EMPTY_SUMMARY);
+        setSummary(EMPTY_LEAD_CHECKLIST_SUMMARY);
         setMessage('');
         setErrorMessage('');
         void fetchChecklist();
@@ -85,21 +59,14 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
         setMessage('');
         setErrorMessage('');
         try {
-            const response = await fetch('/api/franchise-lead-contract-checklist', {
-                method: 'PUT',
-                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({
-                    requesterId: userId,
-                    leadId,
-                    stepKey,
-                    ...patch
-                })
+            const data = await checklist.saveStep({
+                userId,
+                leadId,
+                stepKey,
+                patch
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<ChecklistResponse>(payload);
-            setSteps(data.steps || []);
-            setSummary(data.summary || EMPTY_SUMMARY);
+            setSteps(data.steps);
+            setSummary(data.summary);
             setMessage('구비서류를 저장했습니다.');
             onSaved?.();
         } catch (error) {
@@ -107,7 +74,7 @@ export function useLeadContractChecklist({ leadId, onSaved, userId }: UseLeadCon
         } finally {
             setSavingStepKey('');
         }
-    }, [leadId, onSaved, userId]);
+    }, [checklist, leadId, onSaved, userId]);
 
     return {
         errorMessage,
