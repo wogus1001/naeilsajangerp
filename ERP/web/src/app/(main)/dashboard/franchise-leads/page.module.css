@@ -7049,6 +7049,18 @@
     text-overflow: ellipsis;
 }
 
+.latestActivityCell {
+    overflow: hidden;
+}
+
+.latestActivityText {
+    display: block;
+    overflow: hidden;
+    color: var(--fr-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .dueBadge,
 .dueBadgeDanger {
     display: inline-flex;

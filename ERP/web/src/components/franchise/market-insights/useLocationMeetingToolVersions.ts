@@ -8,15 +8,13 @@ import {
 import type { MeetingToolVersion } from '@/lib/franchise-location-meeting-tool-versions';
 import type { FranchiseLocation } from './locationMasterTypes';
 import { isDemoApiBlockedError } from './locationMeetingToolDialogUtils';
-import {
-    fetchLocationMeetingToolVersionsRequest,
-    saveLocationMeetingToolVersionRequest
-} from './locationMeetingToolVersionRequests';
+import type { LocationInteractionRuntime } from './locationInteractionRuntime';
 
 type UseLocationMeetingToolVersionsParams = {
     readonly open: boolean;
     readonly locationId: string;
     readonly location: FranchiseLocation | null;
+    readonly runtime: LocationInteractionRuntime;
     readonly draft: MeetingToolDraft;
     readonly setDraft: React.Dispatch<React.SetStateAction<MeetingToolDraft>>;
     readonly setRatioInputValues: React.Dispatch<React.SetStateAction<Record<MeetingToolCostKey, string>>>;
@@ -27,6 +25,7 @@ export function useLocationMeetingToolVersions({
     open,
     locationId,
     location,
+    runtime,
     draft,
     setDraft,
     setRatioInputValues,
@@ -48,7 +47,7 @@ export function useLocationMeetingToolVersions({
         setVersions([]);
         setVersionTitle('');
         setVersionLoading(true);
-        fetchLocationMeetingToolVersionsRequest(locationId)
+        runtime.fetchVersions(locationId)
             .then(nextVersions => {
                 if (alive) setVersions(nextVersions);
             })
@@ -67,14 +66,14 @@ export function useLocationMeetingToolVersions({
         return () => {
             alive = false;
         };
-    }, [locationId, open, setMessage]);
+    }, [locationId, open, runtime, setMessage]);
 
     const saveVersion = async () => {
         if (!locationId) return;
         setVersionSaving(true);
         setMessage('');
         try {
-            const savedVersion = await saveLocationMeetingToolVersionRequest({
+            const savedVersion = await runtime.saveVersion({
                 locationId,
                 meetingTool: draft,
                 title: versionTitle

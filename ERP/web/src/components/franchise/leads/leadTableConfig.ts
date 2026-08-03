@@ -2,7 +2,7 @@ import type { LeadTableColumnKey, LeadTableFilters } from './leadTableTypes';
 import type { LeadTableSortKey } from './leadTableTypes';
 import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 
-export const LEAD_TABLE_COLUMNS_STORAGE_KEY = 'franchiseLeadTableColumns';
+export const LEAD_TABLE_COLUMNS_STORAGE_KEY = 'franchiseLeadTableColumnsV2';
 export const LEAD_TABLE_CHECKBOX_COLUMN_WIDTH = 40;
 
 export const LEAD_TABLE_COLUMN_WIDTHS = {
@@ -16,6 +16,8 @@ export const LEAD_TABLE_COLUMN_WIDTHS = {
     desiredRegion: 120,
     budget: 120,
     interestedBrand: 120,
+    lastContactedAt: 136,
+    latestActivity: 192,
     nextContactAt: 144,
     memo: 224,
     links: 88,
@@ -60,6 +62,8 @@ export const LEAD_TABLE_COLUMNS: readonly LeadTableColumnConfig[] = [
     { key: 'desiredRegion', label: '희망지역', defaultVisible: true },
     { key: 'budget', label: '예산', defaultVisible: true },
     { key: 'interestedBrand', label: '브랜드', defaultVisible: false },
+    { key: 'lastContactedAt', label: '최근 연락 일자', defaultVisible: true },
+    { key: 'latestActivity', label: '최근 이력 내용', defaultVisible: true },
     { key: 'nextContactAt', label: '다음 연락', defaultVisible: true },
     { key: 'memo', label: '메모', defaultVisible: false },
     ...(ENABLE_LEAD_CUSTOMER_DB_LINKING ? CUSTOMER_DB_LINK_COLUMNS : []),

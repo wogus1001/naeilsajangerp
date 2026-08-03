@@ -1,3 +1,5 @@
+import type { LeadActivity } from './types';
+
 const META_TEST_VALUE_PATTERN = /^<test lead:\s*dummy data for [^>]+>$/i;
 
 export function formatLeadTableName(value: string): string {
@@ -10,3 +12,7 @@ export function formatLeadTableText(value?: string | null): string {
 }
 
 export const formatLeadTableMobile = formatLeadTableText;
+
+export function formatLatestLeadActivity(activity?: LeadActivity): string {
+    return activity ? `${activity.type} · ${activity.content}` : '-';
+}

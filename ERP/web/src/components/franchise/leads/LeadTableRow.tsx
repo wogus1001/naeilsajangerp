@@ -15,7 +15,12 @@ import styles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { ENABLE_LEAD_CUSTOMER_DB_LINKING } from './constants';
 import { LeadDisclosureStatusCell } from './LeadDisclosureStatusCell';
 import { LeadPrivateTableValue } from './LeadPrivateTableValue';
-import { formatLeadTableMobile, formatLeadTableName, formatLeadTableText } from './leadTableDisplay';
+import {
+    formatLatestLeadActivity,
+    formatLeadTableMobile,
+    formatLeadTableName,
+    formatLeadTableText
+} from './leadTableDisplay';
 import type { LeadTableColumnKey } from './leadTableTypes';
 import type { FranchiseLead } from './types';
 import {
@@ -80,6 +85,8 @@ export function LeadTableRow({
     const leadDisplayRegion = formatLeadTableText(lead.desiredRegion);
     const leadDisplayBrand = formatLeadTableText(lead.interestedBrand);
     const leadDisplayMemo = formatLeadTableText(lead.memo);
+    const latestActivity = lead.activityLog?.[0];
+    const latestActivityText = formatLatestLeadActivity(latestActivity);
 
     return (
         <tr>
@@ -165,6 +172,14 @@ export function LeadTableRow({
             </td>}
             {visibleColumnSet.has('interestedBrand') && <td className={styles.tableTextCell}>
                 <LeadPrivateTableValue value={leadDisplayBrand} />
+            </td>}
+            {visibleColumnSet.has('lastContactedAt') && <td className={styles.centerColumnCell}>
+                {formatDateTime(lead.lastContactedAt)}
+            </td>}
+            {visibleColumnSet.has('latestActivity') && <td className={styles.latestActivityCell}>
+                <span className={styles.latestActivityText} title={latestActivity ? latestActivityText : undefined}>
+                    {latestActivityText}
+                </span>
             </td>}
             {visibleColumnSet.has('nextContactAt') && <td className={styles.centerColumnCell}>
                 <span className={isPastDue(lead.nextContactAt) ? styles.dueBadgeDanger : isDueToday(lead.nextContactAt) ? styles.dueBadge : undefined}>

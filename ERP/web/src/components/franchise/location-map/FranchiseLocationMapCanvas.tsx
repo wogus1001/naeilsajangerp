@@ -31,6 +31,7 @@ type Props = {
     readonly points: readonly LocationMapPoint[];
     readonly radiusCenter: LocationMapPosition | null;
     readonly radiusMeters: LocationMapRadiusMeters;
+    readonly runtime?: 'live' | 'offline';
     readonly onKakaoReadyChange: (ready: boolean) => void;
     readonly onMeasurementPointAdd: (position: LocationMapPosition) => void;
     readonly onRadiusCenterPick: (position: LocationMapPosition) => void;
@@ -57,9 +58,115 @@ function focusMapOnPoint(map: kakao.maps.Map, point: LocationMapPoint) {
     }
 }
 
-export function FranchiseLocationMapCanvas({
+export function FranchiseLocationMapCanvas(props: Props) {
+    if (props.runtime === 'offline') {
+        return <FranchiseLocationMapOfflineCanvas {...props} />;
+    }
+    return <FranchiseLocationMapLiveCanvas {...props} />;
+}
+
+function FranchiseLocationMapOfflineCanvas({
     activeLocationId,
-    activePoint,
+    center,
+    isBusy,
+    isRadiusPicking,
+    measurementMode,
+    points,
+    onKakaoReadyChange,
+    onMeasurementPointAdd,
+    onRadiusCenterPick,
+    onSelectPoint
+}: Props) {
+    React.useEffect(() => {
+        onKakaoReadyChange(true);
+        return () => onKakaoReadyChange(false);
+    }, [onKakaoReadyChange]);
+
+    if (isBusy) {
+        return (
+            <div className={styles.mapFallback}>
+                <MapPin size={24} />
+                <strong>지도 좌표를 확인하고 있습니다.</strong>
+                <span>저장된 위치를 기준으로 물건지를 정리합니다.</span>
+            </div>
+        );
+    }
+
+    if (points.length === 0) {
+        return (
+            <div className={styles.mapFallback}>
+                <Building2 size={24} />
+                <strong>지도에 표시할 물건지가 없습니다.</strong>
+                <span>주소나 좌표가 저장된 가맹 운영점 또는 출점 후보지를 등록해주세요.</span>
+            </div>
+        );
+    }
+
+    const latitudes = points.map(point => point.position.lat);
+    const longitudes = points.map(point => point.position.lng);
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+    const latSpan = Math.max(maxLat - minLat, 0.015);
+    const lngSpan = Math.max(maxLng - minLng, 0.015);
+    const toPercent = (value: number, min: number, span: number) => 10 + ((value - min) / span) * 80;
+    const isMeasuring = measurementMode !== 'none';
+
+    return (
+        <div
+            className={`${styles.mapInner} ${styles.offlineMap} ${isRadiusPicking || isMeasuring ? styles.mapInnerPicking : ''}`}
+            aria-label="샘플 물건지 지도"
+            onClick={(event) => {
+                if (event.target !== event.currentTarget || (!isRadiusPicking && !isMeasuring)) return;
+                const bounds = event.currentTarget.getBoundingClientRect();
+                const xRatio = (event.clientX - bounds.left) / bounds.width;
+                const yRatio = (event.clientY - bounds.top) / bounds.height;
+                const position = {
+                    lat: center.lat + (0.5 - yRatio) * latSpan,
+                    lng: center.lng + (xRatio - 0.5) * lngSpan
+                };
+                if (isRadiusPicking) {
+                    onRadiusCenterPick(position);
+                    return;
+                }
+                onMeasurementPointAdd(position);
+            }}
+        >
+            <span className={styles.offlineMapRoadHorizontal} aria-hidden="true" />
+            <span className={styles.offlineMapRoadVertical} aria-hidden="true" />
+            {points.map((point, index) => {
+                const isActive = activeLocationId === point.location.id;
+                const markerClassName = point.kind === 'operation'
+                    ? styles.operationMarker
+                    : styles.candidateMarker;
+                return (
+                    <button
+                        key={point.location.id}
+                        type="button"
+                        className={`${markerClassName} ${styles.offlineMapMarker} ${isActive ? styles.mapMarkerActive : ''}`}
+                        style={{
+                            left: `${toPercent(point.position.lng, minLng, lngSpan)}%`,
+                            top: `${90 - (toPercent(point.position.lat, minLat, latSpan) - 10)}%`
+                        }}
+                        onClick={() => onSelectPoint(point.location.id)}
+                        title={point.location.address || point.location.region || point.location.name}
+                    >
+                        <span
+                            className={styles.markerDot}
+                            style={{ backgroundColor: LOCATION_MAP_STATUS_COLORS[point.location.status] }}
+                        />
+                        <strong>{index + 1}</strong>
+                        <small>{point.location.name}</small>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function FranchiseLocationMapLiveCanvas({
+    activeLocationId,
     center,
     comparisonRadiusPoints,
     focusRequestId,

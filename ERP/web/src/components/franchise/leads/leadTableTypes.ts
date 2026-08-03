@@ -9,6 +9,8 @@ export type LeadTableColumnKey =
     | 'desiredRegion'
     | 'budget'
     | 'interestedBrand'
+    | 'lastContactedAt'
+    | 'latestActivity'
     | 'nextContactAt'
     | 'memo'
     | 'links'

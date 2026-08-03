@@ -1,6 +1,8 @@
 "use client";
 
 import { CheckCircle2 } from 'lucide-react';
+import { useRef } from 'react';
+import { useModalFocusTrap } from '@/components/common/useModalFocusTrap';
 import { LeadDisclosureSection } from '@/components/franchise/LeadDisclosureSection';
 import { LeadLocationLinkSection } from '@/components/franchise/LeadLocationLinkSection';
 import { LeadWorkflowSection, type LeadNextContactPresetOption } from '@/components/franchise/LeadWorkflowSection';
@@ -125,13 +127,20 @@ export function LeadDetailPanel({
     onLinkRelatedCustomerAction,
     onLinkRelatedCardAction
 }: LeadDetailPanelProps) {
+    const panelRef = useRef<HTMLElement | null>(null);
     const isContractChecklistOnly = mode === 'contractChecklist';
     const detailTitle = isContractChecklistOnly ? '구비서류' : '가맹 희망자 상세';
     const managerName = getManagerNameAction(lead.managerId);
+    useModalFocusTrap({
+        dialogRef: panelRef,
+        isOpen: true,
+        onClose: onCloseAction
+    });
 
     return (
         <div className={styles.detailBackdrop} onClick={onCloseAction}>
             <aside
+                ref={panelRef}
                 className={`${styles.detailPanel} ${isContractChecklistOnly ? styles.contractChecklistOnlyPanel : ''}`}
                 onClick={(event) => event.stopPropagation()}
                 role="dialog"

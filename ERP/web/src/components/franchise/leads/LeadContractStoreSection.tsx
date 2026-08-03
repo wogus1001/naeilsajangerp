@@ -9,14 +9,13 @@ import {
     type ContractStoreFormState
 } from '@/lib/franchise-contract-store-form';
 import { readContractStoreSourceType } from '@/lib/franchise-contract-store';
-import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
-import { readApiError, unwrapApiData } from '@/utils/apiResponse';
 import type {
     ExternalPropertyListing,
     FranchiseLead,
     FranchiseLocation,
     LeadLocationLink
 } from './types';
+import { useLeadDetailRuntime } from './LeadDetailRuntimeProvider';
 import styles from './LeadContractStoreSection.module.css';
 
 type SourceOption = {
@@ -39,12 +38,6 @@ type LeadContractStoreSectionProps = {
     readonly franchiseLocations: readonly FranchiseLocation[];
     readonly externalListings: readonly ExternalPropertyListing[];
     readonly isLocationMatchLoading: boolean;
-};
-
-type LocationResponse = {
-    readonly location?: FranchiseLocation | null;
-    readonly locations?: readonly FranchiseLocation[];
-    readonly created?: boolean;
 };
 
 const STORE_STATUSES = ['오픈준비', '운영중', '휴점', '폐점'];
@@ -92,6 +85,7 @@ export function LeadContractStoreSection({
     externalListings,
     isLocationMatchLoading
 }: LeadContractStoreSectionProps) {
+    const { store: storeRuntime } = useLeadDetailRuntime();
     const [storeLocation, setStoreLocation] = React.useState<FranchiseLocation | null>(null);
     const [selectedSourceKey, setSelectedSourceKey] = React.useState('');
     const [isDirectEntry, setIsDirectEntry] = React.useState(false);
@@ -146,23 +140,16 @@ export function LeadContractStoreSection({
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ requesterId: userId, contractLeadId: lead.id });
-            if (companyName) params.set('company', companyName);
-            const headers = await getApiAuthHeaders();
-            const response = await fetch(`/api/franchise-locations?${params.toString()}`, { cache: 'no-store', headers });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LocationResponse>(payload);
-            const [firstLocation] = data.locations || [];
-            setStoreLocation(firstLocation || null);
-            if (firstLocation) setForm(buildContractStoreFormState(lead, firstLocation));
+            const location = await storeRuntime.load({ leadId: lead.id, userId, companyName });
+            setStoreLocation(location);
+            if (location) setForm(buildContractStoreFormState(lead, location));
         } catch (error) {
             setStoreLocation(null);
             setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 불러오지 못했습니다.');
         } finally {
             setIsLoading(false);
         }
-    }, [companyName, lead, userId]);
+    }, [companyName, lead, storeRuntime, userId]);
 
     React.useEffect(() => {
         void fetchStoreLocation();
@@ -199,16 +186,13 @@ export function LeadContractStoreSection({
         setErrorMessage('');
         setMessage('');
         try {
-            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
-            const response = await fetch('/api/franchise-locations', {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify({ ...form, id: storeLocation.id, requesterId: userId, companyName, locationType: '가맹점' })
+            const location = await storeRuntime.save({
+                locationId: storeLocation.id,
+                form,
+                userId,
+                companyName
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LocationResponse>(payload);
-            setStoreLocation(data.location || null);
+            setStoreLocation(location);
             setMessage('가맹점 정보를 저장했습니다.');
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 저장하지 못했습니다.');
@@ -228,24 +212,16 @@ export function LeadContractStoreSection({
         setErrorMessage('');
         setMessage('');
         try {
-            const headers = await getApiAuthHeaders({ 'Content-Type': 'application/json' });
-            const response = await fetch('/api/franchise-leads/contract-store', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    requesterId: userId,
-                    companyName,
-                    leadId: lead.id,
-                    sourceType: parsedSource?.sourceType || 'direct',
-                    sourceId: parsedSource?.targetId || '',
-                    draft: form
-                })
+            const result = await storeRuntime.create({
+                leadId: lead.id,
+                form,
+                sourceType: parsedSource?.sourceType || 'direct',
+                sourceId: parsedSource?.targetId || '',
+                userId,
+                companyName
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LocationResponse>(payload);
-            setStoreLocation(data.location || null);
-            setMessage(data.created === false ? '이미 연결된 가맹점 정보를 불러왔습니다.' : '가맹점 정보를 생성했습니다.');
+            setStoreLocation(result.location);
+            setMessage(result.created ? '가맹점 정보를 생성했습니다.' : '이미 연결된 가맹점 정보를 불러왔습니다.');
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : '가맹점 정보를 생성하지 못했습니다.');
         } finally {

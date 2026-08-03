@@ -1,5 +1,10 @@
-import KakaoAddressSearch, { type KakaoAddressResult } from '@/components/franchise/KakaoAddressSearch';
-import FranchiseBrandSelector from '@/components/franchise/FranchiseBrandSelector';
+import KakaoAddressSearch, {
+    type KakaoAddressLookupSource,
+    type KakaoAddressResult
+} from '@/components/franchise/KakaoAddressSearch';
+import FranchiseBrandSelector, {
+    type FranchiseBrandSearchSource
+} from '@/components/franchise/FranchiseBrandSelector';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { formatManagerDisplayName } from '@/lib/franchise-manager-display';
 import {
@@ -36,6 +41,8 @@ type LocationMasterFormProps = {
     readonly managerOptions: readonly LocationManagerOption[];
     readonly isManagerLoading: boolean;
     readonly isSaving: boolean;
+    readonly addressLookupSource?: KakaoAddressLookupSource | undefined;
+    readonly brandSearchSource?: FranchiseBrandSearchSource | undefined;
     readonly onChangeAction: (patch: Partial<LocationFormState>) => void;
     readonly onResetAction: () => void;
     readonly onSaveAction: () => void;
@@ -54,6 +61,8 @@ export function LocationMasterForm({
     managerOptions,
     isManagerLoading,
     isSaving,
+    addressLookupSource,
+    brandSearchSource,
     onChangeAction,
     onResetAction,
     onSaveAction,
@@ -127,6 +136,7 @@ export function LocationMasterForm({
                         requesterId={userId}
                         companyName={companyName}
                         value={form.brand}
+                        searchSource={brandSearchSource}
                         onBrandChange={(brand) => onChangeAction({ brand, brandId: '' })}
                         onSelectBrand={onSelectBrandAction}
                         classNames={{
@@ -142,6 +152,7 @@ export function LocationMasterForm({
                     <KakaoAddressSearch
                         requesterId={userId}
                         value={form.address}
+                        lookupSource={addressLookupSource}
                         onAddressChange={(address) => onChangeAction({ address, latitude: null, longitude: null })}
                         onSelect={onSelectAddressAction}
                         classNames={{
