@@ -50,7 +50,7 @@ export type FranchiseLead = {
     readonly disclosureSummary?: LeadDisclosureSummary;
 };
 
-export type LeadActivityType = '전화' | '문자' | '방문상담' | '계약검토' | '메모' | '상태변경' | '고객전환';
+export type LeadActivityType = '전화' | '부재' | '문자' | '방문상담' | '계약검토' | '메모' | '상태변경' | '고객전환';
 
 export type LeadActivity = {
     readonly id: string;

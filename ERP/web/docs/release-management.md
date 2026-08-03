@@ -238,6 +238,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-08-03 데모 실화면 동기화·모객 DB 단계 운영 보강
+  - 작업 브랜치: `codex/franchise-lead-source-sql-applied-20260730`
+  - 기능 커밋: 이번 릴리스 커밋에서 데모 production UI parity와 모객 DB 단계·상담 이력 개선을 함께 기록한다.
+  - 주요 기능: `/demo`가 대시보드, 모객 DB와 후보자 상세 팝업, 물건지 지도, 가맹 운영의 실제 컴포넌트를 fixture/runtime 경계로 재사용한다. 모객 DB는 선택 DB에 맞는 신규 등록, 최근 연락·이력 컬럼, `부재` 상담 유형, 후보자의 `1차 유입 DB로 이동` 일괄 액션과 일반 수정 단계 보존을 제공한다.
+  - 검증: 변경·신규 테스트 102건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 인증된 로컬 실제 이동·원복 브라우저 QA, 독립 기능·한국어 UI 리뷰를 통과했다.
+  - SQL: 신규 SQL 없음. 기존 모객 DB JSON 단계 필드를 사용한다.
+  - dev/main/production: 기능 커밋과 문서 커밋을 작업 브랜치에 push한 뒤 Fast Release Runbook의 dev PR·dev smoke·검증 커밋 선별·main PR·production 순서로 승격한다. 최종 deployment ID는 배포 결과로 보고한다.
+  - 공개 화면: `/landing` 영향 없음. `/demo`는 직접 변경 대상이며 `npm run qa:demo-ui`는 환경별 데모 계정으로 배포 후 smoke한다.
+
 - 2026-07-30 모객 DB 유입경로 관리·필터 정리
   - 작업 브랜치: `codex/meta-business-page-targets-20260727`
   - 기능 커밋: `ca9e4dd fix(franchise): 모객 DB 필터 옵션 정리`, `8ac62d8 feat(franchise): 회사별 유입경로 항목 관리`

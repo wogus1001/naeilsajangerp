@@ -3,10 +3,8 @@
 import React from 'react';
 import { ExternalLink, FileText, Link2, Trash2, UploadCloud, X } from 'lucide-react';
 import { LEAD_CONTRACT_CHECKLIST_DEFINITIONS } from '@/lib/franchise-lead-contract-checklist';
-import { buildLeadDocumentStoragePrefix } from '@/lib/franchise-lead-document-storage';
 import type { FranchiseLeadDocument } from '@/lib/franchise-lead-documents';
-import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
-import { readApiError, unwrapApiData } from '@/utils/apiResponse';
+import { useLeadDetailRuntime } from './leads/LeadDetailRuntimeProvider';
 import styles from './LeadDocumentBoxSection.module.css';
 
 type Props = {
@@ -18,31 +16,14 @@ type Props = {
     readonly userId: string;
 };
 
-type LeadDocumentsResponse = {
-    readonly documents?: readonly FranchiseLeadDocument[];
-};
-
-type UploadResponse = {
-    readonly path?: string;
-};
-
-type OpenDocumentResponse = {
-    readonly url?: string;
-};
-
 type ElectronicContractOption = {
     readonly id: string;
     readonly name: string;
     readonly status: string;
 };
 
-type ElectronicContractsResponse = {
-    readonly contracts?: readonly ElectronicContractOption[];
-};
-
 type DocumentFormMode = 'upload' | 'electronic_contract';
 
-const UPLOAD_BUCKET = 'property-documents';
 const UNLINKED_CHECKLIST_STEP_KEY = '';
 
 const CHECKLIST_LABELS = new Map<string, string>(
@@ -53,14 +34,6 @@ const FORM_MODES = [
     { mode: 'upload', label: '업로드', icon: UploadCloud },
     { mode: 'electronic_contract', label: '전자계약', icon: Link2 }
 ] as const;
-
-function sanitizePathPart(value: string): string {
-    return value
-        .trim()
-        .replace(/[^a-zA-Z0-9._-]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        || 'document';
-}
 
 function formatDate(value: string): string {
     if (!value) return '';
@@ -121,6 +94,7 @@ export function LeadDocumentBoxSection({
     onSaved,
     refreshKey
 }: Props) {
+    const { documents: documentRuntime } = useLeadDetailRuntime();
     const [documents, setDocuments] = React.useState<readonly FranchiseLeadDocument[]>([]);
     const [electronicContracts, setElectronicContracts] = React.useState<readonly ElectronicContractOption[]>([]);
     const [formMode, setFormMode] = React.useState<DocumentFormMode>('upload');
@@ -138,41 +112,25 @@ export function LeadDocumentBoxSection({
     const fetchElectronicContracts = React.useCallback(async () => {
         if (!leadId) return;
         try {
-            const params = new URLSearchParams({ scope: 'company', leadId });
-            const response = await fetch(`/api/electronic-contracts?${params.toString()}`, {
-                cache: 'no-store',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<ElectronicContractsResponse>(payload);
-            setElectronicContracts((data.contracts || []).filter(contract => contract.status === 'completed'));
+            setElectronicContracts(await documentRuntime.loadElectronicContracts({ leadId }));
         } catch {
             setElectronicContracts([]);
         }
-    }, [leadId]);
+    }, [documentRuntime, leadId]);
 
     const fetchDocuments = React.useCallback(async () => {
         if (!leadId) return;
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ leadId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
-                cache: 'no-store',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LeadDocumentsResponse>(payload);
-            setDocuments(data.documents || []);
+            setDocuments(await documentRuntime.load({ leadId }));
         } catch (error) {
             setDocuments([]);
             setErrorMessage(error instanceof Error ? error.message : '점주 문서함을 불러오지 못했습니다.');
         } finally {
             setIsLoading(false);
         }
-    }, [leadId]);
+    }, [documentRuntime, leadId]);
 
     React.useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -193,26 +151,7 @@ export function LeadDocumentBoxSection({
 
     const uploadFile = async (file: File) => {
         if (!companyId) throw new Error('회사 정보를 확인할 수 없습니다.');
-        const formData = new FormData();
-        const suffix = Math.random().toString(36).slice(2, 10) || 'upload';
-        const fileName = sanitizePathPart(file.name);
-        const storagePrefix = buildLeadDocumentStoragePrefix({ companyId, leadId });
-        formData.append('file', file);
-        formData.append('bucket', UPLOAD_BUCKET);
-        formData.append('companyId', companyId);
-        formData.append('leadId', leadId);
-        formData.append('path', `${storagePrefix}${Date.now()}-${suffix}-${fileName}`);
-
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-            headers: await getApiAuthHeaders()
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(readApiError(payload));
-        const data = unwrapApiData<UploadResponse>(payload);
-        if (!data.path) throw new Error('업로드 경로를 확인할 수 없습니다.');
-        return data;
+        return documentRuntime.upload({ companyId, leadId, file });
     };
 
     const resetForm = () => {
@@ -241,26 +180,19 @@ export function LeadDocumentBoxSection({
                 ? await uploadFile(selectedFile)
                 : null;
             const selectedContract = electronicContracts.find(contract => contract.id === electronicContractId.trim());
-            const response = await fetch('/api/franchise-lead-documents', {
-                method: 'POST',
-                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({
-                    leadId,
-                    title: cleanTitle || selectedFile?.name || selectedContract?.name || '전자계약 문서',
-                    sourceType: formMode,
-                    sourceId: formMode === 'electronic_contract' ? electronicContractId.trim() : '',
-                    documentStatus: 'stored',
-                    fileName: selectedFile?.name || '',
-                    storageBucket: uploadResult ? UPLOAD_BUCKET : '',
-                    storagePath: uploadResult?.path || '',
-                    memo,
-                    checklistStepKey: checklistStepKey || undefined
-                })
+            const nextDocuments = await documentRuntime.create({
+                leadId,
+                title: cleanTitle || selectedFile?.name || selectedContract?.name || '전자계약 문서',
+                sourceType: formMode,
+                sourceId: formMode === 'electronic_contract' ? electronicContractId.trim() : '',
+                documentStatus: 'stored',
+                fileName: uploadResult?.fileName || '',
+                storageBucket: uploadResult?.storageBucket || '',
+                storagePath: uploadResult?.storagePath || '',
+                memo,
+                checklistStepKey: checklistStepKey || undefined
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LeadDocumentsResponse>(payload);
-            setDocuments(data.documents || []);
+            setDocuments(nextDocuments);
             setLinkDrafts({});
             resetForm();
             setMessage('점주 문서함에 등록했습니다.');
@@ -278,18 +210,10 @@ export function LeadDocumentBoxSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({
-                id: documentId,
+            setDocuments(await documentRuntime.remove({
+                documentId,
                 checklistStepKey: stepKey
-            });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
-                method: 'DELETE',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LeadDocumentsResponse>(payload);
-            setDocuments(data.documents || []);
+            }));
             setMessage('체크 항목 연결을 삭제했습니다.');
             onSaved?.();
         } catch (error) {
@@ -308,18 +232,10 @@ export function LeadDocumentBoxSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const response = await fetch('/api/franchise-lead-documents', {
-                method: 'PATCH',
-                headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({
-                    id: documentId,
-                    checklistStepKey: stepKey
-                })
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LeadDocumentsResponse>(payload);
-            setDocuments(data.documents || []);
+            setDocuments(await documentRuntime.link({
+                documentId,
+                checklistStepKey: stepKey
+            }));
             setLinkDrafts(prev => {
                 const next = { ...prev };
                 delete next[documentId];
@@ -340,15 +256,7 @@ export function LeadDocumentBoxSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ id: documentId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
-                method: 'DELETE',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<LeadDocumentsResponse>(payload);
-            setDocuments(data.documents || []);
+            setDocuments(await documentRuntime.remove({ documentId }));
             setMessage('문서를 삭제했습니다.');
             onSaved?.();
         } catch (error) {
@@ -363,16 +271,8 @@ export function LeadDocumentBoxSection({
         setMessage('');
         setErrorMessage('');
         try {
-            const params = new URLSearchParams({ action: 'open', documentId });
-            const response = await fetch(`/api/franchise-lead-documents?${params.toString()}`, {
-                cache: 'no-store',
-                headers: await getApiAuthHeaders()
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(readApiError(payload));
-            const data = unwrapApiData<OpenDocumentResponse>(payload);
-            if (!data.url) throw new Error('문서 열람 URL을 확인하지 못했습니다.');
-            window.open(data.url, '_blank', 'noopener,noreferrer');
+            const url = await documentRuntime.open({ documentId });
+            window.open(url, '_blank', 'noopener,noreferrer');
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : '문서를 열지 못했습니다.');
         }

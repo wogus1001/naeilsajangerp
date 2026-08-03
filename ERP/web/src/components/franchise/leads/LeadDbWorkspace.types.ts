@@ -59,6 +59,7 @@ export type LeadDbWorkspaceProps = {
     readonly onVisibleTableColumnsChangeAction: Dispatch<SetStateAction<readonly LeadTableColumnKey[]>>;
     readonly onBulkNextContactAtChangeAction: (value: string) => void;
     readonly onApplyBulkNextContactAction: () => void;
+    readonly onReturnSelectedToRawIntakeAction: () => void;
     readonly onClearSelectedAction: () => void;
     readonly onToggleSelectAllVisibleAction: (checked: boolean) => void;
     readonly onToggleSelectLeadAction: (leadId: string, checked: boolean) => void;

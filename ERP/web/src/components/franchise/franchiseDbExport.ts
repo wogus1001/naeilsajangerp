@@ -1,4 +1,5 @@
 import { LEAD_TABLE_COLUMNS } from '@/components/franchise/leads/leadTableConfig';
+import { formatLatestLeadActivity } from '@/components/franchise/leads/leadTableDisplay';
 import type { LeadTableColumnKey } from '@/components/franchise/leads/leadTableTypes';
 import type { FranchiseLead as LeadExportItem } from '@/components/franchise/leads/types';
 import {
@@ -102,6 +103,10 @@ function getLeadCellValue(lead: LeadExportItem, columnKey: LeadTableColumnKey, g
             return formatBudget(lead.budgetMin, lead.budgetMax);
         case 'interestedBrand':
             return lead.interestedBrand || '-';
+        case 'lastContactedAt':
+            return formatDateTime(lead.lastContactedAt);
+        case 'latestActivity':
+            return formatLatestLeadActivity(lead.activityLog?.[0]);
         case 'nextContactAt':
             return formatDateTime(lead.nextContactAt);
         case 'memo':

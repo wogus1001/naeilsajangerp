@@ -27,9 +27,13 @@ import type { FranchiseLocation, LocationManagerOption } from './locationMasterT
 import type { FranchiseLocationMessageSummary } from './locationMessageTypes';
 import { LocationMessagePanel } from './LocationMessagePanel';
 import { LocationMeetingToolDialog } from './LocationMeetingToolDialog';
-import { fetchLocationMessageSummaries } from './locationMessageRequests';
+import type { LocationMapRuntime } from '@/components/franchise/location-map/types';
 import { formatDate } from './locationMasterUtils';
 import type { MeetingToolDraft } from '@/lib/franchise-location-meeting-tool';
+import {
+    resolveLocationInteractionRuntime,
+    type LocationInteractionRuntime
+} from './locationInteractionRuntime';
 
 const LOCATION_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
@@ -76,6 +80,8 @@ type LocationMasterListProps = {
     readonly locations: readonly FranchiseLocation[];
     readonly managerOptions: readonly LocationManagerOption[];
     readonly deletingLocationId: string;
+    readonly interactionRuntime?: LocationInteractionRuntime | undefined;
+    readonly mapRuntime?: LocationMapRuntime | undefined;
     readonly onEdit: (location: FranchiseLocation) => void;
     readonly onDelete: (location: FranchiseLocation) => void;
 };
@@ -146,10 +152,13 @@ export function LocationMasterList({
     locations,
     managerOptions,
     deletingLocationId,
+    interactionRuntime,
+    mapRuntime,
     onEdit,
     onDelete
 }: LocationMasterListProps) {
     const { showAlert } = useAppDialog();
+    const runtime = resolveLocationInteractionRuntime(interactionRuntime);
     const [recordLocationId, setRecordLocationId] = React.useState('');
     const [messageSummaries, setMessageSummaries] = React.useState<ReadonlyMap<string, FranchiseLocationMessageSummary>>(
         () => new Map<string, FranchiseLocationMessageSummary>()
@@ -192,7 +201,7 @@ export function LocationMasterList({
         if (!userId || !pageLocationIdsKey) return undefined;
         let isActive = true;
         const locationIds = pageLocationIdsKey.split('|').filter(Boolean);
-        void fetchLocationMessageSummaries({ userId, locationIds })
+        void runtime.fetchMessageSummaries({ userId, locationIds })
             .then(summaries => {
                 if (!isActive) return;
                 setMessageSummaries(prev => {
@@ -208,7 +217,7 @@ export function LocationMasterList({
         return () => {
             isActive = false;
         };
-    }, [pageLocationIdsKey, userId]);
+    }, [pageLocationIdsKey, runtime, userId]);
 
     const updateMessageSummary = React.useCallback((summary: FranchiseLocationMessageSummary) => {
         setMessageSummaries(prev => {
@@ -453,6 +462,7 @@ export function LocationMasterList({
                     userId={userId}
                     location={selectedRecordLocation}
                     managerName={getManagerDisplayName(selectedRecordLocation, managerOptions)}
+                    runtime={runtime}
                     onOpenChange={(open) => {
                         if (!open) setRecordLocationId('');
                     }}
@@ -464,6 +474,8 @@ export function LocationMasterList({
                     open={Boolean(selectedReportLocation)}
                     location={selectedReportLocation}
                     managerName={getManagerDisplayName(selectedReportLocation, managerOptions)}
+                    runtime={runtime}
+                    mapRuntime={mapRuntime}
                     onOpenChange={(open) => {
                         if (!open) setReportLocationId('');
                     }}

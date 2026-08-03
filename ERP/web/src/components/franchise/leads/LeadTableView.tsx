@@ -32,6 +32,7 @@ type LeadTableViewProps = {
     readonly getManagerName: (managerId?: string) => string;
     readonly onBulkNextContactAtChange: (value: string) => void;
     readonly onApplyBulkNextContact: () => void;
+    readonly onReturnSelectedToRawIntake: () => void;
     readonly onClearSelected: () => void;
     readonly onToggleSelectAllVisible: (checked: boolean) => void;
     readonly onToggleSelectLead: (leadId: string, checked: boolean) => void;
@@ -54,6 +55,7 @@ const CENTER_ALIGNED_COLUMN_KEYS: ReadonlySet<LeadTableColumnKey> = new Set([
     'disclosure',
     'manager',
     'source',
+    'lastContactedAt',
     'nextContactAt',
     'actions'
 ]);
@@ -76,6 +78,7 @@ export function LeadTableView({
     getManagerName,
     onBulkNextContactAtChange,
     onApplyBulkNextContact,
+    onReturnSelectedToRawIntake,
     onClearSelected,
     onToggleSelectAllVisible,
     onToggleSelectLead,
@@ -100,11 +103,13 @@ export function LeadTableView({
     return (
         <>
             <LeadTableBulkActions
+                leadDbLayer={leadDbLayer}
                 selectedCount={selectedLeadIds.length}
                 bulkNextContactAt={bulkNextContactAt}
                 isBulkUpdating={isBulkUpdating}
                 onBulkNextContactAtChange={onBulkNextContactAtChange}
                 onApplyBulkNextContact={onApplyBulkNextContact}
+                onReturnSelectedToRawIntake={onReturnSelectedToRawIntake}
                 onClearSelected={onClearSelected}
             />
             <div className={styles.tableScroll}>

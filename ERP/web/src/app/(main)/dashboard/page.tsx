@@ -5,6 +5,12 @@ import { Calendar, FileText, Users, Briefcase, ChevronRight, Plus, Clock, CheckC
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppDialog } from '@/components/common/AppDialogProvider';
+import {
+    DashboardNoticeDialog,
+    EMPTY_DASHBOARD_NOTICE_DRAFT,
+    type DashboardNoticeDraft
+} from '@/components/dashboard/DashboardNoticeDialog';
+import { DashboardWelcomeHeader } from '@/components/dashboard/DashboardWelcomeHeader';
 import { fetchDashboardModePreference } from '@/components/dashboard/dashboardModePreference';
 import { fetchDashboardNotices, type DashboardNotice } from '@/components/dashboard/dashboardNotices';
 import { MainDashboardTypeA } from '@/components/dashboard/MainDashboardTypeA';
@@ -41,7 +47,7 @@ export default function DashboardPage() {
 
     // --- Notice Creator State ---
     const [isNoticeModalOpen, setIsNoticeModalOpen] = React.useState(false);
-    const [newNotice, setNewNotice] = React.useState({ title: '', content: '', type: 'team', isPinned: false });
+    const [newNotice, setNewNotice] = React.useState<DashboardNoticeDraft>(() => ({ ...EMPTY_DASHBOARD_NOTICE_DRAFT }));
     const [isSavingNotice, setIsSavingNotice] = React.useState(false);
     const [userData, setUserData] = React.useState<StoredUser>(null);
 
@@ -151,7 +157,7 @@ export default function DashboardPage() {
             if (res.ok) {
                 void showAlert({ message: '공지사항이 등록되었습니다.', type: 'success' });
                 setIsNoticeModalOpen(false);
-                setNewNotice({ title: '', content: '', type: 'team', isPinned: false });
+                setNewNotice({ ...EMPTY_DASHBOARD_NOTICE_DRAFT });
                 refreshDashboardNotices();
             }
         } catch (error) {
@@ -228,16 +234,7 @@ export default function DashboardPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-[1200px] mx-auto" style={{ fontFamily: 'var(--font-pretendard)' }}>
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 md:gap-0">
-                <div>
-                    <h1 style={styles.pageTitle}>안녕하세요, {userName}님! 👋</h1>
-                    <p style={styles.pageSubtitle}>오늘도 성공적인 비즈니스를 응원합니다.</p>
-                </div>
-                <div style={styles.dateDisplay}>
-                    {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
-                </div>
-            </div>
+            <DashboardWelcomeHeader userName={userName} />
 
             {dashboardMode === 'a' ? (
                 <MainDashboardTypeA
@@ -454,97 +451,15 @@ export default function DashboardPage() {
                 </>
             )}
 
-            {/* --- Notice Creation Modal --- */}
-            {isNoticeModalOpen && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                }}>
-                    <div style={{
-                        backgroundColor: 'white', width: '90%', maxWidth: '500px', borderRadius: '16px', padding: '32px',
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
-                    }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '24px', color: '#212529' }}>📢 신규 공지사항 작성</h2>
-
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#495057', marginBottom: '8px' }}>공지 유형</label>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button
-                                    onClick={() => setNewNotice({ ...newNotice, type: 'team' })}
-                                    style={{
-                                        padding: '8px 16px', borderRadius: '8px', border: '1px solid #dee2e6', fontSize: '13px',
-                                        backgroundColor: newNotice.type === 'team' ? '#e7f5ff' : 'white',
-                                        borderColor: newNotice.type === 'team' ? '#339af0' : '#dee2e6',
-                                        color: newNotice.type === 'team' ? '#1971c2' : '#495057',
-                                        fontWeight: 600, cursor: 'pointer'
-                                    }}
-                                >팀 공지</button>
-                                {userData?.role === 'admin' && (
-                                    <button
-                                        onClick={() => setNewNotice({ ...newNotice, type: 'system' })}
-                                        style={{
-                                            padding: '8px 16px', borderRadius: '8px', border: '1px solid #dee2e6', fontSize: '13px',
-                                            backgroundColor: newNotice.type === 'system' ? '#fff5f5' : 'white',
-                                            borderColor: newNotice.type === 'system' ? '#fa5252' : '#dee2e6',
-                                            color: newNotice.type === 'system' ? '#e03131' : '#495057',
-                                            fontWeight: 600, cursor: 'pointer'
-                                        }}
-                                    >전체 시스템 공지</button>
-                                )}
-                            </div>
-                        </div>
-
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#495057', marginBottom: '8px' }}>제목</label>
-                            <input
-                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dee2e6', fontSize: '14px' }}
-                                placeholder="제목을 입력하세요"
-                                value={newNotice.title}
-                                onChange={(e) => setNewNotice({ ...newNotice, title: e.target.value })}
-                            />
-                        </div>
-
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#495057', marginBottom: '8px' }}>내용</label>
-                            <textarea
-                                style={{ width: '100%', height: '150px', padding: '12px', borderRadius: '8px', border: '1px solid #dee2e6', fontSize: '14px', resize: 'none' }}
-                                placeholder="공지할 내용을 입력하세요"
-                                value={newNotice.content}
-                                onChange={(e) => setNewNotice({ ...newNotice, content: e.target.value })}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-                            <input
-                                type="checkbox"
-                                id="isPinnedCheck"
-                                checked={newNotice.isPinned}
-                                onChange={(e) => setNewNotice({ ...newNotice, isPinned: e.target.checked })}
-                            />
-                            <label htmlFor="isPinnedCheck" style={{ fontSize: '14px', color: '#495057', cursor: 'pointer' }}>상단 고정 (📌)</label>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                            <button
-                                onClick={() => setIsNoticeModalOpen(false)}
-                                style={{
-                                    padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#f1f3f5',
-                                    color: '#495057', fontSize: '14px', fontWeight: 700, cursor: 'pointer'
-                                }}
-                            >취소</button>
-                            <button
-                                onClick={handleCreateNotice}
-                                disabled={isSavingNotice}
-                                style={{
-                                    padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#339af0',
-                                    color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                                    opacity: isSavingNotice ? 0.7 : 1
-                                }}
-                            >{isSavingNotice ? '저장 중...' : '등록하기'}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DashboardNoticeDialog
+                isOpen={isNoticeModalOpen}
+                draft={newNotice}
+                canCreateSystemNotice={userData?.role === 'admin'}
+                isSaving={isSavingNotice}
+                onClose={() => setIsNoticeModalOpen(false)}
+                onDraftChange={setNewNotice}
+                onSubmit={handleCreateNotice}
+            />
         </div >
     );
 }
@@ -552,9 +467,6 @@ export default function DashboardPage() {
 const styles: Record<string, React.CSSProperties> = {
     // container: { padding: '32px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'var(--font-pretendard)' },
     // header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' },
-    pageTitle: { fontSize: '24px', fontWeight: '800', margin: '0 0 8px 0', color: '#212529' },
-    pageSubtitle: { fontSize: '16px', color: '#868e96', margin: 0 },
-    dateDisplay: { fontSize: '14px', color: '#868e96', fontWeight: 500, backgroundColor: '#f8f9fa', padding: '8px 16px', borderRadius: '20px' },
 
     // statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' },
     statCard: { backgroundColor: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' },

@@ -56,8 +56,7 @@
     white-space: nowrap;
 }
 
-.demoHeaderButton,
-.demoBellButton {
+.demoHeaderButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -88,175 +87,6 @@
     white-space: nowrap;
 }
 
-.demoBellButton {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-}
-
-.demoProfileButton {
-    border: 0;
-    background: transparent;
-    font: inherit;
-    cursor: pointer;
-}
-
-.demoHeaderPopover {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 18px;
-    z-index: 80;
-    display: grid;
-    width: min(360px, calc(100vw - 32px));
-    gap: 12px;
-    border: 1px solid #d1d6db;
-    border-radius: 8px;
-    background: #ffffff;
-    padding: 14px;
-    box-shadow: 0 16px 40px rgb(25 31 40 / 16%);
-}
-
-.demoHeaderPopoverHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.demoHeaderPopoverHeader strong {
-    color: #191f28;
-    font-size: 15px;
-    font-weight: 800;
-}
-
-.demoHeaderPopoverHeader button,
-.demoProfileActions button {
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #4e5968;
-    padding: 7px 10px;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.demoNotificationList {
-    display: grid;
-    gap: 8px;
-}
-
-.demoNotificationItem {
-    display: grid;
-    gap: 5px;
-    width: 100%;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #f9fafb;
-    color: #333d4b;
-    padding: 12px;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.demoNotificationItem:hover,
-.demoNotificationItem:focus-visible,
-.demoProfileActions button:hover,
-.demoProfileActions button:focus-visible {
-    border-color: #3182f6;
-    background: #e8f3ff;
-}
-
-.demoNotificationItem span {
-    width: fit-content;
-    border-radius: 999px;
-    background: #e8f3ff;
-    color: #2272eb;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.demoNotificationItem strong {
-    color: #191f28;
-    font-size: 13px;
-}
-
-.demoNotificationItem small {
-    color: #6b7684;
-    font-size: 12px;
-    line-height: 1.45;
-}
-
-.demoProfilePanel {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid #e5e8eb;
-    border-radius: 8px;
-    background: #f9fafb;
-    padding: 12px;
-}
-
-.demoProfileAvatar {
-    display: grid;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 999px;
-    background: #3182f6;
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.demoProfilePanel h3 {
-    margin: 0;
-    color: #191f28;
-    font-size: 16px;
-}
-
-.demoProfilePanel p {
-    margin: 4px 0 0;
-    color: #6b7684;
-    font-size: 13px;
-}
-
-.demoProfileMeta {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-}
-
-.demoProfileMeta div {
-    display: grid;
-    grid-template-columns: 78px minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-}
-
-.demoProfileMeta dt {
-    color: #6b7684;
-    font-size: 12px;
-    font-weight: 800;
-}
-
-.demoProfileMeta dd {
-    margin: 0;
-    color: #333d4b;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.45;
-}
-
-.demoProfileActions {
-    display: flex;
-    gap: 8px;
-}
-
 .demoNavButton {
     width: 100%;
     border: 0;
@@ -268,8 +98,7 @@
 }
 
 .demoNavButton:focus-visible,
-.demoHeaderButton:focus-visible,
-.demoBellButton:focus-visible {
+.demoHeaderButton:focus-visible {
     outline: 2px solid #3182f6;
     outline-offset: 2px;
 }
@@ -284,345 +113,77 @@
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Segoe UI", sans-serif;
 }
 
+.demoProductionRegionTarget {
+    position: absolute;
+    min-width: 0;
+    pointer-events: none;
+}
+
+.demoProductionGuideAnchors > .demoProductionRegionTarget {
+    position: absolute;
+}
+
+.demoProductionDashboardFrame {
+    position: relative;
+    min-width: 0;
+}
+
+.demoProductionGuideAnchors {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+}
+
+.demoDashboardTargetKpis {
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 180px;
+}
+
+.demoDashboardTargetSchedule {
+    top: 190px;
+    left: 0;
+    width: calc(50% - 16px);
+    height: 320px;
+}
+
+.demoDashboardTargetNotices {
+    top: 190px;
+    right: 0;
+    width: calc(50% - 16px);
+    height: 320px;
+}
+
+.demoDashboardTargetMemo {
+    top: 520px;
+    left: 0;
+    width: calc(50% - 16px);
+    height: 220px;
+}
+
+.demoActionStatus {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1200;
+    max-width: min(360px, calc(100vw - 32px));
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333d4b;
+    padding: 10px 14px;
+    box-shadow: 0 8px 24px rgb(25 31 40 / 12%);
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .actualUiBlock {
     display: grid;
     gap: 12px;
 }
 
-.demoMainDashboardHero {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin: 6px 0 28px;
-}
-
-.demoMainDashboardHero h1 {
-    margin: 0;
-    color: #191f28;
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1.3;
-    letter-spacing: 0;
-}
-
-.demoMainDashboardHero p {
-    margin: 10px 0 0;
-    color: #6b7684;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.demoMainDashboardHero > span {
-    display: inline-flex;
-    min-height: 38px;
-    align-items: center;
-    border-radius: 999px;
-    background: #ffffff;
-    color: #8b95a1;
-    padding: 0 18px;
-    font-size: 14px;
-    font-weight: 800;
-    white-space: nowrap;
-    box-shadow: 0 4px 16px rgb(25 31 40 / 4%);
-}
-
-.demoMainKpiGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-    margin-bottom: 34px;
-}
-
-.demoMainKpiCard {
-    display: flex;
-    min-height: 140px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    border: 1px solid #edf0f3;
-    border-radius: 18px;
-    background: #ffffff;
-    color: #191f28;
-    padding: 26px;
-    text-align: left;
-    box-shadow: 0 10px 28px rgb(25 31 40 / 5%);
-    cursor: pointer;
-    transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.demoMainKpiCard:hover,
-.demoMainKpiCard:focus-visible {
-    border-color: #3182f6;
-    box-shadow: 0 14px 34px rgb(49 130 246 / 12%);
-    transform: translateY(-2px);
-}
-
-.demoMainKpiCard:focus-visible {
-    outline: 2px solid #3182f6;
-    outline-offset: 3px;
-}
-
-.demoMainKpiCard span,
-.demoMainKpiCard b,
-.demoMainKpiCard strong,
-.demoMainKpiCard em {
-    display: block;
-}
-
-.demoMainKpiCard b {
-    color: #333d4b;
-    font-size: 15px;
-    font-weight: 800;
-    word-break: keep-all;
-}
-
-.demoMainKpiCard strong {
-    margin-top: 12px;
-    color: #191f28;
-    font-size: 32px;
-    font-weight: 900;
-    line-height: 1.1;
-}
-
-.demoMainKpiCard small {
-    margin-left: 3px;
-    color: #6b7684;
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.demoMainKpiCard em {
-    margin-top: 12px;
-    color: #8b95a1;
-    font-size: 13px;
-    font-style: normal;
-    font-weight: 700;
-    line-height: 1.45;
-    word-break: keep-all;
-}
-
-.demoMainKpiCard i {
-    display: inline-grid;
-    width: 52px;
-    height: 52px;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 16px;
-    font-style: normal;
-}
-
-.demoMainKpiIcon_purple {
-    background: #f3f0ff;
-    color: #6d3ff2;
-}
-
-.demoMainKpiIcon_yellow {
-    background: #fff6d6;
-    color: #d97706;
-}
-
-.demoMainKpiIcon_green {
-    background: #dffcf0;
-    color: #009f6b;
-}
-
-.demoMainKpiIcon_orange {
-    background: #fff3e8;
-    color: #f97316;
-}
-
-.demoMainWorkGrid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr);
-    gap: 28px;
-    margin-bottom: 34px;
-}
-
-.demoMainWorkColumn {
-    display: grid;
-    align-content: start;
-    gap: 28px;
-    min-width: 0;
-}
-
-.demoMainSectionHeader {
-    display: flex;
-    min-height: 34px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.demoMainSectionHeader > div {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 8px;
-}
-
-.demoMainSectionHeader h2 {
-    margin: 0;
-    color: #191f28;
-    font-size: 19px;
-    font-weight: 900;
-    letter-spacing: 0;
-}
-
-.demoMainSectionHeader button {
-    display: inline-flex;
-    min-height: 28px;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: #6b7684;
-    padding: 0 8px;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.demoMainSectionHeader > div button {
-    width: 26px;
-    padding: 0;
-    background: #e8f3ff;
-    color: #3182f6;
-}
-
-.demoMainSectionHeader button:hover,
-.demoMainSectionHeader button:focus-visible {
-    color: #2272eb;
-    outline: none;
-}
-
-.demoMainPanel {
-    overflow: hidden;
-    border: 1px solid #f1f3f5;
-    border-radius: 16px;
-    background: #ffffff;
-    box-shadow: 0 8px 24px rgb(25 31 40 / 4%);
-}
-
-.demoMainScheduleRow,
-.demoMainNoticeRow {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    border: 0;
-    border-bottom: 1px solid #f1f3f5;
-    background: #ffffff;
-    color: #333d4b;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.demoMainScheduleRow:last-child,
-.demoMainNoticeRow:last-child {
-    border-bottom: 0;
-}
-
-.demoMainScheduleRow:hover,
-.demoMainScheduleRow:focus-visible,
-.demoMainNoticeRow:hover,
-.demoMainNoticeRow:focus-visible {
-    background: #f9fafb;
-    outline: none;
-}
-
-.demoMainScheduleRow {
-    gap: 18px;
-    min-height: 72px;
-    padding: 16px 18px;
-}
-
-.demoMainScheduleRow > strong {
-    width: 56px;
-    color: #4e5968;
-    font-size: 14px;
-    font-weight: 900;
-}
-
-.demoMainScheduleRow span,
-.demoMainNoticeRow span {
-    display: grid;
-    min-width: 0;
-    gap: 5px;
-}
-
-.demoMainScheduleRow b,
-.demoMainNoticeRow b {
-    overflow: hidden;
-    color: #333d4b;
-    font-size: 14px;
-    font-weight: 800;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.demoMainScheduleRow small,
-.demoMainNoticeRow small {
-    color: #8b95a1;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.demoMainMemoBlock {
-    margin-top: 0;
-}
-
-.demoMainMemoBlock textarea {
-    width: 100%;
-    min-height: 150px;
-    resize: vertical;
-    border: 1px solid #f1f3f5;
-    border-radius: 16px;
-    background: #fff9db;
-    color: #333d4b;
-    padding: 18px;
-    font: inherit;
-    font-size: 14px;
-    line-height: 1.6;
-    box-shadow: 0 8px 24px rgb(25 31 40 / 4%);
-}
-
-.demoMainMemoBlock textarea:focus {
-    border-color: #3182f6;
-    outline: none;
-}
-
-.demoMainNoticeRow {
-    justify-content: space-between;
-    gap: 14px;
-    min-height: 64px;
-    padding: 15px 18px;
-}
-
-.demoMainNoticeRow em {
-    width: fit-content;
-    border-radius: 6px;
-    background: #e8f3ff;
-    color: #2272eb;
-    padding: 3px 7px;
-    font-size: 11px;
-    font-style: normal;
-    font-weight: 900;
-}
-
-.demoMainNoticeRow small {
-    flex: 0 0 auto;
-}
-
-@media (min-width: 1500px) {
-    .demoMainKpiGrid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
 
 .demoHero h1 {
     max-width: 720px;
@@ -1380,35 +941,8 @@
     .roleGrid,
     .erpMetricGrid,
     .erpTwoColumn,
-    .erpFieldGrid,
-    .demoMainKpiGrid,
-    .demoMainWorkGrid {
+    .erpFieldGrid {
         grid-template-columns: 1fr;
-    }
-
-    .demoMainDashboardHero {
-        align-items: flex-start;
-        flex-direction: column;
-        margin-bottom: 22px;
-    }
-
-    .demoMainKpiGrid {
-        gap: 12px;
-        margin-bottom: 22px;
-    }
-
-    .demoMainKpiCard {
-        min-height: 112px;
-        padding: 20px;
-    }
-
-    .demoMainKpiCard strong {
-        font-size: 28px;
-    }
-
-    .demoMainWorkGrid {
-        gap: 22px;
-        margin-bottom: 22px;
     }
 
     .erpShell {
@@ -1470,7 +1004,6 @@
     }
 
     .demoTourButton,
-    .demoBellButton,
     .demoActualLayout .demoModeBadge {
         display: none;
     }
@@ -1484,6 +1017,33 @@
     .tourCard {
         inset: auto 12px 12px;
         width: auto;
+    }
+
+    .demoDashboardTargetKpis {
+        height: 610px;
+    }
+
+    .demoDashboardTargetSchedule,
+    .demoDashboardTargetNotices,
+    .demoDashboardTargetMemo {
+        right: 0;
+        left: 0;
+        width: auto;
+    }
+
+    .demoDashboardTargetSchedule {
+        top: 625px;
+        height: 285px;
+    }
+
+    .demoDashboardTargetMemo {
+        top: 920px;
+        height: 230px;
+    }
+
+    .demoDashboardTargetNotices {
+        top: 1160px;
+        height: 300px;
     }
 }
 
@@ -1511,26 +1071,6 @@
 
     .erpPageHero h1 {
         font-size: 24px;
-    }
-
-    .demoMainDashboardHero h1 {
-        font-size: 24px;
-    }
-
-    .demoMainDashboardHero p {
-        font-size: 14px;
-    }
-
-    .demoMainDashboardHero > span {
-        min-height: 34px;
-        padding: 0 14px;
-        font-size: 12px;
-    }
-
-    .demoMainScheduleRow,
-    .demoMainNoticeRow {
-        align-items: flex-start;
-        flex-direction: column;
     }
 
     .erpToolbar,

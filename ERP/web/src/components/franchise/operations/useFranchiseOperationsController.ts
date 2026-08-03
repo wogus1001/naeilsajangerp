@@ -145,15 +145,17 @@ export function useFranchiseOperationsController() {
         }
     };
 
-    const deleteLocation = async (location: FranchiseLocation) => {
-        if (!userId) return;
-        const confirmed = await showConfirm({
+    const confirmDeleteLocation = (location: FranchiseLocation) => {
+        return showConfirm({
             title: '가맹점 정보 삭제',
             message: `${location.name} 가맹점 정보를 삭제할까요? 기존 모객DB 데이터는 삭제되지 않습니다.`,
             confirmText: '삭제',
             isDanger: true
         });
-        if (!confirmed) return;
+    };
+
+    const deleteLocation = async (location: FranchiseLocation) => {
+        if (!userId) return;
         setDeletingLocationId(location.id);
         try {
             await deleteFranchiseLocation({ userId, companyName, locationId: location.id });
@@ -186,6 +188,7 @@ export function useFranchiseOperationsController() {
         selectBrand,
         saveLocation,
         updateLocationStatus,
+        confirmDeleteLocation,
         deleteLocation
     };
 }

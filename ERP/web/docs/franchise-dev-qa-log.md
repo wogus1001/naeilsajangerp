@@ -23,6 +23,18 @@
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
 - 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
+### 2026-08-03 데모 production UI parity·모객 DB 단계 이동 QA
+
+- `/demo`의 별도 복제 화면을 줄이고 운영 대시보드·헤더·알림·모객 DB·후보자 상세·물건지 지도·가맹 운영 workspace를 동일 컴포넌트로 조합했다. 데모는 typed fixture/runtime와 메모리 상태로 저장·수정·삭제·확인창을 재현하고, API guard는 실제 ERP API와 데모 밖 이동을 계속 차단한다.
+- 공용 화면의 기본 의존성은 기존 live fetch와 navigation을 유지한다. 데모가 data source와 action을 주입한 경우에만 polling·네트워크 요청을 멈추므로 운영 화면 동작 계약은 바뀌지 않는다.
+- 모객 DB 등록 payload는 현재 선택한 DB 단계에 맞춰 `raw_intake` 또는 `candidate`를 보낸다. 최근 상담 이력은 표의 `최근 연락 일자`, 말줄임 처리한 `최근 이력 내용`으로 확인하고 상담 유형은 `부재`를 포함한다.
+- 후보자 선택 툴바의 `1차 유입 DB로 이동`은 `연락일 적용` 바로 옆 보조 액션으로 배치했다. 중앙 확인창 승인 후 선택 건을 명시적인 `return_to_raw_intake` 전환으로 수정하고, 일부 실패는 성공/실패 건수를 나눠 알린다. 일반 수정 요청은 기존 후보자 단계를 보존한다.
+- 자동 검증: 변경·신규 test 파일 28개를 대상으로 `npx tsx --test ...` 102건 통과. `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check` 통과. build는 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 출력했다.
+- 브라우저 QA: 인증된 `http://localhost:3000/dashboard/franchise-leads`에서 후보자 1건 선택, 확인창, 이동, `1차 유입 DB` 자동 전환과 건수 `1/3 -> 2/2`를 확인했다. 같은 행을 후보자로 다시 승격해 `1/3`으로 원복하고 QA 상담 이력도 삭제했다. console error와 Next.js 오류 overlay는 0건이었다.
+- 시각 QA: 1280x720에서 `연락일 적용 -> 1차 유입 DB로 이동 -> 선택 해제` 순서, 한 줄 한국어 라벨, 버튼 높이·간격, 표 정렬을 확인했고 독립 기능·CJK 검토가 모두 `PASS`했다.
+- `npm run qa:demo-ui`는 실행 셸에 `DEMO_ACCESS_ID`, `DEMO_ACCESS_PASSWORD`가 없어 의도대로 자격정보 필수 오류로 중단됐다. 값은 저장소나 로그에 기록하지 않았으며 dev 배포 후 환경별 데모 계정으로 전체 smoke를 다시 수행한다.
+- 신규 SQL 없음. 공개 `/landing` 변경 없음. `/demo`는 이번 릴리스의 직접 변경 대상이다.
+
 ### 2026-07-28 회사별 Meta 신청 항목 매핑 개발·QA
 
 - Meta 양식에서 발견한 실제 질문을 이름, 연락처, 희망 지역, 예산 통합·최소·최대, 관심 브랜드, 메모에 연결하는 UI/API를 구현했다. 자동 추천과 `연결 안 함`을 제공하고, 저장 전 변경은 다른 설정 저장이나 상태 조회 실패에도 유지한다. 자동 수집은 저장된 이름·연락처 매핑과 같은 회사의 재직 중 담당자를 서버에서 다시 확인한 뒤에만 켠다.

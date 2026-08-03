@@ -1,5 +1,6 @@
 import type { FranchiseLead } from '@/components/franchise/leads/types';
 import type { FranchiseLeadStatus } from '@/lib/franchise-leads';
+import type { DemoRole } from '../demoTypes';
 
 export const DEMO_LEAD_MANAGERS = [
     { id: 'manager-kim', label: '김담당' },
@@ -265,6 +266,28 @@ export const DEMO_SAMPLE_LEADS: readonly FranchiseLead[] = [
         locationTargetId: 'demo-location-gangnam-station'
     })
 ];
+
+export function selectDemoContractLeads(role: DemoRole): readonly FranchiseLead[] {
+    const contractLeads = DEMO_SAMPLE_LEADS.filter(lead => lead.status === '계약완료');
+    if (role === 'admin') return contractLeads;
+    if (role === 'manager') return contractLeads.filter(lead => lead.managerId === 'manager-kim');
+    const sharedContract = contractLeads[0];
+    return sharedContract ? [{
+        ...sharedContract,
+        id: 'demo-partner-contract-shared',
+        managerId: 'partner-kim',
+        desiredRegion: '경기 고양시',
+        memo: '협력업체에 공유된 일산점 계약 완료 샘플입니다.',
+        locationLinks: [{
+            id: 'demo-partner-contract-shared-link',
+            targetId: 'demo-operation-ilsan',
+            targetType: 'franchise_location',
+            status: '검토 예정',
+            memo: '협력업체 공유 후보지',
+            createdAt: sharedContract.updatedAt || '2026-06-24T04:30:00.000Z'
+        }]
+    }] : [];
+}
 
 type DemoLeadSeed = {
     readonly id: string;
