@@ -29,7 +29,7 @@ test('Given automatic sources, when checking edit permission, then they stay pro
 });
 
 test('Given manual default sources, when checking edit permission, then they are editable', () => {
-    const editableCodes = ['네이버폼', '랜딩페이지', '박람회', '소개', '광고', '전화문의'];
+    const editableCodes = ['네이버폼', '랜딩페이지', '박람회', '소개', '광고', '전화문의', '기타'];
 
     editableCodes.forEach(code => {
         const option = DEFAULT_FRANCHISE_LEAD_SOURCE_OPTIONS.find(item => item.code === code);

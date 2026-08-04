@@ -189,3 +189,28 @@ test('Given the production runtime When store and opening workflows run Then the
     assert.ok(createCall);
     assert.deepEqual(requestBody(createCall).draft, form);
 });
+
+test('Given an existing operations store When linking it to a contract lead Then the contract-store endpoint receives an explicit link action', async () => {
+    // Given
+    installLiveResponseRouter();
+
+    // When
+    await LIVE_LEAD_DETAIL_RUNTIME.store.link({
+        leadId: 'lead-1',
+        locationId: 'store-1',
+        userId: 'user-1',
+        companyName: '샘플 본사'
+    });
+
+    // Then
+    const linkCall = fetchCalls.find(call => call.url === '/api/franchise-leads/contract-store');
+    assert.ok(linkCall);
+    assert.equal(linkCall.init?.method, 'POST');
+    assert.deepEqual(requestBody(linkCall), {
+        requesterId: 'user-1',
+        companyName: '샘플 본사',
+        action: 'link_existing',
+        leadId: 'lead-1',
+        locationId: 'store-1'
+    });
+});

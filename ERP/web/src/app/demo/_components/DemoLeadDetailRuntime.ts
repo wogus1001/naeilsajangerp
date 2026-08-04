@@ -96,12 +96,14 @@ function createMaps() {
     const openings = new Map<string, FranchiseOpeningProject>();
     const deliveries = new Map<string, readonly FranchiseLeadDisclosureDelivery[]>();
     CONTRACT_LEAD_IDS.forEach(leadId => {
-        const store = createDemoStore(leadId);
         checklistRows.set(leadId, createDemoChecklistRows());
         documents.set(leadId, [createDemoLeadDocument(leadId)]);
-        stores.set(leadId, store);
-        openings.set(leadId, createDemoOpeningProject(leadId, store.id));
         deliveries.set(leadId, [createDemoDisclosureDelivery(leadId, disclosure)]);
+        if (leadId !== 'demo-candidate-6') {
+            const store = createDemoStore(leadId);
+            stores.set(leadId, store);
+            openings.set(leadId, createDemoOpeningProject(leadId, store.id));
+        }
     });
     return { checklistRows, deliveries, disclosure, documents, openings, stores };
 }
@@ -219,6 +221,15 @@ export function createDemoLeadDetailRuntime(): LeadDetailRuntime {
                 const store = { ...createDemoStore(input.leadId), ...input.form };
                 state.stores.set(input.leadId, store);
                 return { location: store, created: true };
+            },
+            async link(input) {
+                const store = {
+                    ...createDemoStore(input.leadId),
+                    id: input.locationId,
+                    contractLeadId: input.leadId
+                };
+                state.stores.set(input.leadId, store);
+                return store;
             }
         },
         opening: {

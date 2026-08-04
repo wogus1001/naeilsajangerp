@@ -214,6 +214,12 @@ export type LeadContractStoreRuntimePort = {
         readonly location: FranchiseLocation | null;
         readonly created: boolean;
     }>;
+    readonly link: (input: {
+        readonly leadId: string;
+        readonly locationId: string;
+        readonly userId: string;
+        readonly companyName: string;
+    }) => Promise<FranchiseLocation | null>;
 };
 
 export type LeadOpeningRuntimePort = {

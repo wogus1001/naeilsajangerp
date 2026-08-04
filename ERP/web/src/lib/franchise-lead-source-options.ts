@@ -47,7 +47,7 @@ const DEFAULT_SOURCE_DEFINITIONS = [
     { code: '명함DB', label: '명함DB', kind: 'system' },
     { code: FRANCHISE_LEAD_REGISTRATION_SOURCE, label: FRANCHISE_LEAD_REGISTRATION_SOURCE, kind: 'system' },
     { code: FRANCHISE_MATCHING_REQUEST_SOURCE, label: FRANCHISE_MATCHING_REQUEST_SOURCE_LABEL, kind: 'system' },
-    { code: '기타', label: '기타', kind: 'system' }
+    { code: '기타', label: '기타', kind: 'custom' }
 ] as const satisfies readonly DefaultSourceDefinition[];
 
 export const DEFAULT_FRANCHISE_LEAD_SOURCE_OPTIONS: readonly FranchiseLeadSourceOption[] = DEFAULT_SOURCE_DEFINITIONS.map(

@@ -119,6 +119,13 @@ export function createTestLeadDetailRuntime(): LeadDetailRuntime {
             async create(input) {
                 storeLocation = { ...storeFixture('store-1'), ...input.form };
                 return { location: storeLocation, created: true };
+            },
+            async link(input) {
+                storeLocation = {
+                    ...storeFixture(input.locationId),
+                    contractLeadId: input.leadId
+                };
+                return storeLocation;
             }
         },
         opening: {

@@ -469,3 +469,33 @@ source_context: "project workflow"
 ```
 
 Use sub-agents for development work when it can improve speed, parallel review, or verification efficiency.
+
+## 2026-07-30T07:57:55.706Z — demo-surfaces-should-prioritize-the-same
+
+```omd-meta
+id: pref_ms781abh_170e3c7e
+timestamp: 2026-07-30T07:57:55.706Z
+scope: layout
+signal: user-statement
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/app/demo"
+```
+
+Demo surfaces should prioritize the same shared components, layout, and visual quality as the current production UI.
+
+## 2026-07-30T08:37:51.000Z — demo-dialogs-drawers-and-popups-must
+
+```omd-meta
+id: pref_ms79gmxh_8351f4ec
+timestamp: 2026-07-30T08:37:51.000Z
+scope: components.dialog
+signal: user-correction
+confidence: explicit
+status: pending
+source_agent: codex
+source_context: "ERP/web/src/app/demo"
+```
+
+Demo dialogs, drawers, and popups must reuse the same production components and interaction states as the developed application.

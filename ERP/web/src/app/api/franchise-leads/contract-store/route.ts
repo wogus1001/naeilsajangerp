@@ -8,12 +8,14 @@ import { canAccessFranchiseLead } from '@/lib/franchise-lead-access';
 import { canAccessFranchiseLocation } from '@/lib/franchise-location-access';
 import {
     buildContractStoreLocationDraft,
+    getExistingContractStoreLinkError,
     getContractStoreDraftValidationError,
     readContractStoreSourceType,
     type ContractStoreDraftInput,
     type ContractStoreLeadInput,
     type ContractStoreSourceInput
 } from '@/lib/franchise-contract-store';
+import { isLeadLocationCandidate } from '@/lib/franchise-lead-location-links';
 import {
     buildInsertPayload,
     cleanString,
@@ -58,6 +60,11 @@ type FranchiseLocationSourceRow = {
     readonly longitude: number | null;
     readonly source_property_id: string | null;
     readonly memo: string | null;
+};
+
+type ExistingFranchiseLocationRow = FranchiseLocationSourceRow & {
+    readonly contract_lead_id?: string | null;
+    readonly contracted_at?: string | null;
 };
 
 type ExternalListingSourceRow = {
@@ -167,6 +174,16 @@ async function fetchFranchiseLocationSource(
     if (!canAccessFranchiseLocation(requester, row) || row.company_id !== lead.company_id) {
         return { source: null, response: fail(403, 'FORBIDDEN', 'Forbidden: source location access denied') };
     }
+    if (!isLeadLocationCandidate({
+        id: row.id,
+        locationType: row.location_type,
+        status: row.status
+    })) {
+        return {
+            source: null,
+            response: fail(409, 'CONFLICT', '출점 후보지 상태의 항목만 가맹 운영으로 전환할 수 있습니다.')
+        };
+    }
     return {
         response: null,
         source: {
@@ -269,6 +286,53 @@ export async function POST(request: Request) {
             return ok({ location: transformLocation(existing.data, managerNames), created: false });
         }
 
+        const action = cleanString(bodyRaw.action);
+        if (action === 'link_existing') {
+            const locationId = cleanString(getFirst(bodyRaw, ['locationId', 'location_id']));
+            if (!locationId) return fail(400, 'VALIDATION_ERROR', '연결할 가맹점을 선택해주세요.');
+
+            const { data: locationData, error: locationError } = await supabaseAdmin
+                .from('franchise_locations')
+                .select('*')
+                .eq('id', locationId)
+                .maybeSingle();
+            if (locationError) throw locationError;
+
+            const location = locationData as ExistingFranchiseLocationRow | null;
+            if (!location) return fail(404, 'NOT_FOUND', '연결할 가맹점을 찾지 못했습니다.');
+            if (!canAccessFranchiseLocation(requester, location) || location.company_id !== lead.company_id) {
+                return fail(403, 'FORBIDDEN', 'Forbidden: existing store access denied');
+            }
+
+            const linkError = getExistingContractStoreLinkError({
+                id: location.id,
+                locationType: location.location_type,
+                status: location.status,
+                contractLeadId: location.contract_lead_id
+            }, lead.id);
+            if (linkError) return fail(409, 'CONFLICT', linkError);
+
+            const nowIso = new Date().toISOString();
+            const { data: linkedLocation, error: linkErrorResult } = await supabaseAdmin
+                .from('franchise_locations')
+                .update({
+                    contract_lead_id: lead.id,
+                    contracted_at: location.contracted_at || nowIso,
+                    updated_at: nowIso
+                })
+                .eq('id', location.id)
+                .is('contract_lead_id', null)
+                .select()
+                .maybeSingle();
+            if (linkErrorResult) throw linkErrorResult;
+            if (!linkedLocation) {
+                return fail(409, 'CONFLICT', '다른 화면에서 가맹점 연결 상태가 변경되었습니다. 다시 확인해주세요.');
+            }
+
+            const managerNames = await fetchLocationManagerNameMap(supabaseAdmin, [linkedLocation]);
+            return ok({ location: transformLocation(linkedLocation, managerNames), created: false, linked: true });
+        }
+
         const sourceResult = await resolveSource(supabaseAdmin, requester, lead, bodyRaw);
         if (sourceResult.response) return sourceResult.response;
 
@@ -296,6 +360,9 @@ export async function POST(request: Request) {
         return ok({ location: transformLocation(inserted, managerNames), created: true }, 201);
     } catch (error) {
         console.error('Contract store POST error:', error);
+        if (getErrorCode(error) === '23505') {
+            return fail(409, 'CONFLICT', '이미 다른 계약 점주 또는 가맹점과 연결되어 있습니다.');
+        }
         if (isMissingContractStoreSchemaError(error)) {
             return fail(
                 424,

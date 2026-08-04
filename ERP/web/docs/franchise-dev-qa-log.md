@@ -23,6 +23,16 @@
 - 문서관리 에이전트: `ERP/web/docs/documentation-agent.md`에 역할/권한/보고 형식 정리
 - 외부 상가 매물 수집: 구현 범위는 `ERP/web/docs/franchise-growth-roadmap.md`, QA 상태는 이 문서에서 관리
 
+### 2026-08-04 계약완료 가맹점 연결·출점 후보지 상태 경계 QA
+
+- 계약완료 점주의 `가맹점 정보`에 기존 가맹점 선택 연결을 추가했다. 운영점 여부, 회사 접근 범위, 다른 계약 점주 연결 여부를 화면과 API에서 함께 확인하고, DB 중복 경합은 409 충돌로 안내한다. 수기 생성과 후보지 기반 생성 흐름은 그대로 유지한다.
+- 신규 후보지 연결 목록은 `예정점`, `검토중`, `오픈준비`만 포함한다. `직영점`, `가맹점`, `운영중`, `휴점`, `폐점`은 제외한다. 후보지 연결 후 운영점으로 승격된 항목은 신규 선택지에서는 빠지지만 기존 연결 조회 map에는 남겨 연결 이력을 계속 표시한다.
+- 데모 runtime에도 기존 가맹점 연결 action과 연결 가능한 운영점 fixture를 추가해 운영 UI와 동일한 계약완료 흐름을 재현한다.
+- 가맹 희망자 등록·수정 팝업에서는 상담 이력과 역할이 겹치는 메모 입력을 제거했다. 유입경로 `기타`는 고정 항목에서 수정 가능한 회사 항목으로 전환하고 기본 migration, 기존 DB 후속 migration, 정적 SQL 회귀 테스트를 함께 보강했다.
+- 자동 검증: 계약 가맹점·후보지·유입경로 관련 회귀 테스트 35건, `npx tsc --noEmit --pretty false --incremental false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`를 통과했다. production build는 113개 페이지를 생성했고 기존 workspace root, `baseline-browser-mapping`, Browserslist 경고만 남았다.
+- 브라우저 QA: 인증된 로컬 `/dashboard/franchise-leads`에서 계약완료 상세의 가맹점 정보와 기존 연결 레코드를 확인했다. 레이아웃 깨짐과 Next.js 오류 오버레이는 없었다. 신규 후보 상태별 노출과 운영점 전환 후 연결 유지는 데이터 변경 없이 회귀 테스트로 검증했다.
+- SQL 상태: 기존 적용 DB에서 `기타`를 수정 가능 항목으로 전환하려면 `supabase_franchise_lead_source_other_editable_migration.sql`을 추가 적용한다. **SQL 등록 필요**.
+
 ### 2026-08-03 데모 production UI parity·모객 DB 단계 이동 QA
 
 - `/demo`의 별도 복제 화면을 줄이고 운영 대시보드·헤더·알림·모객 DB·후보자 상세·물건지 지도·가맹 운영 workspace를 동일 컴포넌트로 조합했다. 데모는 typed fixture/runtime와 메모리 상태로 저장·수정·삭제·확인창을 재현하고, API guard는 실제 ERP API와 데모 밖 이동을 계속 차단한다.

@@ -3,6 +3,7 @@
 import React from 'react';
 import { ExternalLink, Link2, MapPin, Search, Store, Trash2, X } from 'lucide-react';
 import {
+    buildLeadLocationLinkView,
     LEAD_LOCATION_LINK_STATUSES,
     type LeadLocationLink,
     type LeadLocationLinkStatus,
@@ -144,7 +145,11 @@ export function LeadLocationLinkSection({
     const [searchTerm, setSearchTerm] = React.useState('');
     const [isPickerOpen, setIsPickerOpen] = React.useState(false);
     const [memoDrafts, setMemoDrafts] = React.useState<Readonly<Record<string, string>>>({});
-    const locationsById = React.useMemo(() => new Map(locations.map(location => [location.id, location])), [locations]);
+    const locationView = React.useMemo(
+        () => buildLeadLocationLinkView(locations, links),
+        [links, locations]
+    );
+    const locationsById = locationView.linkedLocationsById;
     const listingsById = React.useMemo(() => new Map(externalListings.map(listing => [listing.id, listing])), [externalListings]);
 
     React.useEffect(() => {
@@ -161,10 +166,10 @@ export function LeadLocationLinkSection({
     }, [isPickerOpen]);
 
     const availableLocations = React.useMemo(() => {
-        return locations
+        return locationView.candidateOptions
             .filter(location => matchesSearch(`${location.name} ${location.brand || ''} ${location.region || ''} ${location.address || ''}`, searchTerm))
             .slice(0, 8);
-    }, [locations, searchTerm]);
+    }, [locationView.candidateOptions, searchTerm]);
 
     const availableListings = React.useMemo(() => {
         return externalListings

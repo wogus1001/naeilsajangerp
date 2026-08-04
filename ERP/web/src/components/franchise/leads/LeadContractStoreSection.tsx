@@ -8,13 +8,17 @@ import {
     readContractStoreFormStatus,
     type ContractStoreFormState
 } from '@/lib/franchise-contract-store-form';
-import { readContractStoreSourceType } from '@/lib/franchise-contract-store';
+import {
+    readContractStoreSourceType
+} from '@/lib/franchise-contract-store';
+import { isLeadLocationCandidate } from '@/lib/franchise-lead-location-links';
 import type {
     ExternalPropertyListing,
     FranchiseLead,
     FranchiseLocation,
     LeadLocationLink
 } from './types';
+import { LeadExistingStoreLinkPanel } from './LeadExistingStoreLinkPanel';
 import { useLeadDetailRuntime } from './LeadDetailRuntimeProvider';
 import styles from './LeadContractStoreSection.module.css';
 
@@ -103,6 +107,7 @@ export function LeadContractStoreSection({
             if (link.targetType === 'franchise_location') {
                 const location = locationsById.get(link.targetId);
                 if (!location) return;
+                if (!isLeadLocationCandidate(location)) return;
                 options.push({
                     key: buildSourceKey('franchise_location', location.id),
                     sourceType: 'franchise_location',
@@ -229,6 +234,29 @@ export function LeadContractStoreSection({
         }
     };
 
+    const linkExistingStore = async (locationId: string) => {
+        if (!locationId) return;
+        setIsSaving(true);
+        setErrorMessage('');
+        setMessage('');
+        try {
+            const location = await storeRuntime.link({
+                leadId: lead.id,
+                locationId,
+                userId,
+                companyName
+            });
+            if (!location) throw new Error('연결한 가맹점 정보를 확인하지 못했습니다.');
+            setStoreLocation(location);
+            setForm(buildContractStoreFormState(lead, location));
+            setMessage('기존 가맹점 목록과 계약 점주를 연결했습니다.');
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : '기존 가맹점 연결에 실패했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <section className={styles.section}>
             <div className={styles.header}>
@@ -243,38 +271,50 @@ export function LeadContractStoreSection({
             {message && <div className={styles.message}>{message}</div>}
 
             {!storeLocation && (
-                <div className={styles.sourcePanel}>
-                    <div className={styles.sourceHeader}>
-                        <strong>가맹 운영으로 전환할 후보지</strong>
-                        <span>{isLocationMatchLoading ? '후보지를 불러오는 중입니다.' : `${sourceOptions.length}건 연결됨`}</span>
-                    </div>
-                    {sourceOptions.length > 0 ? (
-                        <div className={styles.sourceList}>
-                            {sourceOptions.map(option => (
-                                <label key={option.key} className={selectedSourceKey === option.key ? styles.sourceOptionActive : styles.sourceOption}>
-                                    <input
-                                        type="radio"
-                                        name="contract-store-source"
-                                        checked={selectedSourceKey === option.key}
-                                        onChange={() => selectSource(option.key)}
-                                    />
-                                    <span>
-                                        <strong>{option.title}</strong>
-                                        <small>{option.meta}</small>
-                                        <em><MapPin size={13} /> {option.address || '주소 미입력'}</em>
-                                    </span>
-                                </label>
-                            ))}
+                <LeadExistingStoreLinkPanel
+                    leadId={lead.id}
+                    locations={franchiseLocations}
+                    isBusy={isSaving || isLoading || isLocationMatchLoading}
+                    onLinkAction={(locationId) => void linkExistingStore(locationId)}
+                />
+            )}
+
+            {!storeLocation && (
+                <>
+                    <div className={styles.createDivider}><span>새 가맹점 만들기</span></div>
+                    <div className={styles.sourcePanel}>
+                        <div className={styles.sourceHeader}>
+                            <strong>가맹 운영으로 전환할 후보지</strong>
+                            <span>{isLocationMatchLoading ? '후보지를 불러오는 중입니다.' : `${sourceOptions.length}건 연결됨`}</span>
                         </div>
-                    ) : (
-                        <div className={styles.empty}>연결된 후보지가 없습니다. 직접 입력으로 먼저 등록할 수 있습니다.</div>
-                    )}
-                    {sourceOptions.length > 0 && (
-                        <button type="button" className={styles.directEntryButton} onClick={switchToDirectEntry} disabled={isSaving || isLoading}>
-                            직접 입력으로 전환
-                        </button>
-                    )}
-                </div>
+                        {sourceOptions.length > 0 ? (
+                            <div className={styles.sourceList}>
+                                {sourceOptions.map(option => (
+                                    <label key={option.key} className={selectedSourceKey === option.key ? styles.sourceOptionActive : styles.sourceOption}>
+                                        <input
+                                            type="radio"
+                                            name="contract-store-source"
+                                            checked={selectedSourceKey === option.key}
+                                            onChange={() => selectSource(option.key)}
+                                        />
+                                        <span>
+                                            <strong>{option.title}</strong>
+                                            <small>{option.meta}</small>
+                                            <em><MapPin size={13} /> {option.address || '주소 미입력'}</em>
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className={styles.empty}>연결된 후보지가 없습니다. 직접 입력으로 먼저 등록할 수 있습니다.</div>
+                        )}
+                        {sourceOptions.length > 0 && (
+                            <button type="button" className={styles.directEntryButton} onClick={switchToDirectEntry} disabled={isSaving || isLoading}>
+                                직접 입력으로 전환
+                            </button>
+                        )}
+                    </div>
+                </>
             )}
 
             <div className={styles.formGrid} aria-busy={isLoading}>
@@ -342,15 +382,17 @@ export function LeadContractStoreSection({
                                 직접 입력 생성
                             </button>
                         )}
-                        <button
-                            type="button"
-                            className={styles.primaryAction}
-                            onClick={() => void createStore(true)}
-                            disabled={isSaving || isLoading || !selectedSourceKey}
-                        >
-                            <Wand2 size={15} />
-                            가맹 운영에 생성
-                        </button>
+                        {sourceOptions.length > 0 && (
+                            <button
+                                type="button"
+                                className={styles.primaryAction}
+                                onClick={() => void createStore(true)}
+                                disabled={isSaving || isLoading || !selectedSourceKey}
+                            >
+                                <Wand2 size={15} />
+                                가맹 운영에 생성
+                            </button>
+                        )}
                     </>
                 )}
             </div>

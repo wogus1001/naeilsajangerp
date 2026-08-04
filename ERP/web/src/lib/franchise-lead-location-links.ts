@@ -15,6 +15,17 @@ export type LeadLocationLink = {
     readonly updatedAt?: string;
 };
 
+export type LeadLocationLinkViewLocation = {
+    readonly id: string;
+    readonly locationType?: string | null;
+    readonly status?: string | null;
+};
+
+export type LeadLocationLinkView<T extends LeadLocationLinkViewLocation> = {
+    readonly candidateOptions: readonly T[];
+    readonly linkedLocationsById: ReadonlyMap<string, T>;
+};
+
 type LeadLocationLinkInput = {
     readonly id: string;
     readonly targetType: LeadLocationTargetType;
@@ -24,6 +35,10 @@ type LeadLocationLinkInput = {
     readonly createdAt: string;
     readonly createdBy?: string;
 };
+
+const OPERATIONAL_LOCATION_TYPES = ['직영점', '가맹점'] as const;
+const OPERATIONAL_LOCATION_STATUSES = ['운영중', '휴점', '폐점'] as const;
+const CANDIDATE_LOCATION_STATUSES = ['검토중', '오픈준비'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -35,6 +50,33 @@ function isTargetType(value: unknown): value is LeadLocationTargetType {
 
 export function isLeadLocationLinkStatus(value: unknown): value is LeadLocationLinkStatus {
     return LEAD_LOCATION_LINK_STATUSES.some(status => status === value);
+}
+
+export function isLeadLocationCandidate(location: LeadLocationLinkViewLocation): boolean {
+    const locationType = String(location.locationType || '').trim();
+    const status = String(location.status || '').trim();
+    const isOperational = OPERATIONAL_LOCATION_TYPES.some(type => type === locationType)
+        || OPERATIONAL_LOCATION_STATUSES.some(candidateStatus => candidateStatus === status);
+    if (isOperational) return false;
+    return locationType === '예정점'
+        || CANDIDATE_LOCATION_STATUSES.some(candidateStatus => candidateStatus === status);
+}
+
+export function buildLeadLocationLinkView<T extends LeadLocationLinkViewLocation>(
+    locations: readonly T[],
+    links: readonly LeadLocationLink[]
+): LeadLocationLinkView<T> {
+    const linkedLocationIds = new Set(
+        links.flatMap(link => link.targetType === 'franchise_location' ? [link.targetId] : [])
+    );
+    return {
+        candidateOptions: locations.filter(isLeadLocationCandidate),
+        linkedLocationsById: new Map(
+            locations
+                .filter(location => linkedLocationIds.has(location.id))
+                .map(location => [location.id, location])
+        )
+    };
 }
 
 export function normalizeLeadLocationLinks(value: unknown): readonly LeadLocationLink[] {

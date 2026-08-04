@@ -97,7 +97,7 @@ export function LeadFormModal({
                 <div className={styles.modalHeader}>
                     <div>
                         <h2 id="franchise-lead-modal-title">{title}</h2>
-                        <p>본사 모객 DB에 필요한 중요 정보만 빠르게 기록합니다.</p>
+                        <p>가맹 희망자 정보를 빠르게 기록합니다.</p>
                     </div>
                     <button type="button" onClick={onCloseAction} className={styles.closeButton} aria-label={`${title} 닫기`}>
                         <X size={20} strokeWidth={2.2} />
@@ -205,11 +205,6 @@ export function LeadFormModal({
                         onUpdateAction={onUpdateSourceOptionAction}
                     />
                 )}
-
-                <label className={styles.memoLabel}>
-                    메모
-                    <textarea value={form.memo} onChange={(event) => onFormChangeAction(prev => ({ ...prev, memo: event.target.value }))} placeholder="상담 내용, 관심 조건, 후속 액션을 기록하세요." />
-                </label>
 
                 <div className={styles.modalActions}>
                     <button type="button" className={styles.secondaryButton} onClick={onCloseAction}>취소</button>

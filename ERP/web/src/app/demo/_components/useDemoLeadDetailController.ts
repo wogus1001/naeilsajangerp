@@ -34,8 +34,8 @@ import { useDemoLeadDetailActivity } from './useDemoLeadDetailActivity';
 const DEMO_LOCATION_OPTIONS: readonly FranchiseLocation[] = [
     { id: 'demo-location-gangnam-station', name: '강남역 2번 출구 후보지', status: '검토중', region: '서울 강남구', address: '서울 강남구 테헤란로 110', brand: '미카도', locationType: '예정점' },
     { id: 'demo-location-mapo-office', name: '마포 오피스 상권 후보지', status: '검토중', region: '서울 마포구', address: '서울 마포구 마포대로 92', brand: '미카도', locationType: '예정점' },
-    { id: 'demo-operation-bundang', name: '미카도 판교점', status: '오픈준비', region: '경기 성남시', address: '경기 성남시 분당구 판교역로 166', brand: '미카도', locationType: '가맹점' },
-    { id: 'demo-operation-busan', name: '샘플카페 센텀점', status: '오픈준비', region: '부산 해운대구', address: '부산 해운대구 센텀중앙로 97', brand: '샘플카페', locationType: '가맹점' },
+    { id: 'demo-operation-bundang', name: '미카도 판교점', status: '오픈준비', region: '경기 성남시', address: '경기 성남시 분당구 판교역로 166', brand: '미카도', locationType: '가맹점', contractLeadId: 'demo-candidate-2' },
+    { id: 'demo-operation-busan', name: '샘플카페 센텀점', status: '오픈준비', region: '부산 해운대구', address: '부산 해운대구 센텀중앙로 97', brand: '샘플카페', locationType: '가맹점', contractLeadId: 'demo-candidate-4' },
     { id: 'demo-operation-jeju', name: '샘플치킨 제주점', status: '오픈준비', region: '제주 제주시', address: '제주 제주시 연북로 12', brand: '샘플치킨', locationType: '가맹점' }
 ];
 

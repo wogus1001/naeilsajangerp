@@ -215,6 +215,20 @@ const store: LeadContractStoreRuntimePort = {
         });
         const data = await readData<LocationResponse>(response);
         return { location: data.location || null, created: data.created !== false };
+    },
+    async link(input) {
+        const response = await fetch('/api/franchise-leads/contract-store', {
+            method: 'POST',
+            headers: await getApiAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                requesterId: input.userId,
+                companyName: input.companyName,
+                action: 'link_existing',
+                leadId: input.leadId,
+                locationId: input.locationId
+            })
+        });
+        return (await readData<LocationResponse>(response)).location || null;
     }
 };
 

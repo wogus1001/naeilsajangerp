@@ -58,7 +58,7 @@ as $$
       ('명함DB', '명함DB', true, 90),
       ('가맹 희망자 등록', '가맹 희망자 등록', true, 100),
       ('프랜차이즈 매칭 요청', '예비 창업자 등록', true, 110),
-      ('기타', '기타', true, 120)
+      ('기타', '기타', false, 120)
   ) as source(code, label, is_system, sort_order)
   on conflict (company_id, code) do nothing;
 $$;
@@ -85,8 +85,7 @@ select distinct
     '고객DB',
     '명함DB',
     '가맹 희망자 등록',
-    '프랜차이즈 매칭 요청',
-    '기타'
+    '프랜차이즈 매칭 요청'
   ),
   1000
 from public.franchise_leads lead
@@ -123,8 +122,7 @@ begin
       '고객DB',
       '명함DB',
       '가맹 희망자 등록',
-      '프랜차이즈 매칭 요청',
-      '기타'
+      '프랜차이즈 매칭 요청'
     ) and not new.is_system then
       raise exception 'protected franchise lead source options must remain system managed';
     end if;
@@ -190,8 +188,7 @@ begin
       '고객DB',
       '명함DB',
       '가맹 희망자 등록',
-      '프랜차이즈 매칭 요청',
-      '기타'
+      '프랜차이즈 매칭 요청'
     ),
     1000,
     new.created_by,

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     addUniqueLeadLocationLink,
+    buildLeadLocationLinkView,
     createLeadLocationLink,
     normalizeLeadLocationLinks,
     updateLeadLocationLink
@@ -116,4 +117,44 @@ test('updateLeadLocationLink updates status and trims memo', () => {
     assert.equal(updated[0]?.status, '관심 있음');
     assert.equal(updated[0]?.memo, '예산 맞음');
     assert.equal(updated[0]?.updatedAt, '2026-06-10T11:00:00.000Z');
+});
+
+test('Given operational stores When building the lead location view Then they are excluded from new candidates', () => {
+    const view = buildLeadLocationLinkView([
+        { id: 'store-opening', locationType: '가맹점', status: '오픈준비' },
+        { id: 'store-active', locationType: '예정점', status: '운영중' }
+    ], []);
+
+    assert.deepEqual(view.candidateOptions, []);
+});
+
+test('Given planning locations When building the lead location view Then planned review and opening candidates remain available', () => {
+    const locations = [
+        { id: 'candidate-planned', locationType: '예정점', status: '' },
+        { id: 'candidate-review', locationType: '', status: '검토중' },
+        { id: 'candidate-opening', locationType: '', status: '오픈준비' }
+    ];
+
+    const view = buildLeadLocationLinkView(locations, []);
+
+    assert.deepEqual(view.candidateOptions, locations);
+});
+
+test('Given a linked candidate promoted to an operational store When building the lead location view Then the existing link remains resolvable', () => {
+    const promotedLocation = {
+        id: 'promoted-store',
+        locationType: '가맹점',
+        status: '운영중'
+    };
+    const existingLink = createLeadLocationLink({
+        id: 'link-promoted',
+        targetType: 'franchise_location',
+        targetId: promotedLocation.id,
+        createdAt: '2026-08-04T09:00:00.000Z'
+    });
+
+    const view = buildLeadLocationLinkView([promotedLocation], [existingLink]);
+
+    assert.deepEqual(view.candidateOptions, []);
+    assert.equal(view.linkedLocationsById.get(promotedLocation.id), promotedLocation);
 });

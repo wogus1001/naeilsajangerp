@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     buildContractStoreLocationDraft,
+    getExistingContractStoreLinkError,
     getContractStoreDraftValidationError,
+    isOperationalContractStoreLocation,
     readContractStoreSourceType,
     type ContractStoreLeadInput,
     type ContractStoreSourceInput
@@ -94,4 +96,44 @@ test('Given a contract store draft without address When validating Then creation
     });
 
     assert.equal(getContractStoreDraftValidationError(draft), '주소 검색으로 가맹점 주소를 선택해주세요.');
+});
+
+test('Given an unlinked operational store When validating an existing store link Then linking is allowed', () => {
+    assert.equal(getExistingContractStoreLinkError({
+        id: 'store-1',
+        locationType: '가맹점',
+        status: '오픈준비',
+        contractLeadId: ''
+    }, lead.id), '');
+});
+
+test('Given a candidate location When validating an existing store link Then linking is blocked', () => {
+    assert.equal(getExistingContractStoreLinkError({
+        id: 'candidate-1',
+        locationType: '예정점',
+        status: '검토중',
+        contractLeadId: ''
+    }, lead.id), '가맹점 목록에 등록된 운영점만 연결할 수 있습니다.');
+});
+
+test('Given a store linked to another lead When validating an existing store link Then reassignment is blocked', () => {
+    assert.equal(getExistingContractStoreLinkError({
+        id: 'store-1',
+        locationType: '가맹점',
+        status: '운영중',
+        contractLeadId: 'lead-2'
+    }, lead.id), '이미 다른 계약 점주와 연결된 가맹점입니다.');
+});
+
+test('Given operational and candidate locations When classifying them Then only the operational store is reusable', () => {
+    assert.equal(isOperationalContractStoreLocation({
+        id: 'store-1',
+        locationType: '가맹점',
+        status: '오픈준비'
+    }), true);
+    assert.equal(isOperationalContractStoreLocation({
+        id: 'candidate-1',
+        locationType: '예정점',
+        status: '검토중'
+    }), false);
 });

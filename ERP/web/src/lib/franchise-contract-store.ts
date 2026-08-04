@@ -50,6 +50,13 @@ export type ContractStoreDraftInput = {
     readonly memo?: string;
 };
 
+export type ExistingContractStoreInput = {
+    readonly id: string;
+    readonly locationType?: string | null;
+    readonly status?: string | null;
+    readonly contractLeadId?: string | null;
+};
+
 export type ContractStoreLocationDraft = {
     readonly contractLeadId: string;
     readonly sourceLocationId: string;
@@ -77,6 +84,26 @@ export type ContractStoreLocationDraft = {
 
 export function getContractStoreDraftValidationError(draft: Pick<ContractStoreLocationDraft, 'address'>): string {
     if (!cleanString(draft.address)) return '주소 검색으로 가맹점 주소를 선택해주세요.';
+    return '';
+}
+
+export function isOperationalContractStoreLocation(location: ExistingContractStoreInput): boolean {
+    return ['직영점', '가맹점'].includes(cleanString(location.locationType))
+        || ['운영중', '휴점', '폐점'].includes(cleanString(location.status));
+}
+
+export function getExistingContractStoreLinkError(
+    location: ExistingContractStoreInput,
+    leadId: string
+): string {
+    if (!isOperationalContractStoreLocation(location)) {
+        return '가맹점 목록에 등록된 운영점만 연결할 수 있습니다.';
+    }
+
+    const linkedLeadId = cleanString(location.contractLeadId);
+    if (linkedLeadId && linkedLeadId !== cleanString(leadId)) {
+        return '이미 다른 계약 점주와 연결된 가맹점입니다.';
+    }
     return '';
 }
 
