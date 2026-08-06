@@ -84,7 +84,7 @@ function FranchiseLocationMapOfflineCanvas({
 
     if (isBusy) {
         return (
-            <div className={styles.mapFallback}>
+            <div className={styles.mapFallback} aria-label="물건지 지도">
                 <MapPin size={24} />
                 <strong>지도 좌표를 확인하고 있습니다.</strong>
                 <span>저장된 위치를 기준으로 물건지를 정리합니다.</span>
@@ -94,7 +94,7 @@ function FranchiseLocationMapOfflineCanvas({
 
     if (points.length === 0) {
         return (
-            <div className={styles.mapFallback}>
+            <div className={styles.mapFallback} aria-label="물건지 지도">
                 <Building2 size={24} />
                 <strong>지도에 표시할 물건지가 없습니다.</strong>
                 <span>주소나 좌표가 저장된 가맹 운영점 또는 출점 후보지를 등록해주세요.</span>
@@ -222,7 +222,7 @@ function FranchiseLocationMapLiveCanvas({
 
     if (kakaoLoadError) {
         return (
-            <div className={styles.mapFallback}>
+            <div className={styles.mapFallback} aria-label="물건지 지도">
                 <MapPin size={24} />
                 <strong>Kakao 지도 도메인 설정이 필요합니다.</strong>
                 <span>JavaScript 키의 Web 플랫폼 도메인에 현재 주소를 등록해주세요.</span>
@@ -232,7 +232,7 @@ function FranchiseLocationMapLiveCanvas({
 
     if (isKakaoLoading || isBusy) {
         return (
-            <div className={styles.mapFallback}>
+            <div className={styles.mapFallback} aria-label="물건지 지도">
                 <MapPin size={24} />
                 <strong>지도 좌표를 확인하고 있습니다.</strong>
                 <span>저장 좌표가 없으면 주소를 기준으로 Kakao 좌표를 조회합니다.</span>
@@ -242,7 +242,7 @@ function FranchiseLocationMapLiveCanvas({
 
     if (points.length === 0) {
         return (
-            <div className={styles.mapFallback}>
+            <div className={styles.mapFallback} aria-label="물건지 지도">
                 <Building2 size={24} />
                 <strong>지도에 표시할 물건지가 없습니다.</strong>
                 <span>주소나 좌표가 저장된 가맹 운영점 또는 출점 후보지를 등록해주세요.</span>

@@ -25,6 +25,7 @@ type ViewportSize = {
 type DemoTourOverlayProps = {
     readonly steps: readonly DemoTourStep[];
     readonly finalAction: DemoGuideAction | undefined;
+    readonly completionLabel?: string;
     readonly onCloseAction?: () => void;
     readonly onCompleteAction?: () => void;
     readonly onFinalAction?: (action: DemoGuideAction) => void;
@@ -34,6 +35,7 @@ type DemoTourOverlayProps = {
 export function DemoTourOverlay({
     steps,
     finalAction,
+    completionLabel,
     onCloseAction,
     onCompleteAction,
     onFinalAction,
@@ -338,7 +340,7 @@ export function DemoTourOverlay({
                         className={styles.primaryButton}
                     >
                         {isLast
-                            ? finalAction?.label ?? (onCompleteAction ? '핵심 체험 완료' : '설명 마치기')
+                            ? finalAction?.label ?? (onCompleteAction ? completionLabel ?? '체험 완료' : '설명 마치기')
                             : '다음'}
                     </button>
                 </div>

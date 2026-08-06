@@ -47,7 +47,7 @@ test('demo guide transitions keep interactive targets visible before advancing',
     assert.match(leadController, /event\.detail\.toTargetId/);
     assert.match(leadController, /'lead-db-promote-action'/);
     assert.match(leadController, /startsWith\('lead-detail-'\)/);
-    assert.match(leadController, /if \(detailLead\) setSelectedLeadId\(detailLead\.id\)/);
+    assert.match(leadController, /if \(detailLeadId\) setSelectedLeadId\(detailLeadId\)/);
     assert.match(leadController, /setLeadDbLayer\('raw_intake'\)/);
     assert.match(leadController, /'lead-db-candidate-table'/);
     assert.match(leadController, /setLeadDbLayer\('candidate'\)/);
@@ -55,7 +55,11 @@ test('demo guide transitions keep interactive targets visible before advancing',
     assert.match(leadController, /'lead-detail-location-link'/);
     assert.match(leadController, /lead\.leadStage === 'candidate'/);
     assert.match(leadController, /tourPromotedLeadIdRef\.current/);
-    assert.match(leadController, /if \(!tourPromotedLeadIdRef\.current\)/);
+    assert.match(leadController, /if \(isDashboardTarget\)[\s\S]*setSelectedLeadId\(''\)/);
+    const promotionTransition = leadController.indexOf('if (isPromotionTransition && !promotedLeadId)');
+    const candidateDetailSelection = leadController.indexOf('if (isDetailTarget)');
+    assert.ok(promotionTransition >= 0);
+    assert.ok(candidateDetailSelection > promotionTransition);
     assert.doesNotMatch(leadController, /onSimulate\(`\$\{lead\.name\} 가맹 희망자 승격`\)/);
     assert.match(locationAdapter, /event\.detail\.toTargetId !== 'location-message-panel'/);
     assert.match(locationAdapter, /setGuidedRecordRequestKey\(key => key \+ 1\)/);
@@ -152,8 +156,9 @@ test('demo shell delegates header surfaces and controlled notification navigatio
     assert.match(shell, /showCompanySelector=\{false\}/);
     assert.match(shell, /HeaderProfileActions/);
     assert.match(shell, /onClick=\{onOpenExperience\}>체험 선택<\/button>/);
+    assert.match(shell, /onClick=\{onOpenScreenGuide\}>현재 기능 안내<\/button>/);
     assert.match(demoShell, /onOpenExperience=\{tour\.chooseStory\}/);
-    assert.doesNotMatch(shell, />이 화면 안내<\/button>/);
+    assert.match(demoShell, /onOpenScreenGuide=\{tour\.openScreenGuide\}/);
     assert.match(shell, /현재 데모에서는 핵심 프랜차이즈 흐름을 먼저 확인해 주세요/);
     assert.doesNotMatch(shell, /경로를 확인했습니다/);
     assert.doesNotMatch(shell, /DemoHeaderPopover/);
@@ -236,16 +241,21 @@ test('demo tour behaves like an accessible non-modal coach mark', () => {
     assert.match(experience, /자유롭게 둘러보기/);
     assert.match(experience, /다른 기능 둘러보기/);
     assert.match(experience, /처음부터 다시 체험/);
-    assert.match(experience, /도입 문의하기/);
+    assert.match(experience, /가이드 없이 둘러보기/);
+    assert.doesNotMatch(experience, /도입 문의하기/);
     assert.match(experience, /useModalFocusTrap/);
     assert.match(tourController, /tourMode === 'core'/);
     assert.match(tourController, /tourMode === 'story'/);
     assert.match(tourExperience, /mode !== 'core' && mode !== 'story' && mode !== 'screen'/);
+    assert.match(tourExperience, /mode === 'core' \? '핵심 체험 완료' : mode === 'story' \? '시나리오 완료'/);
     assert.doesNotMatch(shell, /activeGuide\.actions\.find/);
     assert.doesNotMatch(tourExperience, /finalAction=\{mode === 'screen'/);
     assert.match(tour, /'설명 마치기'/);
     assert.match(tourController, /beginTour\('core', coreSteps\)/);
     assert.match(tourController, /dispatchTourTarget\(screenSteps\[0\], activeScreen\)/);
+    assert.match(tourController, /requiresRenderedDestination/);
+    assert.match(tourController, /screen !== activeScreen/);
+    assert.match(tourController, /activeFeaturePath !== ''/);
 });
 
 test('role workspaces share production adapters while partner navigation excludes lead DB', () => {
@@ -278,6 +288,8 @@ test('demo feature requests never read the browser real Supabase session', () =>
     assert.match(authHeaders, /return headers;[\s\S]*NEXT_PUBLIC_SUPABASE_URL/);
     assert.match(featureSurface, /id: `demo-\$\{role\}`/);
     assert.match(featureSurface, /role,/);
+    assert.match(featureSurface, /setStoredUserRuntimeOverride/);
+    assert.doesNotMatch(featureSurface, /localStorage\.setItem\('user'/);
 });
 
 test('demo workspaces keep every allowed production surface mounted so local edits survive navigation', () => {

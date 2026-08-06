@@ -46,6 +46,8 @@ const COUNTER_KEYS = [
     'duplicateDialogs',
     'noOpActions'
 ];
+const DEMO_STORY_IDS = ['sales', 'siteDevelopment', 'openingOperations', 'headOffice'];
+const KAKAO_RESOURCE_HOSTS = ['kakao.com', 'daum.net', 'daumcdn.net'];
 
 function createCounters() {
     return Object.fromEntries(COUNTER_KEYS.map(key => [key, 0]));
@@ -57,7 +59,12 @@ function hasFailures(counters) {
 
 function classifyRequest(requestURL, baseOrigin) {
     const url = new URL(requestURL);
-    if (url.origin !== baseOrigin) return 'unexpected-network';
+    if (url.origin !== baseOrigin) {
+        const isKakaoResource = KAKAO_RESOURCE_HOSTS.some(host => (
+            url.hostname === host || url.hostname.endsWith(`.${host}`)
+        ));
+        return isKakaoResource ? 'allowed' : 'unexpected-network';
+    }
     if (url.pathname.startsWith('/api/') && url.pathname !== '/api/demo/access') return 'unexpected-api';
     return 'allowed';
 }
@@ -74,7 +81,9 @@ if (process.argv.includes('--self-test')) {
     assert.equal(hasFailures({ ...createCounters(), staleTourTargets: 1 }), true);
     assert.equal(classifyRequest('https://demo.example.com/api/demo/access', 'https://demo.example.com'), 'allowed');
     assert.equal(classifyRequest('https://demo.example.com/api/franchise-leads', 'https://demo.example.com'), 'unexpected-api');
-    assert.equal(classifyRequest('https://dapi.kakao.com/v2/maps/sdk.js', 'https://demo.example.com'), 'unexpected-network');
+    assert.equal(classifyRequest('https://dapi.kakao.com/v2/maps/sdk.js', 'https://demo.example.com'), 'allowed');
+    assert.equal(classifyRequest('https://map0.daumcdn.net/map_2d/tiles/1.png', 'https://demo.example.com'), 'allowed');
+    assert.equal(classifyRequest('https://unrelated.example.com/script.js', 'https://demo.example.com'), 'unexpected-network');
     process.stdout.write('demo-ui parity gate self-test passed\n');
     process.exit(0);
 }
@@ -139,12 +148,22 @@ try {
 
         for (const [role, screens] of Object.entries(SCREEN_LABELS)) {
             await page.goto(`${baseURL}/demo/${role}`, { waitUntil: 'domcontentloaded' });
-            const coreButton = page.getByRole('button', { name: '3분 핵심 체험', exact: true });
+            const coreButton = page.getByRole('button', { name: '전체 흐름 시작', exact: true });
             if (await coreButton.isVisible().catch(() => false)) {
                 await coreButton.click();
                 await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
-                await inspectEveryTourStep(page, role, '3분 핵심 체험', viewport.id, counters, failures);
+                await inspectEveryTourStep(page, role, '전체 흐름', viewport.id, counters, failures, true);
                 await closeExperienceDialog(page);
+            }
+            if (role === 'manager' && viewport.id === 'desktop') {
+                for (const storyId of DEMO_STORY_IDS) {
+                    await page.getByRole('button', { name: '체험 선택', exact: true }).click();
+                    const storyCard = page.locator(`[data-demo-story-id="${storyId}"]`);
+                    await storyCard.getByRole('button', { name: '이 시나리오 체험', exact: true }).click();
+                    await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
+                    await inspectEveryTourStep(page, role, `story-${storyId}`, viewport.id, counters, failures, true);
+                    await closeExperienceDialog(page);
+                }
             }
             for (const screen of screens) {
                 await clickDemoNav(page, screen);
@@ -152,7 +171,7 @@ try {
                 await activeSurface.waitFor({ state: 'visible' });
                 await page.waitForTimeout(320);
 
-                await page.getByRole('button', { name: '이 화면 안내', exact: true }).click();
+                await page.getByRole('button', { name: '가이드 열기', exact: true }).first().click();
                 await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
                 await inspectEveryTourStep(page, role, screen, viewport.id, counters, failures);
 
@@ -183,7 +202,7 @@ try {
                     const productionSurface = page.locator(`[data-demo-feature-path="${featurePath}"]`);
                     await productionSurface.waitFor({ state: 'visible' });
                     await productionSurface.getByRole('button').first().waitFor({ state: 'visible' });
-                    await page.getByRole('button', { name: '이 화면 안내', exact: true }).click();
+                    await page.getByRole('button', { name: '현재 기능 안내', exact: true }).click();
                     await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
                     await inspectEveryTourStep(page, role, label, viewport.id, counters, failures);
                     const overflow = await page.evaluate(() => (
@@ -457,6 +476,7 @@ async function closeTour(page) {
 async function closeExperienceDialog(page) {
     const buttons = [
         page.getByRole('button', { name: '다른 기능 둘러보기', exact: true }),
+        page.getByRole('button', { name: '가이드 없이 둘러보기', exact: true }),
         page.getByRole('button', { name: '자유롭게 둘러보기', exact: true })
     ];
     for (const button of buttons) {
@@ -468,8 +488,9 @@ async function closeExperienceDialog(page) {
     }
 }
 
-async function inspectEveryTourStep(page, role, screen, viewportId, counters, failures) {
+async function inspectEveryTourStep(page, role, screen, viewportId, counters, failures, verifyPrevious = false) {
     const tourDialog = page.locator('[data-demo-id="demo-tour-card"]');
+    let previousVerified = false;
     for (let stepIndex = 0; stepIndex < 32 && await tourDialog.count() > 0; stepIndex += 1) {
         if (!(await tourDialog.isVisible())) {
             await closeActiveDialogs(page);
@@ -487,8 +508,25 @@ async function inspectEveryTourStep(page, role, screen, viewportId, counters, fa
         }
 
         const [current, total] = String(progressText).split('/').map(value => Number(value.trim()));
+        if (verifyPrevious && !previousVerified && current === 2) {
+            const previousButton = tourDialog.getByRole('button', { name: '이전', exact: true });
+            await previousButton.click();
+            await page.waitForTimeout(120);
+            const previousProgress = await tourDialog.getByText(/^\d+ \/ \d+$/).textContent().catch(() => '');
+            const previousCurrent = Number(String(previousProgress).split('/')[0]?.trim());
+            if (previousCurrent !== 1) {
+                counters.noOpActions += 1;
+                failures.push(`tour previous failed: ${role}/${screen}/${viewportId}/${previousProgress}`);
+            }
+            await tourDialog.getByRole('button', { name: '다음', exact: true }).click();
+            await page.waitForTimeout(120);
+            previousVerified = true;
+            continue;
+        }
         if (!Number.isFinite(current) || !Number.isFinite(total) || current >= total) {
-            const completeButton = tourDialog.getByRole('button', { name: '핵심 체험 완료', exact: true });
+            const completeButton = tourDialog.getByRole('button', {
+                name: /^(핵심 체험|시나리오) 완료$/
+            });
             if (await completeButton.isVisible().catch(() => false)) {
                 await completeButton.click();
                 await tourDialog.waitFor({ state: 'hidden' });

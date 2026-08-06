@@ -12,10 +12,10 @@ export const DEMO_STORIES = {
         id: 'sales',
         roleLabel: '가맹 영업 담당자',
         title: '광고 문의를 놓치지 않고 상담 기회로 전환하기',
-        description: '신규 문의가 들어온 순간부터 담당자 상담, 정보공개서 발송 준비, 가맹 희망자 승격까지 실제 모객 업무를 따라갑니다.',
+        description: '신규 문의가 들어온 순간부터 담당자 상담, 가맹 희망자 승격, 정보공개서 발송 준비까지 실제 모객 업무를 따라갑니다.',
         duration: '약 5분',
-        outcome: '광고 유입부터 상담, 정보공개서 발송 준비, 상담 가능 고객 선별까지 한 화면에서 이어지는 흐름을 확인했습니다.',
-        features: ['유입·상태별 모객 현황', '고객별 상담 이력', '다음 연락과 담당자 업무', '정보공개서 발송 준비', '가맹 희망자 승격'],
+        outcome: '광고 유입부터 상담, 상담 가능 고객 선별, 정보공개서 발송 준비까지 한 화면에서 이어지는 흐름을 확인했습니다.',
+        features: ['유입·상태별 모객 현황', '고객별 상담 이력', '다음 연락과 담당자 업무', '가맹 희망자 승격', '정보공개서·14일 기준'],
         roles: ['manager', 'admin'],
         steps: [
             { id: 'sales-1', screen: 'leadDb', targetId: 'lead-dashboard-kpis', targetSelector: '[data-demo-id="dashboard-kpis"]', title: '오늘 들어온 문의와 진행 상태 확인', description: '1차 유입 DB, 가맹 희망자, 상담 진행, 계약 전환율을 함께 보고 영업 현황을 빠르게 파악합니다.' },
@@ -23,9 +23,9 @@ export const DEMO_STORIES = {
             { id: 'sales-3', screen: 'leadDb', targetId: 'lead-db-management-tab', targetSelector: '[aria-label="모객 DB 작업 영역"] button:nth-of-type(2)', title: '고객별 후속 업무로 이동', description: 'DB 관리에서 연락처, 담당자, 유입경로, 다음 연락일을 고객별로 확인합니다.' },
             { id: 'sales-4', screen: 'leadDb', targetId: 'lead-detail-activity', targetSelector: '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 상담 이력"]', title: '상담 이력 남기기', description: '전화, 부재, 메모를 시간순으로 남겨 다음 담당자도 고객 상황을 바로 이어받습니다.' },
             { id: 'sales-5', screen: 'leadDb', targetId: 'lead-detail-workflow', targetSelector: '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 업무 관리"]', title: '다음 행동과 상담 결과 정리', description: '예산 재확인, 지역 검토 같은 다음 행동과 상담 결과를 기록해 후속 업무를 명확하게 만듭니다.' },
-            { id: 'sales-6', screen: 'leadDb', targetId: 'lead-detail-disclosure', targetSelector: '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 정보공개서"]', title: '정보공개서 발송 준비', description: '발송 문서와 후보자·수신 정보를 확인하고 Gmail로 발송합니다. 발송 기록은 계약 전 14일 대기 기준에 반영됩니다.' },
-            { id: 'sales-7', screen: 'leadDb', targetId: 'lead-db-promote-action', targetSelector: '[class*="leadTable"] [class*="rowActions"]:has([aria-label$="가맹 희망자 승격"])', title: '상담 가능 고객 승격', description: '가맹 의사가 확인된 고객만 가맹 희망자로 승격해 일반 문의와 본격 상담 대상을 분리합니다.' },
-            { id: 'sales-8', screen: 'leadDb', targetId: 'lead-db-candidate-tab', targetSelector: '[class*="leadLayerTabs"] button:nth-of-type(2)', title: '가맹 희망자 후속 관리 시작', description: '승격된 고객은 희망지역, 정보공개서, 후보지, 계약 준비를 이어서 관리합니다.' }
+            { id: 'sales-6', screen: 'leadDb', targetId: 'lead-db-promote-action', targetSelector: '[class*="leadTable"] [class*="rowActions"]:has([aria-label$="가맹 희망자 승격"])', title: '상담 가능 고객 승격', description: '가맹 의사가 확인된 고객만 가맹 희망자로 승격해 일반 문의와 본격 상담 대상을 분리합니다.' },
+            { id: 'sales-7', screen: 'leadDb', targetId: 'lead-db-candidate-tab', targetSelector: '[class*="leadLayerTabs"] button:nth-of-type(2)', title: '가맹 희망자 후속 관리 시작', description: '승격된 고객은 희망지역, 정보공개서, 후보지, 계약 준비를 이어서 관리합니다.' },
+            { id: 'sales-8', screen: 'leadDb', targetId: 'lead-detail-disclosure', targetSelector: '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 정보공개서"]', title: '정보공개서 발송과 법정기한 확인', description: '발송 문서와 수신 정보를 확인하고 발송 기록을 남깁니다. 표준 계약 흐름은 기록일 기준 14일이 지나기 전 계약 전환을 서버에서 막으며, 이메일 열람 표시는 법적 수령 확인을 대신하지 않습니다.' }
         ]
     },
     siteDevelopment: {
@@ -33,9 +33,9 @@ export const DEMO_STORIES = {
         roleLabel: '출점 개발 담당자',
         title: '고객 희망지역과 실제 출점 후보지를 연결하기',
         description: '가맹 희망자의 지역 조건을 확인하고 후보지 검토 기록과 지도 분석을 이용해 상담 가능한 점포를 좁힙니다.',
-        duration: '약 5분',
-        outcome: '가맹 희망자의 조건을 후보지 정보와 물건 기록, 지도 분석에 연결해 출점 상담 근거를 만들었습니다.',
-        features: ['희망지역·예산 조건', '후보지 임대 조건', '물건 요청·처리 기록', '후보지 연결 기록', '지도 반경·거리 분석'],
+        duration: '약 6분',
+        outcome: '가맹 희망자의 조건을 후보지 정보와 물건 기록, 출점 리포트, 지도 분석에 연결하고 실제 후보지 연결까지 확인했습니다.',
+        features: ['희망지역·예산 조건', '후보지 임대 조건', '물건 요청·처리 기록', '출점 검토 리포트', '후보지 연결·지도 분석'],
         roles: ['manager', 'admin'],
         steps: [
             { id: 'site-1', screen: 'leadDb', targetId: 'lead-db-candidate-tab', targetSelector: '[class*="leadLayerTabs"] button:nth-of-type(2)', title: '출점 상담 대상 확인', description: '가맹 희망자 탭에서 희망지역, 예산, 관심 브랜드가 입력된 고객을 먼저 확인합니다.' },
@@ -43,9 +43,11 @@ export const DEMO_STORIES = {
             { id: 'site-3', screen: 'location', targetId: 'location-workspace-tabs', targetSelector: '[data-demo-id="location-workspace-tabs"] [aria-label="출점 후보지 작업 영역"]', title: '후보지 업무 범위 선택', description: '직접 관리하는 출점 후보지와 외부 상가 수집을 구분해 원천 정보가 운영 기록과 섞이지 않게 관리합니다.' },
             { id: 'site-4', screen: 'location', targetId: 'location-master', targetSelector: '[data-demo-id="location-master"] tbody tr:first-child [aria-label$="후보지 수정"]', title: '점포 조건 상세 검토', description: '주소, 전용면적, 보증금, 권리금, 월세와 시설 조건을 열어 고객 예산에 맞는지 검토합니다.' },
             { id: 'site-5', screen: 'location', targetId: 'location-message-panel', targetSelector: '[role="dialog"][aria-label="물건 기록"]', title: '물건 요청과 확인 기록', description: '본사는 물건 검토 요청과 확인 정보를 기록하고, 담당자는 내용을 확인해 처리합니다.' },
-            { id: 'site-6', screen: 'locationMap', targetId: 'location-map-filter', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]', title: '지도에 표시할 대상 좁히기', description: '지역, 후보지 상태, 브랜드 기준으로 지도에 표시할 점포를 좁혀 비교 대상을 정리합니다.' },
-            { id: 'site-7', screen: 'locationMap', targetId: 'location-map-canvas', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도"]', title: '후보지와 운영점을 함께 비교', description: '출점 후보지와 운영 가맹점을 실제 지도에서 확인해 상권 중복과 관리 동선을 검토합니다.' },
-            { id: 'site-8', screen: 'locationMap', targetId: 'location-map-tools', targetSelector: '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]', title: '반경·거리·면적 분석', description: '상권 반경, 경쟁점 거리, 후보지 면적을 직접 측정해 출점 검토 근거를 남깁니다.' }
+            { id: 'site-6', screen: 'location', targetId: 'location-report-action', targetSelector: '[data-demo-id="location-master"] tbody tr:first-child [class*="locationTableActions"] button:nth-of-type(2)', title: '출점 검토 리포트 만들기', description: '수익분석, 상권 메모, 임대 조건을 리포트로 정리해 후보지 검토 근거와 버전 이력을 남깁니다.' },
+            { id: 'site-7', screen: 'locationMap', targetId: 'location-map-filter', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]', title: '지도에 표시할 대상 좁히기', description: '지역, 후보지 상태, 브랜드 기준으로 지도에 표시할 점포를 좁혀 비교 대상을 정리합니다.' },
+            { id: 'site-8', screen: 'locationMap', targetId: 'location-map-canvas', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도"]', title: '후보지와 운영점을 함께 비교', description: '출점 후보지와 운영 가맹점을 실제 지도에서 확인해 상권 중복과 관리 동선을 검토합니다.' },
+            { id: 'site-9', screen: 'locationMap', targetId: 'location-map-tools', targetSelector: '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]', title: '반경·거리·면적 분석', description: '상권 반경, 경쟁점 거리, 후보지 면적을 직접 측정해 출점 검토 근거를 남깁니다.' },
+            { id: 'site-10', screen: 'leadDb', targetId: 'lead-detail-location-link', targetSelector: '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 후보지 연결"]', title: '가맹 희망자와 후보지 연결', description: '검토를 마친 후보지를 가맹 희망자 상세에 연결해 상담 기록과 입지 검토 결과를 한 고객 흐름으로 남깁니다.' }
         ]
     },
     openingOperations: {
@@ -60,7 +62,7 @@ export const DEMO_STORIES = {
         steps: [
             { id: 'opening-1', screen: 'contractOwners', targetId: 'contract-owner-toolbar', targetSelector: '[data-demo-id="contract-owner-toolbar"]', title: '계약 완료 고객 빠르게 찾기', description: '이름, 담당자, 진행 기간으로 오픈 준비를 확인할 고객을 좁혀 여러 계약 건을 빠르게 점검합니다.' },
             { id: 'opening-2', screen: 'contractOwners', targetId: 'contract-owner-tabs', targetSelector: '[data-demo-id="contract-owner-tabs"]', title: '계약 이후 업무로 전환', description: '모객 DB와 계약 완료 업무를 분리해 계약 전 고객과 오픈 준비 점주가 같은 목록에 섞이지 않게 관리합니다.' },
-            { id: 'opening-3', screen: 'contractOwners', targetId: 'contract-owner-list', targetSelector: '[data-demo-id="contract-owner-list"]', title: '구비서류와 법정기한 확인', description: '정보공개서 발송 기록, 14일 법정기한, 필수 서류와 내부 보고 항목을 한 목록에서 점검합니다.' },
+            { id: 'opening-3', screen: 'contractOwners', targetId: 'contract-owner-list', targetSelector: '[data-demo-id="contract-owner-list"]', title: '구비서류와 법정기한 확인', description: '정보공개서 발송 기록, 14일 법정기한, 필수 서류와 내부 보고 항목을 한 목록에서 점검합니다. 체크리스트는 회사의 법률 검토를 대신하지 않습니다.' },
             { id: 'opening-4', featurePath: '/dashboard/franchise-leads/labor-planning', targetId: 'labor-plan-input', targetSelector: 'section[aria-label="인력 계산 조건"]', title: '예상 매출로 필요 인력 계산', description: '매장, 예상 매출, 영업시간을 입력해 정규직과 파트타이머 구성, 예상 인건비를 계산합니다.' },
             { id: 'opening-5', featurePath: '/dashboard/franchise-leads/labor-planning', targetId: 'labor-plan-result-tab', targetSelector: 'nav[aria-label="인력 세팅 보기"] button:nth-of-type(2)', title: '인력 추천안 비교', description: '표준형과 절약형의 인원·인건비를 비교하고 채용과 근무표에 사용할 안을 선택합니다.' },
             { id: 'opening-6', featurePath: '/dashboard/franchise-operations/schedule', targetId: 'schedule-calendar', targetSelector: 'section[aria-label="월간 일정 달력"]', title: '오픈 준비 일정 정리', description: '교육, 공사, 장비 입고, 오픈 점검 일정을 달력에서 확인하고 담당자별 후속 업무를 배정합니다.' },

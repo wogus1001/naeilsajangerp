@@ -10,6 +10,7 @@ import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspac
 import { LaborPlanningPanel } from '@/components/franchise/operations/LaborPlanningPanel';
 import { SupervisionPanel } from '@/components/franchise/operations/SupervisionPanel';
 import { FranchiseSchedulePage } from '@/components/franchise/schedules/FranchiseSchedulePage';
+import { setStoredUserRuntimeOverride } from '@/utils/userUtils';
 import pageStyles from '../../(main)/dashboard/franchise-leads/page.module.css';
 import {
     DEMO_OPERATION_LOCATIONS
@@ -31,20 +32,18 @@ function useDemoProductionIdentity(role: DemoRole): boolean {
     const [ready, setReady] = React.useState(false);
 
     React.useLayoutEffect(() => {
-        const previousUser = window.localStorage.getItem('user');
-        window.localStorage.setItem('user', JSON.stringify({
+        setStoredUserRuntimeOverride({
             id: `demo-${role}`,
             uid: `demo-${role}`,
             name: role === 'admin' ? '관리자' : role === 'partner' ? '김재현' : '김담당',
             role,
             companyId: 'demo-company',
             companyName: role === 'partner' ? '데모 협력업체' : '데모'
-        }));
+        });
         setReady(true);
 
         return () => {
-            if (previousUser) window.localStorage.setItem('user', previousUser);
-            else window.localStorage.removeItem('user');
+            setStoredUserRuntimeOverride(undefined);
         };
     }, [role]);
 

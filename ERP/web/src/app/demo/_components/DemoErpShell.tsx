@@ -31,6 +31,7 @@ type DemoErpShellProps = {
     readonly onPreviewPathChange: (path: string) => void;
     readonly onSimulate: DemoActionHandler;
     readonly onOpenExperience: () => void;
+    readonly onOpenScreenGuide: () => void;
 };
 
 const DEMO_HEADER_NOTIFICATIONS: readonly HeaderNotification[] = [
@@ -79,7 +80,8 @@ export function DemoErpShell({
     onScreenChange,
     onPreviewPathChange,
     onSimulate,
-    onOpenExperience
+    onOpenExperience,
+    onOpenScreenGuide
 }: DemoErpShellProps) {
     const profile = DEMO_ROLE_PROFILES[scenario.role];
     const activeNav = scenario.navItems.find(item => item.id === activeScreen) ?? scenario.navItems[0];
@@ -210,6 +212,7 @@ export function DemoErpShell({
                                 {isSidebarCollapsed ? '메뉴 열기' : '메뉴 접기'}
                             </button>
                             <button type="button" className={`${styles.demoHeaderButton} ${styles.demoTourButton}`} onClick={onOpenExperience}>체험 선택</button>
+                            {activePath ? <button type="button" className={styles.demoHeaderButton} onClick={onOpenScreenGuide}>현재 기능 안내</button> : null}
                             <button type="button" className={`${styles.demoHeaderButton} ${styles.demoLogoutButton}`} onClick={onLogout}>데모 로그아웃</button>
                             <span className={styles.demoModeBadge}>샘플 데이터 데모</span>
                         </>

@@ -7,6 +7,7 @@ import { DemoTourOverlay } from './DemoTourOverlay';
 
 type DemoTourExperienceProps = {
     readonly role: DemoRole;
+    readonly coreStepCount: number;
     readonly mode: DemoTourMode;
     readonly run: number;
     readonly contextKey: string;
@@ -16,13 +17,13 @@ type DemoTourExperienceProps = {
     readonly onStartStoryAction: (storyId: DemoStoryId) => void;
     readonly onChooseStoryAction: () => void;
     readonly onExploreAction: () => void;
-    readonly onContactAction: () => void;
     readonly onCompleteAction: () => void;
     readonly onStepAdvanceAction: (currentStep: DemoTourStep, nextStep: DemoTourStep | undefined) => void;
 };
 
 export function DemoTourExperience({
     role,
+    coreStepCount,
     mode,
     run,
     contextKey,
@@ -32,7 +33,6 @@ export function DemoTourExperience({
     onStartStoryAction,
     onChooseStoryAction,
     onExploreAction,
-    onContactAction,
     onCompleteAction,
     onStepAdvanceAction
 }: DemoTourExperienceProps) {
@@ -40,13 +40,13 @@ export function DemoTourExperience({
         return (
             <DemoExperienceDialog
                 role={role}
+                coreStepCount={coreStepCount}
                 mode={mode}
                 completedStoryId={completedStoryId}
                 onStartCoreAction={onStartCoreAction}
                 onStartStoryAction={onStartStoryAction}
                 onChooseStoryAction={onChooseStoryAction}
                 onExploreAction={onExploreAction}
-                onContactAction={onContactAction}
             />
         );
     }
@@ -58,6 +58,7 @@ export function DemoTourExperience({
             key={`${role}-${mode}-${contextKey}-${run}`}
             steps={steps}
             finalAction={undefined}
+            completionLabel={mode === 'core' ? '핵심 체험 완료' : mode === 'story' ? '시나리오 완료' : undefined}
             onCloseAction={onExploreAction}
             onCompleteAction={mode === 'core' || mode === 'story' ? onCompleteAction : undefined}
             onStepAdvanceAction={onStepAdvanceAction}

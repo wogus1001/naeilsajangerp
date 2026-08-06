@@ -87,11 +87,28 @@ export function useDemoTourController({
             detail: { screen, fromTargetId, toTargetId: step.targetId }
         }));
     };
+    const dispatchTourTargetAfterRender = (
+        step: DemoTourStep | undefined,
+        screen: DemoScreenId,
+        fromTargetId = ''
+    ) => {
+        dispatchTourTarget(step, screen, fromTargetId);
+        if (!step) return;
+        const requiresRenderedDestination = 'featurePath' in step
+            ? step.featurePath !== activeFeaturePath
+            : screen !== activeScreen || activeFeaturePath !== '';
+        if (!requiresRenderedDestination) return;
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                dispatchTourTarget(step, screen, fromTargetId);
+            });
+        });
+    };
     const beginTour = (mode: 'core' | 'story', steps: readonly DemoTourStep[]) => {
         const firstStep = steps[0];
         if (!firstStep) return;
         const screen = navigateToStep(firstStep, defaultScreen);
-        dispatchTourTarget(firstStep, screen);
+        dispatchTourTargetAfterRender(firstStep, screen);
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         setTourRun(run => run + 1);
         setTourMode(mode);
@@ -126,7 +143,7 @@ export function useDemoTourController({
     const handleStepAdvance = (currentStep: DemoTourStep, nextStep: DemoTourStep | undefined) => {
         if (!nextStep) return;
         const screen = navigateToStep(nextStep, activeScreen);
-        dispatchTourTarget(nextStep, screen, currentStep.targetId);
+        dispatchTourTargetAfterRender(nextStep, screen, currentStep.targetId);
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     };
 

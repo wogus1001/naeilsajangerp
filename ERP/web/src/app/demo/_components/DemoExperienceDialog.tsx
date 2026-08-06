@@ -13,24 +13,24 @@ import styles from './DemoExperienceDialog.module.css';
 
 type DemoExperienceDialogProps = {
     readonly role: DemoRole;
+    readonly coreStepCount: number;
     readonly mode: 'welcome' | 'complete';
     readonly completedStoryId: DemoStoryId | undefined;
     readonly onStartCoreAction: () => void;
     readonly onStartStoryAction: (storyId: DemoStoryId) => void;
     readonly onChooseStoryAction: () => void;
     readonly onExploreAction: () => void;
-    readonly onContactAction: () => void;
 };
 
 export function DemoExperienceDialog({
     role,
+    coreStepCount,
     mode,
     completedStoryId,
     onStartCoreAction,
     onStartStoryAction,
     onChooseStoryAction,
-    onExploreAction,
-    onContactAction
+    onExploreAction
 }: DemoExperienceDialogProps) {
     const dialogRef = React.useRef<HTMLElement>(null);
     const primaryButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -71,7 +71,9 @@ export function DemoExperienceDialog({
                     />
                 ) : (
                     <DemoExperienceWelcome
+                        role={role}
                         stories={stories}
+                        coreStepCount={coreStepCount}
                         titleId={titleId}
                         descriptionId={descriptionId}
                         primaryButtonRef={primaryButtonRef}
@@ -92,8 +94,8 @@ export function DemoExperienceDialog({
                         >
                             처음부터 다시 체험
                         </button>
-                        <button ref={primaryButtonRef} type="button" className={styles.primaryButton} onClick={onContactAction}>
-                            도입 문의하기
+                        <button ref={primaryButtonRef} type="button" className={styles.primaryButton} onClick={onExploreAction}>
+                            가이드 없이 둘러보기
                             <ArrowRight size={16} aria-hidden="true" />
                         </button>
                     </div>

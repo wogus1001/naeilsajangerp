@@ -25,6 +25,19 @@ export class DemoApiBlockedError extends Error {
     }
 }
 
+const KAKAO_MAP_RESOURCE_HOSTS = new Set([
+    'kakao.com',
+    'daum.net',
+    'daumcdn.net'
+]);
+
+function isKakaoMapResource(requestUrl: URL): boolean {
+    const hostname = requestUrl.hostname.toLowerCase();
+    return Array.from(KAKAO_MAP_RESOURCE_HOSTS).some(host => (
+        hostname === host || hostname.endsWith(`.${host}`)
+    ));
+}
+
 function getFetchUrl(input: RequestInfo | URL): URL {
     if (typeof input === 'string') {
         return new URL(input, window.location.href);
@@ -43,8 +56,10 @@ function getFetchMethod(input: RequestInfo | URL, init?: RequestInit): string {
     return 'GET';
 }
 
-export function isDemoFetchAllowed(requestUrl: URL, currentOrigin: string): boolean {
-    if (requestUrl.origin !== currentOrigin) return false;
+export function isDemoFetchAllowed(requestUrl: URL, currentOrigin: string, method = 'GET'): boolean {
+    if (requestUrl.origin !== currentOrigin) {
+        return ['GET', 'HEAD'].includes(method.toUpperCase()) && isKakaoMapResource(requestUrl);
+    }
     if (
         requestUrl.pathname.startsWith('/_next/')
         || requestUrl.pathname === '/favicon.ico'
@@ -75,9 +90,10 @@ export function useDemoApiGuard() {
 
         window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
             const requestUrl = getFetchUrl(input);
-            const fixtureResponse = getDemoFeatureApiResponse(requestUrl, getFetchMethod(input, init), init);
+            const requestMethod = getFetchMethod(input, init);
+            const fixtureResponse = getDemoFeatureApiResponse(requestUrl, requestMethod, init);
             if (fixtureResponse) return fixtureResponse;
-            if (!isDemoFetchAllowed(requestUrl, currentOrigin)) {
+            if (!isDemoFetchAllowed(requestUrl, currentOrigin, requestMethod)) {
                 throw new DemoApiBlockedError(requestUrl.pathname);
             }
 

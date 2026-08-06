@@ -57,6 +57,26 @@
     font-weight: 600;
 }
 
+.demoFacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--erp-space-2);
+    margin-top: var(--erp-space-4);
+}
+
+.demoFacts span {
+    border: 1px solid hsl(var(--border));
+    border-radius: 999px;
+    background: var(--erp-surface-muted);
+    color: var(--erp-text-secondary);
+    padding: 6px 10px;
+    font-size: var(--erp-font-caption);
+}
+
+.demoFacts strong {
+    color: hsl(var(--foreground));
+}
+
 .storySection {
     margin-top: var(--erp-space-5);
 }
@@ -194,6 +214,86 @@
     outline-offset: 2px;
 }
 
+.demoNotes {
+    margin-top: var(--erp-space-4);
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-table-muted);
+    padding: var(--erp-space-3) var(--erp-space-4);
+}
+
+.demoNotes summary {
+    color: var(--erp-action-strong);
+    font-size: var(--erp-font-label);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.noteGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--erp-space-5);
+    margin-top: var(--erp-space-4);
+}
+
+.noteGrid section,
+.noteGrid dl,
+.noteGrid ul {
+    display: grid;
+    gap: var(--erp-space-2);
+    margin: 0;
+}
+
+.noteGrid dl > div {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: var(--erp-space-2);
+}
+
+.noteGrid dt,
+.noteGrid dd,
+.noteGrid li {
+    margin: 0;
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-caption);
+    line-height: 1.5;
+}
+
+.noteGrid dt {
+    color: hsl(var(--foreground));
+    font-weight: 700;
+}
+
+.noteGrid ul {
+    padding: 0;
+    list-style: none;
+}
+
+.ready,
+.connect,
+.review {
+    display: inline-flex;
+    margin-right: var(--erp-space-1);
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-weight: 700;
+}
+
+.ready {
+    background: var(--erp-success-soft);
+    color: var(--erp-success);
+}
+
+.connect {
+    background: var(--erp-warning-soft);
+    color: var(--erp-warning);
+}
+
+.review {
+    background: var(--erp-surface-muted);
+    color: var(--erp-text-secondary);
+}
+
 @media (max-width: 760px) {
     .coreJourney {
         grid-template-columns: auto minmax(0, 1fr);
@@ -210,6 +310,10 @@
     }
 
     .storyGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .noteGrid {
         grid-template-columns: 1fr;
     }
 }

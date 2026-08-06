@@ -243,11 +243,37 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
             if (event.detail.screen !== 'leadDb') return;
             const toTargetId = event.detail.toTargetId || '';
             const isDetailTarget = toTargetId.startsWith('lead-detail-');
-            const isCandidateDetailTarget = toTargetId === 'lead-detail-location-link';
+            const isDashboardTarget = toTargetId.startsWith('lead-dashboard-');
+            const isCandidateDetailTarget = [
+                'lead-detail-location-link',
+                'lead-detail-disclosure'
+            ].includes(toTargetId);
+            const firstRawLead = leads.find(lead => lead.leadStage === 'raw_intake');
+            const firstCandidateLead = leads.find(lead => lead.leadStage === 'candidate');
+            const isPromotionTransition = (
+                event.detail.fromTargetId === 'lead-db-promote-action'
+                && (toTargetId === 'lead-db-candidate-tab' || isCandidateDetailTarget)
+            );
+            let promotedLeadId = tourPromotedLeadIdRef.current;
+
+            if (isDashboardTarget) {
+                tourPromotedLeadIdRef.current = '';
+                promotedLeadId = '';
+                setSelectedLeadId('');
+            }
+            if (isPromotionTransition && !promotedLeadId) {
+                const leadToPromote = selectedLead || firstRawLead;
+                if (leadToPromote) {
+                    promotedLeadId = leadToPromote.id;
+                    tourPromotedLeadIdRef.current = promotedLeadId;
+                    promoteLead(leadToPromote);
+                }
+            }
             if ([
                 'lead-db-raw-intake-tab',
                 'lead-db-first-record',
-                'lead-db-promote-action'
+                'lead-db-promote-action',
+                'lead-db-management-tab'
             ].includes(toTargetId) || (isDetailTarget && !isCandidateDetailTarget)) {
                 setLeadDbLayer('raw_intake');
             }
@@ -257,34 +283,22 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
             ].includes(toTargetId) || isCandidateDetailTarget) {
                 setLeadDbLayer('candidate');
             }
-            const firstRawLead = leads.find(lead => lead.leadStage === 'raw_intake');
-            const firstCandidateLead = leads.find(lead => lead.leadStage === 'candidate');
-            const promotedLead = leads.find(lead => lead.id === tourPromotedLeadIdRef.current);
             if (isDetailTarget) {
-                const detailLead = isCandidateDetailTarget
-                    ? promotedLead || firstCandidateLead
-                    : firstRawLead;
-                if (detailLead) setSelectedLeadId(detailLead.id);
+                const detailLeadId = isCandidateDetailTarget
+                    ? promotedLeadId || firstCandidateLead?.id
+                    : firstRawLead?.id;
+                if (detailLeadId) setSelectedLeadId(detailLeadId);
             } else if ([
                 'lead-db-raw-intake-tab',
                 'lead-db-first-record',
                 'lead-db-promote-action',
+                'lead-db-management-tab',
                 'lead-db-candidate-tab',
                 'lead-db-candidate-table'
             ].includes(toTargetId)) {
                 setSelectedLeadId('');
             }
-            if (
-                event.detail.fromTargetId === 'lead-db-promote-action'
-                && toTargetId === 'lead-db-candidate-tab'
-            ) {
-                if (!tourPromotedLeadIdRef.current) {
-                    const leadToPromote = selectedLead || firstRawLead;
-                    if (leadToPromote) {
-                        tourPromotedLeadIdRef.current = leadToPromote.id;
-                        promoteLead(leadToPromote);
-                    }
-                }
+            if (isPromotionTransition) {
                 setLeadDbLayer('candidate');
             }
         };

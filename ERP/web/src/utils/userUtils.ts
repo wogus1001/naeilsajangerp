@@ -26,6 +26,7 @@ export type AdminCompanyScope = {
 const ADMIN_COMPANY_SCOPE_KEY = 'admin_selected_company_scope';
 export const ADMIN_COMPANY_SCOPE_CHANGE_EVENT = 'admin-company-scope-change';
 export const COMPANY_LOGO_CHANGE_EVENT = 'company-logo-change';
+let storedUserRuntimeOverride: StoredUser | undefined;
 
 export const shouldReportAuthCheckFailure = (status: number): boolean => {
     return status !== 401 && status !== 403;
@@ -53,7 +54,12 @@ export const isAdminStoredUser = (sourceUser?: StoredUser): boolean => {
     return user?.role === 'admin' || user?.role === 'super_admin';
 };
 
+export const setStoredUserRuntimeOverride = (user: StoredUser | undefined): void => {
+    storedUserRuntimeOverride = user;
+};
+
 export const getStoredUser = (): StoredUser => {
+    if (storedUserRuntimeOverride !== undefined) return storedUserRuntimeOverride;
     if (typeof window === 'undefined') return null;
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
@@ -98,7 +104,9 @@ export const getRequesterId = (sourceUser?: StoredUser): string => {
 export const getStoredCompanyName = (sourceUser?: StoredUser): string => {
     const user = sourceUser || getStoredUser();
     if (!user) return '';
-    const adminScope = isAdminStoredUser(user) ? getAdminCompanyScope() : null;
+    const adminScope = storedUserRuntimeOverride === undefined && isAdminStoredUser(user)
+        ? getAdminCompanyScope()
+        : null;
     if (adminScope?.name) return adminScope.name;
     return user.companyName || user.company_name || '';
 };
@@ -106,7 +114,9 @@ export const getStoredCompanyName = (sourceUser?: StoredUser): string => {
 export const getStoredCompanyLogoUrl = (sourceUser?: StoredUser): string => {
     const user = sourceUser || getStoredUser();
     if (!user) return '';
-    const adminScope = isAdminStoredUser(user) ? getAdminCompanyScope() : null;
+    const adminScope = storedUserRuntimeOverride === undefined && isAdminStoredUser(user)
+        ? getAdminCompanyScope()
+        : null;
     if (adminScope?.logoUrl) return adminScope.logoUrl;
     return user.companyLogoUrl || user.company_logo_url || '';
 };
@@ -114,7 +124,9 @@ export const getStoredCompanyLogoUrl = (sourceUser?: StoredUser): string => {
 export const getStoredCompanyId = (sourceUser?: StoredUser): string => {
     const user = sourceUser || getStoredUser();
     if (!user) return '';
-    const adminScope = isAdminStoredUser(user) ? getAdminCompanyScope() : null;
+    const adminScope = storedUserRuntimeOverride === undefined && isAdminStoredUser(user)
+        ? getAdminCompanyScope()
+        : null;
     if (adminScope?.id) return adminScope.id;
     return user.companyId || user.company_id || '';
 };

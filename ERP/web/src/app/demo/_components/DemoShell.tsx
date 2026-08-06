@@ -153,6 +153,7 @@ export function DemoShell({ role }: DemoShellProps) {
                 onPreviewPathChange={handlePreviewPathChange}
                 onSimulate={handleSimulate}
                 onOpenExperience={tour.chooseStory}
+                onOpenScreenGuide={tour.openScreenGuide}
             >
                 <div hidden={Boolean(activeFeaturePath)} aria-hidden={Boolean(activeFeaturePath)}>
                     <DemoRoleWorkspace
@@ -177,6 +178,7 @@ export function DemoShell({ role }: DemoShellProps) {
             ) : null}
             <DemoTourExperience
                 role={role}
+                coreStepCount={scenario.tourSteps.length}
                 mode={tour.tourMode}
                 run={tour.tourRun}
                 contextKey={tour.contextKey}
@@ -188,10 +190,6 @@ export function DemoShell({ role }: DemoShellProps) {
                 onExploreAction={tour.closeTour}
                 onCompleteAction={tour.completeTour}
                 onStepAdvanceAction={tour.handleStepAdvance}
-                onContactAction={() => {
-                    setTourMode('closed');
-                    setSimulationMessage('도입 상담 요청을 확인했습니다. 담당자가 안내할 수 있도록 문의 채널을 준비 중입니다.');
-                }}
             />
         </DemoRuntimeProviders>
     );

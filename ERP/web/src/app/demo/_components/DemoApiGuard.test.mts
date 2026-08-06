@@ -8,13 +8,16 @@ import {
 
 const ORIGIN = 'https://demo.example.com';
 
-test('Given demo fetches When classifying requests Then only same-origin non-API assets and demo access are allowed', () => {
+test('Given demo fetches When classifying requests Then only demo resources and Kakao map assets are allowed', () => {
     assert.equal(isDemoFetchAllowed(new URL(`${ORIGIN}/api/demo/access`), ORIGIN), true);
     assert.equal(isDemoFetchAllowed(new URL(`${ORIGIN}/demo/manager`), ORIGIN), true);
     assert.equal(isDemoFetchAllowed(new URL(`${ORIGIN}/_next/static/chunk.js`), ORIGIN), true);
     assert.equal(isDemoFetchAllowed(new URL(`${ORIGIN}/api/franchise-leads`), ORIGIN), false);
     assert.equal(isDemoFetchAllowed(new URL(`${ORIGIN}/contracts/vendor/register?_rsc=demo`), ORIGIN), false);
-    assert.equal(isDemoFetchAllowed(new URL('https://dapi.kakao.com/v2/maps/sdk.js'), ORIGIN), false);
+    assert.equal(isDemoFetchAllowed(new URL('https://dapi.kakao.com/v2/maps/sdk.js'), ORIGIN), true);
+    assert.equal(isDemoFetchAllowed(new URL('https://map0.daumcdn.net/map_2d/tiles/1.png'), ORIGIN), true);
+    assert.equal(isDemoFetchAllowed(new URL('https://dapi.kakao.com/v2/maps/sdk.js'), ORIGIN, 'POST'), false);
+    assert.equal(isDemoFetchAllowed(new URL('https://unrelated.example.com/script.js'), ORIGIN), false);
 });
 
 test('Given links or popups When classifying navigation Then only demo routes remain reachable', () => {

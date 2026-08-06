@@ -26,7 +26,7 @@ test('Given public demo roles When checking links Then every role has a matching
 test('Given demo tour steps When checking ids Then step ids and target ids are usable', () => {
     for (const scenario of Object.values(DEMO_SCENARIOS)) {
         assert.ok(scenario.tourSteps.length >= 3);
-        assert.ok(scenario.tourSteps.length <= 9);
+        assert.ok(scenario.tourSteps.length <= 10);
         assert.equal(new Set(scenario.tourSteps.map(step => step.id)).size, scenario.tourSteps.length);
         assert.equal(scenario.tourSteps.every(step => step.targetId.length > 0), true);
     }
@@ -105,10 +105,15 @@ test('Given the core manager journey When advancing Then it reaches acquisition,
 
 test('Given the core journey reaches site and contract work When advancing Then stable workspace targets keep the guide moving', () => {
     for (const role of ['manager', 'admin'] as const) {
+        const disclosureStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.targetId === 'lead-detail-disclosure');
         const siteStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.screen === 'location');
         const locationLinkStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.targetId === 'lead-detail-location-link');
         const contractStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.screen === 'contractOwners');
 
+        assert.equal(
+            disclosureStep?.targetSelector,
+            '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 정보공개서"]'
+        );
         assert.equal(siteStep?.targetSelector, '[data-demo-id="location-master"] tbody tr:first-child');
         assert.equal(locationLinkStep?.screen, 'leadDb');
         assert.equal(
