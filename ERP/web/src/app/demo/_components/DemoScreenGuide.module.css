@@ -13,23 +13,7 @@
 }
 
 .guideMarker {
-    position: absolute;
-    z-index: 8;
-    top: -16px;
-    left: -2px;
-    display: inline-grid;
-    width: 26px;
-    height: 26px;
-    place-items: center;
-    border: 2px solid #ffffff;
-    border-radius: 999px;
-    background: #3182f6;
-    color: #ffffff;
-    box-shadow: 0 6px 16px rgb(49 130 246 / 28%);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    pointer-events: none;
+    display: none;
 }
 
 .guideCollapsedButton {

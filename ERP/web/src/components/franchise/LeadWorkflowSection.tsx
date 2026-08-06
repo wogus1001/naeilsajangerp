@@ -73,7 +73,7 @@ export function LeadWorkflowSection({
     };
 
     return (
-        <section className={styles.detailSection}>
+        <section className={styles.detailSection} aria-label="가맹 희망자 업무 관리">
             <h3><ClipboardList size={16} /> 업무 관리</h3>
             <div className={styles.workflowGrid}>
                 <label>

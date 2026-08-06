@@ -16,7 +16,7 @@ type LeadBasicInfoSectionProps = {
 
 export function LeadBasicInfoSection({ lead, managerName }: LeadBasicInfoSectionProps) {
     return (
-        <section className={styles.detailSection}>
+        <section className={styles.detailSection} aria-label="가맹 희망자 기본정보">
             <h3><UserRound size={16} /> 기본정보</h3>
             <div className={styles.detailInfoGrid}>
                 <div>

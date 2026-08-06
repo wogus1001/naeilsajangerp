@@ -10,15 +10,19 @@ import { VendorContractFormPanel } from './VendorContractFormPanel';
 import alertStyles from './vendorContractAlerts.module.css';
 import styles from './vendorContracts.module.css';
 
-export function VendorContractRegisterPage() {
+type VendorContractRegisterPageProps = {
+    readonly initialContractId?: string;
+};
+
+export function VendorContractRegisterPage({ initialContractId = '' }: VendorContractRegisterPageProps = {}) {
     const router = useRouter();
     const controller = useVendorContractsController();
     const [contractId, setContractId] = React.useState('');
     const initializedContractId = React.useRef('');
 
     React.useEffect(() => {
-        setContractId(new URLSearchParams(window.location.search).get('contractId') || '');
-    }, []);
+        setContractId(initialContractId || new URLSearchParams(window.location.search).get('contractId') || '');
+    }, [initialContractId]);
 
     React.useEffect(() => {
         if (!contractId || initializedContractId.current === contractId) return;

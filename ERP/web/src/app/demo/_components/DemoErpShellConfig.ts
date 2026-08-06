@@ -1,6 +1,8 @@
 import type { DemoRole, DemoScreenId } from '../demoTypes';
-import type { DemoScenario } from '../demoTypes';
-import type { SidebarMenuSection } from '@/components/layout/SidebarMenuConfig';
+import {
+    SIDEBAR_SECTIONS,
+    type SidebarMenuSection
+} from '@/components/layout/SidebarMenuConfig';
 
 export const DEMO_ROLE_PROFILES = {
     admin: { name: '관리자', company: '데모 운영팀' },
@@ -26,53 +28,43 @@ export const DEMO_SCREEN_TO_PATH: Readonly<Record<DemoScreenId, string>> = {
     operations: '/dashboard/franchise-operations'
 };
 
-const DEMO_SCREEN_FEATURES = {
-    dashboard: 'dashboard',
-    leadDb: 'franchiseLeads',
-    contractOwners: 'franchiseLeads',
-    location: 'marketInsights',
-    locationMap: 'franchiseLocations',
-    operations: 'franchiseOperations'
-} as const;
+export function buildDemoSidebarSections(role: DemoRole): readonly SidebarMenuSection[] {
+    const baseSections = SIDEBAR_SECTIONS.filter(section => (
+        section.key === 'dashboard'
+        || section.key === 'franchise'
+    ));
+    if (role !== 'partner') return baseSections;
 
-const DEMO_SCREEN_ICONS = {
-    dashboard: 'list',
-    leadDb: 'target',
-    contractOwners: 'list',
-    location: 'mapPin',
-    locationMap: 'mapPin',
-    operations: 'store'
-} as const;
+    const allowedPartnerPaths = new Set([
+        '/dashboard/franchise-leads/market-insights',
+        '/dashboard/franchise-locations',
+        '/dashboard/franchise-operations'
+    ]);
+    const allowedPartnerGroups = new Set(['출점 후보지', '가맹 운영']);
 
-export function buildDemoSidebarSections(scenario: DemoScenario): readonly SidebarMenuSection[] {
-    const dashboard = scenario.navItems.find(item => item.id === 'dashboard');
-    const franchiseItems = scenario.navItems.filter(item => item.id !== 'dashboard');
-    return [
-        {
-            key: 'dashboard',
-            title: dashboard?.label ?? '대시보드',
-            collapsedTitle: dashboard?.label ?? '대시보드',
-            direct: true,
-            items: [{
-                title: dashboard?.label ?? '대시보드',
-                url: DEMO_SCREEN_TO_PATH.dashboard,
-                category: '대시보드',
-                featureKey: 'dashboard'
-            }]
-        },
-        {
-            key: 'franchise',
-            title: '프랜차이즈',
-            collapsedTitle: '프랜차이즈',
-            items: franchiseItems.map(item => ({
-                title: item.label,
-                url: DEMO_SCREEN_TO_PATH[item.id],
-                category: '프랜차이즈',
-                featureKey: DEMO_SCREEN_FEATURES[item.id],
-                icon: DEMO_SCREEN_ICONS[item.id]
-            }))
-        }
-    ];
+    return baseSections.map(section => (
+        section.key !== 'franchise'
+            ? section
+            : {
+                ...section,
+                items: section.items.filter(item => (
+                    (item.group && allowedPartnerGroups.has(item.title))
+                    || Boolean(item.url && allowedPartnerPaths.has(item.url))
+                ))
+            }
+    ));
+}
+
+export function isDemoFeaturePathAllowed(role: DemoRole, path: string): boolean {
+    return role !== 'partner' && (
+        path.startsWith('/dashboard/franchise-leads/labor-planning')
+        || path.startsWith('/dashboard/franchise-operations/schedule')
+        || path.startsWith('/dashboard/franchise-supervision')
+        || path.startsWith('/dashboard/franchise-operations/owner-portal')
+        || path.startsWith('/contracts/electronic')
+        || path.startsWith('/dashboard/franchise-vendors')
+        || path.startsWith('/contracts/vendor')
+    );
 }
 
 export function getDemoBreadcrumbRoot(screen: DemoScreenId): string {

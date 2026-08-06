@@ -23,9 +23,12 @@ import {
 type DemoErpShellProps = {
     readonly scenario: DemoScenario;
     readonly activeScreen: DemoScreenId;
+    readonly activePath?: string;
+    readonly activeTitle?: string;
     readonly children: ReactNode;
     readonly onLogout: () => void;
     readonly onScreenChange: (screen: DemoScreenId) => void;
+    readonly onPreviewPathChange: (path: string) => void;
     readonly onSimulate: DemoActionHandler;
     readonly onRestartTour: () => void;
 };
@@ -69,9 +72,12 @@ const DEMO_HEADER_NOTIFICATIONS: readonly HeaderNotification[] = [
 export function DemoErpShell({
     scenario,
     activeScreen,
+    activePath,
+    activeTitle,
     children,
     onLogout,
     onScreenChange,
+    onPreviewPathChange,
     onSimulate,
     onRestartTour
 }: DemoErpShellProps) {
@@ -79,7 +85,7 @@ export function DemoErpShell({
     const activeNav = scenario.navItems.find(item => item.id === activeScreen) ?? scenario.navItems[0];
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [notifications, setNotifications] = useState<readonly HeaderNotification[]>(DEMO_HEADER_NOTIFICATIONS);
-    const sidebarSections = useMemo(() => buildDemoSidebarSections(scenario), [scenario]);
+    const sidebarSections = useMemo(() => buildDemoSidebarSections(scenario.role), [scenario.role]);
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => {
@@ -107,8 +113,15 @@ export function DemoErpShell({
             handleScreenChange(screen);
             return;
         }
-        onSimulate(`데모 화면에서 ${href} 경로를 확인했습니다.`);
-    }, [handleScreenChange, onSimulate, scenario.navItems]);
+        const menuItem = sidebarSections
+            .flatMap(section => section.items)
+            .find(item => item.url === href || item.url === pathname);
+        if (menuItem?.url) {
+            onPreviewPathChange(pathname);
+            return;
+        }
+        onSimulate('현재 데모에서는 핵심 프랜차이즈 흐름을 먼저 확인해 주세요.');
+    }, [handleScreenChange, onPreviewPathChange, onSimulate, scenario.navItems, sidebarSections]);
 
     const notificationDataSource = useMemo<HeaderNotificationDataSource>(() => ({
         load: category => {
@@ -148,8 +161,8 @@ export function DemoErpShell({
 
     const breadcrumb: HeaderBreadcrumb = useMemo(() => ({
         category: getDemoBreadcrumbRoot(activeScreen),
-        title: activeNav?.label ?? scenario.title
-    }), [activeNav?.label, activeScreen, scenario.title]);
+        title: activeTitle || activeNav?.label || scenario.title
+    }), [activeNav?.label, activeScreen, activeTitle, scenario.title]);
 
     const profileActions: HeaderProfileActions = useMemo(() => ({
         onProfile: () => handleDemoPath('/profile'),
@@ -165,7 +178,7 @@ export function DemoErpShell({
                 companyName={profile.company}
                 runtime="demo"
                 navigationAdapter={{
-                    pathname: DEMO_SCREEN_TO_PATH[activeScreen],
+                    pathname: activePath || DEMO_SCREEN_TO_PATH[activeScreen],
                     sections: sidebarSections,
                     onNavigate: handleDemoPath,
                     navigationLabel: '데모 메뉴',
@@ -196,7 +209,7 @@ export function DemoErpShell({
                                 {isSidebarCollapsed ? <ChevronRight size={15} aria-hidden="true" /> : <ChevronLeft size={15} aria-hidden="true" />}
                                 {isSidebarCollapsed ? '메뉴 열기' : '메뉴 접기'}
                             </button>
-                            <button type="button" className={`${styles.demoHeaderButton} ${styles.demoTourButton}`} onClick={onRestartTour}>설명 다시 보기</button>
+                            <button type="button" className={`${styles.demoHeaderButton} ${styles.demoTourButton}`} onClick={onRestartTour}>이 화면 안내</button>
                             <button type="button" className={`${styles.demoHeaderButton} ${styles.demoLogoutButton}`} onClick={onLogout}>데모 로그아웃</button>
                             <span className={styles.demoModeBadge}>샘플 데이터 데모</span>
                         </>

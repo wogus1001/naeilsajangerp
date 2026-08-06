@@ -119,7 +119,7 @@ export default function FranchiseVendorsPage() {
             {error && <div className={styles.error}>{error}</div>}
             {message && <div className={styles.message}>{message}</div>}
 
-            <section className={styles.metricGrid}>
+            <section className={styles.metricGrid} aria-label="업체 관리 핵심 현황">
                 <div className={styles.metricCard}>
                     <Users size={18} />
                     <span>등록 업체</span>
@@ -142,7 +142,7 @@ export default function FranchiseVendorsPage() {
                 </div>
             </section>
 
-            <section className={`${styles.panel} ${styles.filterBar}`}>
+            <section className={`${styles.panel} ${styles.filterBar}`} aria-label="업체 관리 검색 조건">
                 <label className={styles.searchBox}>
                     <Search size={16} />
                     <input
@@ -159,7 +159,7 @@ export default function FranchiseVendorsPage() {
                 </select>
             </section>
 
-            <section className={styles.panel}>
+            <section className={styles.panel} aria-label="업체 목록">
                 <div className={styles.statusLine}>
                     <strong>업체 목록</strong>
                     <div className={styles.listHeaderActions}>

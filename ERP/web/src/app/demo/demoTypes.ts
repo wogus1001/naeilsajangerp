@@ -1,3 +1,5 @@
+import type { DemoFeatureSurfacePath } from './_components/DemoFranchiseFeatureConfig';
+
 export type DemoRole = 'admin' | 'manager' | 'partner';
 
 export type DemoScreenId =
@@ -32,11 +34,27 @@ export type DemoMetric = {
 export type DemoTourStep = {
     readonly id: string;
     readonly targetId: string;
+    readonly screen?: DemoScreenId;
+    readonly featurePath?: DemoFeatureSurfacePath;
     readonly targetSelector?: string;
     readonly emphasisTargetIds?: readonly string[];
     readonly emphasisTargetSelectors?: readonly string[];
     readonly title: string;
     readonly description: string;
+};
+
+export type DemoStoryId = 'sales' | 'siteDevelopment' | 'openingOperations' | 'headOffice';
+
+export type DemoStory = {
+    readonly id: DemoStoryId;
+    readonly roleLabel: string;
+    readonly title: string;
+    readonly description: string;
+    readonly duration: string;
+    readonly outcome: string;
+    readonly features: readonly string[];
+    readonly roles: readonly Exclude<DemoRole, 'partner'>[];
+    readonly steps: readonly DemoTourStep[];
 };
 
 export const DEMO_TOUR_STEP_ADVANCE_EVENT = 'demo-tour-step-advance' as const;
@@ -67,11 +85,14 @@ export type DemoGuideStep = {
     readonly description: string;
 };
 
-export type DemoScreenGuide = {
+export type DemoGuide = {
     readonly badge: string;
     readonly title: string;
     readonly description: string;
     readonly steps: readonly DemoGuideStep[];
+};
+
+export type DemoScreenGuide = DemoGuide & {
     readonly actions: readonly DemoGuideAction[];
 };
 

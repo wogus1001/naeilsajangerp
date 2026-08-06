@@ -410,7 +410,13 @@ export function LocationMasterList({
                                                 {recordBadge}
                                             </span>
                                         ) : null}
-                                        <button type="button" onClick={() => onEdit(location)}>수정</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onEdit(location)}
+                                            aria-label={`${location.name} 후보지 수정`}
+                                        >
+                                            수정
+                                        </button>
                                         <button
                                             type="button"
                                             className={styles.locationDeleteButton}

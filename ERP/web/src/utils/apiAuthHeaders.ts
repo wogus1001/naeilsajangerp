@@ -8,6 +8,10 @@ export async function getApiAuthHeaders(baseHeaders: HeadersInit = {}): Promise<
     const requesterId = getRequesterId();
     if (requesterId) headers.set('x-user-id', requesterId);
 
+    if (window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/')) {
+        return headers;
+    }
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return headers;
 
     try {

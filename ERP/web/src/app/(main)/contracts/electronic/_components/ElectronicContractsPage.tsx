@@ -136,13 +136,13 @@ export default function ElectronicContractsPage() {
 
     return (
         <main className={styles.container}>
-            <section className={`${styles.panel} ${styles.header}`}>
+            <section className={`${styles.panel} ${styles.header}`} aria-label="전자계약 화면 제목">
                 <div>
                     <h1 className={styles.title}>전자계약</h1>
                 </div>
             </section>
 
-            <section className={styles.panel}>
+            <section className={styles.panel} aria-label="전자계약 업무 전환">
                 <div className={styles.statusLine}>
                     <div className={styles.tabs}>
                         <button className={mode === 'documents' ? styles.tabActive : styles.tab} onClick={() => selectMode('documents')}>문서함</button>
@@ -156,7 +156,7 @@ export default function ElectronicContractsPage() {
                 <CompanyContractTemplatesPanel />
             ) : (
                 <>
-                    <section className={styles.panel}>
+                    <section className={styles.panel} aria-label="전자계약 문서 범위">
                         <div className={styles.statusLine}>
                     <div className={styles.tabs}>
                         <button className={scope === 'mine' ? styles.tabActive : styles.tab} onClick={() => setScope('mine')}>내가 발송</button>
@@ -174,7 +174,7 @@ export default function ElectronicContractsPage() {
                         </div>
                     )}
 
-                    <section className={styles.panel}>
+                    <section className={styles.panel} aria-label="전자계약 문서 목록">
                         <ElectronicContractsTable
                             contracts={contracts}
                             loading={loading}

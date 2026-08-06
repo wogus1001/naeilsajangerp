@@ -3534,8 +3534,9 @@
 }
 
 .locationMessageHeader {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     gap: 14px;
     padding: 18px;
     border-bottom: 1px solid #eef2f7;
@@ -3576,6 +3577,17 @@
     padding: 4px 8px;
     border-radius: 999px;
     background: #f2f4f6;
+}
+
+.locationMessageGuide {
+    grid-column: 1 / -1;
+    padding: 10px 12px;
+    border-left: 3px solid #3182f6;
+    border-radius: 0 8px 8px 0;
+    background: #f7faff;
+    color: #4e5968;
+    font-size: 13px;
+    line-height: 1.55;
 }
 
 .locationMessageCloseButton {
@@ -4745,6 +4757,7 @@
 
 .leadLayerTab strong,
 .leadLayerTabActive strong {
+    justify-self: start;
     color: #0f172a;
     font-size: 14px;
     font-weight: 900;

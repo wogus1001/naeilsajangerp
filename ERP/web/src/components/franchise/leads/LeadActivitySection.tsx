@@ -157,7 +157,7 @@ export function LeadActivitySection({
     };
 
     return (
-        <section className={styles.detailSection}>
+        <section className={styles.detailSection} aria-label="가맹 희망자 상담 이력">
             <div className={styles.detailSectionTitleRow}>
                 <h3><MessageSquare size={16} /> 상담 이력</h3>
                 {activities.length > 0 && (

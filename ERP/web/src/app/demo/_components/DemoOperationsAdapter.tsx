@@ -1,6 +1,10 @@
 'use client';
 
 import React from 'react';
+import {
+    DEMO_NAVIGATION_REQUEST_EVENT,
+    type DemoNavigationRequestEventDetail
+} from './DemoApiGuard';
 import { useAppDialog } from '@/components/common/AppDialogProvider';
 import { isOperationalLocation, toLocationFormState } from '@/components/franchise/operations/format';
 import {
@@ -119,7 +123,11 @@ export function DemoOperationsAdapter({ role, onScreenChange, onSimulate }: Demo
         confirmDeleteLocation,
         deleteLocation,
         updateLocationStatus,
-        openOwnerPortal: location => onSimulate(`${location.name} 점주 계정 화면은 로그인 데모에서 별도로 안내됩니다.`)
+        openOwnerPortal: () => {
+            window.dispatchEvent(new CustomEvent<DemoNavigationRequestEventDetail>(DEMO_NAVIGATION_REQUEST_EVENT, {
+                detail: { path: '/dashboard/franchise-operations/owner-portal', kind: 'link' }
+            }));
+        }
     };
 
     return (

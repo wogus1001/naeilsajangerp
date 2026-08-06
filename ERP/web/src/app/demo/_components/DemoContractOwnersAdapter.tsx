@@ -5,6 +5,7 @@ import pageStyles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { LeadContractChecklistWorkspace } from '@/components/franchise/leads/LeadContractChecklistWorkspace';
 import { LeadDetailPanel } from '@/components/franchise/leads/LeadDetailPanel';
+import { LeadFormModal } from '@/components/franchise/leads/LeadFormModal';
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
 import {
     LeadWorkspaceTabs,
@@ -16,10 +17,11 @@ import {
 import type { FranchiseLead } from '@/components/franchise/leads/types';
 import type { DemoActionHandler, DemoRole, DemoScreenId } from '../demoTypes';
 import { DEMO_CONTRACT_CHECKLIST_SUMMARIES } from './DemoContractChecklistSummaries';
-import { selectDemoContractLeads } from './DemoLeadSampleData';
+import { DEMO_LEAD_MANAGERS, selectDemoContractLeads } from './DemoLeadSampleData';
 import { DemoGuideTarget, DemoGuidedLayout } from './DemoScreenGuide';
 import { filterDemoLeads, rebaseDemoLeadDates } from './DemoLeadState';
 import { useDemoLeadDetailController } from './useDemoLeadDetailController';
+import { useDemoLeadModals } from './useDemoLeadModals';
 import { useDemoLeadToolbar } from './useDemoLeadToolbar';
 
 type DemoContractOwnersAdapterProps = {
@@ -49,13 +51,34 @@ export function DemoContractOwnersAdapter({
     const updateLead = (leadId: string, updater: (lead: FranchiseLead) => FranchiseLead) => {
         setLeads(current => current.map(lead => lead.id === leadId ? updater(lead) : lead));
     };
+    const getManagerName = (managerId?: string) => (
+        DEMO_LEAD_MANAGERS.find(manager => manager.id === managerId)?.label || '담당자 선택'
+    );
+    const renderManagerOptions = () => (
+        <>
+            {DEMO_LEAD_MANAGERS.map(manager => (
+                <option key={manager.id} value={manager.id}>{manager.label}</option>
+            ))}
+        </>
+    );
+    const modals = useDemoLeadModals({
+        leads,
+        setLeads,
+        updateLeadAction: updateLead,
+        clearSelectedLeadAction: leadId => {
+            if (selectedLeadId === leadId) setSelectedLeadId('');
+        },
+        getManagerNameAction: getManagerName,
+        renderManagerOptionsAction: renderManagerOptions,
+        onSimulate
+    });
     const detailProps = useDemoLeadDetailController({
         role,
         lead: selectedLead,
         mode: 'contractChecklist',
         updateLeadAction: updateLead,
         onCloseAction: () => setSelectedLeadId(''),
-        onEditAction: lead => onSimulate(`${lead.name} 수정 화면`),
+        onEditAction: modals.openEditModal,
         onPromoteAction: lead => updateLead(lead.id, current => ({ ...current, leadStage: 'candidate' })),
         onConvertAction: lead => onSimulate(`${lead.name} 고객 DB 전환`),
         onSimulate
@@ -107,6 +130,7 @@ export function DemoContractOwnersAdapter({
                     </section>
                 </DemoGuideTarget>
             </DemoGuidedLayout>
+            {modals.formModalProps ? <LeadFormModal {...modals.formModalProps} /> : null}
             {detailProps ? <LeadDetailPanel {...detailProps} /> : null}
         </div>
     );

@@ -9,17 +9,24 @@ import {
     DEFAULT_LEAD_TABLE_COLUMN_KEYS,
     EMPTY_LEAD_TABLE_FILTERS
 } from '@/components/franchise/leads/leadTableConfig';
+import { buildLeadDisclosureDashboardSummary } from '@/components/franchise/leads/leadDashboardMetrics';
 import type {
     LeadTableColumnKey,
     LeadTableFilters,
     LeadTableSortKey
 } from '@/components/franchise/leads/leadTableTypes';
+import type { LeadDashboardTypeBProps } from '@/components/franchise/leads/LeadDashboardTypes';
 import type {
     FranchiseLead,
     LeadActivity,
     LeadDbLayer,
+    LeadSummary,
     LeadViewMode
 } from '@/components/franchise/leads/types';
+import {
+    buildTrendSeriesData,
+    isRawIntakeLead
+} from '@/components/franchise/leads/utils';
 import { FRANCHISE_LEAD_STATUSES } from '@/lib/franchise-leads';
 import {
     getLeadWorkQueueSummary,
@@ -46,6 +53,7 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
     const [taskQueueFilter, setTaskQueueFilter] = React.useState<LeadWorkQueueKey>('all');
     const [selectedLeadId, setSelectedLeadId] = React.useState('');
     const [bulkNextContactAt, setBulkNextContactAt] = React.useState('');
+    const tourPromotedLeadIdRef = React.useRef('');
     const toolbar = useDemoLeadToolbar();
     const selectedLead = leads.find(lead => lead.id === selectedLeadId) || null;
     const getManagerName = (managerId?: string) => (
@@ -97,6 +105,72 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
                 ? taskSummary.noResponse
                 : taskSummary[option.key]
     }));
+    const rawIntakeLeads = leads.filter(isRawIntakeLead);
+    const candidateLeads = leads.filter(lead => !isRawIntakeLead(lead));
+    const dashboardSummary = leads.reduce<LeadSummary>((summary, lead) => {
+        const createdDate = lead.createdAt?.slice(0, 10) || '';
+        const source = lead.source || '미지정';
+        return {
+            total: summary.total + 1,
+            byStatus: {
+                ...summary.byStatus,
+                [lead.status]: (summary.byStatus[lead.status] || 0) + 1
+            },
+            bySource: {
+                ...summary.bySource,
+                [source]: (summary.bySource[source] || 0) + 1
+            },
+            hotCount: summary.hotCount + (lead.grade === 'HOT' ? 1 : 0),
+            nextContactCount: summary.nextContactCount + (lead.nextContactAt ? 1 : 0),
+            createdByDate: createdDate
+                ? {
+                    ...summary.createdByDate,
+                    [createdDate]: (summary.createdByDate[createdDate] || 0) + 1
+                }
+                : summary.createdByDate
+        };
+    }, {
+        total: 0,
+        byStatus: {},
+        bySource: {},
+        hotCount: 0,
+        nextContactCount: 0,
+        createdByDate: {}
+    });
+    const managerCounts = candidateLeads.reduce<Record<string, number>>((counts, lead) => {
+        const manager = getManagerName(lead.managerId);
+        return { ...counts, [manager]: (counts[manager] || 0) + 1 };
+    }, {});
+    const candidateWorkSummary = getLeadWorkQueueSummary(candidateLeads);
+    const contractReadyCount = candidateLeads.filter(lead => (
+        lead.status === '계약예정' || lead.status === '계약완료'
+    )).length;
+    const dashboardProps: LeadDashboardTypeBProps = {
+        candidateCount: candidateLeads.length,
+        rawIntakeCount: rawIntakeLeads.length,
+        activeConsultingCount: candidateLeads.filter(lead => (
+            lead.status === '상담중' || lead.status === '가맹검토'
+        )).length,
+        conversionRate: candidateLeads.length > 0
+            ? Math.round((contractReadyCount / candidateLeads.length) * 1000) / 10
+            : 0,
+        statusFilter: toolbar.filter.status,
+        stageData: FRANCHISE_LEAD_STATUSES.map(status => ({
+            status,
+            count: candidateLeads.filter(lead => lead.status === status).length
+        })),
+        sourceChartData: Object.entries(dashboardSummary.bySource)
+            .map(([source, count]) => ({ source, count }))
+            .sort((a, b) => b.count - a.count),
+        managerChartData: Object.entries(managerCounts)
+            .map(([manager, count]) => ({ manager, count }))
+            .sort((a, b) => b.count - a.count),
+        trendSeriesData: buildTrendSeriesData(dashboardSummary),
+        disclosureSummary: buildLeadDisclosureDashboardSummary(candidateLeads),
+        dueContactCount: candidateWorkSummary.today,
+        overdueContactCount: candidateWorkSummary.overdue,
+        onStatusFilterChangeAction: toolbar.toolbarProps.onStatusFilterChangeAction
+    };
 
     const promoteLead = React.useCallback((lead: FranchiseLead) => {
         setLeads(current => current.map(item => (
@@ -105,8 +179,7 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
                 : item
         )));
         setSelectedLeadId('');
-        onSimulate(`${lead.name} 가맹 희망자 승격`);
-    }, [onSimulate]);
+    }, []);
     const convertLead = (lead: FranchiseLead) => {
         const now = new Date().toISOString();
         updateLead(lead.id, current => ({
@@ -168,10 +241,50 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
     React.useEffect(() => {
         const advance = (event: WindowEventMap[typeof DEMO_TOUR_STEP_ADVANCE_EVENT]) => {
             if (event.detail.screen !== 'leadDb') return;
+            const toTargetId = event.detail.toTargetId || '';
+            const isDetailTarget = toTargetId.startsWith('lead-detail-');
+            const isCandidateDetailTarget = toTargetId === 'lead-detail-location-link';
+            if ([
+                'lead-db-raw-intake-tab',
+                'lead-db-first-record',
+                'lead-db-promote-action'
+            ].includes(toTargetId) || (isDetailTarget && !isCandidateDetailTarget)) {
+                setLeadDbLayer('raw_intake');
+            }
+            if ([
+                'lead-db-candidate-tab',
+                'lead-db-candidate-table'
+            ].includes(toTargetId) || isCandidateDetailTarget) {
+                setLeadDbLayer('candidate');
+            }
             const firstRawLead = leads.find(lead => lead.leadStage === 'raw_intake');
-            if (!firstRawLead) return;
-            if (event.detail.fromTargetId === 'lead-db-promote-action') {
-                promoteLead(selectedLead || firstRawLead);
+            const firstCandidateLead = leads.find(lead => lead.leadStage === 'candidate');
+            const promotedLead = leads.find(lead => lead.id === tourPromotedLeadIdRef.current);
+            if (isDetailTarget) {
+                const detailLead = isCandidateDetailTarget
+                    ? promotedLead || firstCandidateLead
+                    : firstRawLead;
+                if (detailLead) setSelectedLeadId(detailLead.id);
+            } else if ([
+                'lead-db-raw-intake-tab',
+                'lead-db-first-record',
+                'lead-db-promote-action',
+                'lead-db-candidate-tab',
+                'lead-db-candidate-table'
+            ].includes(toTargetId)) {
+                setSelectedLeadId('');
+            }
+            if (
+                event.detail.fromTargetId === 'lead-db-promote-action'
+                && toTargetId === 'lead-db-candidate-tab'
+            ) {
+                if (!tourPromotedLeadIdRef.current) {
+                    const leadToPromote = selectedLead || firstRawLead;
+                    if (leadToPromote) {
+                        tourPromotedLeadIdRef.current = leadToPromote.id;
+                        promoteLead(leadToPromote);
+                    }
+                }
                 setLeadDbLayer('candidate');
             }
         };
@@ -237,6 +350,7 @@ export function useDemoLeadDbController(onSimulate: DemoActionHandler) {
     return {
         ...modals,
         convertLead,
+        dashboardProps,
         leads,
         openCreateModal: modals.openCreateModal,
         promoteLead,

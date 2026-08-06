@@ -474,6 +474,11 @@ export function SupervisionPanel({ userId, companyName, initialActionId = '', in
                     setActiveFilter('all');
                 }}
             />
+            <div
+                id={`supervision-${activeView}-panel`}
+                role="tabpanel"
+                aria-labelledby={`supervision-${activeView}-tab`}
+            >
             {activeView === 'dashboard' ? (
                 <>
                     <DashboardOverview data={data} />
@@ -608,6 +613,7 @@ export function SupervisionPanel({ userId, companyName, initialActionId = '', in
                     </section>
                 </div>
             ) : null}
+            </div>
         </div>
     );
 }

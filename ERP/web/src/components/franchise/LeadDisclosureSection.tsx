@@ -75,7 +75,7 @@ export function LeadDisclosureSection({
     const eligibilityClass = eligibility?.isEligible ? styles.disclosureReady : styles.disclosureLocked;
 
     return (
-        <section className={styles.detailSection}>
+        <section className={styles.detailSection} aria-label="가맹 희망자 정보공개서">
             <div className={styles.disclosureHeader}>
                 <div>
                     <h3><FileText size={16} /> 정보공개서</h3>

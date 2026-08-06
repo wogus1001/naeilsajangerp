@@ -45,32 +45,34 @@ export function MainDashboardTypeA({
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 <div className="flex flex-col">
-                    <SectionHeader
-                        icon="📅"
-                        title="예정된 일정"
-                        actionLabel="더보기"
-                        onAction={() => onNavigate('/schedule')}
-                    />
-                    <div className="bg-white rounded-2xl border border-[#f1f3f5] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-                        {visibleSchedules.length > 0 ? (
-                            visibleSchedules.map((schedule, index) => (
-                                <div
-                                    key={buildRowKey('schedule', schedule.id, index)}
-                                    className="flex items-center gap-4 px-5 py-5 border-b border-[#f1f3f5] last:border-b-0"
-                                >
-                                    <div className="w-[50px] text-sm font-bold text-[#495057]">{schedule.time || '-'}</div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="truncate text-[15px] font-semibold text-[#343a40]">{schedule.title || '일정'}</div>
-                                        <div className="mt-1 truncate text-[13px] text-[#868e96]">{schedule.location || '장소 미정'}</div>
+                    <section aria-label="예정된 일정">
+                        <SectionHeader
+                            icon="📅"
+                            title="예정된 일정"
+                            actionLabel="더보기"
+                            onAction={() => onNavigate('/schedule')}
+                        />
+                        <div className="bg-white rounded-2xl border border-[#f1f3f5] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                            {visibleSchedules.length > 0 ? (
+                                visibleSchedules.map((schedule, index) => (
+                                    <div
+                                        key={buildRowKey('schedule', schedule.id, index)}
+                                        className="flex items-center gap-4 px-5 py-5 border-b border-[#f1f3f5] last:border-b-0"
+                                    >
+                                        <div className="w-[50px] text-sm font-bold text-[#495057]">{schedule.time || '-'}</div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="truncate text-[15px] font-semibold text-[#343a40]">{schedule.title || '일정'}</div>
+                                            <div className="mt-1 truncate text-[13px] text-[#868e96]">{schedule.location || '장소 미정'}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-5 py-10 text-center text-sm text-[#adb5bd]">예정된 일정이 없습니다.</div>
-                        )}
-                    </div>
+                                ))
+                            ) : (
+                                <div className="px-5 py-10 text-center text-sm text-[#adb5bd]">예정된 일정이 없습니다.</div>
+                            )}
+                        </div>
+                    </section>
 
-                    <div className="mt-8">
+                    <section className="mt-8" aria-label="간편 메모">
                         <SectionHeader icon="📌" title="간편 메모" />
                         <div className="bg-[#fff9db] rounded-2xl border border-[#f1f3f5] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
                             <textarea
@@ -80,10 +82,10 @@ export function MainDashboardTypeA({
                                 onChange={event => onMemoChange(event.target.value)}
                             />
                         </div>
-                    </div>
+                    </section>
                 </div>
 
-                <div className="flex flex-col">
+                <section className="flex flex-col" aria-label="공지사항">
                     <SectionHeader
                         icon="📢"
                         title="공지사항"
@@ -116,7 +118,7 @@ export function MainDashboardTypeA({
                             <div className="px-5 py-10 text-center text-[13px] text-[#adb5bd]">등록된 공지사항이 없습니다.</div>
                         )}
                     </div>
-                </div>
+                </section>
             </section>
         </div>
     );

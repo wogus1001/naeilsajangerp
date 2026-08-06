@@ -26,11 +26,19 @@ type DemoTourOverlayProps = {
     readonly steps: readonly DemoTourStep[];
     readonly finalAction: DemoGuideAction | undefined;
     readonly onCloseAction?: () => void;
+    readonly onCompleteAction?: () => void;
     readonly onFinalAction?: (action: DemoGuideAction) => void;
     readonly onStepAdvanceAction?: (currentStep: DemoTourStep, nextStep: DemoTourStep | undefined) => void;
 };
 
-export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalAction, onStepAdvanceAction }: DemoTourOverlayProps) {
+export function DemoTourOverlay({
+    steps,
+    finalAction,
+    onCloseAction,
+    onCompleteAction,
+    onFinalAction,
+    onStepAdvanceAction
+}: DemoTourOverlayProps) {
     const cardRef = useRef<HTMLElement | null>(null);
     const previouslyFocusedRef = useRef<HTMLElement | null>(null);
     const [active, setActive] = useState(true);
@@ -95,30 +103,6 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
                 event.preventDefault();
                 setActive(false);
                 onCloseAction?.();
-                return;
-            }
-
-            if (event.key !== 'Tab' || !cardRef.current) {
-                return;
-            }
-
-            const focusable = Array.from(
-                cardRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])')
-            );
-            if (focusable.length === 0) {
-                event.preventDefault();
-                cardRef.current.focus();
-                return;
-            }
-
-            const first = focusable[0];
-            const last = focusable[focusable.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
-                event.preventDefault();
-                last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault();
-                first.focus();
             }
         };
 
@@ -141,14 +125,20 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
         if (!active) return;
 
         const updateSuspendedState = () => {
-            const hasProductionDialog = Array.from(
+            const productionDialogs = Array.from(
                 document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
-            ).some(dialog => (
+            ).filter(dialog => (
                 dialog !== cardRef.current
                 && dialog.getAttribute('aria-hidden') !== 'true'
                 && isElementInVisibleTree(dialog)
             ));
-            setIsSuspended(hasProductionDialog);
+            const hasProductionDialog = productionDialogs.length > 0;
+            const targetSelector = step?.targetSelector ?? (step ? `[data-demo-id="${step.targetId}"]` : '');
+            const target = targetSelector ? findTourTarget(targetSelector) : null;
+            const targetInsideProductionDialog = Boolean(
+                target && productionDialogs.some(dialog => dialog.contains(target))
+            );
+            setIsSuspended(hasProductionDialog && !targetInsideProductionDialog);
         };
         const observer = new MutationObserver(updateSuspendedState);
         updateSuspendedState();
@@ -162,7 +152,7 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
         return () => {
             observer.disconnect();
         };
-    }, [active]);
+    }, [active, step]);
 
     const cardStyle = useMemo<CSSProperties>(() => {
         if (!primaryTargetRect) {
@@ -255,14 +245,19 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
         onCloseAction?.();
     };
     const completeTour = () => {
+        setActive(false);
         if (finalAction) {
-            setActive(false);
             onCloseAction?.();
             onFinalAction?.(finalAction);
             return;
         }
 
-        closeTour();
+        if (onCompleteAction) {
+            onCompleteAction();
+            return;
+        }
+
+        onCloseAction?.();
     };
     const advanceTour = () => {
         if (isLast) {
@@ -273,6 +268,12 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
         const nextStep = steps[stepIndex + 1];
         onStepAdvanceAction?.(step, nextStep);
         setStepIndex(index => Math.min(steps.length - 1, index + 1));
+    };
+    const retreatTour = () => {
+        if (isFirst) return;
+        const previousStep = steps[stepIndex - 1];
+        onStepAdvanceAction?.(step, previousStep);
+        setStepIndex(index => Math.max(0, index - 1));
     };
 
     return (
@@ -307,24 +308,11 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
                     mask={`url(#${maskId})`}
                 />
             </svg>
-            {targetRects.map((rect, index) => (
-                <div
-                    key={`${rect.width}-${rect.height}-${index}`}
-                    className={styles.spotlight}
-                    style={{
-                        top: rect.top,
-                        left: rect.left,
-                        width: rect.width,
-                        height: rect.height
-                    }}
-                />
-            ))}
             <section
                 ref={cardRef}
                 className={styles.tourCard}
                 style={cardStyle}
-                role="dialog"
-                aria-modal={isSuspended ? undefined : 'true'}
+                role="region"
                 aria-labelledby={titleId}
                 data-demo-id="demo-tour-card"
                 tabIndex={-1}
@@ -337,7 +325,7 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
                 <p>{step.description}</p>
                 <div className={styles.tourActions}>
                     <button type="button" onClick={closeTour} className={styles.secondaryButton}>둘러보기</button>
-                    <button type="button" onClick={() => setStepIndex(index => Math.max(0, index - 1))} disabled={isFirst} className={styles.secondaryButton}>
+                    <button type="button" onClick={retreatTour} disabled={isFirst} className={styles.secondaryButton}>
                         이전
                     </button>
                     <button
@@ -345,7 +333,9 @@ export function DemoTourOverlay({ steps, finalAction, onCloseAction, onFinalActi
                         onClick={advanceTour}
                         className={styles.primaryButton}
                     >
-                        {isLast ? finalAction?.label ?? '직접 사용하기' : '다음'}
+                        {isLast
+                            ? finalAction?.label ?? (onCompleteAction ? '핵심 체험 완료' : '설명 마치기')
+                            : '다음'}
                     </button>
                 </div>
             </section>
@@ -377,10 +367,15 @@ function getTourTargetElements(step: DemoTourStep, primaryElement: HTMLElement):
 
 function getPaddedRect(element: HTMLElement): TargetRect {
     const rect = element.getBoundingClientRect();
+    const top = Math.max(rect.top - SPOTLIGHT_PADDING, 0);
+    const left = Math.max(rect.left - SPOTLIGHT_PADDING, 0);
+    const right = Math.min(rect.right + SPOTLIGHT_PADDING, window.innerWidth);
+    const bottom = Math.min(rect.bottom + SPOTLIGHT_PADDING, window.innerHeight);
+
     return {
-        top: Math.max(rect.top - SPOTLIGHT_PADDING, 12),
-        left: Math.max(rect.left - SPOTLIGHT_PADDING, 12),
-        width: rect.width + SPOTLIGHT_PADDING * 2,
-        height: rect.height + SPOTLIGHT_PADDING * 2
+        top,
+        left,
+        width: Math.max(right - left, 0),
+        height: Math.max(bottom - top, 0)
     };
 }

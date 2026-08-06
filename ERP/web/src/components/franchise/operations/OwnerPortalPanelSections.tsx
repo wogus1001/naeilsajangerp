@@ -287,7 +287,7 @@ export function OwnerPortalAccountsSection(props: AccountSectionProps) {
     };
 
     return (
-        <section className={styles.ownerPortalPanel}>
+        <section className={styles.ownerPortalPanel} aria-label="점주 계정 관리">
             <div className={styles.locationMasterHeader}>
                 <div>
                     <h3>점주 계정 관리</h3>
@@ -473,7 +473,7 @@ export function OwnerPortalNoticeSection(props: NoticeSectionProps) {
 
     return (
         <>
-            <section className={styles.ownerPortalPanel}>
+            <section className={styles.ownerPortalPanel} aria-label="점주 공지 관리">
                 <div className={styles.locationMasterHeader}>
                     <div>
                         <h3>공지/공문</h3>

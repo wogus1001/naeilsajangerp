@@ -49,7 +49,7 @@ export default function VendorContractsPage() {
                 onSelect={controller.setActiveQueue}
             />
 
-            <section className={styles.listLayout}>
+            <section className={styles.listLayout} aria-label="업체 계약 목록">
                 <div className={styles.workspaceColumn}>
                     <VendorContractsTable
                         contracts={controller.visibleContracts}

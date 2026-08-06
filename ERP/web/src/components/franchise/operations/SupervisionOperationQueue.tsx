@@ -35,7 +35,7 @@ export function SupervisionOperationQueue(props: {
 }) {
     const visibleItems = props.items.slice(0, 8);
     return (
-        <section className={styles.section}>
+        <section className={styles.section} aria-label="슈퍼바이징 운영 우선순위">
             <div className={styles.sectionHeader}>
                 <div>
                     <h3>운영 우선순위</h3>

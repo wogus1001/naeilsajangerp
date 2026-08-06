@@ -138,7 +138,7 @@ export function FranchiseSchedulePage() {
                     <Plus size={16} /> 수동 일정 등록
                 </button>
             </header>
-            <section className={styles.kpiGrid}>{model.kpis.map(kpi => <article className={styles.kpiCard} key={kpi.label}><span>{kpi.label}</span><strong>{kpi.value}</strong><p>{kpi.helper}</p></article>)}</section>
+            <section className={styles.kpiGrid} aria-label="일정 핵심 현황">{model.kpis.map(kpi => <article className={styles.kpiCard} key={kpi.label}><span>{kpi.label}</span><strong>{kpi.value}</strong><p>{kpi.helper}</p></article>)}</section>
             <section className={styles.filterBar} aria-label="일정 필터">
                 <select value={filters.status} onChange={event => {
                     const status = getSelectedStatusFilter(event.currentTarget.value);

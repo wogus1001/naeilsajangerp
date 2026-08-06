@@ -1,0 +1,214 @@
+.layer {
+    position: fixed;
+    z-index: 6100;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, hsl(var(--foreground)) 62%, transparent);
+    padding: var(--erp-space-5);
+}
+
+.dialog {
+    position: relative;
+    width: min(100%, 920px);
+    max-height: calc(100dvh - 48px);
+    overflow: auto;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    background: var(--erp-surface);
+    color: hsl(var(--foreground));
+    padding: 28px;
+}
+
+.close {
+    position: absolute;
+    top: var(--erp-space-4);
+    right: var(--erp-space-4);
+    display: inline-grid;
+    width: var(--erp-control-height);
+    height: var(--erp-control-height);
+    place-items: center;
+    border: 0;
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-surface-muted);
+    color: var(--erp-text-secondary);
+    cursor: pointer;
+}
+
+.close:hover {
+    background: var(--erp-action-soft);
+    color: var(--erp-action-strong);
+}
+
+.close:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.textButton:focus-visible {
+    outline: 2px solid var(--erp-focus);
+    outline-offset: 2px;
+}
+
+.badge {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    gap: var(--erp-space-1);
+    border-radius: 999px;
+    background: var(--erp-action-soft);
+    color: var(--erp-action-strong);
+    padding: 0 10px;
+    font-size: var(--erp-font-caption);
+    font-weight: 700;
+}
+
+.dialog > h2 {
+    max-width: 680px;
+    margin: 18px 48px 0 0;
+    font-size: 24px;
+    line-height: 1.35;
+    word-break: keep-all;
+    text-wrap: balance;
+}
+
+.dialog > p {
+    max-width: 720px;
+    margin: var(--erp-space-3) 0 0;
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-body);
+    line-height: 1.57;
+    word-break: keep-all;
+}
+
+.primaryButton,
+.secondaryButton,
+.textButton {
+    display: inline-flex;
+    min-height: var(--erp-control-height);
+    align-items: center;
+    justify-content: center;
+    gap: var(--erp-space-2);
+    border-radius: var(--erp-radius-default);
+    padding: 0 var(--erp-space-4);
+    font: inherit;
+    font-size: var(--erp-font-label);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primaryButton {
+    border: 1px solid var(--erp-action);
+    background: var(--erp-action);
+    color: var(--erp-surface);
+}
+
+.primaryButton:hover {
+    border-color: var(--erp-action-strong);
+    background: var(--erp-action-strong);
+}
+
+.secondaryButton {
+    border: 1px solid hsl(var(--border));
+    background: var(--erp-surface);
+    color: hsl(var(--foreground));
+}
+
+.secondaryButton:hover {
+    border-color: color-mix(in srgb, var(--erp-action) 45%, hsl(var(--border)));
+    background: var(--erp-action-soft);
+    color: var(--erp-action-strong);
+}
+
+.exploreRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--erp-space-4);
+    margin-top: var(--erp-space-4);
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-caption);
+}
+
+.textButton {
+    min-height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--erp-action-strong);
+    padding: 0;
+}
+
+.partnerNote,
+.summary {
+    margin-top: var(--erp-space-5);
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-table-muted);
+    padding: var(--erp-space-4);
+}
+
+.partnerNote {
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-label);
+    line-height: 1.54;
+}
+
+.summary {
+    display: grid;
+    gap: var(--erp-space-3);
+}
+
+.summary > strong {
+    font-size: var(--erp-font-label);
+}
+
+.summary > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--erp-space-2);
+}
+
+.summary span {
+    display: flex;
+    align-items: center;
+    gap: var(--erp-space-2);
+    font-size: var(--erp-font-label);
+    font-weight: 600;
+}
+
+.summary svg {
+    color: var(--erp-success);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--erp-space-2);
+    margin-top: var(--erp-space-5);
+}
+
+@media (max-width: 760px) {
+    .layer {
+        align-items: stretch;
+        padding: var(--erp-space-4);
+    }
+
+    .dialog {
+        max-height: calc(100dvh - 32px);
+        padding: 22px;
+    }
+
+    .exploreRow,
+    .actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .summary > div {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 440px) {
+    .dialog > h2 {
+        font-size: 21px;
+    }
+}

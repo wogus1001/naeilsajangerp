@@ -153,6 +153,9 @@ export function LocationMessagePanel({
                     <button type="button" className={styles.locationMessageCloseButton} onClick={() => onOpenChange(false)} aria-label="닫기">
                         <X size={18} />
                     </button>
+                    <div className={styles.locationMessageGuide} role="note" aria-label="물건 기록 안내">
+                        본사는 물건 검토에 필요한 요청사항과 확인 정보를 기록하고, 담당자는 요청을 확인해 처리합니다.
+                    </div>
                 </header>
 
                 <div className={styles.locationMessageTimeline}>

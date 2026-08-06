@@ -8,6 +8,12 @@ import {
     selectDemoOperationLocations
 } from './_components/DemoFranchiseSampleData';
 import { selectDemoContractLeads } from './_components/DemoLeadSampleData';
+import {
+    buildDemoSidebarSections,
+    DEMO_PATH_TO_SCREEN,
+    isDemoFeaturePathAllowed
+} from './_components/DemoErpShellConfig';
+import { DEMO_FEATURE_SURFACES } from './_components/DemoFranchiseFeatureConfig';
 import { DEMO_ROLES, DEMO_SCENARIOS, DEMO_SCREEN_GUIDES, DEMO_SIMULATION_ACTIONS } from './demoContent';
 
 test('Given public demo roles When checking links Then every role has a matching scenario', () => {
@@ -20,9 +26,100 @@ test('Given public demo roles When checking links Then every role has a matching
 test('Given demo tour steps When checking ids Then step ids and target ids are usable', () => {
     for (const scenario of Object.values(DEMO_SCENARIOS)) {
         assert.ok(scenario.tourSteps.length >= 3);
-        assert.ok(scenario.tourSteps.length <= 5);
+        assert.ok(scenario.tourSteps.length <= 9);
         assert.equal(new Set(scenario.tourSteps.map(step => step.id)).size, scenario.tourSteps.length);
         assert.equal(scenario.tourSteps.every(step => step.targetId.length > 0), true);
+    }
+});
+
+test('Given the manager and admin demos When opening the workspace Then the lead dashboard is introduced first', () => {
+    const renderedKpiSelector = '[data-demo-id="franchise-dashboard"] section[aria-label="가맹 운영 주요 건수"]';
+    const leadKpiSelector = '[data-demo-id="dashboard-kpis"]';
+
+    assert.equal(DEMO_SCREEN_GUIDES.dashboard.steps[0]?.targetSelector, renderedKpiSelector);
+    for (const role of ['manager', 'admin'] as const) {
+        assert.equal(DEMO_SCENARIOS[role].defaultScreen, 'leadDb');
+        assert.equal(DEMO_SCENARIOS[role].tourSteps[0]?.targetSelector, leadKpiSelector);
+    }
+    assert.equal(DEMO_SCENARIOS.partner.tourSteps[0]?.targetSelector, renderedKpiSelector);
+});
+
+test('Given demo screen guides When measuring spotlights Then broad workspaces resolve to focused controls', () => {
+    assert.deepEqual(
+        DEMO_SCREEN_GUIDES.dashboard.steps.map(step => step.targetSelector),
+        [
+            '[data-demo-id="franchise-dashboard"] section[aria-label="가맹 운영 주요 건수"]',
+            '[data-demo-id="franchise-dashboard"] section[aria-label="예정된 일정"]',
+            '[data-demo-id="franchise-dashboard"] section[aria-label="공지사항"]',
+            '[data-demo-id="franchise-dashboard"] section[aria-label="간편 메모"]'
+        ]
+    );
+    assert.deepEqual(
+        DEMO_SCREEN_GUIDES.leadDb.steps.map(step => step.targetSelector),
+        [
+            '[data-demo-id="dashboard-kpis"]',
+            '[data-demo-id="dashboard-pipeline"]',
+            '[aria-label="모객 DB 작업 영역"] button:nth-of-type(2)',
+            '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 상담 이력"]',
+            '[class*="leadTable"] [class*="rowActions"]:has([aria-label$="가맹 희망자 승격"])',
+            '[class*="leadLayerTabs"] button:nth-of-type(2)'
+        ]
+    );
+    assert.deepEqual(
+        DEMO_SCREEN_GUIDES.location.steps.map(step => step.targetSelector),
+        [
+            '[data-demo-id="location-workspace-tabs"] [aria-label="출점 후보지 작업 영역"]',
+            '[data-demo-id="location-view-tabs"] [aria-label="출점 후보지 보기 방식"]',
+            '[data-demo-id="location-master"] [aria-label="후보지 목록 등록 전환"] button:nth-of-type(2)',
+            '[data-demo-id="location-master"] tbody tr:first-child [aria-label$="후보지 수정"]'
+        ]
+    );
+    assert.deepEqual(
+        DEMO_SCREEN_GUIDES.locationMap.steps.map(step => step.targetSelector),
+        [
+            '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]',
+            '[data-demo-id="location-map-page"] [aria-label="샘플 물건지 지도"]',
+            '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]'
+        ]
+    );
+    assert.deepEqual(
+        DEMO_SCREEN_GUIDES.operations.steps.slice(0, 2).map(step => step.targetSelector),
+        [
+            '[data-demo-id="operations-panel"] [class*="marketSummaryCards"]',
+            '[data-demo-id="operations-panel"] [aria-label="가맹 운영 보기"] button:nth-of-type(2)'
+        ]
+    );
+    assert.equal(DEMO_SCREEN_GUIDES.operations.steps[2]?.targetId, 'nav-locationMap');
+});
+
+test('Given the core manager journey When advancing Then it reaches acquisition, site, contract, and operations screens', () => {
+    const expectedScreens = ['leadDb', 'location', 'contractOwners', 'operations'];
+    for (const role of ['manager', 'admin'] as const) {
+        const screens = Array.from(new Set(DEMO_SCENARIOS[role].tourSteps.map(step => step.screen)));
+        assert.deepEqual(screens, expectedScreens);
+        const story = DEMO_SCENARIOS[role].tourSteps.map(step => step.description).join(' ');
+        assert.match(story, /후보지/);
+        assert.match(story, /계약|오픈/);
+    }
+});
+
+test('Given the core journey reaches site and contract work When advancing Then stable workspace targets keep the guide moving', () => {
+    for (const role of ['manager', 'admin'] as const) {
+        const siteStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.screen === 'location');
+        const locationLinkStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.targetId === 'lead-detail-location-link');
+        const contractStep = DEMO_SCENARIOS[role].tourSteps.find(step => step.screen === 'contractOwners');
+
+        assert.equal(siteStep?.targetSelector, '[data-demo-id="location-master"] tbody tr:first-child');
+        assert.equal(locationLinkStep?.screen, 'leadDb');
+        assert.equal(
+            locationLinkStep?.targetSelector,
+            '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 후보지 연결"]'
+        );
+        assert.equal(contractStep?.targetSelector, '[data-demo-id="contract-owner-list"]');
+        assert.deepEqual(
+            DEMO_SCENARIOS[role].tourSteps.slice(5, 8).map(step => step.targetId),
+            ['location-master', 'lead-detail-location-link', 'contract-owner-list']
+        );
     }
 });
 
@@ -40,6 +137,23 @@ test('Given demo navigation When checking guides Then every screen has guide con
     }
 });
 
+test('Given the production franchise menu When checking demo coverage Then every leaf menu opens a real surface', () => {
+    const productionFranchiseLeaves = buildDemoSidebarSections('manager')
+        .find(section => section.key === 'franchise')
+        ?.items
+        .filter(item => !item.group && item.url)
+        .map(item => item.url as string) ?? [];
+    const coveredPaths = new Set([
+        ...Object.keys(DEMO_PATH_TO_SCREEN),
+        ...Object.keys(DEMO_FEATURE_SURFACES)
+    ]);
+
+    assert.deepEqual(
+        productionFranchiseLeaves.filter(path => !coveredPaths.has(path)),
+        []
+    );
+});
+
 test('Given demo roles When checking navigation Then partner visibility stays scoped while shared screens stay aligned', () => {
     const managerScreens = DEMO_SCENARIOS.manager.navItems.map(item => item.id);
     const adminScreens = DEMO_SCENARIOS.admin.navItems.map(item => item.id);
@@ -48,6 +162,17 @@ test('Given demo roles When checking navigation Then partner visibility stays sc
     assert.deepEqual(adminScreens, managerScreens);
     assert.deepEqual(partnerScreens, ['dashboard', 'contractOwners', 'location', 'locationMap', 'operations']);
     assert.equal(partnerScreens.some(screen => String(screen) === 'leadDb'), false);
+    const partnerMenuUrls = buildDemoSidebarSections('partner')
+        .flatMap(section => section.items)
+        .flatMap(item => item.url ? [item.url] : []);
+    assert.deepEqual(partnerMenuUrls, [
+        '/dashboard',
+        '/dashboard/franchise-leads/market-insights',
+        '/dashboard/franchise-locations',
+        '/dashboard/franchise-operations'
+    ]);
+    assert.equal(isDemoFeaturePathAllowed('partner', '/contracts/vendor'), false);
+    assert.equal(isDemoFeaturePathAllowed('manager', '/contracts/vendor/register'), true);
 });
 
 test('Given role fixtures When selecting operational data Then partner rows stay isolated from manager rows', () => {

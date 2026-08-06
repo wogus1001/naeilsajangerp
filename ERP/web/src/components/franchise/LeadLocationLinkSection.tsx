@@ -258,7 +258,7 @@ export function LeadLocationLinkSection({
 
     return (
         <>
-            <section className={styles.detailSection}>
+            <section className={styles.detailSection} aria-label="가맹 희망자 후보지 연결">
                 <div className={styles.leadLinkSectionHeader}>
                     <div>
                         <h3><Link2 size={16} /> 연결된 후보지</h3>

@@ -99,11 +99,15 @@ export function ViewTabs(props: {
 }) {
     const tabs = props.canManage ? VIEW_TABS : VIEW_TABS.filter(tab => tab.key !== 'assignments');
     return (
-        <div className={styles.viewTabs}>
+        <div className={styles.viewTabs} role="tablist" aria-label="슈퍼바이징 업무">
             {tabs.map(tab => (
                 <button
                     key={tab.key}
                     type="button"
+                    role="tab"
+                    id={`supervision-${tab.key}-tab`}
+                    aria-controls={`supervision-${tab.key}-panel`}
+                    aria-selected={props.activeView === tab.key}
                     className={props.activeView === tab.key ? styles.viewTabActive : styles.viewTab}
                     onClick={() => props.onSelect(tab.key)}
                 >
@@ -126,7 +130,7 @@ export function DashboardOverview({ data }: { readonly data: SupervisionPayload 
         : '내 담당 운영점의 방문, 보고서, 시정요청 상태를 확인합니다.';
     return (
         <div className={styles.layoutSingle}>
-            <section className={styles.section}>
+            <section className={styles.section} aria-label="슈퍼바이징 운영 리포트">
                 <SectionHeader title={title} caption={caption} />
                 <div className={styles.reportGrid}>
                     <div className={styles.reportCard}>

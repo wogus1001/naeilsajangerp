@@ -1,0 +1,226 @@
+.optionLabel {
+    display: inline-flex;
+    align-items: center;
+    color: var(--erp-action-strong);
+    font-size: var(--erp-font-caption);
+    font-weight: 700;
+}
+
+.coreJourney {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--erp-space-4);
+    margin-top: var(--erp-space-5);
+    border: 1px solid color-mix(in srgb, var(--erp-action) 35%, hsl(var(--border)));
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-action-soft);
+    padding: var(--erp-space-4);
+}
+
+.coreIcon,
+.storyIcon {
+    display: inline-grid;
+    place-items: center;
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-surface);
+    color: var(--erp-action);
+}
+
+.coreIcon {
+    width: 44px;
+    height: 44px;
+}
+
+.coreJourney > div:nth-child(2) {
+    display: grid;
+    gap: var(--erp-space-1);
+    min-width: 0;
+}
+
+.coreJourney strong {
+    font-size: 16px;
+}
+
+.coreJourney p,
+.storyCard > p {
+    margin: 0;
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-label);
+    line-height: 1.54;
+    word-break: keep-all;
+}
+
+.meta {
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-caption);
+    font-weight: 600;
+}
+
+.storySection {
+    margin-top: var(--erp-space-5);
+}
+
+.sectionHeading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--erp-space-4);
+    margin-bottom: var(--erp-space-3);
+}
+
+.sectionHeading h3 {
+    margin: var(--erp-space-1) 0 0;
+    font-size: 18px;
+}
+
+.sectionHeading > span {
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-caption);
+}
+
+.storyGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(min(300px, 100%), 1fr));
+    gap: var(--erp-space-3);
+}
+
+.storyCard {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: var(--erp-space-3);
+    min-width: 0;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-surface);
+    padding: var(--erp-space-4);
+}
+
+.storyHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--erp-space-3);
+}
+
+.storyIcon {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    background: var(--erp-surface-muted);
+}
+
+.storyHeader > div {
+    display: grid;
+    gap: var(--erp-space-1);
+    min-width: 0;
+}
+
+.storyHeader span {
+    color: var(--erp-action-strong);
+    font-size: var(--erp-font-caption);
+    font-weight: 700;
+}
+
+.storyHeader strong {
+    font-size: var(--erp-font-body);
+    line-height: 1.45;
+    word-break: keep-all;
+}
+
+.storyCard ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--erp-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.storyCard li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--erp-space-1);
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-caption);
+    line-height: 1.5;
+    word-break: keep-all;
+}
+
+.storyCard li svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--erp-success);
+}
+
+.storyFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--erp-space-3);
+    border-top: 1px solid hsl(var(--border));
+    padding-top: var(--erp-space-3);
+}
+
+.storyFooter > span {
+    color: var(--erp-text-secondary);
+    font-size: var(--erp-font-caption);
+    font-weight: 600;
+}
+
+.storyFooter button {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: var(--erp-space-2);
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--erp-radius-default);
+    background: var(--erp-surface);
+    color: var(--erp-action-strong);
+    padding: 0 var(--erp-space-3);
+    font: inherit;
+    font-size: var(--erp-font-label);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.storyFooter button:hover {
+    border-color: var(--erp-action);
+    background: var(--erp-action-soft);
+}
+
+.storyFooter button:focus-visible {
+    outline: 2px solid var(--erp-focus);
+    outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+    .coreJourney {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .coreJourney > button {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .sectionHeading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .storyGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 440px) {
+    .storyCard ul {
+        grid-template-columns: 1fr;
+    }
+
+    .storyFooter {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

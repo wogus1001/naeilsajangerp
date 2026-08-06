@@ -1,34 +1,43 @@
 'use client';
 
+import React from 'react';
 import pageStyles from '@/app/(main)/dashboard/franchise-leads/page.module.css';
-import { Download, Link2, Plus, Upload } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, Link2, Plus, Upload } from 'lucide-react';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
+import { LeadDashboard } from '@/components/franchise/leads/LeadDashboard';
 import { LeadDbWorkspace } from '@/components/franchise/leads/LeadDbWorkspace';
 import { LeadDetailPanel } from '@/components/franchise/leads/LeadDetailPanel';
 import { LeadFormModal } from '@/components/franchise/leads/LeadFormModal';
 import { LeadQuickActivityModal } from '@/components/franchise/leads/LeadQuickActivityModal';
+import { LeadMetaIntegrationPanel } from '@/components/franchise/leads/LeadMetaIntegrationPanel';
 import { LeadToolbar } from '@/components/franchise/leads/LeadToolbar';
 import {
     LeadWorkspaceTabs,
     type LeadWorkspaceTab
 } from '@/components/franchise/leads/LeadWorkspaceTabs';
-import type { DemoActionHandler, DemoScreenId } from '../demoTypes';
+import {
+    DEMO_TOUR_STEP_ADVANCE_EVENT,
+    type DemoActionHandler,
+    type DemoScreenId
+} from '../demoTypes';
 import { DemoGuideTarget, DemoGuidedLayout } from './DemoScreenGuide';
 import { useDemoLeadDbController } from './useDemoLeadDbController';
 import { useDemoLeadDetailController } from './useDemoLeadDetailController';
+import { useDemoMetaIntegration } from './useDemoMetaIntegration';
 
 type DemoLeadDbAdapterProps = {
-    readonly activeTab: LeadWorkspaceTab;
     readonly onScreenChange: (screen: DemoScreenId) => void;
     readonly onSimulate: DemoActionHandler;
 };
 
 export function DemoLeadDbAdapter({
-    activeTab,
     onScreenChange,
     onSimulate
 }: DemoLeadDbAdapterProps) {
+    const [workspaceTab, setWorkspaceTab] = React.useState<Exclude<LeadWorkspaceTab, 'contractOwners'>>('dashboard');
+    const [isMetaPanelOpen, setIsMetaPanelOpen] = React.useState(false);
     const controller = useDemoLeadDbController(onSimulate);
+    const meta = useDemoMetaIntegration(onSimulate);
     const detailProps = useDemoLeadDetailController({
         lead: controller.selectedLead,
         mode: 'default',
@@ -40,6 +49,30 @@ export function DemoLeadDbAdapter({
         onSimulate
     });
 
+    React.useEffect(() => {
+        const handleGuideAdvance = (event: WindowEventMap[typeof DEMO_TOUR_STEP_ADVANCE_EVENT]) => {
+            if (event.detail.screen !== 'leadDb') return;
+            const nextTargetId = event.detail.toTargetId || '';
+            if (nextTargetId === 'lead-db-dashboard-tab' || nextTargetId.startsWith('lead-dashboard-')) {
+                setWorkspaceTab('dashboard');
+                return;
+            }
+            if (nextTargetId.startsWith('lead-db-') || nextTargetId.startsWith('lead-detail-')) {
+                setWorkspaceTab('db');
+            }
+        };
+        window.addEventListener(DEMO_TOUR_STEP_ADVANCE_EVENT, handleGuideAdvance);
+        return () => window.removeEventListener(DEMO_TOUR_STEP_ADVANCE_EVENT, handleGuideAdvance);
+    }, []);
+
+    const handleTabChange = (tab: LeadWorkspaceTab) => {
+        if (tab === 'contractOwners') {
+            onScreenChange('contractOwners');
+            return;
+        }
+        setWorkspaceTab(tab);
+    };
+
     return (
         <div className={pageStyles.pageShell}>
             <FranchiseWorkspaceHero
@@ -48,11 +81,14 @@ export function DemoLeadDbAdapter({
                 actions={(
                     <>
                         <button
-                            className={pageStyles.secondaryButton}
-                            onClick={() => onSimulate('Meta 연동 샘플 상태를 확인했습니다.')}
+                            className={isMetaPanelOpen ? pageStyles.metaToggleButtonActive : pageStyles.metaToggleButton}
+                            onClick={() => setIsMetaPanelOpen(open => !open)}
+                            aria-expanded={isMetaPanelOpen}
+                            aria-controls="meta-integration-panel"
                         >
                             <Link2 size={16} />
-                            Meta 연동
+                            {isMetaPanelOpen ? 'Meta 설정 닫기' : 'Meta 연동 설정'}
+                            {isMetaPanelOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                         </button>
                         <button
                             className={pageStyles.secondaryButton}
@@ -79,18 +115,46 @@ export function DemoLeadDbAdapter({
                 )}
             />
 
-            <DemoGuideTarget marker={1} targetId="lead-db-filters" label="필터 검색">
+            <DemoGuideTarget marker={6} targetId="lead-db-filters" label="필터 검색">
                 <LeadToolbar {...controller.toolbarProps} />
             </DemoGuideTarget>
 
             <LeadWorkspaceTabs
-                activeTab={activeTab}
-                onTabChange={tab => handleTabChange(tab, onScreenChange)}
+                activeTab={workspaceTab}
+                onTabChange={handleTabChange}
             />
 
-            <DemoGuidedLayout screen="leadDb" onScreenChange={onScreenChange}>
-                <LeadDbWorkspace {...controller.workspaceProps} />
-            </DemoGuidedLayout>
+            {isMetaPanelOpen ? (
+                <LeadMetaIntegrationPanel
+                    metaState={meta.metaState}
+                    enabledFormCount={meta.enabledFormCount}
+                    lastSyncAt={meta.lastSyncAt}
+                    errorCount={meta.errorCount}
+                    canManageMeta
+                    isMetaLoading={false}
+                    isMetaSyncing={false}
+                    savingMetaFormId=""
+                    savingMetaFormOperation={null}
+                    dirtyMetaFormIds={meta.dirtyMetaFormIds}
+                    renderManagerOptionsAction={meta.renderManagerOptions}
+                    onRefreshAction={meta.refresh}
+                    onStartConnectAction={meta.startConnect}
+                    onSyncAction={meta.sync}
+                    onDisconnectConnectionAction={meta.disconnect}
+                    onRefreshFormQuestionsAction={meta.refreshQuestions}
+                    onReplaceQuestionMappingAction={meta.replaceQuestionMapping}
+                    onUpdateFormAction={meta.updateForm}
+                    onUpdateQuestionMappingAction={meta.updateQuestionMapping}
+                />
+            ) : null}
+
+            {workspaceTab === 'dashboard' ? (
+                <LeadDashboard {...controller.dashboardProps} />
+            ) : (
+                <DemoGuidedLayout screen="leadDb" onScreenChange={onScreenChange}>
+                    <LeadDbWorkspace {...controller.workspaceProps} />
+                </DemoGuidedLayout>
+            )}
 
             {controller.formModalProps ? (
                 <LeadFormModal {...controller.formModalProps} />
@@ -101,21 +165,4 @@ export function DemoLeadDbAdapter({
             {detailProps ? <LeadDetailPanel {...detailProps} /> : null}
         </div>
     );
-}
-
-function handleTabChange(
-    tab: LeadWorkspaceTab,
-    onScreenChange: (screen: DemoScreenId) => void
-) {
-    switch (tab) {
-        case 'dashboard':
-            onScreenChange('dashboard');
-            return;
-        case 'db':
-            onScreenChange('leadDb');
-            return;
-        case 'contractOwners':
-            onScreenChange('contractOwners');
-            return;
-    }
 }

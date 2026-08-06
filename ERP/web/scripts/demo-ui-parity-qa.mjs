@@ -16,6 +16,22 @@ const SCREEN_IDS = {
     '물건지 지도': 'locationMap',
     '가맹 운영': 'operations'
 };
+const NAV_LABELS = {
+    '대시보드': '대시보드',
+    '모객 DB': '모객 DB',
+    '출점 후보지': '후보지 목록',
+    '물건지 지도': '물건지 지도',
+    '가맹 운영': '가맹점 목록'
+};
+const FEATURE_PATHS = {
+    '인력 세팅': '/dashboard/franchise-leads/labor-planning',
+    '일정관리': '/dashboard/franchise-operations/schedule',
+    '슈퍼바이징': '/dashboard/franchise-supervision',
+    '점주 소통': '/dashboard/franchise-operations/owner-portal',
+    '전자계약': '/contracts/electronic',
+    '업체 관리': '/dashboard/franchise-vendors',
+    '업체 계약함': '/contracts/vendor'
+};
 const VIEWPORTS = [
     { id: 'desktop', width: 1440, height: 900 },
     { id: 'mobile', width: 390, height: 844 }
@@ -123,18 +139,22 @@ try {
 
         for (const [role, screens] of Object.entries(SCREEN_LABELS)) {
             await page.goto(`${baseURL}/demo/${role}`, { waitUntil: 'domcontentloaded' });
+            const coreButton = page.getByRole('button', { name: '3분 핵심 체험', exact: true });
+            if (await coreButton.isVisible().catch(() => false)) {
+                await coreButton.click();
+                await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
+                await inspectEveryTourStep(page, role, '3분 핵심 체험', viewport.id, counters, failures);
+                await closeExperienceDialog(page);
+            }
             for (const screen of screens) {
-                if (screen !== '대시보드') {
-                    await clickDemoNav(page, screen);
-                }
+                await clickDemoNav(page, screen);
                 const activeSurface = page.locator(`[data-demo-surface="${SCREEN_IDS[screen]}"]:not([hidden])`);
                 await activeSurface.waitFor({ state: 'visible' });
                 await page.waitForTimeout(320);
 
-                const tourDialog = page.locator('[data-demo-id="demo-tour-card"]');
-                if (await tourDialog.isVisible()) {
-                    await inspectEveryTourStep(page, role, screen, viewport.id, counters, failures);
-                }
+                await page.getByRole('button', { name: '이 화면 안내', exact: true }).click();
+                await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
+                await inspectEveryTourStep(page, role, screen, viewport.id, counters, failures);
 
                 const overflow = await page.evaluate(() => (
                     document.documentElement.scrollWidth - document.documentElement.clientWidth
@@ -155,6 +175,30 @@ try {
                 const screenshotName = `demo-parity-${role}-${viewport.id}-${screen.replaceAll(' ', '-')}.png`;
                 await page.screenshot({ path: path.join(evidenceDir, screenshotName), fullPage: false });
                 scenarios.push({ role, viewport: viewport.id, screen, overflow });
+            }
+
+            if (role !== 'partner') {
+                for (const [label, featurePath] of Object.entries(FEATURE_PATHS)) {
+                    await clickDemoNav(page, label);
+                    const productionSurface = page.locator(`[data-demo-feature-path="${featurePath}"]`);
+                    await productionSurface.waitFor({ state: 'visible' });
+                    await productionSurface.getByRole('button').first().waitFor({ state: 'visible' });
+                    await page.getByRole('button', { name: '이 화면 안내', exact: true }).click();
+                    await page.locator('[data-demo-id="demo-tour-card"]').waitFor({ state: 'visible' });
+                    await inspectEveryTourStep(page, role, label, viewport.id, counters, failures);
+                    const overflow = await page.evaluate(() => (
+                        document.documentElement.scrollWidth - document.documentElement.clientWidth
+                    ));
+                    if (overflow > 1) {
+                        counters.horizontalOverflow += 1;
+                        failures.push(`horizontal overflow ${overflow}px: ${role}/${label}/${viewport.id}`);
+                    }
+                    await page.screenshot({
+                        path: path.join(evidenceDir, `demo-parity-${role}-${viewport.id}-${label}.png`),
+                        fullPage: false
+                    });
+                    scenarios.push({ role, viewport: viewport.id, screen: label, overflow });
+                }
             }
         }
 
@@ -236,6 +280,7 @@ async function runPopupCoverage(page, viewportId, coverage, modalCheckList, coun
     };
 
     await page.goto(`${baseURL}/demo/manager`, { waitUntil: 'domcontentloaded' });
+    await closeExperienceDialog(page);
     await closeTour(page);
     await check('header-notification', async () => {
         const button = page.getByRole('button', { name: /알림 \d+건/ });
@@ -409,17 +454,32 @@ async function closeTour(page) {
     }
 }
 
+async function closeExperienceDialog(page) {
+    const buttons = [
+        page.getByRole('button', { name: '다른 기능 둘러보기', exact: true }),
+        page.getByRole('button', { name: '자유롭게 둘러보기', exact: true })
+    ];
+    for (const button of buttons) {
+        if (await button.isVisible().catch(() => false)) {
+            await button.click();
+            await button.waitFor({ state: 'hidden' });
+            return;
+        }
+    }
+}
+
 async function inspectEveryTourStep(page, role, screen, viewportId, counters, failures) {
     const tourDialog = page.locator('[data-demo-id="demo-tour-card"]');
-    for (let stepIndex = 0; stepIndex < 12 && await tourDialog.count() > 0; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 32 && await tourDialog.count() > 0; stepIndex += 1) {
         if (!(await tourDialog.isVisible())) {
             await closeActiveDialogs(page);
             await tourDialog.waitFor({ state: 'visible', timeout: 1_500 }).catch(() => undefined);
         }
-        await page.locator('[class*="spotlight"]').first()
-            .waitFor({ state: 'visible', timeout: 1_000 })
+        const spotlightRects = page.locator('svg[class*="tourScrim"] mask rect[fill="#000000"]');
+        await spotlightRects.first()
+            .waitFor({ state: 'attached', timeout: 1_000 })
             .catch(() => undefined);
-        const spotlightCount = await page.locator('[class*="spotlight"]').count();
+        const spotlightCount = await spotlightRects.count();
         const progressText = await tourDialog.getByText(/^\d+ \/ \d+$/).textContent().catch(() => '');
         if (spotlightCount === 0) {
             counters.staleTourTargets += 1;
@@ -428,7 +488,13 @@ async function inspectEveryTourStep(page, role, screen, viewportId, counters, fa
 
         const [current, total] = String(progressText).split('/').map(value => Number(value.trim()));
         if (!Number.isFinite(current) || !Number.isFinite(total) || current >= total) {
-            await closeTour(page);
+            const completeButton = tourDialog.getByRole('button', { name: '핵심 체험 완료', exact: true });
+            if (await completeButton.isVisible().catch(() => false)) {
+                await completeButton.click();
+                await tourDialog.waitFor({ state: 'hidden' });
+            } else {
+                await closeTour(page);
+            }
             return;
         }
         await tourDialog.getByRole('button', { name: '다음', exact: true }).click();
@@ -439,8 +505,15 @@ async function inspectEveryTourStep(page, role, screen, viewportId, counters, fa
 }
 
 async function clickDemoNav(page, label) {
+    if (label === '계약 완료') {
+        await clickDemoNav(page, '모객 DB');
+        await page.getByRole('button', { name: '계약 완료', exact: true }).first().click();
+        await page.waitForTimeout(80);
+        return;
+    }
     const navigation = page.getByRole('navigation', { name: '데모 메뉴', exact: true });
-    const target = navigation.locator('a, button').filter({ hasText: label }).first();
+    const navigationLabel = NAV_LABELS[label] || label;
+    const target = navigation.getByRole('link', { name: navigationLabel, exact: true }).first();
     if (!(await target.isVisible())) {
         const headerMenuButton = page.getByRole('button', { name: '메뉴 열기', exact: true });
         const sidebarMenuButton = page.getByRole('button', { name: '데모 메뉴 열기', exact: true });

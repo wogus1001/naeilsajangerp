@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { DemoAccessGate } from '../_components/DemoAccessGate';
 import { DemoShell } from '../_components/DemoShell';
 import { getDemoAccessState } from '../demoAccessState';
-import { DEMO_SCENARIOS } from '../demoContent';
 import type { DemoRole } from '../demoTypes';
 
 type DemoRolePageProps = {

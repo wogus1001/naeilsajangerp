@@ -39,7 +39,7 @@ export function LaborPlanningInputSection({
     const [isAdvancedOpen, setIsAdvancedOpen] = React.useState(false);
 
     return (
-        <section className={styles.section}>
+        <section className={styles.section} aria-label="인력 계산 조건">
             <div className={styles.sectionHeader}>
                 <h3>매출별 인력 계산</h3>
                 <p>핵심 조건으로 빠르게 계산하고, 상세 조건에서 급여·본인 근무·브레이크타임을 조정합니다.</p>

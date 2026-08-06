@@ -22,7 +22,7 @@ export function ManagerDemoWorkspace({ activeScreen, dashboardUserName, dashboar
         },
         {
             id: 'leadDb',
-            content: <DemoLeadDbAdapter activeTab="db" onScreenChange={onScreenChange} onSimulate={onSimulate} />
+            content: <DemoLeadDbAdapter onScreenChange={onScreenChange} onSimulate={onSimulate} />
         },
         {
             id: 'contractOwners',

@@ -23,7 +23,7 @@ export function VendorContractFilters({
     onStatusChange
 }: Props) {
     return (
-        <section className={baseStyles.panel}>
+        <section className={baseStyles.panel} aria-label="업체 계약 검색 조건">
             <div className={styles.filterBar}>
                 <label className={styles.searchBox}>
                     <Search size={16} />
