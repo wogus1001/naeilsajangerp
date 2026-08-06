@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    DUPLICATE_FRANCHISE_LEAD_MOBILE_MESSAGE,
     FRANCHISE_LEAD_SOURCES,
     FRANCHISE_LEAD_REGISTRATION_SOURCE,
     FRANCHISE_MATCHING_REQUEST_SOURCE,
@@ -10,6 +11,13 @@ import {
     normalizeLeadStage,
     normalizeLeadGrade
 } from './franchise-leads.js';
+
+test('duplicate mobile validation uses a Korean user-facing message', () => {
+    assert.equal(
+        DUPLICATE_FRANCHISE_LEAD_MOBILE_MESSAGE,
+        '같은 연락처로 등록된 가맹 희망자가 이미 있습니다.'
+    );
+});
 
 test('normalizeLeadGrade accepts task-oriented Korean priority labels', () => {
     assert.equal(normalizeLeadGrade('즉시상담'), 'HOT');

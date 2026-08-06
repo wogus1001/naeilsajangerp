@@ -15,6 +15,7 @@ export const DEFAULT_FRANCHISE_LEAD_STATUS: FranchiseLeadStatus = '문의접수'
 export const FRANCHISE_MATCHING_REQUEST_SOURCE = '프랜차이즈 매칭 요청';
 export const FRANCHISE_MATCHING_REQUEST_SOURCE_LABEL = '예비 창업자 등록';
 export const FRANCHISE_LEAD_REGISTRATION_SOURCE = '가맹 희망자 등록';
+export const DUPLICATE_FRANCHISE_LEAD_MOBILE_MESSAGE = '같은 연락처로 등록된 가맹 희망자가 이미 있습니다.';
 
 export const FRANCHISE_LEAD_SOURCES = [
     '네이버폼',

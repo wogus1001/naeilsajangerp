@@ -10,6 +10,7 @@ import {
 import { fail, ok } from '@/lib/api-response';
 import {
     DEFAULT_FRANCHISE_LEAD_STATUS,
+    DUPLICATE_FRANCHISE_LEAD_MOBILE_MESSAGE,
     FRANCHISE_MATCHING_REQUEST_SOURCE,
     FRANCHISE_LEAD_STATUSES,
     normalizeLeadGrade,
@@ -694,7 +695,7 @@ export async function POST(request: Request) {
 
             if (existing) {
                 if (!canAccessFranchiseLead(requesterProfile, existing as FranchiseLeadRow)) {
-                    return fail(409, 'VALIDATION_ERROR', 'A lead with the same mobile already exists');
+                    return fail(409, 'VALIDATION_ERROR', DUPLICATE_FRANCHISE_LEAD_MOBILE_MESSAGE);
                 }
                 const updates = {
                     ...buildUpdatePayload(body, existing.data || {}),
@@ -844,7 +845,7 @@ export async function PUT(request: Request) {
                 .maybeSingle();
 
             if (duplicate) {
-                return fail(400, 'VALIDATION_ERROR', 'A lead with the same mobile already exists');
+                return fail(400, 'VALIDATION_ERROR', DUPLICATE_FRANCHISE_LEAD_MOBILE_MESSAGE);
             }
         }
 
