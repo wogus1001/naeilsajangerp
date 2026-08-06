@@ -238,6 +238,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-08-06 고객 목록 작업내역·컬럼 설정 보강
+  - 작업 브랜치: `codex/franchise-lead-ui-polish-20260804`
+  - 기능 커밋: `e281a3e feat(customers): 고객 작업내역 컬럼 설정 보강`
+  - 주요 기능: 최신 고객작업내역의 날짜·내용 열, 표시 컬럼 선택과 드래그/키보드 순서 변경, 브라우저 설정 복원, 상시 열 구분선, `중요` 별표 열 정렬, 담당자 미지정 고객의 같은 회사 작업내역 저장과 실패 원복을 한 배포 단위로 반영한다.
+  - 검증: 집중 회귀 15건, TypeScript, 전체 ESLint, production build 113개 페이지, `git diff --check`, 인증된 로컬 `/customers` 브라우저 QA를 통과했다.
+  - SQL/env: 신규 SQL과 환경변수 변경 없음.
+  - dev 반영: 기능·문서 커밋을 작업 브랜치에 push한 뒤 동일 최종 소스를 Vercel Dev 환경과 `https://naeilsajang-dev.vercel.app`에 배포한다. 보호된 `dev`, `main`과 production은 이번 요청에서 변경하지 않는다.
+  - 공개 화면: `/customers` 직접 변경, `/landing`, `/demo`, 프랜차이즈 화면 변경 없음.
+
 - 2026-08-06 프랜차이즈 데모 업무 스토리·실화면 일치 마감
   - 작업 브랜치: `codex/franchise-lead-ui-polish-20260804`
   - 기능 커밋: `4253ecb feat(demo): 프랜차이즈 체험 흐름과 실화면 일치 보강`, `a2db4cc feat(demo): 출점 검토와 점주 포털 체험 보강`, `d848868 feat(demo): 체험 선택 진입 동선 개선`, `a1b286c feat(demo): 체험 스토리 안내와 전환 안정화`, `348b518 fix(franchise): 중복 연락처 오류 문구 한글화`
