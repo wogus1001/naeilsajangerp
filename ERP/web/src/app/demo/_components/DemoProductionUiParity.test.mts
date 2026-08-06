@@ -139,6 +139,7 @@ test('dashboard adapter keeps production controlled seams and demo-local notice 
 
 test('demo shell delegates header surfaces and controlled notification navigation to production components', () => {
     const shell = readSource('./DemoErpShell.tsx');
+    const demoShell = readSource('./DemoShell.tsx');
 
     assert.match(shell, /from ['"]@\/components\/layout\/Header['"]/);
     assert.match(shell, /from ['"]@\/components\/layout\/Sidebar['"]/);
@@ -150,6 +151,9 @@ test('demo shell delegates header surfaces and controlled notification navigatio
     assert.match(shell, /navigate:/);
     assert.match(shell, /showCompanySelector=\{false\}/);
     assert.match(shell, /HeaderProfileActions/);
+    assert.match(shell, /onClick=\{onOpenExperience\}>체험 선택<\/button>/);
+    assert.match(demoShell, /onOpenExperience=\{tour\.chooseStory\}/);
+    assert.doesNotMatch(shell, />이 화면 안내<\/button>/);
     assert.match(shell, /현재 데모에서는 핵심 프랜차이즈 흐름을 먼저 확인해 주세요/);
     assert.doesNotMatch(shell, /경로를 확인했습니다/);
     assert.doesNotMatch(shell, /DemoHeaderPopover/);

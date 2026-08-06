@@ -152,7 +152,7 @@ export function DemoShell({ role }: DemoShellProps) {
                 onScreenChange={handleScreenChange}
                 onPreviewPathChange={handlePreviewPathChange}
                 onSimulate={handleSimulate}
-                onRestartTour={tour.openScreenGuide}
+                onOpenExperience={tour.chooseStory}
             >
                 <div hidden={Boolean(activeFeaturePath)} aria-hidden={Boolean(activeFeaturePath)}>
                     <DemoRoleWorkspace
