@@ -80,6 +80,9 @@ type LocationMasterListProps = {
     readonly locations: readonly FranchiseLocation[];
     readonly managerOptions: readonly LocationManagerOption[];
     readonly deletingLocationId: string;
+    readonly guidedRecordLocationId?: string | undefined;
+    readonly guidedRecordRequestKey?: number | undefined;
+    readonly guidedRecordPresentation?: boolean | undefined;
     readonly interactionRuntime?: LocationInteractionRuntime | undefined;
     readonly mapRuntime?: LocationMapRuntime | undefined;
     readonly onEdit: (location: FranchiseLocation) => void;
@@ -152,6 +155,9 @@ export function LocationMasterList({
     locations,
     managerOptions,
     deletingLocationId,
+    guidedRecordLocationId,
+    guidedRecordRequestKey = 0,
+    guidedRecordPresentation = false,
     interactionRuntime,
     mapRuntime,
     onEdit,
@@ -160,6 +166,7 @@ export function LocationMasterList({
     const { showAlert } = useAppDialog();
     const runtime = resolveLocationInteractionRuntime(interactionRuntime);
     const [recordLocationId, setRecordLocationId] = React.useState('');
+    const [guidedPanelLocationId, setGuidedPanelLocationId] = React.useState('');
     const [messageSummaries, setMessageSummaries] = React.useState<ReadonlyMap<string, FranchiseLocationMessageSummary>>(
         () => new Map<string, FranchiseLocationMessageSummary>()
     );
@@ -196,6 +203,24 @@ export function LocationMasterList({
     React.useEffect(() => {
         setCurrentPage(prev => Math.min(prev, totalPages));
     }, [totalPages]);
+
+    React.useEffect(() => {
+        if (!guidedRecordLocationId || guidedRecordRequestKey <= 0) return;
+        if (!locations.some(location => location.id === guidedRecordLocationId)) return;
+        setRecordLocationId(guidedRecordLocationId);
+        if (guidedRecordPresentation) setGuidedPanelLocationId(guidedRecordLocationId);
+    }, [
+        guidedRecordLocationId,
+        guidedRecordPresentation,
+        guidedRecordRequestKey,
+        locations
+    ]);
+
+    React.useEffect(() => {
+        if (guidedRecordPresentation || !guidedPanelLocationId) return;
+        setRecordLocationId(current => current === guidedPanelLocationId ? '' : current);
+        setGuidedPanelLocationId('');
+    }, [guidedPanelLocationId, guidedRecordPresentation]);
 
     React.useEffect(() => {
         if (!userId || !pageLocationIdsKey) return undefined;
@@ -468,9 +493,13 @@ export function LocationMasterList({
                     userId={userId}
                     location={selectedRecordLocation}
                     managerName={getManagerDisplayName(selectedRecordLocation, managerOptions)}
+                    guidedPresentation={selectedRecordLocation.id === guidedPanelLocationId}
                     runtime={runtime}
                     onOpenChange={(open) => {
-                        if (!open) setRecordLocationId('');
+                        if (!open) {
+                            setRecordLocationId('');
+                            setGuidedPanelLocationId('');
+                        }
                     }}
                     onSummaryChange={updateMessageSummary}
                 />

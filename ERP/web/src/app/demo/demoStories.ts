@@ -32,19 +32,20 @@ export const DEMO_STORIES = {
         id: 'siteDevelopment',
         roleLabel: '출점 개발 담당자',
         title: '고객 희망지역과 실제 출점 후보지를 연결하기',
-        description: '가맹 희망자의 지역 조건을 확인하고 후보지 목록과 지도 분석을 이용해 상담 가능한 점포를 좁힙니다.',
-        duration: '약 4분',
-        outcome: '가맹 희망자의 조건을 후보지 정보와 지도 분석에 연결해 출점 상담 근거를 만들었습니다.',
-        features: ['희망지역·예산 조건', '후보지 임대 조건', '후보지 연결 기록', '지도 반경·거리 분석'],
+        description: '가맹 희망자의 지역 조건을 확인하고 후보지 검토 기록과 지도 분석을 이용해 상담 가능한 점포를 좁힙니다.',
+        duration: '약 5분',
+        outcome: '가맹 희망자의 조건을 후보지 정보와 물건 기록, 지도 분석에 연결해 출점 상담 근거를 만들었습니다.',
+        features: ['희망지역·예산 조건', '후보지 임대 조건', '물건 요청·처리 기록', '후보지 연결 기록', '지도 반경·거리 분석'],
         roles: ['manager', 'admin'],
         steps: [
             { id: 'site-1', screen: 'leadDb', targetId: 'lead-db-candidate-tab', targetSelector: '[class*="leadLayerTabs"] button:nth-of-type(2)', title: '출점 상담 대상 확인', description: '가맹 희망자 탭에서 희망지역, 예산, 관심 브랜드가 입력된 고객을 먼저 확인합니다.' },
             { id: 'site-2', screen: 'leadDb', targetId: 'lead-db-candidate-table', targetSelector: '[class*="leadTable"]', title: '고객 조건을 후보지 검토 기준으로 정리', description: '희망지역, 예산, 관심 브랜드와 담당자를 함께 확인해 어떤 후보지를 먼저 제안할지 기준을 세웁니다.' },
             { id: 'site-3', screen: 'location', targetId: 'location-workspace-tabs', targetSelector: '[data-demo-id="location-workspace-tabs"] [aria-label="출점 후보지 작업 영역"]', title: '후보지 업무 범위 선택', description: '직접 관리하는 출점 후보지와 외부 상가 수집을 구분해 원천 정보가 운영 기록과 섞이지 않게 관리합니다.' },
             { id: 'site-4', screen: 'location', targetId: 'location-master', targetSelector: '[data-demo-id="location-master"] tbody tr:first-child [aria-label$="후보지 수정"]', title: '점포 조건 상세 검토', description: '주소, 전용면적, 보증금, 권리금, 월세와 시설 조건을 열어 고객 예산에 맞는지 검토합니다.' },
-            { id: 'site-5', screen: 'locationMap', targetId: 'location-map-filter', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]', title: '지도에 표시할 대상 좁히기', description: '지역, 후보지 상태, 브랜드 기준으로 지도에 표시할 점포를 좁혀 비교 대상을 정리합니다.' },
-            { id: 'site-6', screen: 'locationMap', targetId: 'location-map-canvas', targetSelector: '[data-demo-id="location-map-page"] [aria-label="샘플 물건지 지도"]', title: '후보지와 운영점을 함께 비교', description: '출점 후보지와 운영 가맹점을 한 지도에서 확인해 상권 중복과 관리 동선을 검토합니다.' },
-            { id: 'site-7', screen: 'locationMap', targetId: 'location-map-tools', targetSelector: '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]', title: '반경·거리·면적 분석', description: '상권 반경, 경쟁점 거리, 후보지 면적을 직접 측정해 출점 검토 근거를 남깁니다.' }
+            { id: 'site-5', screen: 'location', targetId: 'location-message-panel', targetSelector: '[role="dialog"][aria-label="물건 기록"]', title: '물건 요청과 확인 기록', description: '본사는 물건 검토 요청과 확인 정보를 기록하고, 담당자는 내용을 확인해 처리합니다.' },
+            { id: 'site-6', screen: 'locationMap', targetId: 'location-map-filter', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]', title: '지도에 표시할 대상 좁히기', description: '지역, 후보지 상태, 브랜드 기준으로 지도에 표시할 점포를 좁혀 비교 대상을 정리합니다.' },
+            { id: 'site-7', screen: 'locationMap', targetId: 'location-map-canvas', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도"]', title: '후보지와 운영점을 함께 비교', description: '출점 후보지와 운영 가맹점을 실제 지도에서 확인해 상권 중복과 관리 동선을 검토합니다.' },
+            { id: 'site-8', screen: 'locationMap', targetId: 'location-map-tools', targetSelector: '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]', title: '반경·거리·면적 분석', description: '상권 반경, 경쟁점 거리, 후보지 면적을 직접 측정해 출점 검토 근거를 남깁니다.' }
         ]
     },
     openingOperations: {
@@ -70,11 +71,11 @@ export const DEMO_STORIES = {
     headOffice: {
         id: 'headOffice',
         roleLabel: '본부 관리자',
-        title: '여러 가맹점의 운영 위험과 계약 업무를 한눈에 관리하기',
-        description: '운영 현황에서 우선 점검 매장을 찾고 슈퍼바이징, 협력업체, 전자계약까지 본부 업무를 연결합니다.',
-        duration: '약 5분',
-        outcome: '운영점 점검부터 협력업체와 전자계약까지 본부가 놓치기 쉬운 위험 업무를 한 흐름으로 확인했습니다.',
-        features: ['가맹 운영 현황', 'SV 방문·시정요청', '협력업체 계약·갱신', '전자계약 서명 상태'],
+        title: '여러 가맹점의 운영 위험과 점주 업무를 한눈에 관리하기',
+        description: '운영 현황에서 우선 점검 매장을 찾고 슈퍼바이징, 협력업체, 전자계약, 점주 홈페이지까지 본부 업무를 연결합니다.',
+        duration: '약 6분',
+        outcome: '운영점 점검부터 계약, 점주 계정 발급과 점주 홈페이지 업무까지 본부가 놓치기 쉬운 운영 흐름을 확인했습니다.',
+        features: ['가맹 운영 현황', 'SV 방문·시정요청', '협력업체 계약·갱신', '전자계약 서명 상태', '점주 계정·홈페이지'],
         roles: ['manager', 'admin'],
         steps: [
             { id: 'hq-1', screen: 'dashboard', targetId: 'dashboard-home-kpis', targetSelector: '[data-demo-id="franchise-dashboard"] section[aria-label="가맹 운영 주요 건수"]', title: '본부 핵심 지표 확인', description: '모객 DB, 계약 가능, 출점 후보지, 연결 필요 건수를 보고 오늘 우선 확인할 업무를 정합니다.' },
@@ -83,7 +84,10 @@ export const DEMO_STORIES = {
             { id: 'hq-4', featurePath: '/dashboard/franchise-vendors', targetId: 'vendor-kpis', targetSelector: 'section[aria-label="업체 관리 핵심 현황"]', title: '협력업체와 갱신 위험 확인', description: '인테리어, 물류, 설비 업체의 계약 여부와 갱신 필요 건수를 함께 확인합니다.' },
             { id: 'hq-5', featurePath: '/contracts/vendor', targetId: 'vendor-contract-queue', targetSelector: 'section[aria-label="업체 계약 업무 큐"]', title: '업체 계약 우선 업무 처리', description: '검토 대기, 만료 예정, 갱신 필요 계약을 업무 순서대로 확인해 계약 공백을 줄입니다.' },
             { id: 'hq-6', featurePath: '/contracts/electronic', targetId: 'electronic-list', targetSelector: 'section[aria-label="전자계약 문서 목록"]', title: '서명 진행 상태 확인', description: '발송, 서명 대기, 완료, 취소 상태와 만료 시점을 확인해 미완료 계약을 후속 처리합니다.' },
-            { id: 'hq-7', featurePath: '/dashboard/franchise-operations/owner-portal', targetId: 'owner-portal-notices', targetSelector: 'section[aria-label="점주 공지 관리"]', title: '운영점 공지와 요청 마무리', description: '전체 또는 특정 운영점에 공지를 전달하고 점주 제출 요청을 본부 담당 업무로 연결합니다.' }
+            { id: 'hq-7', featurePath: '/dashboard/franchise-operations/owner-portal', targetId: 'owner-portal-account-tab', targetSelector: '[role="tablist"][aria-label="점주 소통 업무"] button:nth-of-type(7)', title: '점주 계정 설정으로 이동', description: '운영점별 점주 계정을 발급하고 관리하는 화면으로 이동합니다.' },
+            { id: 'hq-8', featurePath: '/dashboard/franchise-operations/owner-portal', targetId: 'owner-portal-account-create', targetSelector: 'section[aria-label="점주 계정 관리"] [aria-label="신규 점주 계정 발급"]', title: '운영점 점주 계정 발급', description: '운영점을 선택하고 점주명과 연락처를 입력해 로그인 아이디와 임시 비밀번호를 발급합니다.' },
+            { id: 'hq-9', featurePath: '/dashboard/franchise-operations/owner-portal', targetId: 'owner-portal-login-link', targetSelector: 'section[aria-label="점주 계정 관리"] [aria-label="회사별 점주 포털 로그인 링크"]', title: '점주 홈페이지 접속 안내', description: '회사 전용 로그인 링크와 발급된 계정 정보를 점주에게 전달하면 별도 설치 없이 점주 홈페이지를 사용할 수 있습니다.' },
+            { id: 'hq-10', featurePath: '/owner/dashboard', targetId: 'owner-dashboard-summary', targetSelector: 'section[aria-label="점주 업무 요약"]', title: '점주 홈페이지 업무 확인', description: '점주는 미확인 공지, 남은 체크리스트, 처리 대기 요청을 확인하고 본사에 매장 정보와 시설 문의를 제출합니다.' }
         ]
     }
 } as const satisfies Record<DemoStoryId, DemoStory>;

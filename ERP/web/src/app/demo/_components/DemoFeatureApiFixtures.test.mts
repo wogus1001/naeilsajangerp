@@ -19,6 +19,7 @@ test('demo production surfaces receive local fixture responses for every operati
         '/api/franchise-owner-portal/notices',
         '/api/franchise-owner-portal/checklists',
         '/api/franchise-owner-portal/submissions',
+        '/api/owner/dashboard',
         '/api/electronic-contracts',
         '/api/electronic-contract-templates',
         '/api/franchise-vendors',
@@ -33,6 +34,23 @@ test('demo production surfaces receive local fixture responses for every operati
         const payload = await response.json() as { readonly data?: unknown };
         assert.notEqual(payload.data, undefined, `${path} must preserve the production API envelope`);
     }
+});
+
+test('Given the owner homepage preview When loading its dashboard Then the production owner portal receives store work data', async () => {
+    const response = getDemoFeatureApiResponse(new URL('/api/owner/dashboard', origin), 'GET');
+    const payload = await response?.json() as {
+        readonly data: {
+            readonly location: { readonly name: string };
+            readonly notices: readonly unknown[];
+            readonly openingProject: { readonly tasks: readonly unknown[] };
+            readonly submissions: readonly unknown[];
+        };
+    };
+
+    assert.equal(payload.data.location.name, '미카도 강남역점');
+    assert.equal(payload.data.notices.length > 0, true);
+    assert.equal(payload.data.openingProject.tasks.length > 0, true);
+    assert.equal(payload.data.submissions.length > 0, true);
 });
 
 test('demo external realty collection and promotion stay inside the fixture workspace', async () => {

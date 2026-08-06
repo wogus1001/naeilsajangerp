@@ -57,7 +57,8 @@ test('Given the four job stories When comparing their destinations Then the full
             '/dashboard/franchise-vendors',
             '/contracts/vendor',
             '/contracts/electronic',
-            '/dashboard/franchise-operations/owner-portal'
+            '/dashboard/franchise-operations/owner-portal',
+            '/owner/dashboard'
         ]
     );
 });
@@ -75,6 +76,36 @@ test('Given the franchise sales story When workflow notes are complete Then disc
         salesSteps[disclosureIndex]?.targetSelector,
         '[role="dialog"][aria-labelledby="franchise-lead-detail-title"] section[aria-label="가맹 희망자 정보공개서"]'
     );
+});
+
+test('Given the site development story When a location is reviewed Then property records are explained before map analysis', () => {
+    const siteSteps = DEMO_STORIES.siteDevelopment.steps;
+    const locationIndex = siteSteps.findIndex(step => step.targetId === 'location-master');
+    const recordIndex = siteSteps.findIndex(step => step.targetId === 'location-message-panel');
+    const mapIndex = siteSteps.findIndex(step => step.targetId === 'location-map-filter');
+
+    assert.equal(siteSteps.length, 8);
+    assert.equal(recordIndex, locationIndex + 1);
+    assert.equal(mapIndex, recordIndex + 1);
+    assert.equal(
+        siteSteps[recordIndex]?.targetSelector,
+        '[role="dialog"][aria-label="물건 기록"]'
+    );
+});
+
+test('Given the headquarters story When owner collaboration is introduced Then account issuance leads into the owner homepage', () => {
+    const headquartersSteps = DEMO_STORIES.headOffice.steps;
+    const accountTabIndex = headquartersSteps.findIndex(step => step.targetId === 'owner-portal-account-tab');
+    const accountCreateIndex = headquartersSteps.findIndex(step => step.targetId === 'owner-portal-account-create');
+    const loginLinkIndex = headquartersSteps.findIndex(step => step.targetId === 'owner-portal-login-link');
+    const ownerHomeIndex = headquartersSteps.findIndex(step => step.targetId === 'owner-dashboard-summary');
+
+    assert.equal(headquartersSteps.length, 10);
+    assert.equal(accountCreateIndex, accountTabIndex + 1);
+    assert.equal(loginLinkIndex, accountCreateIndex + 1);
+    assert.equal(ownerHomeIndex, loginLinkIndex + 1);
+    const ownerHomeStep = headquartersSteps[ownerHomeIndex];
+    assert.equal(ownerHomeStep && 'featurePath' in ownerHomeStep ? ownerHomeStep.featurePath : undefined, '/owner/dashboard');
 });
 
 test('Given a restricted partner role When selecting stories Then internal headquarters workflows stay hidden', () => {

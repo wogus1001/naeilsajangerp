@@ -61,6 +61,7 @@ export function isDemoFeaturePathAllowed(role: DemoRole, path: string): boolean 
         || path.startsWith('/dashboard/franchise-operations/schedule')
         || path.startsWith('/dashboard/franchise-supervision')
         || path.startsWith('/dashboard/franchise-operations/owner-portal')
+        || path.startsWith('/owner/dashboard')
         || path.startsWith('/contracts/electronic')
         || path.startsWith('/dashboard/franchise-vendors')
         || path.startsWith('/contracts/vendor')

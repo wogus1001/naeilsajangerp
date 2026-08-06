@@ -294,7 +294,7 @@ export function OwnerPortalAccountsSection(props: AccountSectionProps) {
                     <p>운영점별 계정을 발급하고, 비밀번호 재발급과 중지 상태를 관리합니다.</p>
                 </div>
             </div>
-            <div className={styles.ownerPortalLinkCard}>
+            <div className={styles.ownerPortalLinkCard} aria-label="회사별 점주 포털 로그인 링크">
                 <div className={styles.ownerPortalLinkCopy}>
                     <div>
                         <strong>회사별 점주 포털 단축 링크</strong>
@@ -307,7 +307,7 @@ export function OwnerPortalAccountsSection(props: AccountSectionProps) {
                 <input readOnly value={ownerPortalLoginUrl} aria-label="회사별 점주 포털 단축 링크" />
             </div>
             <div className={styles.ownerPortalSplit}>
-                <div className={styles.ownerPortalSubPanel}>
+                <div className={styles.ownerPortalSubPanel} aria-label="신규 점주 계정 발급">
                     <div className={styles.ownerPortalSubHeader}>
                         <strong>신규 계정 발급</strong>
                         <span>아이디를 비워두면 자동 생성됩니다.</span>

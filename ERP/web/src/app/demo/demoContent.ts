@@ -245,7 +245,7 @@ export const DEMO_SCREEN_GUIDES: Record<DemoScreenId, DemoScreenGuide> = {
         description: '지도에서 운영점과 출점 후보지의 위치, 반경, 거리와 주변 조건을 함께 확인합니다.',
         steps: [
             { targetId: 'location-map-page', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]', title: '대상 전환', description: '전체, 가맹 운영점, 출점 후보지를 탭으로 나눠 현재 보고 싶은 물건지만 봅니다.' },
-            { targetId: 'location-map-page', targetSelector: '[data-demo-id="location-map-page"] [aria-label="샘플 물건지 지도"]', title: '마커 선택', description: '지도 마커를 누르면 우측 상세 카드와 반경분석 기준이 함께 바뀝니다.' },
+            { targetId: 'location-map-page', targetSelector: '[data-demo-id="location-map-page"] [aria-label="물건지 지도"]', title: '마커 선택', description: '실제 지도에서 마커를 누르면 우측 상세 카드와 반경분석 기준이 함께 바뀝니다.' },
             { targetId: 'location-map-page', targetSelector: '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]', title: '지도 분석', description: '우측 패널에서 반경분석, 거리재기, 면적재기 흐름을 같은 용어로 확인합니다.' }
         ],
         actions: [

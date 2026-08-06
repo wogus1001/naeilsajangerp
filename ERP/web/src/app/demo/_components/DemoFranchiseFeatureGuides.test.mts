@@ -6,8 +6,8 @@ const featureConfigSource = readFileSync(new URL('./DemoFranchiseFeatureConfig.t
 const featureGuideSource = readFileSync(new URL('./DemoFranchiseFeatureGuides.ts', import.meta.url), 'utf8');
 
 test('every production franchise feature shown in the demo has a focused guide', () => {
-    const featurePaths = featureConfigSource.match(/'\/(?:dashboard|contracts)\/[^']+': \{/g) ?? [];
-    const guidedPaths = featureGuideSource.match(/'\/(?:dashboard|contracts)\/[^']+': \{/g) ?? [];
+    const featurePaths = featureConfigSource.match(/'\/(?:dashboard|contracts|owner)\/[^']+': \{/g) ?? [];
+    const guidedPaths = featureGuideSource.match(/'\/(?:dashboard|contracts|owner)\/[^']+': \{/g) ?? [];
     assert.deepEqual(guidedPaths.sort(), featurePaths.sort());
     for (const path of featurePaths) {
         assert.match(featureGuideSource, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));

@@ -25,7 +25,12 @@ import {
 } from '@/components/franchise/market-insights/locationMasterUtils';
 import type { FranchiseBrand } from '@/lib/franchise-brands';
 import { buildMarketInsights } from '@/lib/franchise-market-insights';
-import type { DemoActionHandler, DemoRole, DemoScreenId } from '../demoTypes';
+import {
+    DEMO_TOUR_STEP_ADVANCE_EVENT,
+    type DemoActionHandler,
+    type DemoRole,
+    type DemoScreenId
+} from '../demoTypes';
 import {
     DEMO_LOCATION_MANAGERS,
     selectDemoLocationMasterItems
@@ -104,6 +109,9 @@ export function DemoLocationAdapter({ role, onScreenChange, onSimulate }: DemoLo
         managerId: defaultManagerId
     }));
     const [deletingLocationId, setDeletingLocationId] = React.useState('');
+    const [guidedRecordLocationId, setGuidedRecordLocationId] = React.useState('');
+    const [guidedRecordRequestKey, setGuidedRecordRequestKey] = React.useState(0);
+    const [guidedRecordPresentation, setGuidedRecordPresentation] = React.useState(false);
     const [interactionRuntime] = React.useState(createDemoLocationRuntime);
     const filteredLocations = React.useMemo(
         () => filterLocationMasterItems(locations, filters),
@@ -186,6 +194,23 @@ export function DemoLocationAdapter({ role, onScreenChange, onSimulate }: DemoLo
         onSimulate(`${region} 후보지만 모아봅니다.`);
     };
 
+    React.useEffect(() => {
+        const openGuidedRecord = (event: WindowEventMap[typeof DEMO_TOUR_STEP_ADVANCE_EVENT]) => {
+            setGuidedRecordPresentation(false);
+            if (event.detail.toTargetId !== 'location-message-panel') return;
+            const location = locations[0];
+            if (!location) return;
+            setActiveMarketTab('market-insights');
+            setActiveMarketView('location-list');
+            setFilters(EMPTY_LOCATION_FILTERS);
+            setGuidedRecordLocationId(location.id);
+            setGuidedRecordRequestKey(key => key + 1);
+            setGuidedRecordPresentation(true);
+        };
+        window.addEventListener(DEMO_TOUR_STEP_ADVANCE_EVENT, openGuidedRecord);
+        return () => window.removeEventListener(DEMO_TOUR_STEP_ADVANCE_EVENT, openGuidedRecord);
+    }, [locations]);
+
     return (
         <div className={pageStyles.pageShell} data-demo-id="location-panel">
             <FranchiseWorkspaceHero
@@ -229,10 +254,13 @@ export function DemoLocationAdapter({ role, onScreenChange, onSimulate }: DemoLo
                                     isManagerLoading={false}
                                     isSaving={false}
                                     deletingLocationId={deletingLocationId}
+                                    guidedRecordLocationId={guidedRecordLocationId}
+                                    guidedRecordRequestKey={guidedRecordRequestKey}
+                                    guidedRecordPresentation={guidedRecordPresentation}
                                     addressLookupSource={DEMO_ADDRESS_LOOKUP_SOURCE}
                                     brandSearchSource={DEMO_BRAND_SEARCH_SOURCE}
                                     interactionRuntime={interactionRuntime}
-                                    mapRuntime="offline"
+                                    mapRuntime="live"
                                     onFormChange={updateForm}
                                     onFiltersChange={patch => setFilters(current => ({ ...current, ...patch }))}
                                     onResetForm={resetForm}

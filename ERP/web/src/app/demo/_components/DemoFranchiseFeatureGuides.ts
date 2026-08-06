@@ -45,6 +45,16 @@ export const DEMO_FEATURE_GUIDES: Record<DemoFeatureSurfacePath, DemoGuide> = {
             { targetId: 'owner-portal-accounts-tab', targetSelector: '[role="tablist"][aria-label="점주 소통 업무"] button:nth-of-type(7)', title: '운영점 계정 관리', description: '운영점별 점주 계정을 발급하고 로그인 상태와 비밀번호 재발급을 관리합니다.' }
         ]
     },
+    '/owner/dashboard': {
+        badge: '점주 홈페이지',
+        title: '점주가 본사 요청과 매장 업무를 직접 확인합니다.',
+        description: '발급받은 계정으로 공지, 체크리스트, 매장 정보, 시설 문의를 한곳에서 처리합니다.',
+        steps: [
+            { targetId: 'owner-dashboard-summary', targetSelector: 'section[aria-label="점주 업무 요약"]', title: '오늘 처리할 업무 확인', description: '미확인 공지, 남은 체크리스트, 처리 대기 요청을 먼저 확인합니다.' },
+            { targetId: 'owner-dashboard-navigation', targetSelector: 'nav[aria-label="점주 포털 메뉴"]', title: '점주 업무 메뉴', description: '내 매장, 공지, 체크리스트, 시설 문의, 정산 제출을 업무별로 선택합니다.' },
+            { targetId: 'owner-dashboard-submissions', targetSelector: 'section[aria-label="최근 제출 이력"]', title: '본사 제출 결과 확인', description: '점주가 본사에 전달한 요청과 검토 상태를 최근 순서로 확인합니다.' }
+        ]
+    },
     '/contracts/electronic': {
         badge: '계약 관리',
         title: '계약 작성부터 서명 완료까지 상태를 놓치지 않습니다.',

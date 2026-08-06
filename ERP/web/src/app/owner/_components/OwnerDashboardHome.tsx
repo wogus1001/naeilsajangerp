@@ -39,7 +39,7 @@ function OwnerDashboardContent({ data }: { readonly data: OwnerDashboardData }) 
                 <DashboardMetric label="처리 대기 요청" value={submittedCount} href="/owner/submissions" />
                 <DashboardMetric label="전체 제출" value={data.submissions.length} href="/owner/submissions" />
             </section>
-            <section className={styles.panel}>
+            <section className={styles.panel} aria-label="최근 제출 이력">
                 <div className={styles.panelHeader}>
                     <div>
                         <h2>최근 제출 이력</h2>

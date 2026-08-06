@@ -23,6 +23,7 @@ type LocationMessagePanelProps = {
     readonly userId: string;
     readonly location: FranchiseLocation | null;
     readonly managerName: string;
+    readonly guidedPresentation?: boolean | undefined;
     readonly runtime?: LocationInteractionRuntime | undefined;
     readonly onOpenChange: (open: boolean) => void;
     readonly onSummaryChange: (summary: FranchiseLocationMessageSummary) => void;
@@ -53,6 +54,7 @@ export function LocationMessagePanel({
     userId,
     location,
     managerName,
+    guidedPresentation = false,
     runtime,
     onOpenChange,
     onSummaryChange
@@ -67,7 +69,11 @@ export function LocationMessagePanel({
     const [updatingMessageId, setUpdatingMessageId] = React.useState('');
     const panelRef = React.useRef<HTMLElement | null>(null);
     const closePanel = React.useCallback(() => onOpenChange(false), [onOpenChange]);
-    useModalFocusTrap({ isOpen: open, onClose: closePanel, dialogRef: panelRef });
+    useModalFocusTrap({
+        isOpen: open && !guidedPresentation,
+        onClose: closePanel,
+        dialogRef: panelRef
+    });
 
     React.useEffect(() => {
         if (!open || !location || !userId) return undefined;
@@ -139,7 +145,14 @@ export function LocationMessagePanel({
                 if (event.target === event.currentTarget) onOpenChange(false);
             }}
         >
-            <section ref={panelRef} className={styles.locationMessagePanel} role="dialog" aria-modal="true" aria-label="물건 기록" tabIndex={-1}>
+            <section
+                ref={panelRef}
+                className={styles.locationMessagePanel}
+                role="dialog"
+                aria-modal={guidedPresentation ? undefined : true}
+                aria-label="물건 기록"
+                tabIndex={-1}
+            >
                 <header className={styles.locationMessageHeader}>
                     <div>
                         <span className={styles.locationMessageEyebrow}><MessageSquare size={14} /> 물건 기록</span>
@@ -154,7 +167,7 @@ export function LocationMessagePanel({
                         <X size={18} />
                     </button>
                     <div className={styles.locationMessageGuide} role="note" aria-label="물건 기록 안내">
-                        본사는 물건 검토에 필요한 요청사항과 확인 정보를 기록하고, 담당자는 요청을 확인해 처리합니다.
+                        본사는 물건 검토 요청과 확인 정보를 기록하고, 담당자는 내용을 확인해 처리합니다.
                     </div>
                 </header>
 

@@ -78,7 +78,7 @@ test('Given demo screen guides When measuring spotlights Then broad workspaces r
         DEMO_SCREEN_GUIDES.locationMap.steps.map(step => step.targetSelector),
         [
             '[data-demo-id="location-map-page"] [aria-label="물건지 지도 필터"]',
-            '[data-demo-id="location-map-page"] [aria-label="샘플 물건지 지도"]',
+            '[data-demo-id="location-map-page"] [aria-label="물건지 지도"]',
             '[data-demo-id="location-map-page"] [aria-label="지도 분석 도구"]'
         ]
     );

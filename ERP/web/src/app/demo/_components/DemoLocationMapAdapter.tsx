@@ -190,7 +190,7 @@ export function DemoLocationMapAdapter({ role, onScreenChange, onSimulate }: Dem
                     measurementDistanceMeters={measurementDistanceMeters}
                     measurementMode={measurementMode}
                     measurementPoints={measurementPoints}
-                    mapRuntime="offline"
+                    mapRuntime="live"
                     onKakaoReadyChange={setKakaoReady}
                     onMeasurementClear={clearMeasurement}
                     onMeasurementModeChange={changeMeasurementMode}

@@ -15,6 +15,10 @@ export const DEMO_FEATURE_SURFACES = {
         title: '점주 소통',
         description: '운영점별 점주 계정, 공지, 제출 요청을 본사에서 관리합니다.'
     },
+    '/owner/dashboard': {
+        title: '점주 홈페이지',
+        description: '본사에서 발급받은 계정으로 점주가 공지, 체크리스트, 제출 요청을 처리합니다.'
+    },
     '/contracts/electronic': {
         title: '전자계약',
         description: '가맹 계약서와 본사 양식을 만들고 발송·서명 상태를 한곳에서 확인합니다.'

@@ -124,6 +124,7 @@ export function DemoTourOverlay({
     useEffect(() => {
         if (!active) return;
 
+        let targetRefreshFrame = 0;
         const updateSuspendedState = () => {
             const productionDialogs = Array.from(
                 document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
@@ -139,6 +140,8 @@ export function DemoTourOverlay({
                 target && productionDialogs.some(dialog => dialog.contains(target))
             );
             setIsSuspended(hasProductionDialog && !targetInsideProductionDialog);
+            window.cancelAnimationFrame(targetRefreshFrame);
+            targetRefreshFrame = window.requestAnimationFrame(refreshTarget);
         };
         const observer = new MutationObserver(updateSuspendedState);
         updateSuspendedState();
@@ -150,9 +153,10 @@ export function DemoTourOverlay({
         });
 
         return () => {
+            window.cancelAnimationFrame(targetRefreshFrame);
             observer.disconnect();
         };
-    }, [active, step]);
+    }, [active, refreshTarget, step]);
 
     const cardStyle = useMemo<CSSProperties>(() => {
         if (!primaryTargetRect) {

@@ -29,6 +29,9 @@ type LocationMasterSectionProps = {
     readonly isManagerLoading: boolean;
     readonly isSaving: boolean;
     readonly deletingLocationId: string;
+    readonly guidedRecordLocationId?: string | undefined;
+    readonly guidedRecordRequestKey?: number | undefined;
+    readonly guidedRecordPresentation?: boolean | undefined;
     readonly addressLookupSource?: KakaoAddressLookupSource | undefined;
     readonly brandSearchSource?: FranchiseBrandSearchSource | undefined;
     readonly interactionRuntime?: LocationInteractionRuntime | undefined;
@@ -57,6 +60,9 @@ export function LocationMasterSection({
     isManagerLoading,
     isSaving,
     deletingLocationId,
+    guidedRecordLocationId,
+    guidedRecordRequestKey,
+    guidedRecordPresentation,
     addressLookupSource,
     brandSearchSource,
     interactionRuntime,
@@ -122,6 +128,9 @@ export function LocationMasterSection({
                             locations={filteredLocations}
                             managerOptions={managerOptions}
                             deletingLocationId={deletingLocationId}
+                            guidedRecordLocationId={guidedRecordLocationId}
+                            guidedRecordRequestKey={guidedRecordRequestKey}
+                            guidedRecordPresentation={guidedRecordPresentation}
                             interactionRuntime={interactionRuntime}
                             mapRuntime={mapRuntime}
                             onEdit={editLocation}

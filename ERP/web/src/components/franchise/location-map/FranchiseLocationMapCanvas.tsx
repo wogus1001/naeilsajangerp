@@ -254,6 +254,7 @@ function FranchiseLocationMapLiveCanvas({
         <div
             ref={mapHostRef}
             className={`${styles.mapInner} ${isRadiusPicking || isMeasuring ? styles.mapInnerPicking : ''}`}
+            aria-label="물건지 지도"
         >
             <Map
                 center={displayCenter}

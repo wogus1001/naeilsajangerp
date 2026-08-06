@@ -21,7 +21,8 @@ test('demo map adapter composes the controlled production workspace', () => {
     const source = readSource(adapterPath);
 
     assert.match(source, /FranchiseLocationMapWorkspace/);
-    assert.match(source, /mapRuntime="offline"/);
+    assert.match(source, /mapRuntime="live"/);
+    assert.doesNotMatch(source, /mapRuntime="offline"/);
     assert.match(source, /onMeasurementPointAdd/);
     assert.match(source, /onRadiusCenterPick/);
     assert.match(source, /comparisonRadiusPoints/);

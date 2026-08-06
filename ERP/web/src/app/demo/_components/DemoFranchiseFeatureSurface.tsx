@@ -5,9 +5,9 @@ import ElectronicContractsPage from '@/app/(main)/contracts/electronic/_componen
 import { VendorContractRegisterPage } from '@/app/(main)/contracts/vendor/VendorContractRegisterPage';
 import VendorContractsPage from '@/app/(main)/contracts/vendor/VendorContractsPage';
 import FranchiseVendorsPage from '@/app/(main)/dashboard/franchise-vendors/page';
+import { OwnerDashboardHome } from '@/app/owner/_components/OwnerDashboardHome';
 import { FranchiseWorkspaceHero } from '@/components/franchise/FranchiseWorkspaceHero';
 import { LaborPlanningPanel } from '@/components/franchise/operations/LaborPlanningPanel';
-import { OwnerPortalPanel } from '@/components/franchise/operations/OwnerPortalPanel';
 import { SupervisionPanel } from '@/components/franchise/operations/SupervisionPanel';
 import { FranchiseSchedulePage } from '@/components/franchise/schedules/FranchiseSchedulePage';
 import pageStyles from '../../(main)/dashboard/franchise-leads/page.module.css';
@@ -18,6 +18,7 @@ import {
     DEMO_FEATURE_SURFACES,
     type DemoFeatureSurfacePath
 } from './DemoFranchiseFeatureConfig';
+import { DemoOwnerPortalAdapter } from './DemoOwnerPortalAdapter';
 import type { DemoRole } from '../demoTypes';
 
 type DemoFranchiseFeatureSurfaceProps = {
@@ -103,7 +104,7 @@ export function DemoFranchiseFeatureSurface({ path, role, search = '' }: DemoFra
             {path === '/dashboard/franchise-operations/owner-portal' ? (
                 <OperationsSurface title={surface.title} description={surface.description}>
                     <div className={pageStyles.operationWorkspaceBody}>
-                        <OwnerPortalPanel
+                        <DemoOwnerPortalAdapter
                             userId={demoUserId}
                             companyName="데모"
                             locations={DEMO_OPERATION_LOCATIONS}
@@ -120,6 +121,7 @@ export function DemoFranchiseFeatureSurface({ path, role, search = '' }: DemoFra
                     initialContractId={new URLSearchParams(search).get('contractId') || ''}
                 />
             ) : null}
+            {path === '/owner/dashboard' ? <OwnerDashboardHome /> : null}
         </div>
     );
 }

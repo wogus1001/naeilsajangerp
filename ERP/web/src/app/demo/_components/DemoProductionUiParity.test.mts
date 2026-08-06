@@ -36,6 +36,8 @@ test('manager demo adapters compose production operational surfaces', () => {
 test('demo guide transitions keep interactive targets visible before advancing', () => {
     const leadAdapter = readSource('./DemoLeadDbAdapter.tsx');
     const leadController = readSource('./useDemoLeadDbController.tsx');
+    const locationAdapter = readSource('./DemoLocationAdapter.tsx');
+    const locationSection = readSource('../../../components/franchise/market-insights/LocationMasterSection.tsx');
     const locationList = readSource('../../../components/franchise/market-insights/LocationMasterList.tsx');
     const locationMessagePanel = readSource('../../../components/franchise/market-insights/LocationMessagePanel.tsx');
 
@@ -55,12 +57,24 @@ test('demo guide transitions keep interactive targets visible before advancing',
     assert.match(leadController, /tourPromotedLeadIdRef\.current/);
     assert.match(leadController, /if \(!tourPromotedLeadIdRef\.current\)/);
     assert.doesNotMatch(leadController, /onSimulate\(`\$\{lead\.name\} 가맹 희망자 승격`\)/);
+    assert.match(locationAdapter, /event\.detail\.toTargetId !== 'location-message-panel'/);
+    assert.match(locationAdapter, /setGuidedRecordRequestKey\(key => key \+ 1\)/);
+    assert.match(locationAdapter, /setGuidedRecordPresentation\(false\)/);
+    assert.match(locationAdapter, /setGuidedRecordPresentation\(true\)/);
+    assert.match(locationSection, /guidedRecordLocationId=\{guidedRecordLocationId\}/);
+    assert.match(locationSection, /guidedRecordPresentation=\{guidedRecordPresentation\}/);
+    assert.match(locationList, /setRecordLocationId\(guidedRecordLocationId\)/);
+    assert.match(locationList, /setGuidedPanelLocationId\(guidedRecordLocationId\)/);
+    assert.match(locationList, /guidedPresentation=\{selectedRecordLocation\.id === guidedPanelLocationId\}/);
+    assert.match(locationList, /setGuidedPanelLocationId\(''\)/);
     assert.match(locationList, /aria-label=\{`\$\{location\.name\} 후보지 수정`\}/);
     assert.match(
         locationMessagePanel,
-        /본사는 물건 검토에 필요한 요청사항과 확인 정보를 기록하고, 담당자는 요청을 확인해 처리합니다\./
+        /본사는 물건 검토 요청과 확인 정보를 기록하고, 담당자는 내용을 확인해 처리합니다\./
     );
     assert.match(locationMessagePanel, /aria-label="물건 기록 안내"/);
+    assert.match(locationMessagePanel, /isOpen:\s*open && !guidedPresentation/);
+    assert.match(locationMessagePanel, /aria-modal=\{guidedPresentation \? undefined : true\}/);
 });
 
 test('lead detail guide exposes production sections and remains visible over the detail dialog', () => {
@@ -74,6 +88,7 @@ test('lead detail guide exposes production sections and remains visible over the
 
     assert.match(tour, /targetInsideProductionDialog/);
     assert.match(tour, /hasProductionDialog && !targetInsideProductionDialog/);
+    assert.match(tour, /window\.requestAnimationFrame\(refreshTarget\)/);
     assert.match(tour, /onStepAdvanceAction\?\.\(step, previousStep\)/);
     assert.match(demoStyles, /\.tourLayer\s*\{[\s\S]*?z-index:\s*6000;/);
     assert.match(basicInfo, /aria-label="가맹 희망자 기본정보"/);
@@ -148,6 +163,7 @@ test('demo franchise sidebar keeps the production menu hierarchy', () => {
     const shell = readSource('./DemoErpShell.tsx');
     const demoShell = readSource('./DemoShell.tsx');
     const featureSurface = readSource('./DemoFranchiseFeatureSurface.tsx');
+    const ownerPortalAdapter = readSource('./DemoOwnerPortalAdapter.tsx');
     const featureConfig = readSource('./DemoFranchiseFeatureConfig.ts');
     const featureGuides = readSource('./DemoFranchiseFeatureGuides.ts');
     const fixtureApi = readSource('./DemoFeatureApiFixtures.ts');
@@ -162,6 +178,7 @@ test('demo franchise sidebar keeps the production menu hierarchy', () => {
         '/dashboard/franchise-operations/schedule',
         '/dashboard/franchise-supervision',
         '/dashboard/franchise-operations/owner-portal',
+        '/owner/dashboard',
         '/contracts/electronic',
         '/dashboard/franchise-vendors',
         '/contracts/vendor',
@@ -177,7 +194,10 @@ test('demo franchise sidebar keeps the production menu hierarchy', () => {
     assert.match(featureSurface, /<LaborPlanningPanel/);
     assert.match(featureSurface, /<FranchiseSchedulePage/);
     assert.match(featureSurface, /<SupervisionPanel/);
-    assert.match(featureSurface, /<OwnerPortalPanel/);
+    assert.match(featureSurface, /<DemoOwnerPortalAdapter/);
+    assert.match(ownerPortalAdapter, /<OwnerPortalPanel/);
+    assert.match(ownerPortalAdapter, /DEMO_TOUR_STEP_ADVANCE_EVENT/);
+    assert.match(featureSurface, /<OwnerDashboardHome/);
     assert.match(featureSurface, /<ElectronicContractsPage/);
     assert.match(featureSurface, /<FranchiseVendorsPage/);
     assert.match(featureSurface, /<VendorContractsPage/);

@@ -229,6 +229,53 @@ const demoOwnerSubmissions = [
     }
 ] as const;
 
+const demoOwnerDashboard = {
+    account: {
+        ownerName: '박점주',
+        temporaryPassword: false
+    },
+    location: {
+        id: 'demo-operation-gangnam',
+        name: '미카도 강남역점',
+        brand: '미카도',
+        status: '운영중',
+        region: '서울 강남구',
+        address: '서울 강남구 테헤란로 132',
+        basics: {
+            businessNumber: '123-45-67890',
+            representativeName: '박점주',
+            contactPhone: '010-4101-2001',
+            deposit: '7,000만원',
+            monthlyRent: '520만원',
+            maintenanceFee: '45만원',
+            areaSize: '28평',
+            tableCount: '14',
+            seatCount: '42',
+            memo: '점심 피크 운영 동선을 확인합니다.'
+        }
+    },
+    notices: [
+        {
+            id: 'demo-owner-notice',
+            title: '8월 운영 정책 및 신메뉴 안내',
+            body: '신메뉴 적용일과 매장 안내물 교체 일정을 확인해주세요.',
+            createdAt: DEMO_NOW,
+            readAt: null,
+            attachments: []
+        }
+    ],
+    openingProject: {
+        id: 'demo-operation-gangnam',
+        status: 'owner_portal_checklist',
+        tasks: [
+            { id: 'signage', title: '간판 설치 확인', memo: '외부 조명 포함', status: '완료' },
+            { id: 'logistics', title: '초도 물류 입고 확인', memo: '냉장·냉동 분리', status: '진행중' }
+        ],
+        issues: []
+    },
+    submissions: demoOwnerSubmissions
+} as const;
+
 const demoVendorSeeds = [
     {
         id: 'demo-vendor-interior',
@@ -607,6 +654,9 @@ export function getDemoFeatureApiResponse(requestUrl: URL, method: string, init?
                 submissions: demoOwnerSubmissions
             }
         });
+    }
+    if (path === '/api/owner/dashboard') {
+        return jsonResponse({ data: demoOwnerDashboard });
     }
     if (path === '/api/franchise-owner-portal/reminders') {
         return jsonResponse({ data: { reminders: [], stats: { acknowledged: 2, unacknowledged: 1, ownerCount: 3 } } });
