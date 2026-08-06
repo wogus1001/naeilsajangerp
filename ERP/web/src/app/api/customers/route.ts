@@ -10,6 +10,7 @@ import {
     resolveUserUuid
 } from '@/lib/api-auth';
 import { fail, ok } from '@/lib/api-response';
+import { canUpdateCustomer } from '@/lib/customer-update-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -384,8 +385,12 @@ export async function PUT(request: Request) {
         if (!canAccessCompanyResource(requesterProfile, existing)) {
             return fail(403, 'FORBIDDEN', 'Forbidden: cross-company access denied');
         }
-        if (!isAdmin(requesterProfile) && requesterProfile.role !== 'manager' && existing.manager_id !== requesterProfile.id) {
-            return fail(403, 'FORBIDDEN', 'Forbidden: customer update requires assigned manager or team lead');
+        if (!canUpdateCustomer({
+            requesterId: requesterProfile.id,
+            requesterRole: requesterProfile.role,
+            assignedManagerId: existing.manager_id
+        })) {
+            return fail(403, 'FORBIDDEN', '다른 담당자에게 배정된 고객은 담당자 본인 또는 팀 관리자만 수정할 수 있습니다.');
         }
 
         const updates: any = { updated_at: new Date().toISOString() };

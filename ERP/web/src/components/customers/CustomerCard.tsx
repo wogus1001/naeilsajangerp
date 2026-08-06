@@ -1,6 +1,6 @@
 "use client";
 
-import { readApiJson } from '@/utils/apiResponse';
+import { readApiError, readApiJson } from '@/utils/apiResponse';
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, X, Search, FileText, Trash2, Copy, Printer, Star, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import styles from '@/app/(main)/customers/register/page.module.css';
@@ -305,9 +305,9 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
                     return newData;
                 }
                 return data;
-                return data;
             } else {
-                showAlert('저장에 실패했습니다.', 'error');
+                const responseBody = await res.json().catch(() => null);
+                showAlert(readApiError(responseBody) || '저장에 실패했습니다.', 'error');
                 return null;
             }
         } catch (error) {
@@ -354,6 +354,7 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
     };
 
     const handleHistoryAdd = async (newHistory: any) => {
+        const previousData = formData;
         const updatedHistory = [newHistory, ...formData.history];
         const updatedData = { ...formData, history: updatedHistory };
         setFormData(updatedData);
@@ -364,6 +365,8 @@ export default function CustomerCard({ id, onClose, onSuccess, isModal = false, 
         if (saved) {
             // Also sync to schedule
             await createScheduleSync(newHistory, saved.name, saved.id!);
+        } else {
+            setFormData(previousData);
         }
     };
 

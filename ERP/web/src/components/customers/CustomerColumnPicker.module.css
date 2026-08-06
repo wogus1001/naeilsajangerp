@@ -1,0 +1,148 @@
+.picker {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.summary {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+    color: #495057;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+}
+
+.summary::-webkit-details-marker {
+    display: none;
+}
+
+.summary:hover {
+    border-color: #adb5bd;
+    background: #f8f9fa;
+}
+
+.panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 1000;
+    width: 340px;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(33, 37, 41, 0.14);
+}
+
+.heading {
+    padding: 2px 4px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.heading strong {
+    color: #212529;
+    font-size: 14px;
+}
+
+.heading span {
+    color: #868e96;
+    font-size: 12px;
+}
+
+.list {
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.row {
+    min-height: 40px;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+}
+
+.row:hover {
+    border-color: #e9ecef;
+    background: #f8f9fa;
+}
+
+.dragging {
+    opacity: 0.45;
+    border-color: #74c0fc;
+    background: #e7f5ff;
+}
+
+.grip {
+    color: #adb5bd;
+    cursor: grab;
+}
+
+.label {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #343a40;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.label input {
+    margin: 0;
+}
+
+.label small {
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: #e7f5ff;
+    color: #1971c2;
+    font-size: 10px;
+}
+
+.actions {
+    display: flex;
+    gap: 2px;
+}
+
+.actions button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #fff;
+    color: #495057;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.actions button:hover:not(:disabled) {
+    border-color: #74c0fc;
+    background: #e7f5ff;
+    color: #1971c2;
+}
+
+.actions button:disabled {
+    color: #ced4da;
+    cursor: not-allowed;
+}

@@ -13,36 +13,21 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { getApiAuthHeaders } from '@/utils/apiAuthHeaders';
 import { parseSearchTerms } from '@/utils/search';
 import { getRequesterId, getStoredCompanyId, getStoredCompanyName, getStoredUser } from '@/utils/userUtils';
+import CustomerColumnPicker from '@/components/customers/CustomerColumnPicker';
+import CustomerListTable from '@/components/customers/CustomerListTable';
+import {
+    CUSTOMER_COLUMN_PREFERENCES_STORAGE_KEY,
+    CUSTOMER_LIST_COLUMN_WIDTHS,
+    DEFAULT_CUSTOMER_COLUMN_PREFERENCES,
+    CustomerColumnPreferences,
+    CustomerListColumnKey,
+    CustomerListRecord,
+    CustomerListSortConfig,
+    parseCustomerColumnPreferences
+} from '@/components/customers/customerListTableConfig';
+import { getCustomerListSortValue } from '@/components/customers/customerListTableValues';
 
-interface Customer {
-    id: string;
-    companyId?: string;
-    companyName?: string;
-    name: string;
-    grade: string;
-    gender: 'M' | 'F';
-    class: string;
-    status: string;
-    feature: string;
-    address: string;
-    mobile: string;
-    companyPhone: string;
-    wantedDepositMin: string;
-    wantedDepositMax: string;
-    wantedRentMin: string;
-    wantedRentMax: string;
-    wantedItem: string;
-    wantedIndustry: string;
-    wantedArea: string;
-    createdAt: string;
-    updatedAt: string;
-    managerId: string;
-    manager_id?: string; // UUID from DB
-    isFavorite?: boolean;
-    memoInterest?: string;
-    memoHistory?: string;
-    history?: any[];
-}
+type Customer = CustomerListRecord;
 
 const STATUS_OPTIONS = [
     { value: 'progress', label: '추진', class: styles.badgeProgress },
@@ -51,11 +36,6 @@ const STATUS_OPTIONS = [
     { value: 'common', label: '공동', class: styles.badgeCommon },
     { value: 'complete', label: '완료', class: styles.badgeComplete },
 ];
-
-interface SortConfig {
-    key: string;
-    direction: 'asc' | 'desc';
-}
 
 function CustomerListPageContent() {
     const router = useRouter();
@@ -130,15 +110,32 @@ function CustomerListPageContent() {
     const [uploadFiles, setUploadFiles] = useState<{ main: File | null, promoted: File | null, history: File | null }>({ main: null, promoted: null, history: null });
 
     // New Features State
-    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+    const [sortConfig, setSortConfig] = useState<CustomerListSortConfig | null>(null);
     const [colWidths, setColWidths] = useState<Record<string, number>>({
-        checkbox: 30, no: 40, star: 30, name: 100, grade: 60, gender: 40,
-        class: 90, status: 80, feature: 200, address: 300, mobile: 120,
-        companyPhone: 120, deposit: 100, rent: 100, wantedItem: 80,
-        wantedIndustry: 80, wantedArea: 80, createdAt: 120, manager: 80,
-        latestWork: 140
+        checkbox: 30,
+        star: 52,
+        ...CUSTOMER_LIST_COLUMN_WIDTHS
     });
+    const [columnPreferences, setColumnPreferences] = useState<CustomerColumnPreferences>(
+        DEFAULT_CUSTOMER_COLUMN_PREFERENCES
+    );
+    const [columnPreferencesReady, setColumnPreferencesReady] = useState(false);
     const resizingRef = useRef<{ key: string, startX: number, startWidth: number } | null>(null);
+
+    useEffect(() => {
+        setColumnPreferences(parseCustomerColumnPreferences(
+            localStorage.getItem(CUSTOMER_COLUMN_PREFERENCES_STORAGE_KEY)
+        ));
+        setColumnPreferencesReady(true);
+    }, []);
+
+    useEffect(() => {
+        if (!columnPreferencesReady) return;
+        localStorage.setItem(
+            CUSTOMER_COLUMN_PREFERENCES_STORAGE_KEY,
+            JSON.stringify(columnPreferences)
+        );
+    }, [columnPreferences, columnPreferencesReady]);
 
     // Category Filter State
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -595,22 +592,6 @@ function CustomerListPageContent() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isCardOpen]);
 
-    const getBadgeClass = (grade: string) => {
-        switch (grade) {
-            case 'progress': return styles.badgeProgress;
-            case 'manage': return styles.badgeManage;
-            case 'hold': return styles.badgeHold;
-            case 'common': return styles.badgeCommon;
-            case 'complete': return styles.badgeComplete;
-            default: return styles.badgeManage;
-        }
-    };
-
-    const getGradeLabel = (grade: string) => {
-        const found = STATUS_OPTIONS.find(o => o.value === grade);
-        return found ? found.label : grade;
-    };
-
     const toggleStatusFilter = (value: string) => {
         setSelectedStatuses(prev =>
             prev.includes(value)
@@ -642,14 +623,8 @@ function CustomerListPageContent() {
         }
     };
 
-    const getLatestWorkDate = (history: any[]) => {
-        if (!history || history.length === 0) return '-';
-        const sorted = [...history].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        return sorted[0].date || '-';
-    };
-
     // Sorting Logic
-    const handleSort = (key: string) => {
+    const handleSort = (key: CustomerListColumnKey) => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -713,22 +688,8 @@ function CustomerListPageContent() {
         // 5. Sorting
         if (sortConfig) {
             result.sort((a, b) => {
-                // Handle complex keys if any
-                let valA = (a as any)[sortConfig.key];
-                let valB = (b as any)[sortConfig.key];
-
-                if (sortConfig.key === 'no') {
-                    // Sort by createdAt for 'No' column logic usually, or just leave it since No is index
-                    valA = a.createdAt;
-                    valB = b.createdAt;
-                } else if (sortConfig.key === 'manager') {
-                    valA = managers[a.managerId || ''] || a.managerId || '';
-                    valB = managers[b.managerId || ''] || b.managerId || '';
-                } else if (sortConfig.key === 'latestWork') {
-                    // This is derived, tricky to sort efficiently in memo, but okay for small datasets
-                    valA = getLatestWorkDate(a.history || []);
-                    valB = getLatestWorkDate(b.history || []);
-                }
+                const valA = getCustomerListSortValue(a, sortConfig.key, managers);
+                const valB = getCustomerListSortValue(b, sortConfig.key, managers);
 
                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -992,136 +953,30 @@ function CustomerListPageContent() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    <CustomerColumnPicker
+                        preferences={columnPreferences}
+                        onChangeAction={setColumnPreferences}
+                    />
                     <ViewModeSwitcher currentMode={viewMode} onModeChange={setViewMode} />
                 </div>
             </div>
 
             {/* Table */}
             <div className={styles.tableContainer}>
-                <table className={styles.table} style={{ tableLayout: 'fixed' }}>
-                    <colgroup>
-                        <col style={{ width: colWidths.checkbox }} />
-                        <col style={{ width: colWidths.no }} />
-                        <col style={{ width: colWidths.star }} />
-                        <col style={{ width: colWidths.name }} />
-                        <col style={{ width: colWidths.grade }} />
-                        <col style={{ width: colWidths.gender }} />
-                        <col style={{ width: colWidths.class }} />
-                        <col style={{ width: colWidths.status }} />
-                        <col style={{ width: colWidths.feature }} />
-                        <col style={{ width: colWidths.address }} />
-                        <col style={{ width: colWidths.mobile }} />
-                        <col style={{ width: colWidths.companyPhone }} />
-                        <col style={{ width: colWidths.deposit }} />
-                        <col style={{ width: colWidths.rent }} />
-                        <col style={{ width: colWidths.wantedItem }} />
-                        <col style={{ width: colWidths.wantedIndustry }} />
-                        <col style={{ width: colWidths.wantedArea }} />
-                        <col style={{ width: colWidths.createdAt }} />
-                        <col style={{ width: colWidths.manager }} />
-                        <col style={{ width: colWidths.latestWork }} />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th>
-                                <input
-                                    type="checkbox"
-                                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                                    checked={filteredCustomers.length > 0 && selectedIds.length === filteredCustomers.length}
-                                />
-                                <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'checkbox')} />
-                            </th>
-                            <th onClick={() => handleSort('no')} style={{ cursor: 'pointer' }}>
-                                No
-                                <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'no')} />
-                            </th>
-                            <th><div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'star')} /></th>
-                            <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>고객명 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'name')} /></th>
-                            <th onClick={() => handleSort('grade')} style={{ cursor: 'pointer' }}>등급 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'grade')} /></th>
-                            <th onClick={() => handleSort('gender')} style={{ cursor: 'pointer' }}>성별 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'gender')} /></th>
-                            <th onClick={() => handleSort('class')} style={{ cursor: 'pointer' }}>분류 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'class')} /></th>
-                            <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>진행상태 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'status')} /></th>
-                            <th onClick={() => handleSort('feature')} style={{ cursor: 'pointer' }}>특징 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'feature')} /></th>
-                            <th onClick={() => handleSort('address')} style={{ cursor: 'pointer' }}>주소 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'address')} /></th>
-                            <th onClick={() => handleSort('mobile')} style={{ cursor: 'pointer' }}>핸드폰 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'mobile')} /></th>
-                            <th onClick={() => handleSort('companyPhone')} style={{ cursor: 'pointer' }}>회사전화 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'companyPhone')} /></th>
-                            <th onClick={() => handleSort('wantedDepositMin')} style={{ cursor: 'pointer' }}>보증금 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'deposit')} /></th>
-                            <th onClick={() => handleSort('wantedRentMin')} style={{ cursor: 'pointer' }}>월세 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'rent')} /></th>
-                            <th onClick={() => handleSort('wantedItem')} style={{ cursor: 'pointer' }}>찾는물건 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'wantedItem')} /></th>
-                            <th onClick={() => handleSort('wantedIndustry')} style={{ cursor: 'pointer' }}>찾는업종 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'wantedIndustry')} /></th>
-                            <th onClick={() => handleSort('wantedArea')} style={{ cursor: 'pointer' }}>찾는지역 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'wantedArea')} /></th>
-                            <th onClick={() => handleSort('createdAt')} style={{ cursor: 'pointer' }}>등록일 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'createdAt')} /></th>
-                            <th onClick={() => handleSort('manager')} style={{ cursor: 'pointer' }}>담당자 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'manager')} /></th>
-                            <th onClick={() => handleSort('latestWork')} style={{ cursor: 'pointer' }}>작업일 <div className={styles.resizer} onMouseDown={(e) => handleResizeMouseDown(e, 'latestWork')} /></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredCustomers.map((customer, index) => (
-                            <tr key={customer.id} className={styles.tr} onClick={() => handleRowClick(customer.id)}>
-                                <td onClick={(e) => e.stopPropagation()}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedIds.includes(customer.id)}
-                                        onChange={(e) => toggleSelectOne(customer.id, e.target.checked)}
-                                    />
-                                </td>
-                                <td>
-                                    {
-                                        (sortConfig?.key === 'createdAt' || sortConfig?.key === 'no') && sortConfig.direction === 'asc'
-                                            ? index + 1
-                                            : filteredCustomers.length - index
-                                    }
-                                </td>
-                                <td onClick={(e) => toggleFavorite(e, customer)} style={{ cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible' }}>
-                                    <Star
-                                        size={16}
-                                        fill={customer.isFavorite ? "#FAB005" : "none"}
-                                        color={customer.isFavorite ? "#FAB005" : "#ced4da"}
-                                        style={{ cursor: 'pointer' }}
-                                    />
-                                </td>
-                                <td style={{ fontWeight: 'bold' }}>
-                                    {customer.name}
-                                </td>
-                                <td>
-                                    <span className={`${styles.badge} ${getBadgeClass(customer.grade)}`}>
-                                        {getGradeLabel(customer.grade)}
-                                    </span>
-                                </td>
-                                <td>{customer.gender === 'F' ? '여' : '남'}</td>
-                                {/* 물건등급 - 진행상태 영문값이 잘못 들어간 경우 표시하지 않음 */}
-                                <td className={styles.classBadge}>{
-                                    (() => {
-                                        const cls = customer.class;
-                                        // 진행상태 값이 class에 잘못 들어간 경우 빈칸으로 표시
-                                        const invalidValues = ['progress', 'manage', 'hold', 'common', 'complete', 'completed'];
-                                        if (!cls || invalidValues.includes(cls)) return '';
-                                        return cls;
-                                    })()
-                                }</td>
-                                <td>{customer.status}</td>
-                                <td style={{ textAlign: 'left' }}>{customer.feature}</td>
-                                <td style={{ textAlign: 'left' }}>{customer.address}</td>
-                                <td>{customer.mobile}</td>
-                                <td>{customer.companyPhone}</td>
-                                <td style={{ color: 'blue' }}>
-                                    {(customer.wantedDepositMin || customer.wantedDepositMax) ?
-                                        `${customer.wantedDepositMin || '0'}~${customer.wantedDepositMax || ''}` : '-'}
-                                </td>
-                                <td style={{ color: 'blue' }}>
-                                    {(customer.wantedRentMin || customer.wantedRentMax) ?
-                                        `${customer.wantedRentMin || '0'}~${customer.wantedRentMax || ''}` : '-'}
-                                </td>
-                                <td>{customer.wantedItem}</td>
-                                <td>{customer.wantedIndustry}</td>
-                                <td>{customer.wantedArea}</td>
-                                <td>{(customer.createdAt || '').substring(0, 10)}</td>
-                                <td>{managers[customer.managerId || customer.manager_id || ''] || (customer.managerId || '-')}</td>
-                                <td style={{ color: '#228be6' }}>{getLatestWorkDate(customer.history || [])}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <CustomerListTable
+                    customers={filteredCustomers}
+                    selectedIds={selectedIds}
+                    preferences={columnPreferences}
+                    columnWidths={colWidths}
+                    managers={managers}
+                    sortConfig={sortConfig}
+                    onSortAction={handleSort}
+                    onResizeStartAction={handleResizeMouseDown}
+                    onSelectAllAction={toggleSelectAll}
+                    onSelectOneAction={toggleSelectOne}
+                    onRowClickAction={handleRowClick}
+                    onToggleFavoriteAction={toggleFavorite}
+                />
             </div>
 
             {/* Footer */}

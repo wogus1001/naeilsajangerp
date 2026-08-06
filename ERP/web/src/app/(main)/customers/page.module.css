@@ -104,6 +104,34 @@
     color: #343a40;
 }
 
+.favoriteHeader,
+.favoriteCell {
+    text-align: center;
+}
+
+.favoriteButton {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favoriteButton:hover {
+    background: #fff9db;
+}
+
+.favoriteButton:focus-visible {
+    outline: 2px solid #4c6ef5;
+    outline-offset: 1px;
+}
+
 /* Row Hover */
 .tr:hover {
     background-color: #f8f9fa;
@@ -512,6 +540,19 @@
     z-index: 1;
 }
 
-.resizer:hover, .resizing {
-    background-color: #228be6; /* Highlight on hover/resize */
+.resizer::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    bottom: 20%;
+    left: 50%;
+    width: 1px;
+    background-color: #dee2e6;
+    transform: translateX(-50%);
+}
+
+.resizer:hover::after,
+.resizing::after {
+    width: 2px;
+    background-color: #228be6;
 }
