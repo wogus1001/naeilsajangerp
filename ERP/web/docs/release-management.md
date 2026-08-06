@@ -238,6 +238,15 @@ YYYY-MM-DD
 
 ## Current Release Baseline
 
+- 2026-08-06 프랜차이즈 데모 업무 스토리·실화면 일치 마감
+  - 작업 브랜치: `codex/franchise-lead-ui-polish-20260804`
+  - 기능 커밋: `4253ecb feat(demo): 프랜차이즈 체험 흐름과 실화면 일치 보강`, `a2db4cc feat(demo): 출점 검토와 점주 포털 체험 보강`, `d848868 feat(demo): 체험 선택 진입 동선 개선`, `a1b286c feat(demo): 체험 스토리 안내와 전환 안정화`, `348b518 fix(franchise): 중복 연락처 오류 문구 한글화`
+  - 주요 기능: 실제 프랜차이즈 메뉴·컴포넌트를 사용하는 전체 흐름과 4개 업무 시나리오, 화면/탭/상세 패널 간 투어 전환, 물건 기록·지도·정보공개서·점주 계정/포털 체험, 중복 연락처 한국어 안내를 한 배포 단위로 승격한다.
+  - 검증: 전체 테스트 1,103건, 데모 집중 회귀 32건, 중복 연락처 회귀 6건, TypeScript, 전체 ESLint, production build, `git diff --check`, 로컬 브라우저 전체 스토리 QA와 독립 코드·목표·보안·QA·최종 게이트 리뷰를 통과했다.
+  - SQL/env: 신규 SQL과 환경변수 변경 없음.
+  - 배포: 기능·문서 커밋을 작업 브랜치에 push한 뒤 동일 최종 소스를 Vercel Dev 환경과 `naeilsajang` production에 순서대로 직접 배포한다. 보호된 `dev`, `main` 브랜치는 이번 요청에서 직접 변경하지 않는다. Dev는 `https://naeilsajang-dev.vercel.app`, production은 `https://www.fcerp.co.kr`와 `https://fcerp.co.kr`의 READY 상태와 주요 공개 경로 응답을 확인한다.
+  - 공개 화면: `/demo` 직접 변경, `/landing` 변경 없음.
+
 - 2026-08-03 데모 실화면 동기화·모객 DB 단계 운영 보강
   - 작업 브랜치: `codex/franchise-lead-source-sql-applied-20260730`
   - 기능 커밋: 이번 릴리스 커밋에서 데모 production UI parity와 모객 DB 단계·상담 이력 개선을 함께 기록한다.
